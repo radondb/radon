@@ -1,18 +1,17 @@
 # OverView
-RadonDB is an open source, cloud-native distributed MySQL database for building global, scalable cloud services
+RadonDB is an open source, Cloud-native MySQL database for unlimited scalability and performance.
 
 ## what is RadonDB?
 
-RadonDB is based MySQL,but add more next generation feature such as distributed,unlimted scale out,support distributed transaction, and compatible with the MySQL protocol.
+RadonDB is a cloud-native database based on MySQL，and architected in fully distributed cluster that enable unlimited scalability (scale-out), capacity and performance. It supported distributed transaction that ensure high data consistency, and leveraged MySQL as storage engine for trusted data reliability. RadonDB is compatible with MySQL protocol, and sup-porting automatic table sharding as well as batch of automation feature for simplifying the maintenance and operation workflow.
 
 ## Feature
 
-* **Automatic shard table**: automatically shards (partitions) tables across nodes, enabling databases to scale horizontally on low cost,Sharding is entirely transparent to the application which is able to connect to any node in the cluster and have queries automatically access the correct shards.
-* **support distributed transaction**: support distributed transaction across partitions,implementation Atomicity,Consistency,Isolation,Durability （ACID）for transaction completely.
-* **Automatic data compression**: DBA selected TokuDB storage engine when partition MySQL,Will automatically achieve high-rate data compression,The storage space utilization is increased by 50%, which greatly saves storage space and IO overhead, and further optimizes service performance.
-* **Intelligent smooth scale out**: Virtually seamless dynamic re-sharding,Vertical and Horizontal sharding support.when scale out finished, all data will auto rebalance between shards,The service is not perceived and will not be interrupted due to capacity scaling.
-* **support connection thread pool**: Providing a connected thread pool and presetting a set of connected thread resources. When a distributed SQL cluster needs to establish an access connect with each storage node, these pre-set threads can be used to quickly establish connection and support connection reuse and automatic reconnection. Overall connection efficiency.
-* **auditing and logging**:The user can choose to enable the SQL query audit log function to implement auditing of multiple dimensions such as the query event time, operation statement type, and time-consuming query to ensure the security of the user's operations and meet the data compliance requirements. The audit log can be set to read operation auditing, write operation auditing, or simultaneous read/write operation auditing modes,and allow the user to select flexibly based on actual needs.
+* **Automatic Table Sharing**: automatically sharding (partition) across nodes that mini-mizing the complexity of maintenance and operation.
+* **Distributed Transaction**: supporting distributed transaction across shards (partitions) and securing Atomicity, Consistency, Isolation, Durability (ACID) for whole trans-actrion process.
+* **Connection Thread Pool**: presetting a set of connected threads that can be lever-aged to accelerating the efficiency of connection between SQL cluster and storage nodes; supporting automatic reconnection and thread reuse.
+* **Auditing and Logging**: Users can choose to enable this function for auditing and logging the SQL query operation in multiple dimensions: query event time, opera-tions statement type, consuming time, etc; this function help to secure operation safety and data compliance; the auditing log is able to be set in multiple modes for high flexibility: read (SQL) only, write only, or read/write simultaneously.
+
 
 ## Architecture
 
