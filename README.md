@@ -1,3 +1,7 @@
+[![Build Status](https://travis-ci.org/radondb/radon.png)](https://travis-ci.org/radondb/radon)
+[![Go Report Card](https://goreportcard.com/badge/github.com/radondb/radon)](https://goreportcard.com/report/github.com/radondb/radon)
+[![codecov.io](https://codecov.io/gh/radondb/radon/graphs/badge.svg)](https://codecov.io/gh/radondb/radon/branch/master)
+
 # OverView
 RadonDB is an open source, Cloud-native MySQL database for unlimited scalability and performance.
 
@@ -23,7 +27,7 @@ large-capacity database、automatic plane split table、 scalable and strong con
 ## SQL Layer
 
 ### SQL surpported
-On SQL syntax level, RadonDB Fully compatible with MySQL.You can view all of the SQL features RadonDB supports here  [radon_sql_surported](radon_SQL_surpported.md)
+On SQL syntax level, RadonDB Fully compatible with MySQL.You can view all of the SQL features RadonDB supports here  [radon_sql_surported](docs/radon_sql_surpport.md)
 
 ###  SQL parser, planner, excutor
 
@@ -80,3 +84,12 @@ RadonDB achieves the level of SI (Snapshot Isolation) at the level of consistenc
 ``` Transaction with SQL Layer```
 
 The SQL node is stateless, but in order to guarantee transaction `Snapshot Isolation`, it is currently a write-multiple-read mode.
+
+## Issues
+
+The [integrated github issue tracker](https://github.com/radondb/radon/issues)
+is used for this project.
+
+## License
+
+RadonDB is released under the GPLv3. See LICENSE

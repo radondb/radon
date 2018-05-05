@@ -1,0 +1,43 @@
+/*
+ * Radon
+ *
+ * Copyright 2018 The Radon Authors.
+ * Code is licensed under the GPLv3.
+ *
+ */
+
+package cmd
+
+import (
+	"ctl"
+	"proxy"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestCmdReadOnly(t *testing.T) {
+	_, proxy, cleanup := proxy.MockProxy(log)
+	defer cleanup()
+
+	admin := ctl.NewAdmin(log, proxy)
+	admin.Start()
+	defer admin.Stop()
+	time.Sleep(100)
+
+	// enable.
+	{
+		cmd := NewReadonlyCommand()
+		_, err := executeCommand(cmd, "enable")
+		assert.Nil(t, err)
+	}
+
+	// disable.
+	{
+		cmd := NewReadonlyCommand()
+		_, err := executeCommand(cmd, "disable")
+		assert.Nil(t, err)
+	}
+
+}

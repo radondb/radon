@@ -1,0 +1,6 @@
+bin/*
+pkg/*
+tags
+coverage*
+y.output
+src/github.com/*

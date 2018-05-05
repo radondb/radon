@@ -1,0 +1,20 @@
+{
+        "proxy": {
+                "endpoint": "{RADON-HOST}:{PORT}",
+                "meta-dir": "{RADON-META-DIR}",
+                "twopc-enable": false,
+                "peer-address": "{RADON-HOST:8080}"
+        },
+        "binlog": {
+                "binlog-dir": "{RADON-BINLOG-DIR}",
+                "enable-binlog": true,
+                "enable-relay": true
+        },
+        "audit": {
+                "mode": "N",
+                "audit-dir": "{AUDIT-LOG-DIR}"
+        },
+        "log": {
+                "level": "INFO"
+        }
+}

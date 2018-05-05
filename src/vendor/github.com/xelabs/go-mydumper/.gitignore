@@ -1,0 +1,6 @@
+bin/*
+pkg/*
+src/github.com/
+
+tags
+coverage.out

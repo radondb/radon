@@ -1,0 +1,15 @@
+{
+        "proxy": {
+                "endpoint": ":3306",
+                "meta-dir": "bin/radon-meta"
+        },
+        "binlog": {
+                "binlog-dir": "bin/radon-binlog"
+        },
+        "audit": {
+                "audit-dir": "bin/radon-audit"
+        },
+        "log": {
+                "level": "INFO"
+        }
+}
