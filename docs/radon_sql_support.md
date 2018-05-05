@@ -1,7 +1,7 @@
 
 [TOC]
 
-# Radon SQL surport
+# Radon SQL support
 
 ## Background
 
@@ -71,7 +71,7 @@ Query OK, 0 rows affected (0.01 sec)
   except for TYPE `BINARY/NULL`)
 * The partition mode is HASH, which is evenly distributed across the partitions according to the partition key
  `HASH value`
-* table_options only surpport `ENGINE` and `CHARSET`，Others are automatically ignored
+* table_options only support `ENGINE` and `CHARSET`，Others are automatically ignored
 * The default engine for partition table is `InnoDB`
 * The default character set for partition table `UTF-8`
 * Does not support PRIMARY/UNIQUE constraints for non-partitioned keys, returning errors directly
@@ -368,7 +368,7 @@ SELECT
 
 `Instructions`
 
- * Support cross-partition count, sum, avg, max, min and other aggregate functions, *avg field must be in select_expr*, Aggregate   functions only surpport for numeric values
+ * Support cross-partition count, sum, avg, max, min and other aggregate functions, *avg field must be in select_expr*, Aggregate  functions only support for numeric values
  * Support cross-partition order by, group by, limit and other operations, *field must be in select_expr*
  * Supports complex queries such as joins, automatic routing to AP-Nodes to execute and return
 
