@@ -85,7 +85,7 @@ allpkgs =	xbase/...\
 coverage:
 	go build -v -o bin/gotestcover \
 	src/vendor/github.com/pierrre/gotestcover/*.go;
-	gotestcover -coverprofile=coverage.out -v $(allpkgs)
+	bin/gotestcover -coverprofile=coverage.out -v $(allpkgs)
 	go tool cover -html=coverage.out
 
 .PHONY: build clean install fmt test coverage check
