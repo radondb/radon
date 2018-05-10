@@ -11,7 +11,7 @@ RadonDB is a cloud-native database based on MySQL，and architected in fully dis
 
 ## Feature
 
-* **Automatic Table Sharing**: automatically sharding (partition) across nodes that mini-mizing the complexity of maintenance and operation.
+* **Automatic Table Sharding**: automatically sharding (partition) across nodes that mini-mizing the complexity of maintenance and operation.
 * **Distributed Transaction**: supporting distributed transaction across shards (partitions) and securing Atomicity, Consistency, Isolation, Durability (ACID) for whole trans-actrion process.
 * **Connection Thread Pool**: presetting a set of connected threads that can be lever-aged to accelerating the efficiency of connection between SQL cluster and storage nodes; supporting automatic reconnection and thread reuse.
 * **Auditing and Logging**: Users can choose to enable this function for auditing and logging the SQL query operation in multiple dimensions: query event time, opera-tions statement type, consuming time, etc; this function help to secure operation safety and data compliance; the auditing log is able to be set in multiple modes for high flexibility: read (SQL) only, write only, or read/write simultaneously.
