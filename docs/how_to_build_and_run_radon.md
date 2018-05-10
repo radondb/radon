@@ -53,7 +53,7 @@ When randon started, it will use three ports:
 `6060: debug port, golang debug port`
 
 ## Step4. Add a backend(mysql server) to randon
-This is an admin instruction of randon api, for more admin instructions, see  [randon admin API](API.md) ).
+This is an admin instruction of randon api, for more admin instructions, see  [randon admin API](api.md) ).
 Here we suppose  mysql has being installed and mysql service has beeing started on your machine and the user and password logined to mysql are all root.
 `user: the user to login mysql`
 `password: the password to login mysql`
@@ -91,7 +91,7 @@ Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
 mysql> 
 ```
-Now you can send sql from mysql client, for more sql surpported by randon sql protocol, see *  [Radon_SQL_surported](Radon_SQL_surported.md)
+Now you can send sql from mysql client, for more sql supported by randon sql protocol, see *  [Radon_SQL_support](radon_sql_support.md)
 `Example: `
 ```
 mysql> SHOW DATABASES;
