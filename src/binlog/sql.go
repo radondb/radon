@@ -1,7 +1,7 @@
 /*
  * Radon
  *
- * Copyright (c) 2017 QingCloud.com.
+ * Copyright 2018 The Radon Authors.
  * Code is licensed under the GPLv3.
  *
  */
