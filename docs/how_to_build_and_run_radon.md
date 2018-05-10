@@ -3,7 +3,7 @@
 --------------------------------------------------------------------------------------------------
 [TOC]
 
-# How to build and run randon
+# How to build and run radon
 
 ## Requirements
 1. [Go](http://golang.org) version 1.8 or newer is required.("sudo apt install golang" for ubuntu or "yum install golang" for centOS/redhat)
@@ -28,13 +28,13 @@ $ ls bin/
 $ radon radoncli
 ```
 
-## Step3. Run
+## Step3. Run radon
 Copy the default configure file conf/radon.default.json into bin first:
 ```
 $ cp conf/radon.default.json bin/
 ```
  
-Then Run RadonDB server:
+Then run `radon` server:
 ```
 $ bin/radon -c bin/radon.default.json
 ``` 
@@ -47,20 +47,20 @@ If start successfully, you will see infos next:
      .... 
     2018/04/04 15:20:17.151499 admin.go:54:      [INFO]     http.server.start[:8080]...
 ```
-When randon started, it will use three ports:
-`3306: External service port for MySQL client link`
+When radon started, it will use three ports:
+`3308: External service port for MySQL client link`
 `8080: Management port, external RESTFUL interface`
 `6060: debug port, golang debug port`
 
-## Step4. Add a backend(mysql server) to randon
-This is an admin instruction of randon api, for more admin instructions, see  [randon admin API](api.md) ).
-Here we suppose  mysql has being installed and mysql service has beeing started on your machine and the user and password logined to mysql are all root.
-`user: the user to login mysql`
-`password: the password to login mysql`
+## Step4. Add a backend(mysql server) to radon
+This is an admin instruction of radon api, for more admin instructions, see  [radon admin API](api.md).
+Here we suppose  mysql has being installed and the mysql service has beeing started on your machine, the user and password logged in to mysql are all root.
+`user`: the user to login mysql
+`password`: the password to login mysql
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d \
 > '{"name": "backend1", "address": "127.0.0.1:3306", "user":\
->  "root", "password": "318831", "max-connections":1024}' \
+>  "root", "password": "root", "max-connections":1024}' \
 > http://127.0.0.1:8080/v1/radon/backend
 ```
 `Response: `
@@ -71,9 +71,11 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 ## Step5. Connect mysql client to radon
-Radon supports client connections to the MySQL protocol
+Radon supports client connections to the MySQL protocol, like: mysql -uroot -h127.0.0.1 -P3308
+`root`:account login to radon, we provide default account 'root' with no password to login
+`3308`:radon default port
 ```
-$ mysql -uroot -h127.0.0.1 -P3306
+$ mysql -uroot -h127.0.0.1 -P3308
 ```
 If connected success, you will see:
 ```

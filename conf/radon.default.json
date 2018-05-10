@@ -1,6 +1,6 @@
 {
         "proxy": {
-                "endpoint": ":3306",
+                "endpoint": ":3308",
                 "meta-dir": "bin/radon-meta"
         },
         "binlog": {
