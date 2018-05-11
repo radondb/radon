@@ -4,3 +4,6 @@ tags
 coverage*
 y.output
 src/github.com/*
+
+# IntelliJ project files
+.idea
