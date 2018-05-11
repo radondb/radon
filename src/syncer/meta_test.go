@@ -22,19 +22,12 @@ import (
 )
 
 const (
-	testMetadir = "/tmp/radon_syncer_meta_test"
+	testMetadir = "_test_syncer/radon_syncer_meta_test"
+	testDirRm   = "_test_syncer"
 )
 
 func testRemoveMetadir() {
-	os.RemoveAll(testMetadir)
-
-	deleteFiles := func(p string, f os.FileInfo, err error) (e error) {
-		if strings.HasPrefix(f.Name(), "_backup_radon") {
-			os.RemoveAll(p)
-		}
-		return
-	}
-	filepath.Walk(path.Dir(testMetadir), deleteFiles)
+	os.RemoveAll(testDirRm)
 }
 
 func TestMeta(t *testing.T) {
@@ -88,9 +81,8 @@ func TestMeta(t *testing.T) {
 
 func TestMetaError(t *testing.T) {
 	defer testRemoveMetadir()
-	metadir := "/xx/radon_syncer_meta_test"
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	syncer := NewSyncer(log, metadir, "", nil, nil)
+	syncer := NewSyncer(log, testMetadir, "", nil, nil)
 	assert.NotNil(t, syncer)
 
 	// MetaJson.
