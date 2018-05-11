@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"router"
+	"strconv"
 	"time"
 
 	"github.com/ant0ine/go-json-rest/rest"
@@ -20,8 +21,20 @@ func mockSyncer(log *xlog.Log, n int) ([]*Syncer, func()) {
 	var peers []string
 	var httpServers []*http.Server
 	var syncers []*Syncer
+
+	getCurrDir := func() string {
+		dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+		if err != nil {
+			log.Panicf("mock.getCurrentDirectory err :%+v", err)
+		}
+		return dir
+	}
+	dir := getCurrDir()
+
 	for i := 0; i < n; i++ {
-		metadir := fmt.Sprintf("/tmp/radon_test_syncer_meta%d", i)
+		var metadir string
+		metadir = dir + "/radon_test_syncer_meta" + strconv.Itoa(i)
+
 		os.Mkdir(metadir, 0777)
 		peerAddr := fmt.Sprintf("127.0.0.1:%d", 8081+i)
 
