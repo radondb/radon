@@ -93,7 +93,7 @@ Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
 mysql> 
 ```
-Now you can send sql from mysql client, for more sql supported by randon sql protocol, see *  [Radon_SQL_support](radon_sql_support.md)
+Now you can send sql from mysql client, for more sql supported by radon sql protocol, see *  [Radon_SQL_support](radon_sql_support.md)
 `Example: `
 ```
 mysql> SHOW DATABASES;
