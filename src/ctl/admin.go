@@ -48,10 +48,11 @@ func (admin *Admin) Start() {
 
 	api.SetApp(router)
 	handlers := api.MakeHandler()
-	admin.server = &http.Server{Addr: ":8080", Handler: handlers}
+	admin.server = &http.Server{Addr: admin.proxy.PeerAddress(), Handler: handlers}
+
 	go func() {
 		log := admin.log
-		log.Info("http.server.start[%v]...", ":8080")
+		log.Info("http.server.start[%v]...", admin.proxy.PeerAddress())
 		if err := admin.server.ListenAndServe(); err != http.ErrServerClosed {
 			log.Panic("%v", err)
 		}

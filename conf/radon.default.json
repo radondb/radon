@@ -1,7 +1,8 @@
 {
         "proxy": {
                 "endpoint": ":3308",
-                "meta-dir": "bin/radon-meta"
+                "meta-dir": "bin/radon-meta",
+                "peer-address": ":8080"
         },
         "binlog": {
                 "binlog-dir": "bin/radon-binlog"
