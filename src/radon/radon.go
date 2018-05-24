@@ -37,7 +37,7 @@ func usage() {
 }
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	runtime.GOMAXPROCS(runtime.NumCPU()*2)
 	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
 
 	build := build.GetInfo()
