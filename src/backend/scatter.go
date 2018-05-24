@@ -48,7 +48,7 @@ func NewScatter(log *xlog.Log, metadir string) *Scatter {
 // Add backend node.
 func (scatter *Scatter) add(config *config.BackendConfig) error {
 	log := scatter.log
-	log.Warning("scatter.add:%v", config)
+	log.Warning("scatter.add:%v", config.Name)
 
 	if _, ok := scatter.backends[config.Name]; ok {
 		return errors.Errorf("scatter.backend[%v].duplicate", config.Name)
@@ -67,7 +67,7 @@ func (scatter *Scatter) Add(config *config.BackendConfig) error {
 
 func (scatter *Scatter) remove(config *config.BackendConfig) error {
 	log := scatter.log
-	log.Warning("scatter.remove:%v", config)
+	log.Warning("scatter.remove:%v", config.Name)
 
 	pool, ok := scatter.backends[config.Name]
 	if !ok {
@@ -87,7 +87,7 @@ func (scatter *Scatter) Remove(config *config.BackendConfig) error {
 
 func (scatter *Scatter) addBackup(config *config.BackendConfig) error {
 	log := scatter.log
-	log.Warning("scatter.add.backup:%v", config)
+	log.Warning("scatter.add.backup:%v", config.Name)
 
 	if scatter.backup != nil {
 		return errors.Errorf("scatter.backup.node[%+v].duplicate", config.Name)
@@ -108,7 +108,7 @@ func (scatter *Scatter) AddBackup(config *config.BackendConfig) error {
 // Remove backup node.
 func (scatter *Scatter) removeBackup(config *config.BackendConfig) error {
 	log := scatter.log
-	log.Warning("scatter.remove.backup:%v", config)
+	log.Warning("scatter.remove.backup:%v", config.Name)
 	if scatter.backup != nil && scatter.backup.conf.Name == config.Name {
 		scatter.backup.Close()
 		scatter.backup = nil
@@ -218,19 +218,19 @@ func (scatter *Scatter) LoadConfig() error {
 	}
 	for _, backend := range conf.Backends {
 		if err := scatter.add(backend); err != nil {
-			log.Error("scatter.add.backend[%+v].error:%v", backend, err)
+			log.Error("scatter.add.backend[%+v].error:%v", backend.Name, err)
 			return err
 		}
-		log.Warning("scatter.load.backend:%+v", backend)
+		log.Warning("scatter.load.backend:%+v", backend.Name)
 	}
 
 	// Add backup node.
 	if conf.Backup != nil {
 		if err := scatter.addBackup(conf.Backup); err != nil {
-			log.Error("scatter.add.backup[%+v].error:%v", conf.Backup, err)
+			log.Error("scatter.add.backup[%+v].error:%v", conf.Backup.Name, err)
 			return err
 		}
-		log.Warning("scatter.load.backup:%+v", conf.Backup)
+		log.Warning("scatter.load.backup:%+v", conf.Backup.Name)
 	}
 	return nil
 }
