@@ -1,7 +1,16 @@
 `RadonDB` is fairly simple to deploy, without installing external dependencies.
 
 --------------------------------------------------------------------------------------------------
-[TOC]
+Contents
+=================
+
+* [How to build and run radon](#how-to-build-and-run-radon)
+   * [Requirements](#requirements)
+   * [Step1. Download src code from github](#step1-download-src-code-from-github)
+   * [Step2. Build](#step2-build)
+   * [Step3. Run radon](#step3-run-radon)
+   * [Step4. Add a backend(mysql server) to radon](#step4-add-a-backendmysql-server-to-radon)
+   * [Step5. Connect mysql client to radon](#step5-connect-mysql-client-to-radon)
 
 # How to build and run radon
 
