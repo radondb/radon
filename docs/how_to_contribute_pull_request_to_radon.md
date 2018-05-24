@@ -1,4 +1,13 @@
-[TOC]
+Contents
+=================
+
+* [how_to_contribute_pull_request_to_radon](#how_to_contribute_pull_request_to_radon)
+   * [Requirements](#requirements)
+   * [Step1. Fork a radon repo to your git](#step1-fork-a-radon-repo-to-your-git)
+   * [Step2. Clone radon repo to your local machine](#step2-clone-radon-repo-to-your-local-machine)
+   * [Step3. Modify sth. on local branch and make a commit](#step3-modify-sth-on-local-branch-and-make-a-commit)
+   * [Step4. Push the local modification to your github](#step4-push-the-local-modification-to-your-github)
+   * [Step5. Pull a request to base repo](#step5-pull-a-request-to-base-repo)
 
 # how_to_contribute_pull_request_to_radon
 

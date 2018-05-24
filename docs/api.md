@@ -1,14 +1,59 @@
-[TOC]
+Contents
+=================
+
+* [API](#api)
+   * [Background](#background)
+   * [radon](#radon)
+      * [config](#config)
+      * [readonly](#readonly)
+      * [throttle](#throttle)
+      * [status](#status)
+   * [shard](#shard)
+      * [shardz](#shardz)
+      * [balanceadvice](#balanceadvice)
+      * [shift](#shift)
+      * [reload](#reload)
+   * [backend](#backend)
+      * [health](#health)
+   * [backends](#backends)
+      * [add](#add)
+      * [remove](#remove)
+   * [backup](#backup)
+      * [add](#add-1)
+      * [remove](#remove-1)
+   * [meta](#meta)
+      * [versions](#versions)
+      * [versioncheck](#versioncheck)
+      * [metas](#metas)
+   * [debug](#debug)
+      * [processlist](#processlist)
+      * [txnz](#txnz)
+      * [queryz](#queryz)
+      * [configz](#configz)
+      * [backendz](#backendz)
+      * [schemaz](#schemaz)
+   * [peers](#peers)
+      * [add peer](#add-peer)
+      * [peerz](#peerz)
+      * [remove peer](#remove-peer)
+   * [users](#users)
+      * [create user](#create-user)
+      * [update user](#update-user)
+      * [drop user](#drop-user)
+   * [relay](#relay)
+      * [status](#status-1)
+      * [start](#start)
+      * [stop](#stop)
 
 # API
 
-# Background
+## Background
 
 This document describes the RadonDB REST API, which allows users to achieve most tasks on WebUI.
 
-# radon
+## radon
 
-## config
+### config
 
 ```
 Path:    /v1/radon/config
@@ -42,7 +87,7 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-## readonly
+### readonly
 
 ```
 Path:    /v1/radon/readonly
@@ -51,13 +96,17 @@ Request: {
 			"readonly": The value of the read-only(true) or not(false),														[required]
          }
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example: `
+
 ```
 $ curl -i -H 'Content-Type: application/json' -X PUT -d '{"readonly":true}' \
 		 http://127.0.0.1:8080/v1/radon/readonly
@@ -69,7 +118,7 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-## throttle
+### throttle
 
 ```
 Path:    /v1/radon/throttle
@@ -78,13 +127,17 @@ Request: {
 			"limits": The max number of requests in a second, defaults 0, means no limits,  [required]
          }
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example:`
+
 ```
 $ curl -i -H 'Content-Type: application/json' -X PUT -d '{"limits":4800}' \
 		 http://127.0.0.1:8080/v1/radon/throttle
@@ -96,7 +149,7 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-## status
+### status
 
 ```
 Path:    /v1/radon/status
@@ -105,12 +158,16 @@ Response:{
 			readonly:true/false
          }
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
+
 `Example: `
+
 ```
 $ curl http://127.0.0.1:8080/v1/radon/status
 
@@ -118,9 +175,9 @@ $ curl http://127.0.0.1:8080/v1/radon/status
 {"readonly":true}
 ```
 
-# shard
+## shard
 
-## shardz
+### shardz
 
 This api used to get all shard tables from router.
 
@@ -128,13 +185,17 @@ This api used to get all shard tables from router.
 Path:    /v1/shard/shardz
 Method:  GET
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	503: StatusServiceUnavailable, backend(s) MySQL seems to be down.
 ```
+
 `Example: `
+
 ```
 $ curl http://127.0.0.1:8080/v1/shard/shardz
 
@@ -147,7 +208,7 @@ $ curl http://127.0.0.1:8080/v1/shard/shardz
 ```
 
 
-## balanceadvice
+### balanceadvice
 
 This api used to get the best table(only one) which should be transferred from the max-backend to min-backend.
 
@@ -170,7 +231,9 @@ Response: [{
          }]
 
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
@@ -179,7 +242,9 @@ Response: [{
 Notes:
 If response is NULL, means there is no advice.
 ```
+
 `Example:`
+
 ```
 $ curl http://127.0.0.1:8080/v1/shard/balanceadvice
 
@@ -188,7 +253,7 @@ null
 ```
 
 
-## shift
+### shift
 
 This api used to change the partition backend from one to another.
 
@@ -202,20 +267,24 @@ Request: {
 			"to-address":	"the to backend address(host:port)",	[required]
          }
 ```
+
 `Status:1`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	503: StatusServiceUnavailable, radon has no advice.
 ```
+
 `Example: `
+
 ```
 $ url -i -H 'Content-Type: application/json' -X POST -d '{"database": "db_test1", "table": "t1", "from-address": "127.0.0.1:3306", "to-address": "127.0.0.1:3306"} \
 		 http://127.0.0.1:8080/v1/shard/shift
 ```
 
 
-## reload
+### reload
 
 This api used to re-load the router info from metadir.
 
@@ -224,13 +293,17 @@ Path:    /v1/shard/reload
 Method:  POST
 Request: NIL
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	503: StatusServiceUnavailable, radon has no advice.
 ```
+
 `Example: `
+
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST http://127.0.0.1:8080/v1/shard/reload
 
@@ -241,9 +314,9 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-# backend
+## backend
 
-## health
+### health
 
 This api can perform a backend health check by sending the PING(select 1) command to backends.
 
@@ -251,13 +324,17 @@ This api can perform a backend health check by sending the PING(select 1) comman
 Path:    /v1/radon/ping
 Method:  GET
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	503: StatusServiceUnavailable, backend(s) MySQL seems to be down.
 ```
+
 `Example:`
+
 ```
 $ curl http://127.0.0.1:8080/v1/radon/ping
 ```
@@ -266,7 +343,7 @@ $ curl http://127.0.0.1:8080/v1/radon/ping
 
 This api used to add/delete a backend config.
 
-#### add
+### add
 
 ```
 Path:    /v1/radon/backend
@@ -279,13 +356,17 @@ Request: {
 			"max-connections": The maximum permitted number of backend connection pool,							[optional]
          }
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example: `
+
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend1", "address": "127.0.0.1:3306", "user": "root", "password": "318831", "max-connections":1024}' \
 		 http://127.0.0.1:8080/v1/radon/backend
@@ -297,7 +378,7 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-#### remove
+### remove
 
 ```
 Path:    /v1/radon/backend/{backend-name}
@@ -314,12 +395,11 @@ Method:  DELETE
 $ curl -X DELETE http://127.0.0.1:8080/v1/radon/backend/backend1
 ```
 
-
 ## backup
 
 This api used to add/delete a backup node config.
 
-#### add
+### add
 
 ```
 Path:    /v1/radon/backup
@@ -332,7 +412,9 @@ Request: {
 			"max-connections": The maximum permitted number of backend connection pool,			[optional]
          }
 ```
+
 `Example: `
+
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backupnode", "address":  "127.0.0.1:3306", "user": "root", "password": "318831", "max-connections":1024}' \
 		 http://127.0.0.1:8080/v1/radon/backup
@@ -350,13 +432,15 @@ Content-Type: text/plain; charset=utf-8
 	500: StatusInternalServerError
 ```
 
-#### remove
+### remove
 
 ```
 Path:    /v1/radon/backup/{backup-name}
 Method:  DELETE
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
@@ -371,7 +455,7 @@ $ curl -X DELETE http://127.0.0.1:8080/v1/radon/backup/backupnode
 
 The API used to do multi-proxy meta synchronization.
 
-#### versions
+### versions
 
 ```
 Path:    /v1/meta/versions
@@ -380,12 +464,16 @@ Response:{
 			Ts int64 `json:"version"`
          }
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
+
 `Example: `
+
 ```
 $ curl http://127.0.0.1:8080/v1/meta/versions
 
@@ -394,7 +482,7 @@ $ curl http://127.0.0.1:8080/v1/meta/versions
 ```
 
 
-#### versioncheck
+### versioncheck
 
 ```
 Path:    /v1/meta/versioncheck
@@ -404,12 +492,16 @@ Response:{
 			"peers":["127.0.0.1:8080"]
          }
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
+
 `Example:`
+
 ```
 $ curl http://127.0.0.1:8080/v1/meta/versioncheck
 
@@ -417,7 +509,7 @@ $ curl http://127.0.0.1:8080/v1/meta/versioncheck
 {"latest":true,"peers":["127.0.0.1:8080"]}
 ```
 
-#### metas
+### metas
 
 ```
 Path:    /v1/meta/metas
@@ -427,13 +519,17 @@ Response:{
          }
 
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example: `
+
 ```
 $ curl http://127.0.0.1:8080/v1/meta/metas
 
@@ -444,9 +540,9 @@ $ curl http://127.0.0.1:8080/v1/meta/metas
 t\t{\n\t\t\t\"table\": \"t2_0029\",\n\t\t\t\"segment\": \"3712-3840\",\n\t\t\t\"backend\": \"backend1\"\n\t\t},\n\t\t{\n\t\t\t\
 ```
 
-# debug
+## debug
 
-## processlist
+### processlist
 This api shows which threads are running.
 
 ```
@@ -463,19 +559,23 @@ Response: [{
 			"info":    The statement the thread is executing.
          }]
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
+
 `Example:`
+
 ```
 $ curl http://127.0.0.1:8080/v1/debug/processlist
 ---Response---
 [{"id":1,"user":"root","host":"127.0.0.1:40742","db":"","command":"Sleep","time":41263,"state":"","info":""}]
 ```
 
-## txnz
+### txnz
 This api shows which transactions are running.
 
 ```
@@ -490,19 +590,23 @@ Response: [{
 			"sending":  The backend numbers which the transaction fanout to.
          }]
 ```
+
 `Example: `
+
 ```
 $ curl http://127.0.0.1:8080/v1/debug/txnz/10
 ---Response(now backend does nothing, return null)--
 null
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
 
-## queryz
+### queryz
 This api shows which queries are running.
 
 ```
@@ -516,32 +620,40 @@ Response: [{
 			"query":    The query which is executing.
          }]
 ```
+
 `Example:`
+
 ``` 
 $ curl http://127.0.0.1:8080/v1/debug/queryz/10
 ---Response---
 null
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
 
-## configz
+### configz
 This api shows the config of RadonDB.
 
 ```
 Path:    /v1/debug/configz
 Method:  GET
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example:`
+
 ```
 $ curl http://127.0.0.1:8080/v1/debug/configz
 
@@ -549,20 +661,24 @@ $ curl http://127.0.0.1:8080/v1/debug/configz
 {"proxy":{"allowip":["127.0.0.1","127.0.0.2"],"meta-dir":"bin/radon-meta","endpoint":":3306","twopc-enable":true,"max-connections":1024,"max-result-size":1073741824,"ddl-timeout":3600,"query-timeout":600,"peer-address":"127.0.0.1:8080","backup-default-engine":"TokuDB"},"audit":{"mode":"N","audit-dir":"bin/radon-audit","max-size":268435456,"expire-hours":1},"router":{"slots-readonly":4096,"blocks-readonly":128},"binlog":{"binlog-dir":"bin/radon-binlog","max-size":134217728,"relay-workers":32,"relay-wait-ms":5000,"enable-binlog":false,"enable-relay":false,"parallel-type":1},"log":{"level":"INFO"}}
 ```
 
-## backendz
+### backendz
 This api shows all the backends of RadonDB.
 
 ```
 Path:    /v1/debug/backendz
 Method:  GET
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example: `
+
 ```
 $ curl http://127.0.0.1:8080/v1/debug/backendz
 
@@ -570,21 +686,24 @@ $ curl http://127.0.0.1:8080/v1/debug/backendz
 []
 ```
 
-
-## schemaz
+### schemaz
 This api shows all the schemas of RadonDB.
 
 ```
 Path:    /v1/debug/schemaz
 Method:  GET
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example: `
+
 ```
 $ curl http://127.0.0.1:8080/v1/debug/schemaz
 
@@ -595,9 +714,9 @@ $ curl http://127.0.0.1:8080/v1/debug/schemaz
 :"backend1","Range":{"Start":3712,"End":3840}},{"Table":"t2_0030","Backend":"backend1","Range":{"Start":3840,"End":3968}},{"Table":"t2_0031","Backend":"backend1","Range":{"Start":3968,"End":4096}}]}}}}}
 ```
 
-# peers
+## peers
 
-## add peer
+### add peer
 
 This api used to add a peer.
 
@@ -608,13 +727,17 @@ Request: {
 			"address":         "The REST address of this peer",													[required]
          }
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example: `
+
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"address": "127.0.0.1:8080"}' \
 		 http://127.0.0.1:8080/v1/peer/add
@@ -627,7 +750,7 @@ Content-Type: text/plain; charset=utf-8
 ```
 
 
-## peerz
+### peerz
 
 This api used to show the peers of a group.
 
@@ -635,7 +758,9 @@ This api used to show the peers of a group.
 Path:    /v1/peer/peerz
 Method:  GET
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
@@ -648,8 +773,7 @@ $ curl http://127.0.0.1:8080/v1/peer/peerz
 ["127.0.0.1:8080"]
 ```
 
-
-## remove peer
+### remove peer
 
 This api used to removea peer.
 
@@ -660,13 +784,17 @@ Request: {
 		"address":  "The REST address of this peer",     [required]
          }
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example: `
+
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"address": "127.0.0.1:8080"}' \
 		 http://127.0.0.1:8080/v1/peer/remove
@@ -681,11 +809,11 @@ Content-Type: text/plain; charset=utf-8
 
 
 
-# users
+## users
 
 The normal users that can connect to radon with password.
 
-## create user
+### create user
 
 ```
 Path:    /v1/user/add
@@ -695,13 +823,17 @@ Request: {
 			"password": "password",	[required]
          }
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example: `
+
 ```
 ---backend should not be null---
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend1", "address": "127.0.0.1:3306", "user": "root", "password": "318831", "max-connections":1024}' \
@@ -722,7 +854,7 @@ Content-Type: text/plain; charset=utf-8
 ```
 
 
-## update user
+### update user
 
 ```
 Path:    /v1/user/update
@@ -732,13 +864,17 @@ Request: {
 			"password": "password",	[required]
          }
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example:`
+
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"user": "test", "password": "test"}' \
 		 http://127.0.0.1:8080/v1/user/update
@@ -750,8 +886,7 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-
-## drop user
+### drop user
 
 ```
 Path:    /v1/user/remove
@@ -760,13 +895,17 @@ Request: {
 			"user": "user name",	[required]
          }
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example:`
+
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"user": "test"}' \
 		 http://127.0.0.1:8080/v1/user/remove
@@ -777,12 +916,11 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-
-# relay
+## relay
 
 The relay to backup node.
 
-## status
+### status
 
 ```
 Path:    /v1/relay/status
@@ -798,13 +936,16 @@ Response:{
 		Rates           string `json:"rates"`
 }
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
 
 `Example:`
+
 ```
 $ curl http://127.0.0.1:8080/v1/relay/status
 
@@ -812,7 +953,7 @@ $ curl http://127.0.0.1:8080/v1/relay/status
 {"status":true,"max-workers":32,"parallel-workers":0,"second-behinds":0,"parallel-type":1,"relay-binlog":"","relay-gtid":0,"restart-gtid":0,"rates":"{\"All\":[0]}"}
 ```
 
-## start
+### start
 
 start the relay worker.
 
@@ -821,13 +962,17 @@ Path:    /v1/relay/start
 Method:  PUT
 Request: nil
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
+
 `Example:`
+
 ```
 $ curl -i -H 'Content-Type: application/json' -X PUT http://127.0.0.1:8080/v1/relay/start
 
@@ -838,8 +983,7 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-
-## stop
+### stop
 
 stop the relay worker.
 
@@ -848,13 +992,17 @@ Path:    /v1/relay/stop
 Method:  PUT
 Request: nil
 ```
+
 `Status:`
+
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalSserverError
 ```
+
 `Example: `
+
 ```
 $ curl -i -H 'Content-Type: application/json' -X PUT http://127.0.0.1:8080/v1/relay/stop
 
