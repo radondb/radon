@@ -16,26 +16,41 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
+const (
+	testPeerdir = "_test_syncer_peer"
+)
+
+func testRemovePeerdir() {
+	os.RemoveAll(testPeerdir)
+}
+
 func TestPeer(t *testing.T) {
-	defer testRemoveMetadir()
-	defer os.RemoveAll("/tmp/peers.json")
 	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
-	peer := NewPeer(log, "/tmp/", "192.168.0.1")
+
+	// Create test dir "_test_syncer_peer"
+	if err := os.MkdirAll(testPeerdir, os.ModePerm); err != nil {
+		log.Error("syncer.peer.test.mkdir.error:%+v", err)
+	}
+	defer testRemovePeerdir()
+
+	peer := NewPeer(log, testPeerdir, "192.168.0.1:8080")
 	assert.NotNil(t, peer)
+
+	// peer.json not exist
 	err := peer.LoadConfig()
 	assert.Nil(t, err)
 
 	// Add peers.
 	{
-		peer.Add("192.168.0.2")
-		peer.Add("192.168.0.3")
-		peer.Add("192.168.0.4")
+		peer.Add("192.168.0.2:8080")
+		peer.Add("192.168.0.3:8080")
+		peer.Add("192.168.0.4:8080")
 
 		want := []string{
-			"192.168.0.1",
-			"192.168.0.2",
-			"192.168.0.3",
-			"192.168.0.4",
+			"192.168.0.1:8080",
+			"192.168.0.2:8080",
+			"192.168.0.3:8080",
+			"192.168.0.4:8080",
 		}
 		got := peer.peers
 		assert.Equal(t, want, got)
@@ -43,12 +58,12 @@ func TestPeer(t *testing.T) {
 
 	// Remove peers.
 	{
-		peer.Remove("192.168.0.3")
-		peer.Remove("192.168.0.4")
+		peer.Remove("192.168.0.3:8080")
+		peer.Remove("192.168.0.4:8080")
 
 		want := []string{
-			"192.168.0.1",
-			"192.168.0.2",
+			"192.168.0.1:8080",
+			"192.168.0.2:8080",
 		}
 		got := peer.peers
 		assert.Equal(t, want, got)
@@ -59,8 +74,8 @@ func TestPeer(t *testing.T) {
 		err := peer.LoadConfig()
 		assert.Nil(t, err)
 		want := []string{
-			"192.168.0.1",
-			"192.168.0.2",
+			"192.168.0.1:8080",
+			"192.168.0.2:8080",
 		}
 		got := peer.peers
 		assert.Equal(t, want, got)
@@ -68,12 +83,20 @@ func TestPeer(t *testing.T) {
 }
 
 func TestPeerError(t *testing.T) {
-	defer testRemoveMetadir()
+	defer testRemovePeerdir()
+
 	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
-	peer := NewPeer(log, "/", "192.168.0.1")
+	peer := NewPeer(log, testPeerdir, "192.168.0.1:8080")
+
+	// Dir not exist, add fail.
 	{
-		err := peer.Add("192.168.0.2")
+		err := peer.Add("192.168.0.2:8080")
 		assert.NotNil(t, err)
+	}
+
+	// Create test dir
+	if err := os.MkdirAll(testPeerdir, os.ModePerm); err != nil {
+		log.Error("syncer.peer.test.Mkdir.error:%+v", err)
 	}
 
 	// Add empty peer.
