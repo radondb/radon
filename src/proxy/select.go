@@ -26,3 +26,8 @@ func (spanner *Spanner) handleSelectStream(session *driver.Session, query string
 	database := session.Schema()
 	return spanner.ExecuteStreamFetch(session, database, query, node, callback, streamBufferSize)
 }
+
+// handle select [dual]
+func (spanner *Spanner) handleDual(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+	return spanner.ExecuteSingle(query)
+}

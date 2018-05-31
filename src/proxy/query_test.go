@@ -9,6 +9,7 @@
 package proxy
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -123,6 +124,7 @@ func TestProxyQueryComments(t *testing.T) {
 	}
 }
 
+// Proxy with no backup
 func TestProxyQueryStream(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
@@ -169,12 +171,202 @@ func TestProxyQueryStream(t *testing.T) {
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
-		query := "select /*backup*/ * from test.t1"
-		qr, err := client.FetchAll(query, -1)
+		{
+			query := "select /*backup*/ * from test.t1"
+			qr, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			want := 60510
+			got := int(qr.RowsAffected)
+			assert.Equal(t, want, got)
+		}
+		{ // select * from test.t1 t1 as ...;
+			query := "select * from test.t1 as aliaseTable"
+			qr, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			want := 60510
+			got := int(qr.RowsAffected)
+			assert.Equal(t, want, got)
+		}
+		{ // select id from t1 as ...;
+			query := "select /*backup*/ * from test.t1 as aliaseTable"
+			qr, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			want := 60510
+			got := int(qr.RowsAffected)
+			assert.Equal(t, want, got)
+		}
+		{ // select 1 from dual
+			query := "select 1 from dual"
+			qr, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			want := 2017
+			got := int(qr.RowsAffected)
+			assert.Equal(t, want, got)
+		}
+		{ // select 1
+			query := "select 1"
+			qr, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			want := 2017
+			got := int(qr.RowsAffected)
+			assert.Equal(t, want, got)
+		}
+		{ // select @@version_comment limit 1 [from] [dual]
+			query := "select @@version_comment limit 1"
+			qr, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			want := 2017
+			got := int(qr.RowsAffected)
+			assert.Equal(t, want, got)
+		}
+	}
+
+	// select .* from dual  error
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
-		want := 60510
-		got := int(qr.RowsAffected)
-		assert.Equal(t, want, got)
+		fakedbs.AddQueryErrorPattern("select .*", errors.New("mock.mysql.select.from.dual.error"))
+		{ // ERROR 1054 (42S22): Unknown column 'a' in 'field list'
+			query := "select a from dual"
+			_, err := client.FetchAll(query, -1)
+			want := "mock.mysql.select.from.dual.error (errno 1105) (sqlstate HY000)"
+			got := err.Error()
+			assert.Equal(t, want, got)
+		}
+		{
+			query := "select /*backup*/ a from test.dual"
+			_, err := client.FetchAll(query, -1)
+			want := "Table 'dual' doesn't exist (errno 1146) (sqlstate 42S02)"
+			got := err.Error()
+			assert.Equal(t, want, got)
+		}
+	}
+}
+
+// Proxy with with backup
+func TestProxyQueryStreamWithBackup(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+
+	fakedbs, proxy, cleanup := MockProxyWithBackup(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	result11 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "id",
+				Type: querypb.Type_INT32,
+			},
+			{
+				Name: "name",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: make([][]sqltypes.Value, 0, 256)}
+
+	for i := 0; i < 2017; i++ {
+		row := []sqltypes.Value{
+			sqltypes.MakeTrusted(querypb.Type_INT32, []byte("11")),
+			sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("1nice name")),
+		}
+		result11.Rows = append(result11.Rows, row)
+	}
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("select .*", result11)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// select.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		{
+			query := "select /*backup*/ * from test.t1"
+			qr, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			want := 64544
+			got := int(qr.RowsAffected)
+			assert.Equal(t, want, got)
+		}
+		{ // select * from test.t1 t1 as ...;
+			query := "select * from test.t1 as aliaseTable"
+			qr, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			want := 64544
+			got := int(qr.RowsAffected)
+			assert.Equal(t, want, got)
+		}
+		{ // select id from t1 as ...;
+			query := "select /*backup*/ * from test.t1 as aliaseTable"
+			qr, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			want := 64544
+			got := int(qr.RowsAffected)
+			assert.Equal(t, want, got)
+		}
+		{ // select 1 from dual
+			query := "select 1 from dual"
+			qr, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			want := 2017
+			got := int(qr.RowsAffected)
+			assert.Equal(t, want, got)
+		}
+		{ // select 1
+			query := "select 1"
+			qr, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			want := 2017
+			got := int(qr.RowsAffected)
+			assert.Equal(t, want, got)
+		}
+		{ // select @@version_comment limit 1 [from] [dual]
+			query := "select @@version_comment limit 1"
+			qr, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			want := 2017
+			got := int(qr.RowsAffected)
+			assert.Equal(t, want, got)
+		}
+	}
+
+	// select .*  from dual error
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		fakedbs.AddQueryErrorPattern("select .*", errors.New("mock.mysql.select.from.dual.error"))
+		{ // ERROR 1054 (42S22): Unknown column 'a' in 'field list'
+			query := "select a from dual"
+			_, err := client.FetchAll(query, -1)
+			want := "mock.mysql.select.from.dual.error (errno 1105) (sqlstate HY000)"
+			got := err.Error()
+			assert.Equal(t, want, got)
+		}
+		{
+			query := "select a from dual as aliasTable"
+			_, err := client.FetchAll(query, -1)
+			want := "mock.mysql.select.from.dual.error (errno 1105) (sqlstate HY000)"
+			got := err.Error()
+			assert.Equal(t, want, got)
+		}
+		{
+			query := "select a from test.t1 as aliasTable"
+			_, err := client.FetchAll(query, -1)
+			want := "mock.mysql.select.from.dual.error (errno 1105) (sqlstate HY000)"
+			got := err.Error()
+			assert.Equal(t, want, got)
+		}
 	}
 }
 
