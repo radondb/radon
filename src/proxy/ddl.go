@@ -30,9 +30,14 @@ var (
 // CheckCreateTable used to check the CRERATE TABLE statement.
 func CheckCreateTable(ddl *sqlparser.DDL) error {
 	shardKey := ddl.PartitionName
+	table := ddl.Table.Name.String()
 	// Check the sharding key.
 	if shardKey == "" {
 		return fmt.Errorf("create table must end with 'PARTITION BY HASH(shard-key)'")
+	}
+
+	if "dual" == table {
+		return fmt.Errorf("spanner.ddl.check.create.table[%s].error:not surpport", table)
 	}
 
 	// UNIQUE/PRIMARY constraint check.

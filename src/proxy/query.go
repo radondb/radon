@@ -205,17 +205,47 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 			log.Warning("proxy.select.for.backup:[%s].done", query)
 			return nil
 		default:
-			if qr, err = spanner.handleSelect(session, query, node); err != nil {
-				log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
-				// Send to AP node if we have.
-				if hasBackup {
-					if qr, err = spanner.handleBackupQuery(session, query, node); err != nil {
-						log.Error("proxy.backup.select[%s].error:%+v", xbase.TruncateQuery(query, 256), err)
+			switch snode.From[0].(type) {
+			case *sqlparser.AliasedTableExpr:
+				aliasTableExpr := snode.From[0].(*sqlparser.AliasedTableExpr)
+				tb := aliasTableExpr.Expr.(sqlparser.TableName)
+				dualTable := tb.Name.String()
+				if dualTable == "dual" {
+					if qr, err = spanner.handleDual(session, query, node); err != nil {
+						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
+						// Send to AP node if we have.
+						if hasBackup {
+							if qr, err = spanner.handleBackupQuery(session, query, node); err != nil {
+								log.Error("proxy.backup.select[%s].error:%+v", xbase.TruncateQuery(query, 256), err)
+							}
+						}
+					}
+				} else { // e.g.: select a from table [as] aliasTable;
+					if qr, err = spanner.handleSelect(session, query, node); err != nil {
+						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
+						// Send to AP node if we have.
+						if hasBackup {
+							if qr, err = spanner.handleBackupQuery(session, query, node); err != nil {
+								log.Error("proxy.backup.select[%s].error:%+v", xbase.TruncateQuery(query, 256), err)
+							}
+						}
 					}
 				}
+				spanner.auditLog(session, R, xbase.SELECT, query, qr)
+				return returnQuery(qr, callback, err)
+			default: // ParenTableExpr, JoinTableExpr
+				if qr, err = spanner.handleSelect(session, query, node); err != nil {
+					log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
+					// Send to AP node if we have.
+					if hasBackup {
+						if qr, err = spanner.handleBackupQuery(session, query, node); err != nil {
+							log.Error("proxy.backup.select[%s].error:%+v", xbase.TruncateQuery(query, 256), err)
+						}
+					}
+				}
+				spanner.auditLog(session, R, xbase.SELECT, query, qr)
+				return returnQuery(qr, callback, err)
 			}
-			spanner.auditLog(session, R, xbase.SELECT, query, qr)
-			return returnQuery(qr, callback, err)
 		}
 	case *sqlparser.Kill:
 		if qr, err = spanner.handleKill(session, query, node); err != nil {
