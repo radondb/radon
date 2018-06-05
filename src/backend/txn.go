@@ -21,6 +21,7 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
+	"strings"
 )
 
 var (
@@ -434,6 +435,16 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 			oneShard(back, txn, qs)
 			break
 		}
+	// ReqSingleRoot mode: execute on the root shard of txn.backends.
+	case xcontext.ReqSingleRoot:
+		qs := []string{req.RawQuery}
+		for back := range txn.backends {
+			if strings.EqualFold(txn.backends[back].conf.User, "root") {
+				wg.Add(1)
+				oneShard(back, txn, qs)
+				break
+			}
+		}
 	// ReqScatter mode: execute on the all shards of txn.backends.
 	case xcontext.ReqScatter:
 		qs := []string{req.RawQuery}
@@ -716,6 +727,15 @@ func (txn *Txn) ExecuteSingle(query string) (*sqltypes.Result, error) {
 	rctx := &xcontext.RequestContext{
 		RawQuery: query,
 		Mode:     xcontext.ReqSingle,
+	}
+	return txn.Execute(rctx)
+}
+
+// ExecuteSingleRoot used to execute query on root shard.
+func (txn *Txn) ExecuteSingleRoot(query string) (*sqltypes.Result, error) {
+	rctx := &xcontext.RequestContext{
+		RawQuery: query,
+		Mode:     xcontext.ReqSingleRoot,
 	}
 	return txn.Execute(rctx)
 }

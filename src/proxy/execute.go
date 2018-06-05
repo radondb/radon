@@ -184,6 +184,20 @@ func (spanner *Spanner) ExecuteSingle(query string) (*sqltypes.Result, error) {
 	return txn.ExecuteSingle(query)
 }
 
+// ExecuteSingleRoot used to execute query on root shard without planner.
+// The query must contain the database, such as db.table.
+func (spanner *Spanner) ExecuteSingleRoot(query string) (*sqltypes.Result, error) {
+	log := spanner.log
+	scatter := spanner.scatter
+	txn, err := scatter.CreateTransaction()
+	if err != nil {
+		log.Error("spanner.execute.single.txn.create.error:[%v]", err)
+		return nil, err
+	}
+	defer txn.Finish()
+	return txn.ExecuteSingleRoot(query)
+}
+
 // ExecuteScatter used to execute query on all shards without planner.
 func (spanner *Spanner) ExecuteScatter(query string) (*sqltypes.Result, error) {
 	log := spanner.log

@@ -83,7 +83,7 @@ func (spanner *Spanner) AuthCheck(s *driver.Session) error {
 	resp := s.Scramble()
 
 	query := fmt.Sprintf("select authentication_string from mysql.user where user='%s'", user)
-	qr, err := spanner.ExecuteSingle(query)
+	qr, err := spanner.ExecuteSingleRoot(query)
 
 	// Query error.
 	if err != nil {

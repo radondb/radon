@@ -25,6 +25,10 @@ const (
 
 	// ReqSingle mode will send the RawQuery to the first backend which computed by the scatter.
 	ReqSingle
+
+	// ReqSingleRoot mode will send the RawQuery to the root backend which computed by the scatter.
+	ReqSingleRoot
+
 )
 
 // TxnMode type.
