@@ -97,7 +97,7 @@ func (p *Pool) Get() (Connection, error) {
 		now := time.Now().Unix()
 		elapsed := (now - conn.Timestamp())
 		if elapsed > 1 {
-			// If elasped time more than 20s, we create new one.
+			// If elapsed time more than 20s, we create new one.
 			if elapsed > atomic.LoadInt64(&p.maxIdleTime) {
 				conn.Close()
 				return p.reconnect()

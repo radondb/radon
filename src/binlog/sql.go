@@ -140,7 +140,7 @@ func (sql *SQLWorker) seekToEvent(ts int64) error {
 		}
 		// Find the first larger event, we should stop.
 		if event.Timestamp > uint64(ts) {
-			// Reset the postion to the previous.
+			// Reset the position to the previous.
 			sql.currPos.Set(prevPos)
 			return nil
 		}

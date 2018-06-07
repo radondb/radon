@@ -54,7 +54,7 @@ func (pt *PlanTree) Plans() []Plan {
 	return pt.children
 }
 
-// Size used to measure the memory useage for this plantree.
+// Size used to measure the memory usage for this plantree.
 func (pt *PlanTree) Size() int {
 	return pt.size
 }

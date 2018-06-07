@@ -224,7 +224,7 @@ func (p *AggregatePlan) ReWritten() sqlparser.SelectExprs {
 	return p.rewritten
 }
 
-// Empty retuns the aggregator number more than zero.
+// Empty returns the aggregator number more than zero.
 func (p *AggregatePlan) Empty() bool {
 	return (len(p.normalAggrs) == 0 && len(p.groupAggrs) == 0)
 }

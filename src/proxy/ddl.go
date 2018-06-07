@@ -144,7 +144,7 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node sq
 
 		// Check the table and change the engine.
 		if err := CheckCreateTable(ddl); err != nil {
-			log.Error("spanner.ddl.check.crete.table[%s].error:%+v", table, err)
+			log.Error("spanner.ddl.check.create.table[%s].error:%+v", table, err)
 			return nil, err
 		}
 
