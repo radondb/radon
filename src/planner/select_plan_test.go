@@ -284,13 +284,12 @@ func TestSelectPlanDatabaseIsNull(t *testing.T) {
 
 func TestSelectUnsupportedPlan(t *testing.T) {
 	querys := []string{
-		"select * from A as A where id in (select id from B)",
+		"select * from A as A1 where id in (select id from B)",
 		"select distinct(b) from A",
 		"select A.id from A join B on B.id=A.id",
 		"select id, rand(id) from A",
 		"select id from A order by b",
 		"select id from A limit x",
-		"select 1",
 		"select age,count(*) from A group by age having count(*) >=2",
 		"select id from A,b limit x",
 	}
@@ -301,7 +300,6 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: function:rand",
 		"unsupported: orderby[b].should.in.select.list",
 		"unsupported: limit.offset.or.counts.must.be.IntVal",
-		"Table 'dual' doesn't exist (errno 1146) (sqlstate 42S02)",
 		"unsupported: expr[count(*)].in.having.clause",
 		"unsupported: subqueries.in.select",
 	}
@@ -332,7 +330,43 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 func TestSelectPlanAs(t *testing.T) {
 	results := []string{
 		`{
-	"RawQuery": "select A.id  from A as a1 where A.id\u003e1000",
+	"RawQuery": "select a1.id  from A as a1 where a1.id\u003e1000",
+	"Project": "a1.id",
+	"Partitions": [
+		{
+			"Query": "select a1.id from sbtest.A1 as a1 where a1.id \u003e 1000",
+			"Backend": "backend1",
+			"Range": "[0-32)"
+		},
+		{
+			"Query": "select a1.id from sbtest.A2 as a1 where a1.id \u003e 1000",
+			"Backend": "backend2",
+			"Range": "[32-64)"
+		},
+		{
+			"Query": "select a1.id from sbtest.A3 as a1 where a1.id \u003e 1000",
+			"Backend": "backend3",
+			"Range": "[64-96)"
+		},
+		{
+			"Query": "select a1.id from sbtest.A4 as a1 where a1.id \u003e 1000",
+			"Backend": "backend4",
+			"Range": "[96-256)"
+		},
+		{
+			"Query": "select a1.id from sbtest.A5 as a1 where a1.id \u003e 1000",
+			"Backend": "backend5",
+			"Range": "[256-512)"
+		},
+		{
+			"Query": "select a1.id from sbtest.A6 as a1 where a1.id \u003e 1000",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+		`{
+	"RawQuery": "select A.id  from A where A.id\u003e1000",
 	"Project": "A.id",
 	"Partitions": [
 		{
@@ -369,7 +403,8 @@ func TestSelectPlanAs(t *testing.T) {
 }`,
 	}
 	querys := []string{
-		"select A.id  from A as a1 where A.id>1000",
+		"select a1.id  from A as a1 where a1.id>1000",
+		"select A.id  from A where A.id>1000", // alias table is alse 'A'
 	}
 
 	// Database not null.
