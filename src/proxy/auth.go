@@ -114,7 +114,7 @@ func (spanner *Spanner) AuthCheck(s *driver.Session) error {
 	// gotStage1 = SHA1(password)
 	gotStage1 := make([]byte, 20)
 	for i := range resp {
-		// SHA1(password) = (resp XOR SHA1(SHA1(password)))
+		// SHA1(password) = (resp XOR want)
 		gotStage1[i] = (resp[i] ^ want[i])
 	}
 
