@@ -71,15 +71,16 @@ func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser
 // analyze used to check the 'select' is at the support level, and get the db, table, etc..
 // Unsupports:
 // 1. subquery
-func (p *SelectPlan) analyze() (string, string, error) {
+func (p *SelectPlan) analyze() (string, string, string, error) {
 	var shardDatabase string
 	var shardTable string
+	var aliasTable string
 	var tableExpr *sqlparser.AliasedTableExpr
 	node := p.node
 
 	// Check subquery.
 	if hasSubquery(node) || len(node.From) > 1 {
-		return shardDatabase, shardTable, errors.New("unsupported: subqueries.in.select")
+		return shardDatabase, shardTable, aliasTable, errors.New("unsupported: subqueries.in.select")
 	}
 
 	// Find the first table in the node.From.
@@ -94,6 +95,8 @@ func (p *SelectPlan) analyze() (string, string, error) {
 	}
 
 	if tableExpr != nil {
+		aliasTable = tableExpr.As.String()
+
 		switch expr := tableExpr.Expr.(type) {
 		case sqlparser.TableName:
 			if !expr.Qualifier.IsEmpty() {
@@ -102,7 +105,7 @@ func (p *SelectPlan) analyze() (string, string, error) {
 			shardTable = expr.Name.String()
 		}
 	}
-	return shardDatabase, shardTable, nil
+	return shardDatabase, shardTable, aliasTable, nil
 }
 
 // Build used to build distributed querys.
@@ -110,15 +113,19 @@ func (p *SelectPlan) analyze() (string, string, error) {
 func (p *SelectPlan) Build() error {
 	var err error
 	var shardTable string
+	var aliasTable string
 	var shardDatabase string
 
 	log := p.log
 	node := p.node
-	if shardDatabase, shardTable, err = p.analyze(); err != nil {
+	if shardDatabase, shardTable, aliasTable, err = p.analyze(); err != nil {
 		return err
 	}
 	if shardDatabase == "" {
 		shardDatabase = p.database
+	}
+	if aliasTable == "" {
+		aliasTable = shardTable
 	}
 
 	// Get the routing segments info.
@@ -185,7 +192,7 @@ func (p *SelectPlan) Build() error {
 			Name:      sqlparser.NewTableIdent(segment.Table),
 			Qualifier: sqlparser.NewTableIdent(shardDatabase),
 		}
-		as := fmt.Sprintf(" as %s", shardTable)
+		as := fmt.Sprintf(" as %s", aliasTable)
 		buf := sqlparser.NewTrackedBuffer(nil)
 		buf.Myprintf("select %v%s%v from %v%s%v%v%v%v%v",
 			node.Comments, node.Hints, node.SelectExprs,
