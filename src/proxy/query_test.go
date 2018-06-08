@@ -243,7 +243,7 @@ func TestProxyQueryStream(t *testing.T) {
 	}
 }
 
-// Proxy with with backup
+// Proxy with backup
 func TestProxyQueryStreamWithBackup(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 

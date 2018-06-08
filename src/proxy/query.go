@@ -209,8 +209,8 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 			case *sqlparser.AliasedTableExpr:
 				aliasTableExpr := snode.From[0].(*sqlparser.AliasedTableExpr)
 				tb := aliasTableExpr.Expr.(sqlparser.TableName)
-				dualTable := tb.Name.String()
-				if dualTable == "dual" {
+				table := tb.Name.String()
+				if table == "dual" {
 					if qr, err = spanner.handleDual(session, query, node); err != nil {
 						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
 						// Send to AP node if we have.

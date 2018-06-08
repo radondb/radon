@@ -68,7 +68,7 @@ func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser
 	}
 }
 
-// check used to check the 'select' is at the support level.
+// analyze used to check the 'select' is at the support level, and get the db, table, etc..
 // Unsupports:
 // 1. subquery
 func (p *SelectPlan) analyze() (string, string, error) {
