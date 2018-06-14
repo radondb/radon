@@ -34,8 +34,8 @@ type ProxyConfig struct {
 // DefaultProxyConfig returns default proxy config.
 func DefaultProxyConfig() *ProxyConfig {
 	return &ProxyConfig{
-		MetaDir:             "./radonmeta",
-		Endpoint:            "127.0.0.1:3306",
+		MetaDir:             "./radon-meta",
+		Endpoint:            "127.0.0.1:3308",
 		MaxConnections:      1024,
 		MaxResultSize:       1024 * 1024 * 1024, // 1GB
 		DDLTimeout:          10 * 3600 * 1000,   // 10hours
