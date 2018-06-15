@@ -22,7 +22,7 @@ import (
 func (r *Router) writeFrmData(db string, table string, tconf *config.TableConfig) error {
 	log := r.log
 	dir := path.Join(r.metadir, db)
-	log.Warning("frm.write.data[db:%s, table:%s]", db, table)
+	log.Info("frm.write.data[db:%s, table:%s]", db, table)
 	// Create dir.
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if x := os.MkdirAll(dir, os.ModePerm); x != nil {
@@ -66,7 +66,7 @@ func (r *Router) removeFrmData(db string, table string) error {
 // loadTable used to add a table read from the json file.
 func (r *Router) loadTableFromFile(db, file string) error {
 	log := r.log
-	log.Warning("frm.load.table.from.file:%v", file)
+	log.Info("frm.load.table.from.file:%v", file)
 
 	conf, err := r.readFrmData(file)
 	if err != nil {
@@ -101,7 +101,7 @@ func (r *Router) DropDatabase(db string) error {
 	log := r.log
 	// Delete database dir.
 	dir := path.Join(r.metadir, db)
-	log.Warning("frm.drop.database.file[%v]", dir)
+	log.Info("frm.drop.database.file[%v]", dir)
 	if err := os.RemoveAll(dir); err != nil {
 		r.log.Error("frm.drop.database[%v].error:%v", dir, err)
 		return err
