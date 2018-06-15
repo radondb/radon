@@ -79,7 +79,7 @@ func (spanner *Spanner) ExecuteNormal(session *driver.Session, database string, 
 
 // ExecuteDDL used to execute ddl querys to the shards with DDLTimeout limits, used for create/drop index long time operation.
 func (spanner *Spanner) ExecuteDDL(session *driver.Session, database string, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
-	spanner.log.Warning("spanner.execute.ddl.query:%s", query)
+	spanner.log.Info("spanner.execute.ddl.query:%s", query)
 	timeout := spanner.conf.Proxy.DDLTimeout
 	return spanner.executeWithTimeout(session, database, query, node, timeout)
 }
