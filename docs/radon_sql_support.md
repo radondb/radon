@@ -408,7 +408,11 @@ SELECT
 
  * Support cross-partition count, sum, avg, max, min and other aggregate functions, *avg field must be in select_expr*, Aggregate  functions only support for numeric values
  * Support cross-partition order by, group by, limit and other operations, *field must be in select_expr*
- * Supports complex queries such as joins, automatic routing to AP-Nodes to execute and return
+ * Support complex queries such as joins, automatic routing to AP-Nodes to execute and return
+ * Support retrieving rows computed without reference to any table or specify `DUAL` as a dummy table name in situations where no tables are referenced. 
+ * Support alias_name for column like `SELECT columna [[AS] alias] FROM mytable;`.
+ * Support alias_name for table like `SELECT columna FROM tbl_name [[AS] alias];`.
+ 
 
 `Example: `
 ```
@@ -437,6 +441,59 @@ mysql> select id, sum(id) from t2 group by id order by id desc limit 10;
 |   23 |      23 |
 +------+---------+
 4 rows in set (0.01 sec)
+```
+
+
+SELECT can be used to retrieve rows computed without reference to any table:
+
+```
+mysql> select 1 + 1;
++-------+
+| 1 + 1 |
++-------+
+|     2 |
++-------+
+1 row in set (0.00 sec)
+```
+
+Specify `DUAL` as a dummy table name in situations where no tables are referenced:
+
+```
+mysql> select date_format(now(),'%y-%m-%d') FROM DUAL;
++-------------------------------+
+| date_format(now(),'%y-%m-%d') |
++-------------------------------+
+| 18-06-18                      |
++-------------------------------+
+1 row in set (0.00 sec)
+```
+
+SELECT with alias, `AS` is optional:
+
+```
+mysql> select id ID from t2 testTbl;
++------+
+| ID   |
++------+
+|    3 |
+|   23 |
+|    1 |
+|   13 |
++------+
+4 rows in set (0.02 sec)
+```
+
+```
+mysql> select testTbl.id as ID from t2 as testTbl;
++------+
+| ID   |
++------+
+|    3 |
+|   23 |
+|    1 |
+|   13 |
++------+
+4 rows in set (0.02 sec)
 ```
 
 ### INSERT
