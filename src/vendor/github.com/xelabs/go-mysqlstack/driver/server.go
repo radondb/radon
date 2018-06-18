@@ -207,6 +207,8 @@ func (l *Listener) handle(conn net.Conn, ID uint32) {
 				}
 				continue
 			}
+		case sqldb.COM_FIELD_LIST:
+			return
 		default:
 			cmd := sqldb.CommandString(data[0])
 			log.Error("session.command:%s.not.implemented", cmd)
