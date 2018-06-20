@@ -180,6 +180,115 @@ func TestProxyShowCreateTable(t *testing.T) {
 	}
 }
 
+func TestProxyShowColumns(t *testing.T) {
+	r1 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "table",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "create table",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_0000")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("show create table t1_0000")),
+			},
+		},
+	}
+
+	r2 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "Field",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Type",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Null",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Key",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Default",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Extra",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("col_a")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("int(11)")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("YES")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+			},
+		},
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("show create .*", r1)
+		fakedbs.AddQueryPattern("show columns .*", r2)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create table t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		client.Quit()
+	}
+
+	// show create table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show create table test.t1"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[t1 show create table t1]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// show columns from table
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show columns from test.t1"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[col_a int(11) YES NULL NULL NULL]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+}
+
 func TestProxyShowProcesslist(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, scleanup := MockProxy(log)
