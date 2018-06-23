@@ -172,8 +172,8 @@ func (f *rotateFile) GetOldLogInfos() ([]LogInfo, error) {
 	return infos, nil
 }
 
-// GetCurrLogInfo returns the last log file which ts >= log.ts_name.
-// If we ts < log.Ts returns the last LogInfo.
+// GetCurrLogInfo returns the last log file which ts >= log.Ts.
+// If when ts < log.Ts, returns the last LogInfo.
 // ts is the UTC().UnixNano() tiemstamp.
 func (f *rotateFile) GetCurrLogInfo(ts int64) (LogInfo, error) {
 	info := LogInfo{}
@@ -203,7 +203,7 @@ func (f *rotateFile) GetCurrLogInfo(ts int64) (LogInfo, error) {
 	return info, nil
 }
 
-// GetNextLogInfo return the first log file which log.ts_name > ts.
+// GetNextLogInfo return the first log file which LogInfo.Ts > ts.
 func (f *rotateFile) GetNextLogInfo(logName string) (LogInfo, error) {
 	info := LogInfo{}
 
