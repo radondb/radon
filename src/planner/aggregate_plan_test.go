@@ -133,6 +133,124 @@ func TestAggregatePlan(t *testing.T) {
 	}
 }
 
+// TestAggregatePlanUpperCase test Aggregate func in uppercase
+func TestAggregatePlanUpperCase(t *testing.T) {
+	querys := []string{
+		"select 1, a, MIN(b), MAX(a), AVG(a), SUM(a), COUNT(a), b as b1, AVG(b), c, AVG(c)  from t group by a, b1, c",
+	}
+	results := []string{
+		`{
+	"Aggrs": [
+		{
+			"Field": "MIN(b)",
+			"Index": 2,
+			"Type": "MIN"
+		},
+		{
+			"Field": "MAX(a)",
+			"Index": 3,
+			"Type": "MAX"
+		},
+		{
+			"Field": "AVG(a)",
+			"Index": 4,
+			"Type": "AVG"
+		},
+		{
+			"Field": "sum(a)",
+			"Index": 5,
+			"Type": "SUM"
+		},
+		{
+			"Field": "count(a)",
+			"Index": 6,
+			"Type": "COUNT"
+		},
+		{
+			"Field": "SUM(a)",
+			"Index": 7,
+			"Type": "SUM"
+		},
+		{
+			"Field": "COUNT(a)",
+			"Index": 8,
+			"Type": "COUNT"
+		},
+		{
+			"Field": "AVG(b)",
+			"Index": 10,
+			"Type": "AVG"
+		},
+		{
+			"Field": "sum(b)",
+			"Index": 11,
+			"Type": "SUM"
+		},
+		{
+			"Field": "count(b)",
+			"Index": 12,
+			"Type": "COUNT"
+		},
+		{
+			"Field": "AVG(c)",
+			"Index": 14,
+			"Type": "AVG"
+		},
+		{
+			"Field": "sum(c)",
+			"Index": 15,
+			"Type": "SUM"
+		},
+		{
+			"Field": "count(c)",
+			"Index": 16,
+			"Type": "COUNT"
+		},
+		{
+			"Field": "a",
+			"Index": 1,
+			"Type": "GROUP BY"
+		},
+		{
+			"Field": "b1",
+			"Index": 9,
+			"Type": "GROUP BY"
+		},
+		{
+			"Field": "c",
+			"Index": 13,
+			"Type": "GROUP BY"
+		}
+	],
+	"ReWritten": "1, a, MIN(b), MAX(a), AVG(a), sum(a), count(a), SUM(a), COUNT(a), b as b1, AVG(b), sum(b), count(b), c, AVG(c), sum(c), count(c)"
+}`,
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	for i, query := range querys {
+		tree, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		node := tree.(*sqlparser.Select)
+		assert.Nil(t, err)
+		tuples, err := parserSelectExprs(node.SelectExprs)
+		assert.Nil(t, err)
+		plan := NewAggregatePlan(log, node, tuples)
+		// plan build
+		{
+			err := plan.Build()
+			assert.Nil(t, err)
+			want := results[i]
+			got := plan.JSON()
+			log.Debug(got)
+			assert.Equal(t, want, got)
+			assert.True(t, nil == plan.Children())
+			assert.Equal(t, 13, len(plan.NormalAggregators()))
+			assert.Equal(t, 3, len(plan.GroupAggregators()))
+			assert.False(t, plan.Empty())
+		}
+	}
+}
+
 func TestAggregatePlanHaving(t *testing.T) {
 	querys := []string{
 		"select age,count(*) from A group by age having a >=2",

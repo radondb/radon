@@ -11,6 +11,7 @@ package planner
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -119,7 +120,9 @@ func (p *AggregatePlan) analyze() error {
 		if tuple.distinct {
 			return errors.Errorf("unsupported: distinct.in.function:%+v", tuple.fn)
 		}
-		switch tuple.fn {
+
+		aggrType := strings.ToLower(tuple.fn)
+		switch aggrType {
 		case "":
 			// non-func
 			nullAggrs = append(nullAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeNull})
