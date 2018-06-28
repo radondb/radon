@@ -75,34 +75,34 @@ func TestAggregateExecutor(t *testing.T) {
 	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
 	// sum.
-	fakedbs.AddQuery("select id, sum(score) as score from sbtest.A0 as A where id > 8", r1)
-	fakedbs.AddQuery("select id, sum(score) as score from sbtest.A2 as A where id > 8", r2)
-	fakedbs.AddQuery("select id, sum(score) as score from sbtest.A4 as A where id > 8", r1)
-	fakedbs.AddQuery("select id, sum(score) as score from sbtest.A8 as A where id > 8", r2)
+	fakedbs.AddQuery("select id, sum(score) as score from sbtest.A0 as A where id > 1", r1)
+	fakedbs.AddQuery("select id, sum(score) as score from sbtest.A2 as A where id > 1", r2)
+	fakedbs.AddQuery("select id, sum(score) as score from sbtest.A4 as A where id > 1", r1)
+	fakedbs.AddQuery("select id, sum(score) as score from sbtest.A8 as A where id > 1", r2)
 
 	// count.
-	fakedbs.AddQuery("select id, count(score) as score from sbtest.A0 as A where id > 8", r1)
-	fakedbs.AddQuery("select id, count(score) as score from sbtest.A2 as A where id > 8", r2)
-	fakedbs.AddQuery("select id, count(score) as score from sbtest.A4 as A where id > 8", r1)
-	fakedbs.AddQuery("select id, count(score) as score from sbtest.A8 as A where id > 8", r2)
+	fakedbs.AddQuery("select id, count(score) as score from sbtest.A0 as A where id > 2", r1)
+	fakedbs.AddQuery("select id, count(score) as score from sbtest.A2 as A where id > 2", r2)
+	fakedbs.AddQuery("select id, count(score) as score from sbtest.A4 as A where id > 2", r1)
+	fakedbs.AddQuery("select id, count(score) as score from sbtest.A8 as A where id > 2", r2)
 
 	// min.
-	fakedbs.AddQuery("select id, min(score) as score from sbtest.A0 as A where id > 8", r1)
-	fakedbs.AddQuery("select id, min(score) as score from sbtest.A2 as A where id > 8", r2)
-	fakedbs.AddQuery("select id, min(score) as score from sbtest.A4 as A where id > 8", r1)
-	fakedbs.AddQuery("select id, min(score) as score from sbtest.A8 as A where id > 8", r2)
+	fakedbs.AddQuery("select id, min(score) as score from sbtest.A0 as A where id > 1", r1)
+	fakedbs.AddQuery("select id, min(score) as score from sbtest.A2 as A where id > 1", r2)
+	fakedbs.AddQuery("select id, min(score) as score from sbtest.A4 as A where id > 1", r1)
+	fakedbs.AddQuery("select id, min(score) as score from sbtest.A8 as A where id > 1", r2)
 
 	// max.
-	fakedbs.AddQuery("select id, max(score) as score from sbtest.A0 as A where id > 8", r1)
-	fakedbs.AddQuery("select id, max(score) as score from sbtest.A2 as A where id > 8", r2)
-	fakedbs.AddQuery("select id, max(score) as score from sbtest.A4 as A where id > 8", r1)
-	fakedbs.AddQuery("select id, max(score) as score from sbtest.A8 as A where id > 8", r2)
+	fakedbs.AddQuery("select id, max(score) as score from sbtest.A0 as A where id > 2", r1)
+	fakedbs.AddQuery("select id, max(score) as score from sbtest.A2 as A where id > 2", r2)
+	fakedbs.AddQuery("select id, max(score) as score from sbtest.A4 as A where id > 2", r1)
+	fakedbs.AddQuery("select id, max(score) as score from sbtest.A8 as A where id > 2", r2)
 
 	querys := []string{
-		"select id, sum(score) as score from A where id>8",
-		"select id, count(score) as score from A where id>8",
-		"select id, min(score) as score from A where id>8",
-		"select id, max(score) as score from A where id>8",
+		"select id, sum(score) as score from A where id>1",
+		"select id, count(score) as score from A where id>2",
+		"select id, min(score) as score from A where id>1",
+		"select id, max(score) as score from A where id>2",
 	}
 	results := []string{
 		"[[3 20]]",
