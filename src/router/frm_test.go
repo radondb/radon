@@ -18,16 +18,16 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
-func checkFileExistsForTest(db, table string) bool {
-	file := path.Join(_mockRouterSchemaDir, db, fmt.Sprintf("%s.json", table))
+func checkFileExistsForTest(router *Router, db, table string) bool {
+	file := path.Join(router.metadir, db, fmt.Sprintf("%s.json", table))
 	if _, err := os.Stat(file); err != nil {
 		return false
 	}
 	return true
 }
 
-func makeFileBrokenForTest(db, table string) {
-	file := path.Join(_mockRouterSchemaDir, db, fmt.Sprintf("%s.json", table))
+func makeFileBrokenForTest(router *Router, db, table string) {
+	file := path.Join(router.metadir, db, fmt.Sprintf("%s.json", table))
 	fd, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		panic(err)
@@ -43,18 +43,20 @@ func TestFrmTable(t *testing.T) {
 
 	// Add 1.
 	{
+		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
 		err := router.CreateTable("test", "t1", "id", backends)
 		assert.Nil(t, err)
-		assert.True(t, checkFileExistsForTest("test", "t1"))
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
 
 	// Add 2.
 	{
+		tmpRouter := router
 		backends := []string{"backend1", "backend2"}
 		err := router.CreateTable("test", "t2", "id", backends)
 		assert.Nil(t, err)
-		assert.True(t, checkFileExistsForTest("test", "t2"))
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
 
 	// Add 2.
@@ -66,9 +68,10 @@ func TestFrmTable(t *testing.T) {
 
 	// Remove 2.
 	{
+		tmpRouter := router
 		err := router.DropTable("test", "t2")
 		assert.Nil(t, err)
-		assert.False(t, checkFileExistsForTest("test", "t2"))
+		assert.False(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
 
 	// Refresh table.
@@ -119,10 +122,11 @@ func TestFrmTableError(t *testing.T) {
 
 	// Add 1.
 	{
+		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
 		err := router.CreateTable("test", "t1", "id", backends)
 		assert.Nil(t, err)
-		assert.True(t, checkFileExistsForTest("test", "t1"))
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
 
 	// Drop table.
@@ -140,25 +144,28 @@ func TestFrmDropDatabase(t *testing.T) {
 
 	// Add 1.
 	{
+		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
 		err := router.CreateTable("test", "t1", "id", backends)
 		assert.Nil(t, err)
-		assert.True(t, checkFileExistsForTest("test", "t1"))
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
 
 	// Add 2.
 	{
+		tmpRouter := router
 		backends := []string{"backend1", "backend2"}
 		err := router.CreateTable("test", "t2", "id", backends)
 		assert.Nil(t, err)
-		assert.True(t, checkFileExistsForTest("test", "t2"))
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
 
 	{
+		tmpRouter := router
 		err := router.DropDatabase("test")
 		assert.Nil(t, err)
-		assert.False(t, checkFileExistsForTest("test", "t1"))
-		assert.False(t, checkFileExistsForTest("test", "t2"))
+		assert.False(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
+		assert.False(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
 }
 
@@ -169,22 +176,25 @@ func TestFrmLoad(t *testing.T) {
 
 	// Add 1.
 	{
+		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
 		err := router.CreateTable("test", "t1", "id", backends)
 		assert.Nil(t, err)
-		assert.True(t, checkFileExistsForTest("test", "t1"))
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
 
 	// Add 2.
 	{
+		tmpRouter := router
 		backends := []string{"backend1", "backend2"}
 		err := router.CreateTable("test", "t2", "id", backends)
 		assert.Nil(t, err)
-		assert.True(t, checkFileExistsForTest("test", "t2"))
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
 
 	{
-		router1, _ := MockNewRouter(log)
+		router1, cleanup1 := MockNewRouter(log)
+		defer cleanup1()
 		assert.NotNil(t, router1)
 
 		// load.
@@ -227,12 +237,13 @@ func TestFrmReadFileBroken(t *testing.T) {
 
 	// Add 1.
 	{
+		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
 		err := router.CreateTable("test", "t1", "id", backends)
 		assert.Nil(t, err)
-		assert.True(t, checkFileExistsForTest("test", "t1"))
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 		// Make file broken.
-		makeFileBrokenForTest("test", "t1")
+		makeFileBrokenForTest(tmpRouter, "test", "t1")
 	}
 
 	// Refresh table.

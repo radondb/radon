@@ -10,6 +10,7 @@ package audit
 
 import (
 	"config"
+	"fakedb"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,14 +26,15 @@ import (
 func TestAudit(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_audit_", log)
+	defer os.RemoveAll(tmpDir)
 	conf := &config.AuditConfig{
 		Mode:        ALL,
 		MaxSize:     102400,
 		ExpireHours: 1,
-		LogDir:      "/tmp/radon/test/audit",
+		LogDir:      tmpDir,
 	}
 
-	os.RemoveAll(conf.LogDir)
 	audit := NewAudit(log, conf)
 	err := audit.Init()
 	assert.Nil(t, err)
@@ -56,14 +58,15 @@ func TestAudit(t *testing.T) {
 func TestAuditMultiThread(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_audit_", log)
+	defer os.RemoveAll(tmpDir)
 	conf := &config.AuditConfig{
 		Mode:        ALL,
 		MaxSize:     1024 * 1024,
 		ExpireHours: 1,
-		LogDir:      "/tmp/radon/test/audit",
+		LogDir:      tmpDir,
 	}
 
-	os.RemoveAll(conf.LogDir)
 	audit := NewAudit(log, conf)
 	err := audit.Init()
 	assert.Nil(t, err)
@@ -96,14 +99,15 @@ func TestPurge(t *testing.T) {
 	fileFormat := "20060102150405.000"
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_audit_", log)
+	defer os.RemoveAll(tmpDir)
 	conf := &config.AuditConfig{
 		Mode:        ALL,
 		MaxSize:     102400,
 		ExpireHours: 1,
-		LogDir:      "/tmp/radon/test/audit",
+		LogDir:      tmpDir,
 	}
 
-	os.RemoveAll(conf.LogDir)
 	audit := NewAudit(log, conf)
 	err := audit.Init()
 	assert.Nil(t, err)
@@ -141,14 +145,15 @@ func TestPurge(t *testing.T) {
 
 func TestAuditBench(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	tmpDir := fakedb.GetTmpDir("", "radon_audit_", log)
+	defer os.RemoveAll(tmpDir)
 	conf := &config.AuditConfig{
 		Mode:        ALL,
 		MaxSize:     1024 * 1024 * 100,
 		ExpireHours: 1,
-		LogDir:      "/tmp/test/audit",
+		LogDir:      tmpDir,
 	}
 
-	os.RemoveAll(conf.LogDir)
 	audit := NewAudit(log, conf)
 	err := audit.Init()
 	assert.Nil(t, err)
