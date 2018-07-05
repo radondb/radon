@@ -9,6 +9,7 @@
 package proxy
 
 import (
+	"fakedb"
 	"os"
 	"path"
 	"testing"
@@ -23,6 +24,9 @@ import (
 
 func TestDumperWithProxy(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_proxy_", log)
+	defer os.RemoveAll(tmpDir)
+
 	fakedbs, server, cleanup := MockProxy(log)
 	defer cleanup()
 	address := server.Address()
@@ -106,7 +110,7 @@ func TestDumperWithProxy(t *testing.T) {
 
 	args := &common.Args{
 		Database:      "test",
-		Outdir:        "/tmp/dumperradontest",
+		Outdir:        tmpDir,
 		User:          "mock",
 		Password:      "mock",
 		Address:       address,
@@ -124,6 +128,9 @@ func TestDumperWithProxy(t *testing.T) {
 
 func TestLoaderWithProxy(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_proxy_", log)
+	defer os.RemoveAll(tmpDir)
+
 	fakedbs, server, cleanup := MockProxy(log)
 	defer cleanup()
 	address := server.Address()
@@ -137,7 +144,7 @@ func TestLoaderWithProxy(t *testing.T) {
 
 	args := &common.Args{
 		Database:      "test",
-		Outdir:        "/tmp/dumperradontest",
+		Outdir:        tmpDir,
 		User:          "mock",
 		Password:      "mock",
 		Address:       address,

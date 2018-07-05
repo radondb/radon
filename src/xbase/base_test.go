@@ -9,15 +9,41 @@
 package xbase
 
 import (
+	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
+// avoid that import cycle with fakedb
+// getTmpDir used to create and get a test tmp dir
+// dir: path specified, can be an empty string
+// module: the name of test module
+func getTmpDir(dir, module string, log *xlog.Log) string {
+	tmpDir := ""
+	var err error
+	if dir == "" {
+		tmpDir, err = ioutil.TempDir(os.TempDir(), module)
+		if err != nil {
+			log.Error("%v.test.can't.create.temp.dir.in:%v", module, os.TempDir())
+		}
+	} else {
+		tmpDir, err = ioutil.TempDir(dir, module)
+		if err != nil {
+			log.Error("%v.test.can't.create.temp.dir.in:%v", module, dir)
+		}
+	}
+	return tmpDir
+}
+
 func TestXbaseWriteFile(t *testing.T) {
-	file := "/tmp/xbase.test"
-	defer os.RemoveAll(file)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := getTmpDir("", "radon_backend_", log)
+	defer os.RemoveAll(tmpDir)
+	file := path.Join(tmpDir, "xbase.test")
 
 	// Write OK.
 	{

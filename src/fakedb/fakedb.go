@@ -10,6 +10,8 @@ package fakedb
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"sync"
 
 	"config"
@@ -72,6 +74,26 @@ var (
 	// Result3 result.
 	Result3 = &sqltypes.Result{}
 )
+
+// GetTmpDir used to create a test tmp dir
+// dir: path specified, can be an empty string
+// module: the name of test module
+func GetTmpDir(dir, module string, log *xlog.Log) string {
+	tmpDir := ""
+	var err error
+	if dir == "" {
+		tmpDir, err = ioutil.TempDir(os.TempDir(), module)
+		if err != nil {
+			log.Error("%v.test.can't.create.temp.dir.in:[%v]", module, os.TempDir())
+		}
+	} else {
+		tmpDir, err = ioutil.TempDir(dir, module)
+		if err != nil {
+			log.Error("%v.test.can't.create.temp.dir.in:[%v]", module, dir)
+		}
+	}
+	return tmpDir
+}
 
 // DB is a fake database.
 type DB struct {

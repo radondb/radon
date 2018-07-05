@@ -18,19 +18,20 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
 const (
-	mockDir       = "/tmp/test/"
 	mockPrefix    = "xfiletest-"
 	mockExtension = ".testlog"
 )
 
 func TestFileGetOldLogInfos4(t *testing.T) {
-	os.RemoveAll(mockDir)
-	os.MkdirAll(mockDir, 0744)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := getTmpDir("", "radon_xbase_", log)
+	defer os.RemoveAll(tmpDir)
 
-	xfile := NewRotateFile(mockDir, mockPrefix, mockExtension, 1024*512)
+	xfile := NewRotateFile(tmpDir, mockPrefix, mockExtension, 1024*512)
 	defer xfile.Close()
 
 	for i := 0; i < 1024*64; i++ {
@@ -54,7 +55,7 @@ func TestFileGetOldLogInfos4(t *testing.T) {
 	}
 
 	list := make([]string, 0, 10)
-	filepath.Walk(mockDir, func(path string, info os.FileInfo, err error) error {
+	filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
@@ -71,10 +72,11 @@ func TestFileGetOldLogInfos4(t *testing.T) {
 }
 
 func TestFileGetOldLogInfos0(t *testing.T) {
-	os.RemoveAll(mockDir)
-	os.MkdirAll(mockDir, 0744)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := getTmpDir("", "radon_xbase_", log)
+	defer os.RemoveAll(tmpDir)
 
-	xfile := NewRotateFile(mockDir, mockPrefix, mockExtension, 1024*512)
+	xfile := NewRotateFile(tmpDir, mockPrefix, mockExtension, 1024*512)
 	defer xfile.Close()
 
 	for i := 0; i < 1024; i++ {
@@ -89,7 +91,7 @@ func TestFileGetOldLogInfos0(t *testing.T) {
 	assert.Equal(t, 0, len(logInfos))
 
 	list := make([]string, 0, 10)
-	filepath.Walk(mockDir, func(path string, info os.FileInfo, err error) error {
+	filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
@@ -106,9 +108,9 @@ func TestFileGetOldLogInfos0(t *testing.T) {
 }
 
 func TestFileGetCurrLogInfo(t *testing.T) {
-	dir := mockDir
-	os.RemoveAll(dir)
-	os.MkdirAll(dir, os.ModePerm)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := getTmpDir("", "radon_xbase_", log)
+	defer os.RemoveAll(tmpDir)
 
 	files := []string{
 		"xfiletest-20171226140847.773.testlog",
@@ -117,15 +119,14 @@ func TestFileGetCurrLogInfo(t *testing.T) {
 		"xfiletest-20171226140846.770.testlog",
 	}
 
-	defer os.RemoveAll(dir)
 	for _, file := range files {
-		name := path.Join(dir, file)
+		name := path.Join(tmpDir, file)
 		f, err := os.OpenFile(name, os.O_RDONLY|os.O_CREATE, 0666)
 		assert.Nil(t, err)
 		f.Close()
 	}
 
-	xfile := NewRotateFile(dir, mockPrefix, mockExtension, 1024*512)
+	xfile := NewRotateFile(tmpDir, mockPrefix, mockExtension, 1024*512)
 	defer xfile.Close()
 
 	info, err := xfile.GetCurrLogInfo(time.Now().UnixNano())
@@ -161,9 +162,9 @@ func TestFileGetCurrLogInfo(t *testing.T) {
 }
 
 func TestFileGetNextLogInfo(t *testing.T) {
-	dir := mockDir
-	os.RemoveAll(dir)
-	os.MkdirAll(dir, os.ModePerm)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := getTmpDir("", "radon_xbase_", log)
+	defer os.RemoveAll(tmpDir)
 
 	files := []string{
 		"xfiletest-20171226140847.773.testlog",
@@ -173,13 +174,13 @@ func TestFileGetNextLogInfo(t *testing.T) {
 	}
 
 	for _, file := range files {
-		name := path.Join(dir, file)
+		name := path.Join(tmpDir, file)
 		f, err := os.OpenFile(name, os.O_RDONLY|os.O_CREATE, 0666)
 		assert.Nil(t, err)
 		f.Close()
 	}
 
-	xfile := NewRotateFile(dir, mockPrefix, mockExtension, 1024*512)
+	xfile := NewRotateFile(tmpDir, mockPrefix, mockExtension, 1024*512)
 	defer xfile.Close()
 
 	// Next should be "xfiletest-20171226140846.772.testlog".
@@ -213,11 +214,11 @@ func TestFileGetNextLogInfo(t *testing.T) {
 }
 
 func TestFileGetNextLogInfoWithEmpty(t *testing.T) {
-	dir := mockDir
-	os.RemoveAll(dir)
-	os.MkdirAll(dir, os.ModePerm)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := getTmpDir("", "radon_xbase_", log)
+	defer os.RemoveAll(tmpDir)
 
-	xfile := NewRotateFile(dir, mockPrefix, mockExtension, 1024*512)
+	xfile := NewRotateFile(tmpDir, mockPrefix, mockExtension, 1024*512)
 	defer xfile.Close()
 
 	// Next should be "".

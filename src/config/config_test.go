@@ -12,12 +12,22 @@ import (
 	"io/ioutil"
 	_ "log"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/xelabs/go-mysqlstack/xlog"
+)
+
+var (
+	radon_test_json = "radon.test.config.json"
 )
 
 func TestWriteConfig(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := getTmpDir("", "radon_config_", log)
+	defer os.RemoveAll(tmpDir)
+
 	conf := &Config{
 		Proxy:  MockProxyConfig,
 		Log:    MockLogConfig,
@@ -26,19 +36,21 @@ func TestWriteConfig(t *testing.T) {
 		Router: DefaultRouterConfig(),
 	}
 
-	path := "/tmp/radon.test.config.json"
-	os.Remove(path)
+	path := path.Join(tmpDir, radon_test_json)
 	err := WriteConfig(path, conf)
 	assert.Nil(t, err)
 
 	want, err := LoadConfig(path)
 	assert.Nil(t, err)
 	assert.Equal(t, want, conf)
-	os.Remove(path)
 }
 
 func TestLoadConfig(t *testing.T) {
-	path := "/tmp/radon.test.config.json"
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := getTmpDir("", "radon_config_", log)
+	defer os.RemoveAll(tmpDir)
+
+	path := path.Join(tmpDir, radon_test_json)
 	{
 		_, err := LoadConfig(path)
 		assert.NotNil(t, err)
@@ -61,7 +73,6 @@ func TestLoadConfig(t *testing.T) {
 			Log:    MockLogConfig,
 		}
 
-		path := "/tmp/radon.test.config.json"
 		err := WriteConfig(path, conf)
 		assert.Nil(t, err)
 		want, err := LoadConfig(path)
@@ -82,7 +93,6 @@ func TestLoadConfig(t *testing.T) {
 			Proxy: mockProxyConfig,
 			Log:   MockLogConfig,
 		}
-		path := "/tmp/radon.test.config.json"
 		err := WriteConfig(path, conf)
 		assert.Nil(t, err)
 		{
@@ -108,7 +118,6 @@ func TestLoadConfig(t *testing.T) {
 			Binlog: DefaultBinlogConfig(),
 		}
 
-		path := "/tmp/radon.test.config.json"
 		err := WriteConfig(path, want)
 		assert.Nil(t, err)
 		got, err := LoadConfig(path)
@@ -118,13 +127,17 @@ func TestLoadConfig(t *testing.T) {
 }
 
 func TestWriteLoadConfig(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := getTmpDir("", "radon_config_", log)
+	defer os.RemoveAll(tmpDir)
+
+	path := path.Join(tmpDir, radon_test_json)
+
 	conf := &Config{
 		Proxy: MockProxyConfig,
 		Log:   MockLogConfig,
 	}
 
-	path := "/tmp/radon.test.config.json"
-	os.Remove(path)
 	err := WriteConfig(path, conf)
 	assert.Nil(t, err)
 
@@ -250,7 +263,11 @@ func TestReadTableConfig(t *testing.T) {
 }
 
 func TestRouterConfigUnmarshalJSON(t *testing.T) {
-	path := "/tmp/radon.test.config.json"
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := getTmpDir("", "radon_config_", log)
+	defer os.RemoveAll(tmpDir)
+
+	path := path.Join(tmpDir, radon_test_json)
 
 	// All nil.
 	{

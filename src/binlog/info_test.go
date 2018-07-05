@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"config"
+	"fakedb"
 
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
@@ -22,14 +23,14 @@ import (
 )
 
 func TestInfo(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
 	defer leaktest.Check(t)()
-	os.RemoveAll(mockDir)
-	os.MkdirAll(mockDir, os.ModePerm)
+	defer os.RemoveAll(tmpDir)
 
-	log := xlog.NewStdLog(xlog.Level(xlog.INFO))
 	conf := &config.BinlogConfig{
 		MaxSize: 102400,
-		LogDir:  mockDir,
+		LogDir:  tmpDir,
 	}
 
 	ts := time.Now().UnixNano()
