@@ -438,3 +438,36 @@ func TestSelectPlanAs(t *testing.T) {
 		}
 	}
 }
+
+func TestSelectPlanDatabaseNotFound(t *testing.T) {
+	querys := []string{
+		"select * from A as A1 where id in (select id from B)",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	databaseNull := ""
+	planTree := NewPlanTree()
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewSelectPlan(log, databaseNull, query, node.(*sqlparser.Select), route)
+		{
+			err := planTree.Add(plan)
+			assert.Nil(t, err)
+		}
+
+		// plan build
+		{
+			err := planTree.Build()
+			assert.NotNil(t, err)
+		}
+	}
+}
