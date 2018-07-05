@@ -88,6 +88,7 @@ func TestUpdatePlan(t *testing.T) {
 
 	err := route.AddForTest(database, router.MockTableMConfig())
 	assert.Nil(t, err)
+	planTree := NewPlanTree()
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
@@ -97,6 +98,10 @@ func TestUpdatePlan(t *testing.T) {
 		{
 			err := plan.Build()
 			assert.Nil(t, err)
+			{
+				err := planTree.Add(plan)
+				assert.Nil(t, err)
+			}
 			got := plan.JSON()
 			want := results[i]
 			assert.Equal(t, want, got)
@@ -105,7 +110,6 @@ func TestUpdatePlan(t *testing.T) {
 		}
 	}
 }
-
 func TestUpdateUnsupportedPlan(t *testing.T) {
 	querys := []string{
 		"update sbtest.A set a=3",
@@ -139,5 +143,129 @@ func TestUpdateUnsupportedPlan(t *testing.T) {
 			got := err.Error()
 			assert.Equal(t, want, got)
 		}
+	}
+}
+
+func TestUpdateWithNoDatabase(t *testing.T) {
+	query := "update A set b=3 where id in (select id from t1)"
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig())
+	assert.Nil(t, err)
+
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+
+	databaseNull := ""
+	plan := NewUpdatePlan(log, databaseNull, query, node.(*sqlparser.Update), route)
+
+	// plan build
+	{
+		err := plan.Build()
+		assert.NotNil(t, err)
+	}
+}
+
+func TestUpdatePlanError(t *testing.T) {
+	query := "update A set b=3"
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig())
+	assert.Nil(t, err)
+
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+
+	databaseNull := ""
+	plan := NewUpdatePlan(log, databaseNull, query, node.(*sqlparser.Update), route)
+
+	// plan build
+	{
+		err := plan.Build()
+		assert.NotNil(t, err)
+	}
+}
+
+func TestUpdateShardKey(t *testing.T) {
+	query := "update sbtest.A set id = 1 where id = 2"
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig())
+	assert.Nil(t, err)
+
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+
+	databaseNull := ""
+	plan := NewUpdatePlan(log, databaseNull, query, node.(*sqlparser.Update), route)
+
+	// plan build
+	{
+		err := plan.Build()
+		assert.NotNil(t, err)
+	}
+}
+
+func TestUpdateNoDatabase(t *testing.T) {
+	query := "update A set b = 1 where id = 2"
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig())
+	assert.Nil(t, err)
+
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+
+	databaseNull := ""
+	plan := NewUpdatePlan(log, databaseNull, query, node.(*sqlparser.Update), route)
+
+	// plan build
+	{
+		err := plan.Build()
+		assert.NotNil(t, err)
+	}
+}
+
+func TestUpdateDatabaseNotFound(t *testing.T) {
+	query := "update sbtest_xxx.A set val = 1 where id = 1"
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig())
+	assert.Nil(t, err)
+
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+
+	plan := NewUpdatePlan(log, database, query, node.(*sqlparser.Update), route)
+
+	// plan build
+	{
+		err := plan.Build()
+		assert.NotNil(t, err)
 	}
 }

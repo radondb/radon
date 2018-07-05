@@ -291,3 +291,26 @@ func TestReplacePlanBench(t *testing.T) {
 		fmt.Printf(" LOOP\t%v COST %v, avg:%v/s\n", N, took, (int64(N)/(took.Nanoseconds()/1e6))*1000)
 	}
 }
+
+func TestInsertPlanError(t *testing.T) {
+	query := "insert into A(b, c, id) values(1, 2, 3)"
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig())
+	assert.Nil(t, err)
+	databaseNull := ""
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+	plan := NewInsertPlan(log, databaseNull, query, node.(*sqlparser.Insert), route)
+
+	// plan build
+	{
+		err := plan.Build()
+		assert.NotNil(t, err)
+	}
+}

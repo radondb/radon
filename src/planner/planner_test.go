@@ -41,5 +41,35 @@ func TestPlanner(t *testing.T) {
 		}
 		err := planTree.Build()
 		assert.Nil(t, err)
+		planSize := planTree.Size()
+		log.Info("planSize: %s", planSize)
+	}
+}
+
+func TestPlannerError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+
+	database := "xx"
+	query := "create table A(a int)"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableAConfig())
+	assert.Nil(t, err)
+
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+	database1 := ""
+	DDL := NewDDLPlan(log, database1, query, node.(*sqlparser.DDL), route)
+
+	{
+		planTree := NewPlanTree()
+		for i := 0; i < 64; i++ {
+			err := planTree.Add(DDL)
+			assert.Nil(t, err)
+		}
+		err := planTree.Build()
+		assert.NotNil(t, err)
 	}
 }
