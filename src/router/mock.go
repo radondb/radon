@@ -12,6 +12,7 @@ import (
 	"os"
 
 	"config"
+	"fakedb"
 
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
@@ -290,14 +291,16 @@ func MockTableE1Config() *config.TableConfig {
 	return mock
 }
 
+// mockTmpDir is only used for MockNewRouter()
 var (
-	_mockRouterSchemaDir = "/tmp/router_test"
+	log        = xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	mockTmpDir = fakedb.GetTmpDir("", "radon_router_", log)
 )
 
 // MockNewRouter mocks router.
 func MockNewRouter(log *xlog.Log) (*Router, func()) {
-	return NewRouter(log, _mockRouterSchemaDir, config.DefaultRouterConfig()), func() {
-		if err := os.RemoveAll(_mockRouterSchemaDir); err != nil {
+	return NewRouter(log, mockTmpDir, config.DefaultRouterConfig()), func() {
+		if err := os.RemoveAll(mockTmpDir); err != nil {
 			panic(err)
 		}
 	}

@@ -10,6 +10,7 @@ package config
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -21,13 +22,25 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
-const (
-	testMetadir = "_test_config"
-	//versionJSONFile = "version.json"
-)
-
-func testRemoveMetadir() {
-	os.RemoveAll(testMetadir)
+// avoid that import cycle with fakedb
+// getTmpDir used to create and get a test tmp dir
+// dir: path specified, can be an empty string
+// module: the name of test module
+func getTmpDir(dir, module string, log *xlog.Log) string {
+	tmpDir := ""
+	var err error
+	if dir == "" {
+		tmpDir, err = ioutil.TempDir(os.TempDir(), module)
+		if err != nil {
+			log.Error("%v.test.can't.create.temp.dir.in:%v", module, os.TempDir())
+		}
+	} else {
+		tmpDir, err = ioutil.TempDir(dir, module)
+		if err != nil {
+			log.Error("%v.test.can't.create.temp.dir.in:%v", module, dir)
+		}
+	}
+	return tmpDir
 }
 
 // Generate version file
@@ -47,30 +60,31 @@ func genVersion(metadir string, ts int64) error {
 }
 
 func TestVersion(t *testing.T) {
-	defer testRemoveMetadir()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := getTmpDir("", "radon_config_", log)
+	defer os.RemoveAll(tmpDir)
 
 	// Generate version file
 	ts := time.Now().UnixNano()
-	if err := genVersion(testMetadir, ts); err != nil {
+	if err := genVersion(tmpDir, ts); err != nil {
 		log.Error("config.version_test.genVersion.error:%+v", err)
 	}
 
 	// Read version.
 	{
-		ver := ReadVersion(testMetadir)
+		ver := ReadVersion(tmpDir)
 		assert.Equal(t, ver, ts)
 	}
 
 	// Update version.
 	{
-		err := UpdateVersion(testMetadir)
+		err := UpdateVersion(tmpDir)
 		assert.Nil(t, err)
 	}
 
 	// Read version.
 	{
-		ver := ReadVersion(testMetadir)
+		ver := ReadVersion(tmpDir)
 		assert.True(t, ver > ts)
 
 		tsNow := time.Now().UnixNano()
@@ -79,17 +93,15 @@ func TestVersion(t *testing.T) {
 }
 
 func TestVersionError(t *testing.T) {
-	defer testRemoveMetadir()
-
 	// Update version.
 	{
-		err := UpdateVersion(testMetadir)
+		err := UpdateVersion("xxx")
 		assert.NotNil(t, err)
 	}
 
 	// Read version.
 	{
-		ver := ReadVersion(testMetadir)
+		ver := ReadVersion("xxx")
 		assert.Equal(t, int64(0), ver)
 	}
 }

@@ -16,24 +16,22 @@ import (
 	"time"
 
 	"config"
+	"fakedb"
 
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
-var (
-	mockDir = "/tmp/radon/test/binlog"
-)
-
 func TestSQLWorker(t *testing.T) {
-	os.RemoveAll(mockDir)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
+	defer os.RemoveAll(tmpDir)
 	defer leaktest.Check(t)()
 
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	conf := &config.BinlogConfig{
 		MaxSize: 102400,
-		LogDir:  mockDir,
+		LogDir:  tmpDir,
 	}
 
 	ts := time.Now().UnixNano()
@@ -70,13 +68,14 @@ func TestSQLWorker(t *testing.T) {
 }
 
 func TestSQLWorkerInitError(t *testing.T) {
-	os.RemoveAll(mockDir)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
+	defer os.RemoveAll(tmpDir)
 	defer leaktest.Check(t)()
 
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	conf := &config.BinlogConfig{
 		MaxSize: 102400,
-		LogDir:  mockDir,
+		LogDir:  tmpDir,
 	}
 
 	sqlworker := NewSQLWorker(log, conf, 0)
@@ -95,13 +94,14 @@ func TestSQLWorkerInitError(t *testing.T) {
 }
 
 func TestSQLWorkerNoAnyBinlogFiles(t *testing.T) {
-	os.RemoveAll(mockDir)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
+	defer os.RemoveAll(tmpDir)
 	defer leaktest.Check(t)()
 
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	conf := &config.BinlogConfig{
 		MaxSize: 102400,
-		LogDir:  mockDir,
+		LogDir:  tmpDir,
 	}
 
 	ts := time.Now().UnixNano()
@@ -140,13 +140,14 @@ func TestSQLWorkerNoAnyBinlogFiles(t *testing.T) {
 }
 
 func TestSQLWorkerSeekEvent(t *testing.T) {
-	os.RemoveAll(mockDir)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
+	defer os.RemoveAll(tmpDir)
 	defer leaktest.Check(t)()
 
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	conf := &config.BinlogConfig{
 		MaxSize: 102400,
-		LogDir:  mockDir,
+		LogDir:  tmpDir,
 	}
 	os.RemoveAll(conf.LogDir)
 
@@ -181,13 +182,14 @@ func TestSQLWorkerSeekEvent(t *testing.T) {
 }
 
 func TestSQLWorkerAndIOWorkerAsync(t *testing.T) {
-	os.RemoveAll(mockDir)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
+	defer os.RemoveAll(tmpDir)
 	defer leaktest.Check(t)()
 
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	conf := &config.BinlogConfig{
 		MaxSize: 1024 * 1024,
-		LogDir:  mockDir,
+		LogDir:  tmpDir,
 	}
 
 	var wg sync.WaitGroup
@@ -248,13 +250,14 @@ func TestSQLWorkerAndIOWorkerAsync(t *testing.T) {
 }
 
 func TestSQLWorkerSeekFromSecond(t *testing.T) {
-	os.RemoveAll(mockDir)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
+	defer os.RemoveAll(tmpDir)
 	defer leaktest.Check(t)()
 
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	conf := &config.BinlogConfig{
 		MaxSize: 1024 * 1024,
-		LogDir:  mockDir,
+		LogDir:  tmpDir,
 	}
 
 	os.RemoveAll(conf.LogDir)
@@ -297,13 +300,14 @@ func TestSQLWorkerSeekFromSecond(t *testing.T) {
 }
 
 func TestSQLWorkerStaleWrite(t *testing.T) {
-	os.RemoveAll(mockDir)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
+	defer os.RemoveAll(tmpDir)
 	defer leaktest.Check(t)()
 
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	conf := &config.BinlogConfig{
 		MaxSize: 1024,
-		LogDir:  mockDir,
+		LogDir:  tmpDir,
 	}
 
 	ts := time.Now().UnixNano()
