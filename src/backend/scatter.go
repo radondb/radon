@@ -190,7 +190,7 @@ func (scatter *Scatter) LoadConfig() error {
 	scatter.mu.Lock()
 	defer scatter.mu.Unlock()
 
-	// Do cleay first.
+	// Do clear first.
 	scatter.clear()
 
 	log := scatter.log
