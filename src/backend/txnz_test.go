@@ -11,11 +11,11 @@ package backend
 import (
 	"testing"
 	"time"
+
 	"xcontext"
 
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
-
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 

@@ -9,11 +9,12 @@
 package binlog
 
 import (
-	"config"
 	"fmt"
 	"os"
 	"testing"
 	"time"
+
+	"config"
 
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"

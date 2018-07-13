@@ -9,16 +9,17 @@
 package main
 
 import (
-	"build"
-	"config"
-	"ctl"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
-	"proxy"
 	"runtime"
 	"syscall"
+
+	"build"
+	"config"
+	"ctl"
+	"proxy"
 
 	"github.com/xelabs/go-mysqlstack/xlog"
 )

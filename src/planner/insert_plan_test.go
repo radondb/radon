@@ -10,9 +10,10 @@ package planner
 
 import (
 	"fmt"
-	"router"
 	"testing"
 	"time"
+
+	"router"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"

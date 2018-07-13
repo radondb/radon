@@ -10,13 +10,14 @@ package syncer
 
 import (
 	"backend"
-	"config"
 	"encoding/json"
 	"os"
 	"path"
-	"router"
 	"sync"
 	"time"
+
+	"config"
+	"router"
 	"xbase"
 
 	"github.com/xelabs/go-mysqlstack/xlog"

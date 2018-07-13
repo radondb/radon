@@ -9,11 +9,12 @@
 package cmd
 
 import (
-	"ctl"
 	"fmt"
-	"proxy"
 	"testing"
 	"time"
+
+	"ctl"
+	"proxy"
 
 	"github.com/stretchr/testify/assert"
 )

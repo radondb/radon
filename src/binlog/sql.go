@@ -9,11 +9,12 @@
 package binlog
 
 import (
-	"config"
 	"io"
 	"os"
 	"path"
 	"time"
+	
+	"config"
 	"xbase"
 	"xbase/sync2"
 

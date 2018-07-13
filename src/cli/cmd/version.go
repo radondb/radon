@@ -9,8 +9,9 @@
 package cmd
 
 import (
-	"build"
 	"fmt"
+
+	"build"
 
 	"github.com/spf13/cobra"
 )

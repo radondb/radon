@@ -10,8 +10,9 @@ package backend
 
 import (
 	"errors"
-	"fakedb"
 	"testing"
+
+	"fakedb"
 
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"

@@ -11,9 +11,10 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"proxy"
 	"strconv"
 	"strings"
+
+	"proxy"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/xelabs/go-mysqlstack/xlog"

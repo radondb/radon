@@ -15,12 +15,13 @@ import (
 	"io"
 	"sync"
 	"time"
+
 	"xbase/stats"
+	"xbase/sync2"
 
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
-	"xbase/sync2"
 )
 
 var _ Connection = &connection{}

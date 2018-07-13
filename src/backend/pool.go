@@ -10,12 +10,13 @@ package backend
 
 import (
 	"bytes"
-	"config"
 	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"config"
 	"xbase/stats"
 
 	"github.com/xelabs/go-mysqlstack/xlog"

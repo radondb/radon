@@ -9,8 +9,9 @@
 package planner
 
 import (
-	"router"
 	"testing"
+
+	"router"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"

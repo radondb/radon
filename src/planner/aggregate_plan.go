@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )

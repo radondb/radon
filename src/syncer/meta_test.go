@@ -9,13 +9,14 @@
 package syncer
 
 import (
-	"config"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/xlog"

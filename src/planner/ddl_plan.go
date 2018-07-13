@@ -13,8 +13,9 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"router"
 	"strings"
+
+	"router"
 	"xcontext"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser"

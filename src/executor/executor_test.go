@@ -9,11 +9,12 @@
 package executor
 
 import (
+	"testing"
+
 	"backend"
 	"fakedb"
 	"planner"
 	"router"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"

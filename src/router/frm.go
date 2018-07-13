@@ -9,11 +9,12 @@
 package router
 
 import (
-	"config"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
+
+	"config"
 )
 
 // writeFrmData used to write table's json schema to file.

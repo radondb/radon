@@ -10,11 +10,12 @@ package router
 
 import (
 	"bytes"
-	"config"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
+
+	"config"
 
 	"github.com/pkg/errors"
 	jump "github.com/renstrom/go-jump-consistent-hash"

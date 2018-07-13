@@ -9,10 +9,11 @@
 package proxy
 
 import (
-	"backend"
 	"sort"
 	"sync"
 	"time"
+
+	"backend"
 
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqlparser"

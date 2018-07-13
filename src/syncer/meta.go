@@ -9,7 +9,6 @@
 package syncer
 
 import (
-	"config"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -18,6 +17,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"config"
 	"xbase"
 
 	"github.com/xelabs/go-mysqlstack/common"

@@ -10,11 +10,11 @@ package proxy
 
 import (
 	"fmt"
-	"router"
 	"strings"
 
-	"github.com/xelabs/go-mysqlstack/driver"
+	"router"
 
+	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"

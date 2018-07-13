@@ -9,9 +9,10 @@
 package backend
 
 import (
-	"fakedb"
 	"os"
 	"testing"
+
+	"fakedb"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/xlog"

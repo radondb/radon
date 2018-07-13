@@ -10,7 +10,6 @@ package proxy
 
 import (
 	"github.com/xelabs/go-mysqlstack/driver"
-
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )

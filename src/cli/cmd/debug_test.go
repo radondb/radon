@@ -9,10 +9,11 @@
 package cmd
 
 import (
-	"ctl"
-	"proxy"
 	"testing"
 	"time"
+
+	"ctl"
+	"proxy"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/driver"

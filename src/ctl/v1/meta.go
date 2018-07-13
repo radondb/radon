@@ -9,8 +9,9 @@
 package v1
 
 import (
-	"config"
 	"net/http"
+
+	"config"
 	"proxy"
 
 	"github.com/ant0ine/go-json-rest/rest"
