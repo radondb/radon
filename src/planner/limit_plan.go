@@ -14,7 +14,6 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/hack"
 	"github.com/xelabs/go-mysqlstack/xlog"

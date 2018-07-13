@@ -9,12 +9,12 @@
 package backend
 
 import (
-	"fakedb"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"fakedb"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 

@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"xbase/sync2"
 
+	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )

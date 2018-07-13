@@ -10,10 +10,10 @@ package planner
 
 import (
 	"fmt"
+
 	"router"
 
 	"github.com/pkg/errors"
-
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 )
 

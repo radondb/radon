@@ -9,9 +9,10 @@
 package router
 
 import (
-	"config"
 	"fmt"
 	"sort"
+
+	"config"
 
 	"github.com/pkg/errors"
 )

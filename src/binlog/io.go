@@ -9,10 +9,11 @@
 package binlog
 
 import (
-	"config"
 	"os"
 	"sync"
 	"time"
+
+	"config"
 	"xbase"
 
 	"github.com/xelabs/go-mysqlstack/common"

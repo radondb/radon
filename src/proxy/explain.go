@@ -10,8 +10,9 @@ package proxy
 
 import (
 	"fmt"
-	"optimizer"
 	"regexp"
+
+	"optimizer"
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/driver"

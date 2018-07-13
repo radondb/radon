@@ -9,9 +9,10 @@
 package router
 
 import (
-	"config"
 	"fmt"
 	"testing"
+
+	"config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/xlog"

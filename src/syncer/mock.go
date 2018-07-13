@@ -2,16 +2,17 @@ package syncer
 
 import (
 	"backend"
-	"config"
 	"context"
 	"crypto/sha1"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
-	"router"
 	"strconv"
 	"time"
+
+	"config"
+	"router"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/xelabs/go-mysqlstack/xlog"

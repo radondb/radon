@@ -9,10 +9,11 @@
 package backend
 
 import (
-	"config"
-	"fakedb"
 	"fmt"
 	"time"
+
+	"config"
+	"fakedb"
 
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"

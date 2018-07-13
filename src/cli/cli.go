@@ -9,9 +9,10 @@
 package main
 
 import (
-	"cli/cmd"
 	"fmt"
 	"os"
+
+	"cli/cmd"
 
 	"github.com/spf13/cobra"
 )

@@ -9,12 +9,12 @@
 package router
 
 import (
-	"config"
 	"encoding/json"
 	"sync"
 
-	"github.com/pkg/errors"
+	"config"
 
+	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/xlog"

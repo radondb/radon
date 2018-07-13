@@ -11,6 +11,7 @@ package xbase
 import (
 	"sync"
 	"time"
+
 	"xbase/sync2"
 
 	"github.com/beefsack/go-rate"

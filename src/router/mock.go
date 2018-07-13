@@ -9,8 +9,9 @@
 package router
 
 import (
-	"config"
 	"os"
+
+	"config"
 
 	"github.com/xelabs/go-mysqlstack/xlog"
 )

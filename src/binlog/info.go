@@ -9,11 +9,12 @@
 package binlog
 
 import (
-	"config"
 	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"config"
 	"xbase/sync2"
 
 	"github.com/xelabs/go-mysqlstack/xlog"

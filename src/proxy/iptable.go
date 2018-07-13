@@ -9,8 +9,9 @@
 package proxy
 
 import (
-	"config"
 	"sync"
+
+	"config"
 
 	"github.com/xelabs/go-mysqlstack/xlog"
 )

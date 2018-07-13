@@ -9,8 +9,9 @@
 package proxy
 
 import (
-	"fakedb"
 	"testing"
+
+	"fakedb"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/driver"

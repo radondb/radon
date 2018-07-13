@@ -11,6 +11,7 @@ package config
 import (
 	"encoding/json"
 	"io/ioutil"
+
 	"xbase"
 
 	"github.com/pkg/errors"

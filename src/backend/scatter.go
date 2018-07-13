@@ -9,12 +9,13 @@
 package backend
 
 import (
-	"config"
 	"io/ioutil"
 	"os"
 	"path"
 	"sort"
 	"sync"
+
+	"config"
 
 	"github.com/pkg/errors"
 

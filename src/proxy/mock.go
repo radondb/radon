@@ -9,13 +9,14 @@
 package proxy
 
 import (
-	"config"
-	"fakedb"
 	"fmt"
 	"math/rand"
 	"os"
 	"path"
 	"time"
+
+	"config"
+	"fakedb"
 
 	"github.com/xelabs/go-mysqlstack/xlog"
 )

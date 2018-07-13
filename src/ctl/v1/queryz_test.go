@@ -9,11 +9,12 @@
 package v1
 
 import (
-	"proxy"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"proxy"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/ant0ine/go-json-rest/rest/test"

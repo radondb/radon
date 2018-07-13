@@ -9,13 +9,14 @@
 package audit
 
 import (
-	"config"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
+
+	"config"
 
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"

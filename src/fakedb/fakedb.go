@@ -9,9 +9,10 @@
 package fakedb
 
 import (
-	"config"
 	"fmt"
 	"sync"
+
+	"config"
 
 	"github.com/xelabs/go-mysqlstack/driver"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
