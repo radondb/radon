@@ -13,6 +13,7 @@ import (
 	"net"
 	"runtime"
 	"runtime/debug"
+	"monitor"
 
 	"github.com/xelabs/go-mysqlstack/common"
 	"github.com/xelabs/go-mysqlstack/sqldb"
@@ -170,6 +171,8 @@ func (l *Listener) handle(conn net.Conn, ID uint32) {
 		return
 	}
 
+	monitor.ClientConnectionInc(session.User())
+	defer monitor.ClientConnectionDec(session.User())
 	for {
 		// Reset packet sequence ID.
 		session.packets.ResetSeq()
