@@ -10,6 +10,7 @@ package binlog
 
 import (
 	"config"
+	"fakedb"
 	"fmt"
 	"os"
 	"sync"
@@ -22,11 +23,14 @@ import (
 )
 
 func TestIOWorker(t *testing.T) {
-	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
+	defer leaktest.Check(t)()
+	defer os.RemoveAll(tmpDir)
+
 	conf := &config.BinlogConfig{
 		MaxSize: 102400,
-		LogDir:  "/tmp/radon/test/binlog",
+		LogDir:  tmpDir,
 	}
 
 	os.RemoveAll(conf.LogDir)
@@ -44,11 +48,14 @@ func TestIOWorker(t *testing.T) {
 }
 
 func TestIOWorkerMultiThread(t *testing.T) {
-	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
+	defer os.RemoveAll(tmpDir)
+	defer leaktest.Check(t)()
+
 	conf := &config.BinlogConfig{
 		MaxSize: 1024 * 1024,
-		LogDir:  "/tmp/radon/test/binlog",
+		LogDir:  tmpDir,
 	}
 	os.RemoveAll(conf.LogDir)
 	ioworker := NewIOWorker(log, conf)
@@ -74,9 +81,12 @@ func TestIOWorkerMultiThread(t *testing.T) {
 
 func TestIOWorkerBench(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
+	defer os.RemoveAll(tmpDir)
+
 	conf := &config.BinlogConfig{
 		MaxSize: 1024 * 1024 * 100,
-		LogDir:  "/tmp/radon/test/binlog",
+		LogDir:  tmpDir,
 	}
 	os.RemoveAll(conf.LogDir)
 	ioworker := NewIOWorker(log, conf)

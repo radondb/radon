@@ -19,7 +19,10 @@ import (
 
 func TestScatterAddRemove(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	scatter := NewScatter(log, "/tmp/")
+	tmpDir := fakedb.GetTmpDir("", "radon_backend_", log)
+	defer os.RemoveAll(tmpDir)
+
+	scatter := NewScatter(log, tmpDir)
 	fakedb := fakedb.New(log, 2)
 	defer fakedb.Close()
 	addrs := fakedb.Addrs()
@@ -64,7 +67,10 @@ func TestScatterAddRemove(t *testing.T) {
 
 func TestScatterLoadConfig(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	scatter := NewScatter(log, "/tmp/")
+	tmpDir := fakedb.GetTmpDir("", "radon_backend_", log)
+	defer os.RemoveAll(tmpDir)
+
+	scatter := NewScatter(log, tmpDir)
 	fakedb := fakedb.New(log, 2)
 	defer fakedb.Close()
 	addrs := fakedb.Addrs()
@@ -110,7 +116,10 @@ func TestScatterLoadConfig(t *testing.T) {
 
 func TestScatterAddRemoveBackup(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	scatter := NewScatter(log, "/tmp/")
+	tmpDir := fakedb.GetTmpDir("", "radon_backend_", log)
+	defer os.RemoveAll(tmpDir)
+
+	scatter := NewScatter(log, tmpDir)
 	fakedb := fakedb.New(log, 2)
 	defer fakedb.Close()
 	addrs := fakedb.Addrs()
@@ -193,7 +202,10 @@ func TestScatterAddRemoveBackup(t *testing.T) {
 
 func TestScatter(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	scatter := NewScatter(log, "/tmp/")
+	tmpDir := fakedb.GetTmpDir("", "radon_backend_", log)
+	defer os.RemoveAll(tmpDir)
+
+	scatter := NewScatter(log, tmpDir)
 	defer scatter.Close()
 
 	fakedb := fakedb.New(log, 2)
@@ -233,8 +245,10 @@ func TestScatter(t *testing.T) {
 
 func TestScatterLoadNotExists(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	scatter := NewScatter(log, "/tmp/")
-	os.Remove("/tmp/backend.json")
+	tmpDir := fakedb.GetTmpDir("", "radon_backend_", log)
+	defer os.RemoveAll(tmpDir)
+
+	scatter := NewScatter(log, tmpDir)
 	err := scatter.LoadConfig()
 	assert.Nil(t, err)
 }

@@ -75,6 +75,8 @@ func MockProxyWithBackup(log *xlog.Log) (*fakedb.DB, *Proxy, func()) {
 
 // MockProxy1 mocks the proxy with config.
 func MockProxy1(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func()) {
+	tmpDir := fakedb.GetTmpDir("", "radon_mock_", log)
+
 	// Fake backends.
 	fakedbs := fakedb.New(log, 5)
 
@@ -86,7 +88,7 @@ func MockProxy1(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func())
 	fileFormat := "20060102150405.000"
 	t := time.Now().UTC()
 	timestamp := t.Format(fileFormat)
-	metaDir := "/tmp/test_radonmeta_" + timestamp
+	metaDir := tmpDir + "/test_radonmeta_" + timestamp
 	conf.Proxy.MetaDir = metaDir
 
 	if x := os.MkdirAll(metaDir, 0777); x != nil {
@@ -99,17 +101,19 @@ func MockProxy1(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func())
 	}
 
 	// Proxy.
-	proxy := NewProxy(log, "/tmp/radon_mock.json", conf)
+	mockJson := tmpDir + "/radon_mock.json"
+	proxy := NewProxy(log, mockJson, conf)
 	proxy.Start()
 	return fakedbs, proxy, func() {
 		proxy.Stop()
 		fakedbs.Close()
-		os.RemoveAll(metaDir)
+		os.RemoveAll(tmpDir)
 	}
 }
 
 // MockProxy2 mocks the proxy with the conf.
 func MockProxy2(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func()) {
+	tmpDir := fakedb.GetTmpDir("", "radon_mock_", log)
 	// Fake backends.
 	fakedbs := fakedb.New(log, 5)
 
@@ -117,7 +121,7 @@ func MockProxy2(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func())
 	addr := fmt.Sprintf(":%d", port)
 
 	conf.Proxy.Endpoint = addr
-	metaDir := "/tmp/test_radonmeta"
+	metaDir := tmpDir + "/test_radonmeta_"
 	conf.Proxy.MetaDir = metaDir
 
 	os.RemoveAll(metaDir)
@@ -136,10 +140,12 @@ func MockProxy2(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func())
 	}
 
 	// Proxy.
-	proxy := NewProxy(log, "/tmp/radon_mock.json", conf)
+	mockJson := tmpDir + "/radon_mock.json"
+	proxy := NewProxy(log, mockJson, conf)
 	proxy.Start()
 	return fakedbs, proxy, func() {
 		proxy.Stop()
 		fakedbs.Close()
+		os.RemoveAll(tmpDir)
 	}
 }

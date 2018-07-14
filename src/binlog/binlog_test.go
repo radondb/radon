@@ -10,6 +10,7 @@ package binlog
 
 import (
 	"config"
+	"fakedb"
 	"os"
 	"testing"
 	"time"
@@ -20,13 +21,14 @@ import (
 )
 
 func TestBinlog(t *testing.T) {
-	os.RemoveAll(mockDir)
-	defer leaktest.Check(t)()
-
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
+	defer leaktest.Check(t)()
+	defer os.RemoveAll(tmpDir)
+
 	conf := &config.BinlogConfig{
 		MaxSize: 102400,
-		LogDir:  mockDir,
+		LogDir:  tmpDir,
 	}
 
 	binlog := NewBinlog(log, conf)
@@ -52,13 +54,14 @@ func TestBinlog(t *testing.T) {
 }
 
 func TestBinlogPurge(t *testing.T) {
-	os.RemoveAll(mockDir)
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_binlog_", log)
+	defer os.RemoveAll(tmpDir)
 	defer leaktest.Check(t)()
 
-	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	conf := &config.BinlogConfig{
 		MaxSize: 102400,
-		LogDir:  mockDir,
+		LogDir:  tmpDir,
 	}
 
 	binlog := NewBinlog(log, conf)
