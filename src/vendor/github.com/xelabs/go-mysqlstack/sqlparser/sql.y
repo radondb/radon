@@ -154,7 +154,7 @@ func forceEOF(yylex interface{}) {
 %token <bytes> NULLX AUTO_INCREMENT APPROXNUM SIGNED UNSIGNED ZEROFILL
 
 // Supported SHOW tokens
-%token <bytes> DATABASES TABLES VITESS_KEYSPACES VITESS_SHARDS VSCHEMA_TABLES WARNINGS VARIABLES EVENTS BINLOG GTID
+%token <bytes> DATABASES TABLES VITESS_KEYSPACES VITESS_SHARDS VSCHEMA_TABLES WARNINGS VARIABLES EVENTS BINLOG GTID STATUS
 
 // Functions
 %token <bytes> CURRENT_TIMESTAMP DATABASE CURRENT_DATE
@@ -173,7 +173,7 @@ func forceEOF(yylex interface{}) {
 // RadonDB
 %token <empty> PARTITION PARTITIONS HASH XA
 %type <statement> truncate_statement xa_statement explain_statement kill_statement transaction_statement
-%token <bytes> ENGINES STATUS VERSIONS PROCESSLIST QUERYZ TXNZ KILL START TRANSACTION COMMIT SESSION ENGINE
+%token <bytes> ENGINES VERSIONS PROCESSLIST QUERYZ TXNZ KILL START TRANSACTION COMMIT SESSION ENGINE
 
 %type <statement> command
 %type <selStmt> select_statement base_select union_lhs union_rhs
@@ -977,7 +977,7 @@ show_statement_type:
 | reserved_keyword
   {
     switch v := string($1); v {
-    case ShowDatabasesStr, ShowTablesStr, ShowEnginesStr, ShowVersionsStr, ShowProcesslistStr, ShowQueryzStr, ShowTxnzStr, ShowStatusStr:
+    case ShowDatabasesStr, ShowTablesStr, ShowEnginesStr, ShowVersionsStr, ShowProcesslistStr, ShowQueryzStr, ShowTxnzStr:
       $$ = v
     default:
       $$ = ShowUnsupportedStr
@@ -1016,6 +1016,10 @@ show_statement:
 | SHOW BINLOG EVENTS binlog_from_opt limit_opt force_eof
   {
     $$ = &Show{Type: ShowBinlogEventsStr, From: $4, Limit: $5 }
+  }
+| SHOW STATUS force_eof
+  {
+    $$ = &Show{Type: ShowStatusStr}
   }
 
 binlog_from_opt:
@@ -2381,7 +2385,6 @@ reserved_keyword:
 | SEPARATOR
 | SET
 | SHOW
-| STATUS
 | STRAIGHT_JOIN
 | TABLE
 | TABLES
