@@ -31,7 +31,7 @@ type UpdatePlan struct {
 	// router
 	router *router.Router
 
-	// insert ast
+	// update ast
 	node *sqlparser.Update
 
 	// database
