@@ -93,6 +93,7 @@ var keywords = map[string]int{
 	"check":               UNUSED,
 	"collate":             COLLATE,
 	"column":              COLUMN,
+	"columns":             COLUMNS,
 	"comment":             COMMENT_KEYWORD,
 	"commit":              COMMIT,
 	"condition":           UNUSED,

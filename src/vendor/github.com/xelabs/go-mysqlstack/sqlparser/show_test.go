@@ -104,6 +104,10 @@ func TestShow1(t *testing.T) {
 			input:  "show binlog events from gtid '20171225083823' limit 1",
 			output: "show binlog events from gtid '20171225083823' limit 1",
 		},
+		{
+			input:  "show columns from t1",
+			output: "show columns from t1",
+		},
 	}
 
 	for _, show := range validSQL {

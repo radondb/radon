@@ -119,6 +119,39 @@ func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query str
 	return qr, nil
 }
 
+func (spanner *Spanner) handleShowColumns(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+	router := spanner.router
+	ast := node.(*sqlparser.Show)
+
+	table := ast.Table.Name.String()
+	database := session.Schema()
+	if !ast.Table.Qualifier.IsEmpty() {
+		database = ast.Table.Qualifier.String()
+	}
+	if database == "" {
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR, "")
+	}
+	// Check the database ACL.
+	if err := router.DatabaseACL(database); err != nil {
+		return nil, err
+	}
+
+	// Get one table from the router.
+	parts, err := router.Lookup(database, table, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	partTable := parts[0].Table
+	backend := parts[0].Backend
+	rewritten := fmt.Sprintf("SHOW COLUMNS FROM %s.%s", database, partTable)
+	qr, err := spanner.ExecuteOnThisBackend(backend, rewritten)
+	if err != nil {
+		return nil, err
+	}
+
+	return qr, nil
+}
+
 // handleShowProcesslist used to handle the query "SHOW PROCESSLIST".
 func (spanner *Spanner) handleShowProcesslist(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	sessions := spanner.sessions
