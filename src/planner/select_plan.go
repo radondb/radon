@@ -32,7 +32,7 @@ type SelectPlan struct {
 	// router
 	router *router.Router
 
-	// insert ast
+	// select ast
 	node *sqlparser.Select
 
 	// database

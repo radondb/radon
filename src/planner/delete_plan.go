@@ -31,7 +31,7 @@ type DeletePlan struct {
 	// router
 	router *router.Router
 
-	// insert ast
+	// delete ast
 	node *sqlparser.Delete
 
 	// database
