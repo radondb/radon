@@ -170,7 +170,9 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node sq
 		r, err := spanner.ExecuteDDL(session, database, query, node)
 		if err != nil {
 			log.Error("spanner.ddl.execute[%v].error[%+v]", query, err)
+			return nil, err
 		}
+
 		if err := router.DropTable(database, table); err != nil {
 			log.Error("spanner.ddl.router.drop.table[%s].error[%+v]", table, err)
 		}
