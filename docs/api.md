@@ -279,7 +279,7 @@ Request: {
 `Example: `
 
 ```
-$ url -i -H 'Content-Type: application/json' -X POST -d '{"database": "db_test1", "table": "t1", "from-address": "127.0.0.1:3306", "to-address": "127.0.0.1:3306"} \
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"database": "db_test1", "table": "t1", "from-address": "127.0.0.1:3306", "to-address": "127.0.0.1:3306"} \
 		 http://127.0.0.1:8080/v1/shard/shift
 ```
 
