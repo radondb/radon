@@ -96,6 +96,10 @@ func (p *Proxy) Start() {
 		log.Panic("proxy.scatter.load.config.panic:%+v", err)
 	}
 
+	if err := scatter.Init(p.conf.Scatter); err != nil {
+		log.Panic("proxy.scatter.init.panic:%+v", err)
+	}
+
 	spanner := NewSpanner(log, conf, iptable, router, scatter, binlog, sessions, audit, throttle)
 	if err := spanner.Init(); err != nil {
 		log.Panic("proxy.spanner.init.panic:%+v", err)

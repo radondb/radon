@@ -42,6 +42,10 @@ var (
 	txnCounterTxnAbort              = "#txn.abort"
 )
 
+var (
+	xaMaxRetryNum = 2 // TODO config
+)
+
 type txnState int32
 
 const (
@@ -279,16 +283,20 @@ func (txn *Txn) xaPrepare() error {
 	return nil
 }
 
-func (txn *Txn) xaCommit() {
+func (txn *Txn) xaCommit() error {
 	txnCounters.Add(txnCounterXaCommit, 1)
 	txn.xaState.Set(int32(txnXAStateCommit))
+	// if the commit is failed, the status is set txnXAStateCommitFinished which is not used.
+	// If need, more states will be added.
 	defer func() { txn.xaState.Set(int32(txnXAStateCommitFinished)) }()
 
 	commit := fmt.Sprintf("XA COMMIT '%v'", txn.xid)
 	if err := txn.executeXACommand(commit, txnXAStateCommit); err != nil {
 		txn.incErrors()
 		txnCounters.Add(txnCounterXaCommitError, 1)
+		return err
 	}
+	return nil
 }
 
 func (txn *Txn) xaRollback() error {
@@ -338,7 +346,11 @@ func (txn *Txn) Commit() error {
 		}
 
 		// 3. XA COMMIT
-		txn.xaCommit()
+		if err := txn.xaCommit(); err != nil {
+			//txn.WriteXaCommitErrLog() is put in the executeXA to get the backend infos
+			return err
+		}
+
 	}
 	return nil
 }
@@ -529,7 +541,7 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 				}
 			}
 		case txnXAStateCommit, txnXAStateRollback:
-			maxRetry := 20
+			maxRetry := xaMaxRetryNum
 			for retry := 0; retry < maxRetry; retry++ {
 				if retry == 0 {
 					if c, x = txn.twopcConnection(back); x != nil {
@@ -560,6 +572,12 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 					continue
 				}
 				break
+			}
+
+			if state == txnXAStateCommit && x != nil && txn.mgr.xaCheck != nil {
+				if err := txn.WriteXaCommitErrLog(back); err != nil {
+					log.Error("txn.xa.WriteXaLog[maxretry:%v, retried:%v].state[%v].on[%v].query[%v].error[%T]:%+v", maxRetry, maxRetry, state, c.Address(), query, x, x)
+				}
 			}
 		}
 
@@ -822,4 +840,9 @@ func (txn *Txn) Abort() error {
 	txn.normalConnMu.RUnlock()
 	txn.mgr.Remove()
 	return nil
+}
+
+// WriteXaLog used to write the error xaid to the log.
+func (txn *Txn) WriteXaCommitErrLog(backend string) error {
+	return txn.mgr.xaCheck.WriteXaCommitErrLog(txn, backend)
 }

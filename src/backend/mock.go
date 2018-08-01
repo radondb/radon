@@ -18,6 +18,7 @@ import (
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
+	"path"
 )
 
 var (
@@ -82,9 +83,28 @@ func MockBackendConfigDefault(name, addr string) *config.BackendConfig {
 	}
 }
 
+// MockXaCheckConfigDefault mocks new xacheck config.
+func MockScatterDefault(log *xlog.Log) *config.ScatterConfig {
+	dir := fakedb.GetTmpDir("/tmp", "xacheck", log)
+	return &config.ScatterConfig{
+		XaCheckInterval: 1,
+		XaCheckDir:      dir, // in the test
+	}
+}
+
+// MockScatter3Default mocks new xacheck config.
+func MockScatter3Default(log *xlog.Log) *config.ScatterConfig {
+	dir := path.Join("/tmp", "xacheck003")
+	return &config.ScatterConfig{
+		XaCheckInterval: 1,
+		XaCheckDir:      dir, // in the test
+	}
+}
+
 // MockScatter used to mock a scatter.
 func MockScatter(log *xlog.Log, n int) (*Scatter, *fakedb.DB, func()) {
 	scatter := NewScatter(log, "")
+	scatter.Init(MockScatterDefault(log))
 	fakedb := fakedb.New(log, n)
 	backends := make(map[string]*Pool)
 	addrs := fakedb.Addrs()
