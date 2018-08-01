@@ -35,6 +35,7 @@ func TestWriteConfig(t *testing.T) {
 		Binlog:  DefaultBinlogConfig(),
 		Router:  DefaultRouterConfig(),
 		Monitor: DefaultMonitorConfig(),
+		Scatter: DefaultScatterConfig(),
 	}
 
 	path := path.Join(tmpDir, radonTestJSON)
@@ -73,6 +74,7 @@ func TestLoadConfig(t *testing.T) {
 			Binlog:  DefaultBinlogConfig(),
 			Monitor: DefaultMonitorConfig(),
 			Log:     MockLogConfig,
+			Scatter: DefaultScatterConfig(),
 		}
 
 		err := WriteConfig(path, conf)
@@ -105,6 +107,7 @@ func TestLoadConfig(t *testing.T) {
 				Binlog:  DefaultBinlogConfig(),
 				Router:  DefaultRouterConfig(),
 				Monitor: DefaultMonitorConfig(),
+				Scatter: DefaultScatterConfig(),
 			}
 			got, err := LoadConfig(path)
 			assert.Nil(t, err)
@@ -120,6 +123,7 @@ func TestLoadConfig(t *testing.T) {
 			Router:  DefaultRouterConfig(),
 			Binlog:  DefaultBinlogConfig(),
 			Monitor: DefaultMonitorConfig(),
+			Scatter: DefaultScatterConfig(),
 		}
 
 		err := WriteConfig(path, want)
@@ -155,6 +159,7 @@ func TestWriteLoadConfig(t *testing.T) {
 			Router:  DefaultRouterConfig(),
 			Binlog:  DefaultBinlogConfig(),
 			Monitor: DefaultMonitorConfig(),
+			Scatter: DefaultScatterConfig(),
 		}
 		got := conf
 		assert.Equal(t, want, got)
@@ -289,6 +294,7 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 			Binlog:  DefaultBinlogConfig(),
 			Log:     DefaultLogConfig(),
 			Monitor: DefaultMonitorConfig(),
+			Scatter: DefaultScatterConfig(),
 		}
 		assert.Equal(t, want, got)
 	}
@@ -314,6 +320,10 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 	},
 	"log": {
 		"level": "ERROR"
+	},
+	"xacheck": {
+		"xa-check-interval": 1,
+		"xa-check-dir":      "/tmp/xacheck"
 	}
 }`
 		err := ioutil.WriteFile(path, []byte(data), 0644)
@@ -330,6 +340,7 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 			Binlog:  DefaultBinlogConfig(),
 			Log:     DefaultLogConfig(),
 			Monitor: DefaultMonitorConfig(),
+			Scatter: DefaultScatterConfig(),
 		}
 		assert.Equal(t, want, got)
 	}

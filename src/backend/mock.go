@@ -82,6 +82,23 @@ func MockBackendConfigDefault(name, addr string) *config.BackendConfig {
 	}
 }
 
+// MockScatterDefault mocks new xacheck config.
+func MockScatterDefault(log *xlog.Log) *config.ScatterConfig {
+	dir := fakedb.GetTmpDir("/tmp", "xacheck", log)
+	return &config.ScatterConfig{
+		XaCheckInterval: 1,
+		XaCheckDir:      dir,
+	}
+}
+
+// MockScatterDefault2 mocks new xacheck config with dir.
+func MockScatterDefault2(dir string) *config.ScatterConfig {
+	return &config.ScatterConfig{
+		XaCheckInterval: 1,
+		XaCheckDir:      dir,
+	}
+}
+
 // MockScatter used to mock a scatter.
 func MockScatter(log *xlog.Log, n int) (*Scatter, *fakedb.DB, func()) {
 	scatter := NewScatter(log, "")
@@ -142,5 +159,30 @@ func MockTxnMgr(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool
 		}
 		backup.Close()
 		fakedb.Close()
+	}
+}
+
+// MockTxnMgrScatter used to mock a txnMgr and a scatter.
+// commit err and rollback err will WriteXaCommitErrLog, need the scatter
+func MockTxnMgrScatter(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool, *Pool, []string, *Scatter, func()) {
+	scatter := NewScatter(log, "")
+	fakedb := fakedb.New(log, n)
+	backends := make(map[string]*Pool)
+	addrs := fakedb.Addrs()
+	for _, addr := range addrs {
+		conf := MockBackendConfigDefault(addr, addr)
+		pool := NewPool(log, conf)
+		backends[addr] = pool
+	}
+	scatter.backends = backends
+
+	addr := addrs[len(addrs)-1]
+	conf := MockBackendConfigDefault(addr, addr)
+	backup := NewPool(log, conf)
+	txnMgr := scatter.txnMgr
+
+	return fakedb, txnMgr, backends, backup, addrs, scatter, func() {
+		fakedb.Close()
+		scatter.Close()
 	}
 }

@@ -377,7 +377,7 @@ func (th *TestHandler) GetQueryCalledNum(query string) int {
 
 // MockMysqlServer creates a new mock mysql server.
 func MockMysqlServer(log *xlog.Log, h Handler) (svr *Listener, err error) {
-	port := randomPort(10000, 20000)
+	port := randomPort(10000, 60000)
 	return mockMysqlServer(log, port, h)
 }
 
