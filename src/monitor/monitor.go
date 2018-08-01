@@ -21,10 +21,18 @@ var (
 		[]string{"user"},
 	)
 
+	backendConnectionNum = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "connection_number_backend",
+			Help: "backend connection Number",
+		},
+		[]string{"address"},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(clientConnectionNum)
+	prometheus.MustRegister(backendConnectionNum)
 }
 
 // Start monitor
@@ -53,3 +61,12 @@ func ClientConnectionDec(user string) {
 	clientConnectionNum.WithLabelValues(user).Dec()
 }
 
+// BackendConnectionInc add 1
+func BackendConnectionInc(address string) {
+	backendConnectionNum.WithLabelValues(address).Inc()
+}
+
+// BackendConnectionDec dec 1
+func BackendConnectionDec(address string) {
+	backendConnectionNum.WithLabelValues(address).Dec()
+}

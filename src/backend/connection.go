@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"monitor"
 	"xbase/stats"
 	"xbase/sync2"
 
@@ -93,6 +94,7 @@ func (c *connection) Dial() error {
 		return errors.New("Server maybe lost, please try again")
 	}
 	c.connectionID = c.driver.ConnectionID()
+	monitor.BackendConnectionInc(c.address)
 	return nil
 }
 
@@ -254,6 +256,7 @@ func (c *connection) Close() {
 	c.lastErr = errors.New("I.am.closed")
 	if c.driver != nil {
 		c.driver.Close()
+		monitor.BackendConnectionDec(c.address)
 	}
 }
 
