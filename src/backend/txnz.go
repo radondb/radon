@@ -80,18 +80,23 @@ var (
 		int32(txnStateCommitting):      "txnStateCommitting",
 		int32(txnStateFinshing):        "txnStateFinshing",
 		int32(txnStateAborting):        "txnStateAborting",
+		int32(txnStateRecovering):      "txnStateRecovering",
 	}
 
 	xaStates = map[int32]string{
-		int32(txnXAStateNone):            "txnXAStateNone",
-		int32(txnXAStateStart):           "txnXAStateStart",
-		int32(txnXAStateStartFinished):   "txnXAStateStartFinished",
-		int32(txnXAStateEnd):             "txnXAStateEnd",
-		int32(txnXAStateEndFinished):     "txnXAStateEndFinished",
-		int32(txnXAStatePrepare):         "txnXAStatePrepare",
-		int32(txnXAStatePrepareFinished): "txnXAStatePrepareFinished",
-		int32(txnXAStateCommit):          "txnXAStateCommit",
-		int32(txnXAStateRollback):        "txnXAStateRollback",
+		int32(txnXAStateNone):             "txnXAStateNone",
+		int32(txnXAStateStart):            "txnXAStateStart",
+		int32(txnXAStateStartFinished):    "txnXAStateStartFinished",
+		int32(txnXAStateEnd):              "txnXAStateEnd",
+		int32(txnXAStateEndFinished):      "txnXAStateEndFinished",
+		int32(txnXAStatePrepare):          "txnXAStatePrepare",
+		int32(txnXAStatePrepareFinished):  "txnXAStatePrepareFinished",
+		int32(txnXAStateCommit):           "txnXAStateCommit",
+		int32(txnXAStateCommitFinished):   "txnXAStateCommitFinished",
+		int32(txnXAStateRollback):         "txnXAStateRollback",
+		int32(txnXAStateRollbackFinished): "txnXAStateRollbackFinished",
+		int32(txnXAStateRecover):          "txnXAStateRecover",
+		int32(txnXAStateRecoverFinished):  "txnXAStateRecoverFinished",
 	}
 )
 

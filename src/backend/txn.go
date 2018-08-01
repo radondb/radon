@@ -42,6 +42,10 @@ var (
 	txnCounterTxnAbort              = "#txn.abort"
 )
 
+var (
+	xaMaxRetryNum = 20
+)
+
 type txnState int32
 
 const (
@@ -53,6 +57,7 @@ const (
 	txnStateCommitting
 	txnStateFinshing
 	txnStateAborting
+	txnStateRecovering
 )
 
 type txnXAState int32
@@ -69,6 +74,8 @@ const (
 	txnXAStateCommitFinished
 	txnXAStateRollback
 	txnXAStateRollbackFinished
+	txnXAStateRecover
+	txnXAStateRecoverFinished
 )
 
 // Transaction interface.
@@ -280,18 +287,26 @@ func (txn *Txn) xaPrepare() error {
 }
 
 func (txn *Txn) xaCommit() {
+	log := txn.log
 	txnCounters.Add(txnCounterXaCommit, 1)
 	txn.xaState.Set(int32(txnXAStateCommit))
+	// if the commit is failed, the status is set txnXAStateCommitFinished which is not used.
+	// If need, more states will be added.
 	defer func() { txn.xaState.Set(int32(txnXAStateCommitFinished)) }()
 
 	commit := fmt.Sprintf("XA COMMIT '%v'", txn.xid)
 	if err := txn.executeXACommand(commit, txnXAStateCommit); err != nil {
 		txn.incErrors()
 		txnCounters.Add(txnCounterXaCommitError, 1)
+
+		if err := txn.WriteXaCommitErrLog(txnXACommitErrStateCommit); err != nil {
+			log.Error("txn.xa.WriteXaCommitErrLog.query[%v].error[%T]:%+v", commit, err, err)
+		}
 	}
 }
 
-func (txn *Txn) xaRollback() error {
+func (txn *Txn) xaRollback() {
+	log := txn.log
 	txnCounters.Add(txnCounterXaRollback, 1)
 	txn.xaState.Set(int32(txnXAStateRollback))
 	defer func() { txn.xaState.Set(int32(txnXAStateRollbackFinished)) }()
@@ -300,9 +315,11 @@ func (txn *Txn) xaRollback() error {
 	if err := txn.executeXACommand(rollback, txnXAStateRollback); err != nil {
 		txnCounters.Add(txnCounterXaRollbackError, 1)
 		txn.incErrors()
-		return err
+
+		if err := txn.WriteXaCommitErrLog(txnXACommitErrStateRollback); err != nil {
+			log.Error("txn.xa.WriteXaCommitErrLog.query[%v].error[%T]:%+v", rollback, err, err)
+		}
 	}
-	return nil
 }
 
 // Begin used to start a XA transaction.
@@ -361,7 +378,9 @@ func (txn *Txn) Rollback() error {
 		if err := txn.xaPrepare(); err != nil {
 			return err
 		}
-		return txn.xaRollback()
+
+		// 3. XA ROLLBACK
+		txn.xaRollback()
 	}
 	return nil
 }
@@ -532,7 +551,7 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 				}
 			}
 		case txnXAStateCommit, txnXAStateRollback:
-			maxRetry := 20
+			maxRetry := xaMaxRetryNum
 			for retry := 0; retry < maxRetry; retry++ {
 				if retry == 0 {
 					if c, x = txn.twopcConnection(back); x != nil {
@@ -547,6 +566,7 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 						continue
 					}
 				}
+
 				if _, x = c.Execute(query); x != nil {
 					log.Error("txn.xa.execute[maxretry:%v, retried:%v].state[%v].on[%v].query[%v].error[%T]:%+v", maxRetry, retry, state, c.Address(), query, x, x)
 					if sqlErr, ok := x.(*sqldb.SQLError); ok {
@@ -555,7 +575,7 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 						// Error: 1397 SQLSTATE: XAE04 (ER_XAER_NOTA)
 						// Message: XAER_NOTA: Unknown XID
 						if sqlErr.Num == 1397 {
-							log.Warning("txn.xa.[%v].XAE04.error....", state)
+							log.Error("txn.xa.[%v].XAE04.error....", state)
 							break
 						}
 					}
@@ -825,4 +845,9 @@ func (txn *Txn) Abort() error {
 	txn.normalConnMu.RUnlock()
 	txn.mgr.Remove()
 	return nil
+}
+
+// WriteXaCommitErrLog used to write the error xaid to the log.
+func (txn *Txn) WriteXaCommitErrLog(state string) error {
+	return txn.mgr.xaCheck.WriteXaCommitErrLog(txn, state)
 }

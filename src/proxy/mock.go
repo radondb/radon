@@ -33,11 +33,12 @@ func randomPort(min int, max int) int {
 // MockDefaultConfig mocks the default config.
 func MockDefaultConfig() *config.Config {
 	conf := &config.Config{
-		Proxy:  config.DefaultProxyConfig(),
-		Audit:  config.DefaultAuditConfig(),
-		Router: config.DefaultRouterConfig(),
-		Binlog: config.DefaultBinlogConfig(),
-		Log:    config.DefaultLogConfig(),
+		Proxy:   config.DefaultProxyConfig(),
+		Audit:   config.DefaultAuditConfig(),
+		Router:  config.DefaultRouterConfig(),
+		Binlog:  config.DefaultBinlogConfig(),
+		Log:     config.DefaultLogConfig(),
+		Scatter: config.DefaultScatterConfig(),
 	}
 	return conf
 }
