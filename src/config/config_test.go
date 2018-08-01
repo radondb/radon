@@ -29,11 +29,12 @@ func TestWriteConfig(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	conf := &Config{
-		Proxy:  MockProxyConfig,
-		Log:    MockLogConfig,
-		Audit:  DefaultAuditConfig(),
-		Binlog: DefaultBinlogConfig(),
-		Router: DefaultRouterConfig(),
+		Proxy:   MockProxyConfig,
+		Log:     MockLogConfig,
+		Audit:   DefaultAuditConfig(),
+		Binlog:  DefaultBinlogConfig(),
+		Router:  DefaultRouterConfig(),
+		XaCheck: DefaultXaCheckConfig(),
 	}
 
 	path := path.Join(tmpDir, radon_test_json)
@@ -66,11 +67,12 @@ func TestLoadConfig(t *testing.T) {
 			BackupDefaultEngine: "TokuDB",
 		}
 		conf := &Config{
-			Proxy:  mockProxyConfig,
-			Audit:  DefaultAuditConfig(),
-			Router: DefaultRouterConfig(),
-			Binlog: DefaultBinlogConfig(),
-			Log:    MockLogConfig,
+			Proxy:   mockProxyConfig,
+			Audit:   DefaultAuditConfig(),
+			Router:  DefaultRouterConfig(),
+			Binlog:  DefaultBinlogConfig(),
+			Log:     MockLogConfig,
+			XaCheck: DefaultXaCheckConfig(),
 		}
 
 		err := WriteConfig(path, conf)
@@ -97,11 +99,12 @@ func TestLoadConfig(t *testing.T) {
 		assert.Nil(t, err)
 		{
 			want := &Config{
-				Proxy:  MockProxyConfig,
-				Log:    MockLogConfig,
-				Audit:  DefaultAuditConfig(),
-				Binlog: DefaultBinlogConfig(),
-				Router: DefaultRouterConfig(),
+				Proxy:   MockProxyConfig,
+				Log:     MockLogConfig,
+				Audit:   DefaultAuditConfig(),
+				Binlog:  DefaultBinlogConfig(),
+				Router:  DefaultRouterConfig(),
+				XaCheck: DefaultXaCheckConfig(),
 			}
 			got, err := LoadConfig(path)
 			assert.Nil(t, err)
@@ -111,11 +114,12 @@ func TestLoadConfig(t *testing.T) {
 
 	{
 		want := &Config{
-			Proxy:  MockProxyConfig,
-			Log:    MockLogConfig,
-			Audit:  DefaultAuditConfig(),
-			Router: DefaultRouterConfig(),
-			Binlog: DefaultBinlogConfig(),
+			Proxy:   MockProxyConfig,
+			Log:     MockLogConfig,
+			Audit:   DefaultAuditConfig(),
+			Router:  DefaultRouterConfig(),
+			Binlog:  DefaultBinlogConfig(),
+			XaCheck: DefaultXaCheckConfig(),
 		}
 
 		err := WriteConfig(path, want)
@@ -145,11 +149,12 @@ func TestWriteLoadConfig(t *testing.T) {
 		conf, err := LoadConfig(path)
 		assert.Nil(t, err)
 		want := &Config{
-			Proxy:  MockProxyConfig,
-			Log:    MockLogConfig,
-			Audit:  DefaultAuditConfig(),
-			Router: DefaultRouterConfig(),
-			Binlog: DefaultBinlogConfig(),
+			Proxy:   MockProxyConfig,
+			Log:     MockLogConfig,
+			Audit:   DefaultAuditConfig(),
+			Router:  DefaultRouterConfig(),
+			Binlog:  DefaultBinlogConfig(),
+			XaCheck: DefaultXaCheckConfig(),
 		}
 		got := conf
 		assert.Equal(t, want, got)
@@ -172,8 +177,7 @@ func TestReadBackendsConfig(t *testing.T) {
 	backend, err := ReadBackendsConfig(data)
 	assert.Nil(t, err)
 	want := &BackendsConfig{Backends: MockBackends}
-	got := backend
-	assert.Equal(t, want, got)
+c
 }
 
 func TestReadBackendsConfig1(t *testing.T) {
@@ -278,11 +282,12 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 		got, err := LoadConfig(path)
 		assert.Nil(t, err)
 		want := &Config{
-			Proxy:  DefaultProxyConfig(),
-			Router: DefaultRouterConfig(),
-			Audit:  DefaultAuditConfig(),
-			Binlog: DefaultBinlogConfig(),
-			Log:    DefaultLogConfig(),
+			Proxy:   DefaultProxyConfig(),
+			Router:  DefaultRouterConfig(),
+			Audit:   DefaultAuditConfig(),
+			Binlog:  DefaultBinlogConfig(),
+			Log:     DefaultLogConfig(),
+			XaCheck: DefaultXaCheckConfig(),
 		}
 		assert.Equal(t, want, got)
 	}
@@ -308,6 +313,10 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 	},
 	"log": {
 		"level": "ERROR"
+	},
+	"xacheck": {
+		"xa-check-interval": 1,
+		"xa-check-dir":      "/tmp/xacheck"
 	}
 }`
 		err := ioutil.WriteFile(path, []byte(data), 0644)
@@ -318,11 +327,12 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 		proxy := DefaultProxyConfig()
 		proxy.Endpoint = ":5566"
 		want := &Config{
-			Proxy:  proxy,
-			Router: DefaultRouterConfig(),
-			Audit:  DefaultAuditConfig(),
-			Binlog: DefaultBinlogConfig(),
-			Log:    DefaultLogConfig(),
+			Proxy:   proxy,
+			Router:  DefaultRouterConfig(),
+			Audit:   DefaultAuditConfig(),
+			Binlog:  DefaultBinlogConfig(),
+			Log:     DefaultLogConfig(),
+			XaCheck: DefaultXaCheckConfig(),
 		}
 		assert.Equal(t, want, got)
 	}

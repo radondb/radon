@@ -82,9 +82,26 @@ func MockBackendConfigDefault(name, addr string) *config.BackendConfig {
 	}
 }
 
+// MockXaCheckConfigDefault mocks new xacheck config.
+func MockXaCheckConfigDefault() *config.XaCheckConfig {
+	return &config.XaCheckConfig{
+		Interval: 1,
+		Dir:      "/tmp/xacheck", // in the test
+	}
+}
+
+// MockXaCheckConfigDefault mocks new xacheck config.
+func MockXaCheckConfig2Default() *config.XaCheckConfig {
+	return &config.XaCheckConfig{
+		Interval: 1,
+		Dir:      "/tmp/xacheck001", // in the test
+	}
+}
+
 // MockScatter used to mock a scatter.
 func MockScatter(log *xlog.Log, n int) (*Scatter, *fakedb.DB, func()) {
 	scatter := NewScatter(log, "")
+	scatter.Init(MockXaCheckConfigDefault())
 	fakedb := fakedb.New(log, n)
 	backends := make(map[string]*Pool)
 	addrs := fakedb.Addrs()

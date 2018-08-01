@@ -208,13 +208,39 @@ func (c *RouterConfig) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// XaCheckConfig tuple.
+type XaCheckConfig struct {
+	Interval int    `json:"xa-check-interval`
+	Dir      string `json:"xa-check-dir"`
+}
+
+// DefaultXaCheckConfig returns default XaCheckConfig config.
+func DefaultXaCheckConfig() *XaCheckConfig {
+	return &XaCheckConfig{
+		Interval: 1,
+		Dir:      "/tmp/xacheck", //TODO tmp is dangerous
+	}
+}
+
+// UnmarshalJSON interface on XaCheckConfig.
+func (c *XaCheckConfig) UnmarshalJSON(b []byte) error {
+	type confAlias *XaCheckConfig
+	conf := confAlias(DefaultXaCheckConfig())
+	if err := json.Unmarshal(b, conf); err != nil {
+		return err
+	}
+	*c = XaCheckConfig(*conf)
+	return nil
+}
+
 // Config tuple.
 type Config struct {
-	Proxy  *ProxyConfig  `json:"proxy"`
-	Audit  *AuditConfig  `json:"audit"`
-	Router *RouterConfig `json:"router"`
-	Binlog *BinlogConfig `json:"binlog"`
-	Log    *LogConfig    `json:"log"`
+	Proxy   *ProxyConfig   `json:"proxy"`
+	Audit   *AuditConfig   `json:"audit"`
+	Router  *RouterConfig  `json:"router"`
+	Binlog  *BinlogConfig  `json:"binlog"`
+	Log     *LogConfig     `json:"log"`
+	XaCheck *XaCheckConfig `json:"xacheck"`
 }
 
 func checkConfig(conf *Config) {
@@ -236,6 +262,10 @@ func checkConfig(conf *Config) {
 
 	if conf.Log == nil {
 		conf.Log = DefaultLogConfig()
+	}
+
+	if conf.XaCheck == nil {
+		conf.XaCheck = DefaultXaCheckConfig()
 	}
 }
 
