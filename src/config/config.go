@@ -233,6 +233,31 @@ func (c *RouterConfig) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// ScatterConfig tuple.
+type ScatterConfig struct {
+	XaCheckInterval int    `json:"xa-check-interval"`
+	XaCheckDir      string `json:"xa-check-dir"`
+}
+
+// DefaultXaCheckConfig returns default XaCheckConfig config.
+func DefaultScatterConfig() *ScatterConfig {
+	return &ScatterConfig{
+		XaCheckInterval: 1,
+		XaCheckDir:      "./xacheck", //TODO tmp is dangerous
+	}
+}
+
+// UnmarshalJSON interface on XaCheckConfig.
+func (c *ScatterConfig) UnmarshalJSON(b []byte) error {
+	type confAlias *ScatterConfig
+	conf := confAlias(DefaultScatterConfig())
+	if err := json.Unmarshal(b, conf); err != nil {
+		return err
+	}
+	*c = ScatterConfig(*conf)
+	return nil
+}
+
 // Config tuple.
 type Config struct {
 	Proxy   *ProxyConfig   `json:"proxy"`
@@ -241,6 +266,7 @@ type Config struct {
 	Binlog  *BinlogConfig  `json:"binlog"`
 	Log     *LogConfig     `json:"log"`
 	Monitor *MonitorConfig `json:"monitor"`
+	Scatter *ScatterConfig `json:"scatter"`
 }
 
 func checkConfig(conf *Config) {
@@ -266,6 +292,8 @@ func checkConfig(conf *Config) {
 
 	if conf.Monitor == nil {
 		conf.Monitor = DefaultMonitorConfig()
+	if conf.Scatter == nil {
+		conf.Scatter = DefaultScatterConfig()
 	}
 }
 
