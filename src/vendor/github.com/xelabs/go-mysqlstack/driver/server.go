@@ -13,7 +13,6 @@ import (
 	"net"
 	"runtime"
 	"runtime/debug"
-	"monitor"
 
 	"github.com/xelabs/go-mysqlstack/common"
 	"github.com/xelabs/go-mysqlstack/sqldb"
@@ -26,6 +25,12 @@ import (
 type Handler interface {
 	// NewSession is called when a session is coming.
 	NewSession(session *Session)
+
+	// SessionInc is called when a new session is commit and the user is assigned, to monitor the client connection.
+	SessionInc(session *Session)
+
+	// SessionDec is called when a session is exit, to monitor the client connection.
+	SessionDec(session *Session)
 
 	// SessionClosed is called when a session exit.
 	SessionClosed(session *Session)
@@ -171,8 +176,10 @@ func (l *Listener) handle(conn net.Conn, ID uint32) {
 		return
 	}
 
-	monitor.ClientConnectionInc(session.User())
-	defer monitor.ClientConnectionDec(session.User())
+
+	l.handler.SessionInc(session)
+	defer l.handler.SessionDec(session)
+
 	for {
 		// Reset packet sequence ID.
 		session.packets.ResetSeq()

@@ -13,6 +13,7 @@ import (
 	"backend"
 	"binlog"
 	"config"
+	"monitor"
 	"router"
 	"xbase"
 	"xbase/sync2"
@@ -93,6 +94,16 @@ func (spanner *Spanner) SetReadOnly(val bool) {
 // NewSession impl.
 func (spanner *Spanner) NewSession(s *driver.Session) {
 	spanner.sessions.Add(s)
+}
+
+// SessionInc increase client connection metrics, it need the user is assigned
+func (spanner *Spanner) SessionInc(s *driver.Session) {
+	monitor.ClientConnectionInc(s.User())
+}
+
+// SessionDec decrease client connection metrics.
+func (spanner *Spanner) SessionDec(s *driver.Session) {
+	monitor.ClientConnectionDec(s.User())
 }
 
 // SessionClosed impl.

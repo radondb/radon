@@ -174,6 +174,16 @@ func (th *TestHandler) NewSession(s *Session) {
 	th.ss[s.ID()] = st
 }
 
+// SessionInc implements the interface.
+func (th *TestHandler) SessionInc(s *Session) {
+
+}
+
+// SessionDec implements the interface.
+func (th *TestHandler) SessionDec(s *Session) {
+
+}
+
 // SessionClosed implements the interface.
 func (th *TestHandler) SessionClosed(s *Session) {
 	th.mu.Lock()
