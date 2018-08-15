@@ -74,7 +74,7 @@ For detailed construction，see [radon_cluster_deploy.md](radon_cluster_deploy.m
 Benchyou default uses database `sbtest`  when we use it to make a benchmark, for this reason, we should login mysql-server via mysql-cli to create a database named `sbtest` after we build radon cluster.
 
 ```
-mysql> CREATE DATABASE SBTEST;
+mysql> CREATE DATABASE sbtest;
 ```
 
 ## Step4 Use bencyou to create test tables
