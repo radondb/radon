@@ -143,6 +143,21 @@ func (txn *BackupTxn) Execute(req *xcontext.RequestContext) (*sqltypes.Result, e
 	return nil, fmt.Errorf("backup.txn.execute.not.implemented")
 }
 
+// Begin not implemented.
+func (txn *BackupTxn) Begin() error {
+	return fmt.Errorf("backup.txn.begin.not.implemented")
+}
+
+// Commit not implemented.
+func (txn *BackupTxn) Commit() error {
+	return fmt.Errorf("backup.txn.commit.not.implemented")
+}
+
+// Rollback not implemented.
+func (txn *BackupTxn) Rollback() error {
+	return fmt.Errorf("backup.txn.rollback.not.implemented")
+}
+
 // Finish used to finish a transaction.
 // If the lastErr is nil, we will recycle all the twopc connections to the pool for reuse,
 // otherwise we wil close all of the them.

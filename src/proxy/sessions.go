@@ -131,6 +131,13 @@ func (ss *Sessions) Reaches(quota int) bool {
 	return (len(ss.sessions) >= quota)
 }
 
+// getTxnSession used to get current connection session.
+func (ss *Sessions) getTxnSession(session *driver.Session) *session {
+	ss.mu.RLock()
+	defer ss.mu.RUnlock()
+	return ss.sessions[session.ID()]
+}
+
 // TxnBinding used to bind txn to the session.
 func (ss *Sessions) TxnBinding(s *driver.Session, txn backend.Transaction, node sqlparser.Statement, query string) {
 	ss.mu.RLock()

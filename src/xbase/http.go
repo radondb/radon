@@ -43,7 +43,8 @@ func makeSimpleRequest(ctx context.Context, method string, url string, payload i
 }
 
 func httpDo(method string, url string, payload interface{}) (*http.Response, func(), error) {
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	req, err := makeSimpleRequest(ctx, method, url, payload)
 	if err != nil {
 		return nil, nil, err

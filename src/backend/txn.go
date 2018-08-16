@@ -79,6 +79,14 @@ type Transaction interface {
 	XaState() int32
 	Abort() error
 
+	Begin() error
+	Rollback() error
+	Commit() error
+	Finish() error
+
+	SetTimeout(timeout int)
+	SetMaxResult(max int)
+
 	Execute(req *xcontext.RequestContext) (*sqltypes.Result, error)
 	ExecuteRaw(database string, query string) (*sqltypes.Result, error)
 }
