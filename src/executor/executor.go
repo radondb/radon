@@ -28,12 +28,12 @@ type Executor interface {
 type Tree struct {
 	log      *xlog.Log
 	children []Executor
-	txn      *backend.Txn
+	txn      backend.Transaction
 	planTree *planner.PlanTree
 }
 
 // NewTree creates the new execute tree.
-func NewTree(log *xlog.Log, planTree *planner.PlanTree, txn *backend.Txn) *Tree {
+func NewTree(log *xlog.Log, planTree *planner.PlanTree, txn backend.Transaction) *Tree {
 	return &Tree{
 		log:      log,
 		txn:      txn,

@@ -26,11 +26,11 @@ var (
 type SelectExecutor struct {
 	log  *xlog.Log
 	plan planner.Plan
-	txn  *backend.Txn
+	txn  backend.Transaction
 }
 
 // NewSelectExecutor creates the new select executor.
-func NewSelectExecutor(log *xlog.Log, plan planner.Plan, txn *backend.Txn) *SelectExecutor {
+func NewSelectExecutor(log *xlog.Log, plan planner.Plan, txn backend.Transaction) *SelectExecutor {
 	return &SelectExecutor{
 		log:  log,
 		plan: plan,

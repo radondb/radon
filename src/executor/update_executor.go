@@ -24,11 +24,11 @@ var (
 type UpdateExecutor struct {
 	log  *xlog.Log
 	plan planner.Plan
-	txn  *backend.Txn
+	txn  backend.Transaction
 }
 
 // NewUpdateExecutor creates the new update executor.
-func NewUpdateExecutor(log *xlog.Log, plan planner.Plan, txn *backend.Txn) *UpdateExecutor {
+func NewUpdateExecutor(log *xlog.Log, plan planner.Plan, txn backend.Transaction) *UpdateExecutor {
 	return &UpdateExecutor{
 		log:  log,
 		plan: plan,

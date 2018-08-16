@@ -46,7 +46,7 @@ func (spanner *Spanner) queryBackupWithTimeout(session *driver.Session, query st
 		// binding.
 		sessions.TxnBinding(session, txn, node, query)
 		defer sessions.TxnUnBinding(session)
-		if qr, err = txn.Execute(session.Schema(), query); err != nil {
+		if qr, err = txn.ExecuteRaw(session.Schema(), query); err != nil {
 			log.Error("spanner.backup.read[%s].error:[%v]", query, err)
 		}
 		return qr, err
@@ -104,7 +104,7 @@ func (spanner *Spanner) writeBackupWithTimeout(db string, query string, timeout 
 
 		// txn limits.
 		txn.SetTimeout(timeout)
-		if qr, err = txn.Execute(db, query); err != nil {
+		if qr, err = txn.ExecuteRaw(db, query); err != nil {
 			log.Error("spanner.backup.wirte[%s].execute.error:[%v]", query, err)
 		}
 		return qr, err

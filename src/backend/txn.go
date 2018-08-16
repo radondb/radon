@@ -78,6 +78,9 @@ type Transaction interface {
 	State() int32
 	XaState() int32
 	Abort() error
+
+	Execute(req *xcontext.RequestContext) (*sqltypes.Result, error)
+	ExecuteRaw(database string, query string) (*sqltypes.Result, error)
 }
 
 // Txn tuple.
@@ -350,6 +353,11 @@ func (txn *Txn) Rollback() error {
 		}
 	}
 	return nil
+}
+
+// ExecuteRaw used to execute raw query, txn not implemented.
+func (txn *Txn) ExecuteRaw(database string, query string) (*sqltypes.Result, error) {
+	return nil, fmt.Errorf("txn.ExecuteRaw.not.implemented")
 }
 
 // Execute used to execute the query.

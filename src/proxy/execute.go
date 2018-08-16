@@ -221,5 +221,5 @@ func (spanner *Spanner) ExecuteOnBackup(database string, query string) (*sqltype
 		return nil, err
 	}
 	defer txn.Finish()
-	return txn.Execute(database, query)
+	return txn.ExecuteRaw(database, query)
 }

@@ -24,11 +24,11 @@ var (
 type DDLExecutor struct {
 	log  *xlog.Log
 	plan planner.Plan
-	txn  *backend.Txn
+	txn  backend.Transaction
 }
 
 // NewDDLExecutor creates DDL executor.
-func NewDDLExecutor(log *xlog.Log, plan planner.Plan, txn *backend.Txn) *DDLExecutor {
+func NewDDLExecutor(log *xlog.Log, plan planner.Plan, txn backend.Transaction) *DDLExecutor {
 	return &DDLExecutor{
 		log:  log,
 		plan: plan,

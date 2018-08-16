@@ -9,10 +9,12 @@
 package backend
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
 	"xbase/sync2"
+	"xcontext"
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
@@ -110,9 +112,9 @@ func (txn *BackupTxn) fetchBackupConnection() (Connection, error) {
 	return conn, nil
 }
 
-// Execute used to execute the query to the backup node.
+// ExecuteRaw used to execute the query to the backup node.
 // If the backup node is not exists, fetchBackupConnection will return with an error.
-func (txn *BackupTxn) Execute(database string, query string) (*sqltypes.Result, error) {
+func (txn *BackupTxn) ExecuteRaw(database string, query string) (*sqltypes.Result, error) {
 	log := txn.log
 	conn, err := txn.fetchBackupConnection()
 	if err != nil {
@@ -134,6 +136,11 @@ func (txn *BackupTxn) Execute(database string, query string) (*sqltypes.Result, 
 		return nil, err
 	}
 	return qr, nil
+}
+
+// Execute not implemented.
+func (txn *BackupTxn) Execute(req *xcontext.RequestContext) (*sqltypes.Result, error) {
+	return nil, fmt.Errorf("backup.txn.execute.not.implemented")
 }
 
 // Finish used to finish a transaction.
