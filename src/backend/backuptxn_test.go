@@ -123,3 +123,49 @@ func TestBackupTxnAbort(t *testing.T) {
 		wg.Wait()
 	}
 }
+
+func TestBackupTxnNotImplemented(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	_, txnMgr, _, backup, _, cleanup := MockTxnMgr(log, 2)
+	defer cleanup()
+
+	// Execute error.
+	{
+		txn, err := txnMgr.CreateBackupTxn(backup)
+		assert.Nil(t, err)
+
+		_, err = txn.Execute(&xcontext.RequestContext{})
+		assert.NotNil(t, err)
+		txn.Finish()
+	}
+
+	// Begin error.
+	{
+		txn, err := txnMgr.CreateBackupTxn(backup)
+		assert.Nil(t, err)
+
+		err = txn.Begin()
+		assert.NotNil(t, err)
+		txn.Finish()
+	}
+
+	// Commit error.
+	{
+		txn, err := txnMgr.CreateBackupTxn(backup)
+		assert.Nil(t, err)
+
+		err = txn.Commit()
+		assert.NotNil(t, err)
+		txn.Finish()
+	}
+
+	// Rollback error.
+	{
+		txn, err := txnMgr.CreateBackupTxn(backup)
+		assert.Nil(t, err)
+
+		err = txn.Rollback()
+		assert.NotNil(t, err)
+		txn.Finish()
+	}
+}
