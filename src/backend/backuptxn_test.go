@@ -41,7 +41,7 @@ func TestBackupTxnExecute(t *testing.T) {
 		txn, err := txnMgr.CreateBackupTxn(backup)
 		assert.Nil(t, err)
 
-		got, err := txn.Execute("", "select * from backup")
+		got, err := txn.ExecuteRaw("", "select * from backup")
 		assert.Nil(t, err)
 		assert.Equal(t, result1, got)
 		txn.Finish()
@@ -54,7 +54,7 @@ func TestBackupTxnExecute(t *testing.T) {
 
 		txn, err := txnMgr.CreateBackupTxn(backup)
 		assert.Nil(t, err)
-		_, err = txn.Execute("", "select * from backup")
+		_, err = txn.ExecuteRaw("", "select * from backup")
 		assert.NotNil(t, err)
 		txn.Finish()
 	}
@@ -76,7 +76,7 @@ func TestBackupTxnSetting(t *testing.T) {
 	// timeout
 	{
 		txn.SetTimeout(10)
-		_, err := txn.Execute("", query)
+		_, err := txn.ExecuteRaw("", query)
 		assert.NotNil(t, err)
 	}
 
@@ -84,7 +84,7 @@ func TestBackupTxnSetting(t *testing.T) {
 	{
 		txn.SetTimeout(0)
 		txn.SetMaxResult(10)
-		_, err := txn.Execute("", query)
+		_, err := txn.ExecuteRaw("", query)
 		got := err.Error()
 		want := "Query execution was interrupted, max memory usage[10 bytes] exceeded"
 		assert.Equal(t, want, got)
@@ -110,7 +110,7 @@ func TestBackupTxnAbort(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				txn.Execute("", "update backup")
+				txn.ExecuteRaw("", "update backup")
 			}()
 		}
 

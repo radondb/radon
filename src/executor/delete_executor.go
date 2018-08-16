@@ -24,11 +24,11 @@ var (
 type DeleteExecutor struct {
 	log  *xlog.Log
 	plan planner.Plan
-	txn  *backend.Txn
+	txn  backend.Transaction
 }
 
 // NewDeleteExecutor creates new delete executor.
-func NewDeleteExecutor(log *xlog.Log, plan planner.Plan, txn *backend.Txn) *DeleteExecutor {
+func NewDeleteExecutor(log *xlog.Log, plan planner.Plan, txn backend.Transaction) *DeleteExecutor {
 	return &DeleteExecutor{
 		log:  log,
 		plan: plan,

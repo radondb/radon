@@ -24,11 +24,11 @@ var (
 type InsertExecutor struct {
 	log  *xlog.Log
 	plan planner.Plan
-	txn  *backend.Txn
+	txn  backend.Transaction
 }
 
 // NewInsertExecutor creates new insert executor.
-func NewInsertExecutor(log *xlog.Log, plan planner.Plan, txn *backend.Txn) *InsertExecutor {
+func NewInsertExecutor(log *xlog.Log, plan planner.Plan, txn backend.Transaction) *InsertExecutor {
 	return &InsertExecutor{
 		log:  log,
 		plan: plan,
