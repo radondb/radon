@@ -34,6 +34,7 @@ test:
 	@$(MAKE) testsyncer
 	@$(MAKE) testbinlog
 	@$(MAKE) testctl
+	@$(MAKE) testmonitor
 
 testxbase:
 	go test -v -race xbase
@@ -67,6 +68,8 @@ testcli:
 	go test -v -race cli/cmd
 testpoc:
 	go test -v poc
+testmonitor:
+	go test -v monitor
 
 # code coverage
 allpkgs =	xbase/...\
