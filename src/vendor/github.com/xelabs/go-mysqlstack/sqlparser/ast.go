@@ -877,6 +877,7 @@ const (
 	ShowDatabasesStr      = "databases"
 	ShowCreateDatabaseStr = "create database"
 	ShowTablesStr         = "tables"
+	ShowColumnsStr        = "columns"
 	ShowTablesFromStr     = "tables from"
 	ShowCreateTableStr    = "create table"
 	ShowEnginesStr        = "engines"
@@ -906,6 +907,11 @@ func (node *Show) Format(buf *TrackedBuffer) {
 			buf.Myprintf(" from gtid '%s'", node.From)
 		}
 		buf.Myprintf("%v", node.Limit)
+	case ShowColumnsStr:
+		buf.Myprintf("show %s", node.Type)
+		if node.Table.Name.String() != "" {
+			buf.Myprintf(" from %s", node.Table.Name.String())
+		}
 	default:
 		buf.Myprintf("show %s", node.Type)
 	}
