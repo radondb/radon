@@ -9,12 +9,13 @@
 package proxy
 
 import (
+	"sync"
+
 	"audit"
 	"backend"
 	"binlog"
 	"config"
 	"router"
-	"sync"
 	"syncer"
 	"xbase"
 

@@ -15,9 +15,8 @@ import (
 	"proxy"
 
 	"github.com/ant0ine/go-json-rest/rest"
-	"github.com/xelabs/go-mysqlstack/xlog"
-
 	"github.com/xelabs/go-mysqlstack/sqlparser"
+	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
 type explainParams struct {

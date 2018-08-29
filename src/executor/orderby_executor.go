@@ -13,7 +13,6 @@ import (
 	"xcontext"
 
 	"github.com/pkg/errors"
-
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 

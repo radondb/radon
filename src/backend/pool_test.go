@@ -16,7 +16,6 @@ import (
 
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
-
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )

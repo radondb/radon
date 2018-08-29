@@ -9,13 +9,13 @@
 package proxy
 
 import (
-	"binlog"
-	"config"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
+	"binlog"
+	"config"
 	"xbase"
 	"xbase/stats"
 	"xbase/sync2"
