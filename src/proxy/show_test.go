@@ -122,6 +122,16 @@ func TestProxyShowTables(t *testing.T) {
 		_, err = client.FetchAll(query, -1)
 		assert.NotNil(t, err)
 	}
+
+	// show tables error with sys database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show tables from MYSQL"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
 }
 
 func TestProxyShowCreateTable(t *testing.T) {
@@ -177,6 +187,175 @@ func TestProxyShowCreateTable(t *testing.T) {
 		want := "[t1 show create table t1]"
 		got := fmt.Sprintf("%+v", qr.Rows[0])
 		assert.Equal(t, want, got)
+	}
+
+	// show create table err(no database).
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show create table t1"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// show create table err(system database).
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show create table MYSQL.t1"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// show create table err(database not exist).
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show create table xxx.t1"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+}
+
+func TestProxyShowColumns(t *testing.T) {
+	r1 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "table",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "create table",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_0000")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("show create table t1_0000")),
+			},
+		},
+	}
+
+	r2 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "Field",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Type",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Null",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Key",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Default",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Extra",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("col_a")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("int(11)")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("YES")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+			},
+		},
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("show create .*", r1)
+		fakedbs.AddQueryPattern("show columns .*", r2)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create table t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		client.Quit()
+	}
+
+	// show create table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show create table test.t1"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[t1 show create table t1]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// show columns from table
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show columns from test.t1"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[col_a int(11) YES NULL NULL NULL]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// show columns from table err(database is empty)
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show columns from t1"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// show columns from table err(sys database:MYSQL)
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show columns from MYSQL.t1"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// show columns from table err(database not exist)
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show columns from xxx.t1"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
 	}
 }
 

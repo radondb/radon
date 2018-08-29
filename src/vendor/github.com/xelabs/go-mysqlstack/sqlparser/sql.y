@@ -154,7 +154,7 @@ func forceEOF(yylex interface{}) {
 %token <bytes> NULLX AUTO_INCREMENT APPROXNUM SIGNED UNSIGNED ZEROFILL
 
 // Supported SHOW tokens
-%token <bytes> DATABASES TABLES VITESS_KEYSPACES VITESS_SHARDS VSCHEMA_TABLES WARNINGS VARIABLES EVENTS BINLOG GTID STATUS
+%token <bytes> DATABASES TABLES VITESS_KEYSPACES VITESS_SHARDS VSCHEMA_TABLES WARNINGS VARIABLES EVENTS BINLOG GTID STATUS COLUMNS
 
 // Functions
 %token <bytes> CURRENT_TIMESTAMP DATABASE CURRENT_DATE
@@ -977,7 +977,7 @@ show_statement_type:
 | reserved_keyword
   {
     switch v := string($1); v {
-    case ShowDatabasesStr, ShowTablesStr, ShowEnginesStr, ShowVersionsStr, ShowProcesslistStr, ShowQueryzStr, ShowTxnzStr:
+    case ShowDatabasesStr, ShowTablesStr, ShowEnginesStr, ShowVersionsStr, ShowProcesslistStr, ShowQueryzStr, ShowTxnzStr, ShowColumnsStr:
       $$ = v
     default:
       $$ = ShowUnsupportedStr
@@ -996,6 +996,10 @@ show_statement:
 | SHOW TABLES FROM table_name force_eof
   {
     $$ = &Show{Type: ShowTablesStr, Database: $4}
+  }
+| SHOW COLUMNS FROM table_name force_eof
+  {
+    $$ = &Show{Type: ShowColumnsStr, Table: $4}
   }
 | SHOW CREATE TABLE table_name force_eof
   {
@@ -2388,6 +2392,7 @@ reserved_keyword:
 | STRAIGHT_JOIN
 | TABLE
 | TABLES
+| COLUMNS 
 | THEN
 | TO
 | TRUE
