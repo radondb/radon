@@ -16,7 +16,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/driver"
-
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"

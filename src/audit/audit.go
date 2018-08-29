@@ -9,12 +9,12 @@
 package audit
 
 import (
-	"config"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
+	"config"
 	"xbase"
 
 	"github.com/xelabs/go-mysqlstack/xlog"

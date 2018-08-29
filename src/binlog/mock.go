@@ -10,6 +10,7 @@ package binlog
 
 import (
 	"errors"
+
 	"xbase"
 )
 

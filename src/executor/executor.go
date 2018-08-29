@@ -14,7 +14,6 @@ import (
 	"xcontext"
 
 	"github.com/pkg/errors"
-
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )

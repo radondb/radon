@@ -1,7 +1,6 @@
 package syncer
 
 import (
-	"backend"
 	"context"
 	"crypto/sha1"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"backend"
 	"config"
 	"router"
 

@@ -9,13 +9,14 @@
 package proxy
 
 import (
-	"build"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
+
+	"build"
 
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqldb"

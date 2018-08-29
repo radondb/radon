@@ -18,7 +18,6 @@ import (
 	"config"
 
 	"github.com/pkg/errors"
-
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
