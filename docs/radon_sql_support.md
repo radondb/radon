@@ -30,6 +30,7 @@ Contents
       * [SHOW ENGINES](#show-engines)
       * [SHOW DATABASES](#show-databases)
       * [SHOW TABLES](#show-tables)
+      * [SHOW COLUMNS](#show-columns)
       * [SHOW CREATE TABLE](#show-create-table)
       * [SHOW PROCESSLIST](#show-processlist)
       * [SHOW VARIABLES](#show-variables)
@@ -656,6 +657,34 @@ mysql> SHOW TABLES;
 | t2                 |
 +--------------------+
 2 rows in set (0.01 sec)
+```
+
+### SHOW COLUMNS
+
+`Syntax`
+
+```
+SHOW COLUMNS FROM [db_name.]table_name
+```
+
+`Instructions`
+* Get the column definitions of a table
+
+`Example: `
+
+```
+mysql> CREATE TABLE T1(A INT, B VARCHAR(10)) PARTITION BY HASH(A);
+Query OK, 0 rows affected (0.52 sec)
+
+mysql> SHOW COLUMNS FROM T1;
++-------+-------------+------+-----+---------+-------+
+| Field | Type        | Null | Key | Default | Extra |
++-------+-------------+------+-----+---------+-------+
+| A     | int(11)     | YES  |     | NULL    |       |
+| B     | varchar(10) | YES  |     | NULL    |       |
++-------+-------------+------+-----+---------+-------+
+2 rows in set (0.01 sec)
+
 ```
 
 ### SHOW CREATE TABLE
