@@ -207,6 +207,7 @@ func TestScatter(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	scatter := NewScatter(log, tmpDir)
+	scatter.Init(MockXaCheckConfigDefault())
 	defer scatter.Close()
 
 	fakedb := fakedb.New(log, 2)

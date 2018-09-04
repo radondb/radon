@@ -45,6 +45,11 @@ func NewScatter(log *xlog.Log, metadir string) *Scatter {
 	}
 }
 
+// Init is used to start the xacheck thread.
+func (scatter *Scatter) Init(XaCheckConf *config.XaCheckConfig) error {
+	return scatter.txnMgr.Init(scatter, XaCheckConf)
+}
+
 // Add backend node.
 func (scatter *Scatter) add(config *config.BackendConfig) error {
 	log := scatter.log
@@ -140,6 +145,8 @@ func (scatter *Scatter) Close() {
 	log := scatter.log
 	log.Info("scatter.prepare.to.close....")
 	scatter.clear()
+	// close the xacheck go
+	scatter.txnMgr.xaCheck.Close()
 	log.Info("scatter.close.done....")
 }
 
