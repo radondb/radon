@@ -710,6 +710,7 @@ func TestTxnTwoPCExecuteNormalOnOneBackend(t *testing.T) {
 		xcontext.QueryTuple{Query: "select * from node3", Backend: addrs[0]},
 	}
 
+	fakedb.AddQueryPattern("xa start .*", &sqltypes.Result{})
 	fakedb.AddQuery(querys[0].Query, result2)
 	fakedb.AddQueryDelay(querys[1].Query, result2, 100)
 	fakedb.AddQueryDelay(querys[2].Query, result2, 150)
@@ -809,6 +810,7 @@ func TestTxnTwoPCExecuteScatterOnOneBackend(t *testing.T) {
 	querys := []xcontext.QueryTuple{
 		xcontext.QueryTuple{Query: "select * from node1", Backend: addrs[0]},
 	}
+	fakedb.AddQueryPattern("xa start .*", &sqltypes.Result{})
 	fakedb.AddQuery(querys[0].Query, result2)
 
 	txn, err := txnMgr.CreateTxn(backends)
@@ -883,14 +885,6 @@ func TestTxnTwoPCExecuteError(t *testing.T) {
 		fakedb.AddQueryErrorPattern("XA START .*", errors.New("mock.xa.start.error"))
 
 		err = txn.Begin()
-		assert.Nil(t, err)
-
-		rctx := &xcontext.RequestContext{
-			Mode:    xcontext.ReqNormal,
-			TxnMode: xcontext.TxnWrite,
-			Querys:  querys,
-		}
-		_, err = txn.Execute(rctx)
 		assert.NotNil(t, err)
 	}
 
@@ -990,3 +984,18 @@ func TestTxnTwoPCExecuteError(t *testing.T) {
 /*****************************************************************/
 /*************************XA TESTS END****************************/
 /*****************************************************************/
+
+func TestTxnRawExecute(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+
+	_, txnMgr, backends, _, _, cleanup := MockTxnMgr(log, 2)
+	defer cleanup()
+
+	txn, err := txnMgr.CreateTxn(backends)
+	assert.Nil(t, err)
+	defer txn.Finish()
+
+	_, err = txn.ExecuteRaw("db", "select 1")
+	assert.NotNil(t, err)
+}

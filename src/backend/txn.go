@@ -323,12 +323,13 @@ func (txn *Txn) xaRollback() {
 }
 
 // Begin used to start a XA transaction.
-// Begin only does:
-// 1. set twopc to true
 func (txn *Txn) Begin() error {
 	txnCounters.Add(txnCounterTxnBegin, 1)
 	txn.twopc = true
-	return nil
+
+	txn.req = xcontext.NewRequestContext()
+	txn.req.Mode = xcontext.ReqScatter
+	return txn.xaStart()
 }
 
 // Commit does:
@@ -400,11 +401,6 @@ func (txn *Txn) Execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 			// read-txn acquires the commit read-lock.
 			txn.mgr.CommitRLock()
 			defer txn.mgr.CommitRUnlock()
-		case xcontext.TxnWrite:
-			// write-txn xa starts.
-			if err := txn.xaStart(); err != nil {
-				return nil, err
-			}
 		}
 	}
 	qr, err := txn.execute(req)
@@ -593,30 +589,20 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 		}
 	}
 
-	switch req.Mode {
-	case xcontext.ReqNormal:
-		backends := make(map[string]bool)
-		for _, query := range req.Querys {
-			_, ok := backends[query.Backend]
-			if !ok {
-				backends[query.Backend] = true
-			}
+	// Only do XA when backends numbers larger than one.
+	beLen := len(txn.backends)
+	if beLen > 1 {
+		switch state {
+		case txnXAStateCommit, txnXAStateRollback:
+			// Acquire the commit lock if the txn is write.
+			txn.mgr.CommitLock()
+			defer txn.mgr.CommitUnlock()
 		}
 
-		// Only do XA when backends numbers larger than one.
-		beLen := len(backends)
-		if beLen > 1 {
-			switch state {
-			case txnXAStateCommit, txnXAStateRollback:
-				// Acquire the commit lock if the txn is write.
-				txn.mgr.CommitLock()
-				defer txn.mgr.CommitUnlock()
-			}
-
-			for back := range backends {
-				wg.Add(1)
-				go oneShard(state, back, txn, req.RawQuery)
-			}
+		// Scatter.
+		for back := range txn.backends {
+			wg.Add(1)
+			go oneShard(state, back, txn, req.RawQuery)
 		}
 	}
 
