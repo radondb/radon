@@ -32,6 +32,7 @@ func NewRelayCommand() *cobra.Command {
 	cmd.AddCommand(NewRelayResetToNowCommand())
 	cmd.AddCommand(NewRelayMaxWorkersCommand())
 	cmd.AddCommand(NewRelayNowCommand())
+	cmd.PersistentFlags().StringVar(&radonHost, "radon-host", "127.0.0.1", "--radon-host=[ip]")
 	return cmd
 }
 
@@ -45,7 +46,7 @@ func NewRelayStatusCommand() *cobra.Command {
 }
 
 func relayStatusCommand(cmd *cobra.Command, args []string) {
-	relayUrl := "http://127.0.0.1:8080/v1/relay/status"
+	relayUrl := "http://" + radonHost + ":8080/v1/relay/status"
 	resp, err := xbase.HTTPGet(relayUrl)
 	if err != nil {
 		log.Panicf("error:%+v", err)
@@ -63,7 +64,7 @@ func NewRelayInfosCommand() *cobra.Command {
 }
 
 func relayInfosCommand(cmd *cobra.Command, args []string) {
-	relayUrl := "http://127.0.0.1:8080/v1/relay/infos"
+	relayUrl := "http://" + radonHost + ":8080/v1/relay/infos"
 	resp, err := xbase.HTTPGet(relayUrl)
 	if err != nil {
 		log.Panicf("error:%+v", err)
@@ -94,7 +95,7 @@ func NewRelayStartCommand() *cobra.Command {
 }
 
 func relayStartCommand(cmd *cobra.Command, args []string) {
-	relayUrl := "http://127.0.0.1:8080/v1/relay/start"
+	relayUrl := "http://" + radonHost + ":8080/v1/relay/start"
 	setRelay(relayUrl)
 }
 
@@ -108,7 +109,7 @@ func NewRelayStopCommand() *cobra.Command {
 }
 
 func relayStopCommand(cmd *cobra.Command, args []string) {
-	relayUrl := "http://127.0.0.1:8080/v1/relay/stop"
+	relayUrl := "http://" + radonHost + ":8080/v1/relay/stop"
 	setRelay(relayUrl)
 }
 
@@ -143,7 +144,7 @@ func NewRelayParallelTypeCommand() *cobra.Command {
 }
 
 func relayParallelTypeCommand(cmd *cobra.Command, args []string) {
-	url := "http://127.0.0.1:8080/v1/relay/paralleltype"
+	url := "http://" + radonHost + ":8080/v1/relay/paralleltype"
 	setParallelType(url, int32(localFlags.parallelType))
 }
 
@@ -152,7 +153,7 @@ func relayResetGTID(gtid int64) {
 		log.Panicf("gtid[%v].less.than[1514254947594569594].should.be.UTC().UnixNano()", gtid)
 	}
 
-	relayUrl := "http://127.0.0.1:8080/v1/relay/reset"
+	relayUrl := "http://" + radonHost + ":8080/v1/relay/reset"
 	type request struct {
 		GTID int64 `json:"gtid"`
 	}
@@ -211,7 +212,7 @@ func NewRelayMaxWorkersCommand() *cobra.Command {
 }
 
 func relayMaxWorkersCommand(cmd *cobra.Command, args []string) {
-	relayUrl := "http://127.0.0.1:8080/v1/relay/workers"
+	relayUrl := "http://" + radonHost + ":8080/v1/relay/workers"
 	type request struct {
 		Workers int `json:"workers"`
 	}

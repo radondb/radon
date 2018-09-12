@@ -24,6 +24,7 @@ func NewDebugCommand() *cobra.Command {
 	cmd.AddCommand(NewDebugConfigzCommand())
 	cmd.AddCommand(NewDebugBackendzCommand())
 	cmd.AddCommand(NewDebugSchemazCommand())
+	cmd.PersistentFlags().StringVar(&radonHost, "radon-host", "127.0.0.1", "--radon-host=[ip]")
 	return cmd
 }
 
@@ -37,7 +38,7 @@ func NewDebugConfigzCommand() *cobra.Command {
 }
 
 func debugConfigzCommand(cmd *cobra.Command, args []string) {
-	configzUrl := "http://127.0.0.1:8080/v1/debug/configz"
+	configzUrl := "http://" + radonHost + ":8080/v1/debug/configz"
 	resp, err := xbase.HTTPGet(configzUrl)
 	if err != nil {
 		log.Panicf("error:%+v", err)
@@ -55,7 +56,7 @@ func NewDebugBackendzCommand() *cobra.Command {
 }
 
 func debugBackendzCommand(cmd *cobra.Command, args []string) {
-	backendzUrl := "http://127.0.0.1:8080/v1/debug/backendz"
+	backendzUrl := "http://" + radonHost + ":8080/v1/debug/backendz"
 	resp, err := xbase.HTTPGet(backendzUrl)
 	if err != nil {
 		log.Panicf("error:%+v", err)
@@ -73,7 +74,7 @@ func NewDebugSchemazCommand() *cobra.Command {
 }
 
 func debugSchemazCommand(cmd *cobra.Command, args []string) {
-	schemazUrl := "http://127.0.0.1:8080/v1/debug/schemaz"
+	schemazUrl := "http://" + radonHost + ":8080/v1/debug/schemaz"
 	resp, err := xbase.HTTPGet(schemazUrl)
 	if err != nil {
 		log.Panicf("error:%+v", err)

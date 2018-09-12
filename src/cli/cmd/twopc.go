@@ -23,6 +23,7 @@ func NewTwopcCommand() *cobra.Command {
 	}
 	cmd.AddCommand(NewTwopcEnableCommand())
 	cmd.AddCommand(NewTwopcDisableCommand())
+	cmd.PersistentFlags().StringVar(&radonHost, "radon-host", "127.0.0.1", "--radon-host=[ip]")
 	return cmd
 }
 
@@ -46,7 +47,7 @@ func setTwopc(url string, twopc bool) {
 	}
 }
 
-// enable twopc.
+// NewTwopcEnableCommand enable twopc.
 func NewTwopcEnableCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "enable",
@@ -57,11 +58,11 @@ func NewTwopcEnableCommand() *cobra.Command {
 }
 
 func twopcEnableCommand(cmd *cobra.Command, args []string) {
-	twopcUrl := "http://127.0.0.1:8080/v1/radon/twopc"
+	twopcUrl := "http://" + radonHost + ":8080/v1/radon/twopc"
 	setTwopc(twopcUrl, true)
 }
 
-// disable twopc.
+// NewTwopcDisableCommand disable twopc.
 func NewTwopcDisableCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "disable",
@@ -72,6 +73,6 @@ func NewTwopcDisableCommand() *cobra.Command {
 }
 
 func twopcDisableCommand(cmd *cobra.Command, args []string) {
-	twopcUrl := "http://127.0.0.1:8080/v1/radon/twopc"
+	twopcUrl := "http://" + radonHost + ":8080/v1/radon/twopc"
 	setTwopc(twopcUrl, false)
 }
