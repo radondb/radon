@@ -18,6 +18,7 @@ import (
 var (
 	log        = xlog.NewStdLog(xlog.Level(xlog.INFO))
 	localFlags = LocalFlags{}
+	radonHost  = "127.0.0.1"
 )
 
 // LocalFlags are flags that defined for local.

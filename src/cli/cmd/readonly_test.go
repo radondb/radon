@@ -32,6 +32,8 @@ func TestCmdReadOnly(t *testing.T) {
 		cmd := NewReadonlyCommand()
 		_, err := executeCommand(cmd, "enable")
 		assert.Nil(t, err)
+		_, err := executeCommand(cmd, "enable", "--radon-host", "127.0.0.1")
+		assert.Nil(t, err)
 	}
 
 	// disable.
@@ -39,6 +41,7 @@ func TestCmdReadOnly(t *testing.T) {
 		cmd := NewReadonlyCommand()
 		_, err := executeCommand(cmd, "disable")
 		assert.Nil(t, err)
+		_, err := executeCommand(cmd, "disable", "--radon-host", "127.0.0.1")
+		assert.Nil(t, err)
 	}
-
 }

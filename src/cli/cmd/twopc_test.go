@@ -32,11 +32,15 @@ func TestCmdTwopc(t *testing.T) {
 		cmd := NewTwopcCommand()
 		_, err := executeCommand(cmd, "enable")
 		assert.Nil(t, err)
+		_, err = executeCommand(cmd, "enable", "--radon-host", "127.0.0.1")
+		assert.NotNil(t, err)
 	}
 	// disable.
 	{
 		cmd := NewTwopcCommand()
 		_, err := executeCommand(cmd, "disable")
 		assert.Nil(t, err)
+		_, err = executeCommand(cmd, "disable", "--radon-host", "127.0.0.1")
+		assert.NotNil(t, err)
 	}
 }
