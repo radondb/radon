@@ -39,6 +39,7 @@ func NewBackupRebuildCommand() *cobra.Command {
 		Example: "rebuild --database=DB",
 		Run:     backupRebuildCommand,
 	}
+	cmd.PersistentFlags().StringVar(&radonHost, "radon-host", "127.0.0.1", "--radon-host=[ip]")
 	cmd.PersistentFlags().IntVar(&radonPort, "radon-port", 3306, "--radon-port=[port]")
 	cmd.PersistentFlags().StringVar(&backupEngine, "backup-engine", "tokudb", "--backup-engine=[engine]")
 	cmd.PersistentFlags().StringVar(&database, "database", "", "--database=[db]")
@@ -51,7 +52,7 @@ func backupRebuildCommand(cmd *cobra.Command, args []string) {
 	}
 
 	// First to stop the relay.
-	url := "http://127.0.0.1:8080/v1/relay/stop"
+	url := "http://" + radonHost + ":8080/v1/relay/stop"
 	setRelay(url)
 	log.Info("backup.rebuild.stop.the.relay...")
 
@@ -61,7 +62,7 @@ func backupRebuildCommand(cmd *cobra.Command, args []string) {
 		User     string `json:"user"`
 		Password string `json:"password"`
 	}
-	url = "http://127.0.0.1:8080/v1/radon/backupconfig"
+	url = "http://" + radonHost + ":8080/v1/radon/backupconfig"
 	body, err := xbase.HTTPGet(url)
 	if err != nil {
 		log.Panic("backup.rebuild.get.backup.config.error:%v", err)
@@ -77,7 +78,7 @@ func backupRebuildCommand(cmd *cobra.Command, args []string) {
 	streamArgs := &streamer.Args{
 		User:            "root",
 		Password:        "",
-		Address:         fmt.Sprintf("127.0.0.1:%d", radonPort),
+		Address:         fmt.Sprintf("%s:%d", radonHost, radonPort),
 		ToUser:          backConf.User,
 		ToPassword:      backConf.Password,
 		ToAddress:       backConf.Address,

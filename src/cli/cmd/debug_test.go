@@ -33,8 +33,10 @@ func TestCmdDebugConfigz(t *testing.T) {
 
 	{
 		cmd := NewDebugCommand()
-		cmd.Flags().String("configz", "", "")
-		debugConfigzCommand(cmd, nil)
+		_, err := executeCommand(cmd, "configz")
+		assert.Nil(t, err)
+		_, err = executeCommand(cmd, "configz", "--radon-host", "127.0.0.1")
+		assert.Nil(t, err)
 	}
 }
 
@@ -50,8 +52,10 @@ func TestCmdDebugBackendz(t *testing.T) {
 
 	{
 		cmd := NewDebugCommand()
-		cmd.Flags().String("backendz", "", "")
-		debugBackendzCommand(cmd, nil)
+		_, err := executeCommand(cmd, "backendz")
+		assert.Nil(t, err)
+		_, err = executeCommand(cmd, "backendz", "--radon-host", "127.0.0.1")
+		assert.Nil(t, err)
 	}
 }
 
@@ -82,7 +86,9 @@ func TestCmdDebugSchemaz(t *testing.T) {
 
 	{
 		cmd := NewDebugCommand()
-		cmd.Flags().String("schemaz", "", "")
-		debugSchemazCommand(cmd, nil)
+		_, err := executeCommand(cmd, "schemaz")
+		assert.Nil(t, err)
+		_, err = executeCommand(cmd, "schemaz", "--radon-host", "127.0.0.1")
+		assert.Nil(t, err)
 	}
 }
