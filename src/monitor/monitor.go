@@ -61,6 +61,14 @@ var (
 		},
 		[]string{"description"},
 	)
+
+	slowQueryTotalCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "slow_query_total",
+			Help: "Counter of slow queries.",
+		},
+		[]string{"command", "result"},
+	)
 )
 
 func init() {
@@ -69,13 +77,14 @@ func init() {
 	prometheus.MustRegister(queryTotalCounter)
 	prometheus.MustRegister(backendNum)
 	prometheus.MustRegister(diskUsage)
+	prometheus.MustRegister(slowQueryTotalCounter)
 }
 
 // Start monitor
 func Start(log *xlog.Log, conf *config.Config) {
 	webMonitorIP, webMonitorPort, err := net.SplitHostPort(conf.Monitor.MonitorAddress)
 	if err != nil {
-		log.Error("monitor.start.splithostport[%v].error:[%v]", conf.Monitor.MonitorAddress, err)
+		panic(err)
 	}
 
 	log.Info("[prometheus metrics]:\thttp://{%s}:%s%s\n",
@@ -125,4 +134,9 @@ func BackendDec(btype string) {
 // DiskUsageSet set usage of disk
 func DiskUsageSet(v float64) {
 	diskUsage.WithLabelValues("percent").Set(v)
+}
+
+// SlowQueryTotalCounterInc add 1
+func SlowQueryTotalCounterInc(command string, result string) {
+	slowQueryTotalCounter.WithLabelValues(command, result).Inc()
 }
