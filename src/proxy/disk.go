@@ -15,6 +15,8 @@ import (
 	"xbase"
 	"xbase/sync2"
 
+	"monitor"
+
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -39,7 +41,7 @@ func NewDiskCheck(log *xlog.Log, dir string) *DiskCheck {
 }
 
 // HighWater returns the highwater mark.
-// If true there is no spance left on device.
+// If true there is no space left on device.
 func (dc *DiskCheck) HighWater() bool {
 	return dc.highwater.Get()
 }
@@ -83,6 +85,7 @@ func (dc *DiskCheck) doCheck() {
 		return
 	}
 	used := float64(ds.Used) / float64(ds.All)
+	monitor.DiskUsageSet(used)
 	switch {
 	case used >= 0.90:
 		log.Warning("disk.check.got.high.water:%+v, used.perc[%.2f].more.than.95percent!!!", ds, used)

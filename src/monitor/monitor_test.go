@@ -77,3 +77,46 @@ func TestQueryTotalCounterInc(t *testing.T) {
 
 	assert.EqualValues(t, 1, v)
 }
+
+func TestBackendIncDec(t *testing.T) {
+	getBackendNum := func(btype string) float64 {
+		var m dto.Metric
+		g, _ := backendNum.GetMetricWithLabelValues(btype)
+		g.Write(&m)
+		return m.GetGauge().GetValue()
+	}
+
+	backend := "backend"
+	backup := "backup"
+
+	BackendInc(backend)
+	BackendInc(backup)
+
+	v1 := getBackendNum(backend)
+	v2 := getBackendNum(backup)
+
+	assert.EqualValues(t, 1, v1)
+	assert.EqualValues(t, 1, v2)
+
+	BackendDec(backend)
+	BackendDec(backup)
+
+	v1 = getBackendNum(backend)
+	v2 = getBackendNum(backup)
+
+	assert.EqualValues(t, 0, v1)
+	assert.EqualValues(t, 0, v2)
+}
+
+func TestDiskUsageSet(t *testing.T) {
+	v := 0.35
+
+	DiskUsageSet(v)
+
+	var m dto.Metric
+	g, _ := diskUsage.GetMetricWithLabelValues("percent")
+	g.Write(&m)
+	r := m.GetGauge().GetValue()
+
+	assert.EqualValues(t, v, r)
+}
