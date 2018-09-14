@@ -9,17 +9,18 @@
 package monitor
 
 import (
-	"fmt"
+	"net"
 	"net/http"
+
+	"config"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
 var (
-	webMonitorPort = "13308"
-	webMonitorAddr = "0.0.0.0"
-	webMonitorURL  = "/metrics"
+	webMonitorURL = "/metrics"
 
 	clientConnectionNum = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -53,19 +54,19 @@ func init() {
 }
 
 // Start monitor
-func Start(addr, port string) {
-	if addr != "" {
-		webMonitorAddr = addr
+func Start(log *xlog.Log, conf *config.Config) {
+	webMonitorIP, webMonitorPort, err := net.SplitHostPort(conf.Monitor.MonitorAddress)
+	if err != nil {
+		log.Error("monitor.start.splithostport[%v].error:[%v]", conf.Monitor.MonitorAddress, err)
 	}
-	if port != "" {
-		webMonitorPort = port
-	}
-	fmt.Printf("[prometheus metrics]:\thttp://{%s}:%s%s\n",
-		webMonitorAddr, webMonitorPort, webMonitorURL)
-	fmt.Printf("[pprof web]:\t\thttp://{%s}:%s/debug/pprof/\n",
-		webMonitorAddr, webMonitorPort)
+
+	log.Info("[prometheus metrics]:\thttp://{%s}:%s%s\n",
+		webMonitorIP, webMonitorPort, webMonitorURL)
+	log.Info("[pprof web]:\t\thttp://{%s}:%s/debug/pprof/\n",
+		webMonitorIP, webMonitorPort)
+
 	http.Handle(webMonitorURL, promhttp.Handler())
-	go http.ListenAndServe(webMonitorAddr+":"+webMonitorPort, nil)
+	go http.ListenAndServe(webMonitorIP+":"+webMonitorPort, nil)
 }
 
 // ClientConnectionInc add 1
@@ -88,7 +89,7 @@ func BackendConnectionDec(address string) {
 	backendConnectionNum.WithLabelValues(address).Dec()
 }
 
-//QueryTotalCounterInc add 1
+// QueryTotalCounterInc add 1
 func QueryTotalCounterInc(command string, result string) {
 	queryTotalCounter.WithLabelValues(command, result).Inc()
 }

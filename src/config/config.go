@@ -145,6 +145,29 @@ func (c *LogConfig) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// MonitorConfig tuple
+type MonitorConfig struct {
+	MonitorAddress string `json:monitor-address`
+}
+
+// DefaultMonitorConfig returns default monitor config.
+func DefaultMonitorConfig() *MonitorConfig {
+	return &MonitorConfig{
+		MonitorAddress: "0.0.0.0:13308",
+	}
+}
+
+// UnmarshalJSON interface on MonitorConfig.
+func (c *MonitorConfig) UnmarshalJSON(b []byte) error {
+	type confAlias *MonitorConfig
+	conf := confAlias(DefaultMonitorConfig())
+	if err := json.Unmarshal(b, conf); err != nil {
+		return err
+	}
+	*c = MonitorConfig(*conf)
+	return nil
+}
+
 // BackendConfig tuple.
 type BackendConfig struct {
 	Name           string `json:"name"`
@@ -210,11 +233,12 @@ func (c *RouterConfig) UnmarshalJSON(b []byte) error {
 
 // Config tuple.
 type Config struct {
-	Proxy  *ProxyConfig  `json:"proxy"`
-	Audit  *AuditConfig  `json:"audit"`
-	Router *RouterConfig `json:"router"`
-	Binlog *BinlogConfig `json:"binlog"`
-	Log    *LogConfig    `json:"log"`
+	Proxy   *ProxyConfig   `json:"proxy"`
+	Audit   *AuditConfig   `json:"audit"`
+	Router  *RouterConfig  `json:"router"`
+	Binlog  *BinlogConfig  `json:"binlog"`
+	Log     *LogConfig     `json:"log"`
+	Monitor *MonitorConfig `json:"monitor"`
 }
 
 func checkConfig(conf *Config) {
@@ -236,6 +260,10 @@ func checkConfig(conf *Config) {
 
 	if conf.Log == nil {
 		conf.Log = DefaultLogConfig()
+	}
+
+	if conf.Monitor == nil {
+		conf.Monitor = DefaultMonitorConfig()
 	}
 }
 
