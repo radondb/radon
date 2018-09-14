@@ -10,6 +10,7 @@ package proxy
 
 import (
 	"strings"
+	"time"
 
 	"monitor"
 	"xbase"
@@ -40,6 +41,8 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 	throttle := spanner.throttle
 	diskChecker := spanner.diskChecker
 	hasBackup := spanner.scatter.HasBackup()
+	timeStart := time.Now()
+	slowQueryTime := time.Duration(spanner.conf.Proxy.LongQueryTime) * time.Second
 
 	// Throttle.
 	throttle.Acquire()
@@ -78,7 +81,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 	}
 
 	defer func() {
-		queryStat(node, err)
+		queryStat(node, timeStart, slowQueryTime, err)
 	}()
 	switch node.(type) {
 	case *sqlparser.Use:
@@ -314,7 +317,7 @@ func (spanner *Spanner) IsDDL(node sqlparser.Statement) bool {
 	return false
 }
 
-func queryStat(node sqlparser.Statement, err error) {
+func queryStat(node sqlparser.Statement, timeStart time.Time, slowQueryTime time.Duration, err error) {
 	var command string
 	switch node.(type) {
 	case *sqlparser.Use:
@@ -342,9 +345,16 @@ func queryStat(node sqlparser.Statement, err error) {
 	default:
 		command = "Unsupport"
 	}
+	queryTime := time.Since(timeStart)
 	if err != nil {
+		if queryTime > slowQueryTime {
+			monitor.SlowQueryTotalCounterInc(command, "Error")
+		}
 		monitor.QueryTotalCounterInc(command, "Error")
 	} else {
+		if queryTime > slowQueryTime {
+			monitor.SlowQueryTotalCounterInc(command, "OK")
+		}
 		monitor.QueryTotalCounterInc(command, "OK")
 	}
 }

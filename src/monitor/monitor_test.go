@@ -11,8 +11,11 @@ package monitor
 import (
 	"testing"
 
+	"config"
+
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
+	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
 func TestClientConnectionIncDec(t *testing.T) {
@@ -119,4 +122,41 @@ func TestDiskUsageSet(t *testing.T) {
 	r := m.GetGauge().GetValue()
 
 	assert.EqualValues(t, v, r)
+}
+
+func TestSlowQueryTotalCounterInc(t *testing.T) {
+	// sql supported
+	command := "Select"
+	result := "OK"
+	SlowQueryTotalCounterInc(command, result)
+	SlowQueryTotalCounterInc(command, result)
+
+	var m dto.Metric
+	g, _ := queryTotalCounter.GetMetricWithLabelValues(command, result)
+	g.Write(&m)
+	v := m.GetCounter().GetValue()
+	assert.EqualValues(t, 2, v)
+
+	// sql not supported
+	command = "Unsupport"
+	result = "Error"
+	SlowQueryTotalCounterInc(command, result)
+
+	g, _ = queryTotalCounter.GetMetricWithLabelValues(command, result)
+	g.Write(&m)
+	v = m.GetCounter().GetValue()
+
+	assert.EqualValues(t, 1, v)
+}
+
+func TestMonitorStart(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	var conf config.Config
+	conf.Proxy = config.DefaultProxyConfig()
+	conf.Binlog = config.DefaultBinlogConfig()
+	conf.Audit = config.DefaultAuditConfig()
+	conf.Router = config.DefaultRouterConfig()
+	conf.Log = config.DefaultLogConfig()
+	conf.Monitor = config.DefaultMonitorConfig()
+	Start(log, &conf)
 }
