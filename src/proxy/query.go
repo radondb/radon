@@ -11,6 +11,7 @@ package proxy
 import (
 	"strings"
 
+	"monitor"
 	"xbase"
 
 	"github.com/xelabs/go-mysqlstack/common"
@@ -76,6 +77,9 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 		}
 	}
 
+	defer func() {
+		queryStat(node, err)
+	}()
 	switch node.(type) {
 	case *sqlparser.Use:
 		if qr, err = spanner.handleUseDB(session, query, node); err != nil {
@@ -278,7 +282,8 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 	default:
 		log.Error("proxy.unsupported[%s].from.session[%v]", query, session.ID())
 		spanner.auditLog(session, R, xbase.UNSUPPORT, query, qr)
-		return sqldb.NewSQLError(sqldb.ER_UNKNOWN_ERROR, "unsupported.query:%v", query)
+		err = sqldb.NewSQLError(sqldb.ER_UNKNOWN_ERROR, "unsupported.query:%v", query)
+		return err
 	}
 }
 
@@ -307,4 +312,39 @@ func (spanner *Spanner) IsDDL(node sqlparser.Statement) bool {
 		return true
 	}
 	return false
+}
+
+func queryStat(node sqlparser.Statement, err error) {
+	var command string
+	switch node.(type) {
+	case *sqlparser.Use:
+		command = "Use"
+	case *sqlparser.DDL:
+		command = "DDL"
+	case *sqlparser.Show:
+		command = "Show"
+	case *sqlparser.Insert:
+		command = "Insert"
+	case *sqlparser.Delete:
+		command = "Delete"
+	case *sqlparser.Update:
+		command = "Update"
+	case *sqlparser.Select:
+		command = "Select"
+	case *sqlparser.Kill:
+		command = "Kill"
+	case *sqlparser.Explain:
+		command = "Explain"
+	case *sqlparser.Transaction:
+		command = "Transaction"
+	case *sqlparser.Set:
+		command = "Set"
+	default:
+		command = "Unsupport"
+	}
+	if err != nil {
+		monitor.QueryTotalCounterInc(command, "Error")
+	} else {
+		monitor.QueryTotalCounterInc(command, "OK")
+	}
 }

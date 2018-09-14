@@ -36,11 +36,20 @@ var (
 		},
 		[]string{"address"},
 	)
+
+	queryTotalCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "query_total",
+			Help: "Counter of queries.",
+		},
+		[]string{"command", "result"},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(clientConnectionNum)
 	prometheus.MustRegister(backendConnectionNum)
+	prometheus.MustRegister(queryTotalCounter)
 }
 
 // Start monitor
@@ -77,4 +86,9 @@ func BackendConnectionInc(address string) {
 // BackendConnectionDec dec 1
 func BackendConnectionDec(address string) {
 	backendConnectionNum.WithLabelValues(address).Dec()
+}
+
+//QueryTotalCounterInc add 1
+func QueryTotalCounterInc(command string, result string) {
+	queryTotalCounter.WithLabelValues(command, result).Inc()
 }
