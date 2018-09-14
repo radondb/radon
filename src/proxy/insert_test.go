@@ -93,3 +93,43 @@ func TestProxyInsertQuerys(t *testing.T) {
 		assert.Nil(t, err)
 	}
 }
+
+func TestProxyLongTimeQuerys(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+	proxy.SetLongQueryTime(0)
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
+	}
+
+	tables := []string{
+		"create table test.t1(id int, b int) partition by hash(id)",
+		"create table test.t2(id datetime, b int) partition by hash(id)",
+		"create table test.t3(id varchar(200), b int) partition by hash(id)",
+		"create table test.t4(id decimal, b int) partition by hash(id)",
+		"create table test.t5(id float, b int) partition by hash(id)",
+	}
+
+	for _, table := range tables {
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		_, err = client.FetchAll(table, -1)
+		assert.Nil(t, err)
+	}
+
+	querysError := []string{
+		"insert into test.t6(id, b) values(1, 1)",
+		"insert into test.t7(id, b) values(1, 1)",
+	}
+	for _, query := range querysError {
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+}

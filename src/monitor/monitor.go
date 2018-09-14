@@ -45,19 +45,28 @@ var (
 		},
 		[]string{"command", "result"},
 	)
+
+	slowQueryTotalCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "slow_query_total",
+			Help: "Counter of slow queries.",
+		},
+		[]string{"command", "result"},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(clientConnectionNum)
 	prometheus.MustRegister(backendConnectionNum)
 	prometheus.MustRegister(queryTotalCounter)
+	prometheus.MustRegister(slowQueryTotalCounter)
 }
 
 // Start monitor
 func Start(log *xlog.Log, conf *config.Config) {
 	webMonitorIP, webMonitorPort, err := net.SplitHostPort(conf.Monitor.MonitorAddress)
 	if err != nil {
-		log.Error("monitor.start.splithostport[%v].error:[%v]", conf.Monitor.MonitorAddress, err)
+		panic(err)
 	}
 
 	log.Info("[prometheus metrics]:\thttp://{%s}:%s%s\n",
@@ -92,4 +101,9 @@ func BackendConnectionDec(address string) {
 // QueryTotalCounterInc add 1
 func QueryTotalCounterInc(command string, result string) {
 	queryTotalCounter.WithLabelValues(command, result).Inc()
+}
+
+// SlowQueryTotalCounterInc add 1
+func SlowQueryTotalCounterInc(command string, result string) {
+	slowQueryTotalCounter.WithLabelValues(command, result).Inc()
 }
