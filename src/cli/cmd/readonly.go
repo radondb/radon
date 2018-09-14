@@ -23,6 +23,7 @@ func NewReadonlyCommand() *cobra.Command {
 	}
 	cmd.AddCommand(NewReadonlyEnableCommand())
 	cmd.AddCommand(NewReadonlyDisableCommand())
+	cmd.PersistentFlags().StringVar(&radonHost, "radon-host", "127.0.0.1", "--radon-host=[ip]")
 	return cmd
 }
 
@@ -46,7 +47,7 @@ func setReadonly(url string, readonly bool) {
 	}
 }
 
-// enable readonly.
+// NewReadonlyEnableCommand enable readonly.
 func NewReadonlyEnableCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "enable",
@@ -57,11 +58,11 @@ func NewReadonlyEnableCommand() *cobra.Command {
 }
 
 func readonlyEnableCommand(cmd *cobra.Command, args []string) {
-	readonlyUrl := "http://127.0.0.1:8080/v1/radon/readonly"
+	readonlyUrl := "http://" + radonHost + ":8080/v1/radon/readonly"
 	setReadonly(readonlyUrl, true)
 }
 
-// disable readonly.
+// NewReadonlyDisableCommand disable readonly.
 func NewReadonlyDisableCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "disable",
@@ -72,6 +73,6 @@ func NewReadonlyDisableCommand() *cobra.Command {
 }
 
 func readonlyDisableCommand(cmd *cobra.Command, args []string) {
-	readonlyUrl := "http://127.0.0.1:8080/v1/radon/readonly"
+	readonlyUrl := "http://" + radonHost + ":8080/v1/radon/readonly"
 	setReadonly(readonlyUrl, false)
 }
