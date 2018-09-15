@@ -84,7 +84,8 @@ allpkgs =	xbase/...\
 			proxy\
 			audit\
 			syncer\
-			binlog
+			binlog\
+			monitor
 coverage:
 	go build -v -o bin/gotestcover \
 	src/vendor/github.com/pierrre/gotestcover/*.go;

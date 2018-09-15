@@ -12,5 +12,8 @@
         },
         "log": {
                 "level": "INFO"
+        },
+        "monitor": {
+            "monitor-address": "0.0.0.0:13380"
         }
 }
