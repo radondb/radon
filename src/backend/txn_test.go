@@ -19,7 +19,6 @@ import (
 
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
-
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
@@ -796,7 +795,9 @@ func TestTxnTwoPCExecuteError(t *testing.T) {
 			txn.Commit()
 		}
 
-		// XA COMMIT error.
+		// Add the xaredo feature when the commit is failed, and the test is moved to the xaredo_test.go
+		///*
+			// XA COMMIT error.
 		{
 			txn, err := txnMgr.CreateTxn(backends)
 			assert.Nil(t, err)
@@ -815,8 +816,10 @@ func TestTxnTwoPCExecuteError(t *testing.T) {
 			}
 			_, err = txn.Execute(rctx)
 			assert.Nil(t, err)
-			txn.Commit()
+			err =txn.Commit()
+			assert.NotNil(t, err)
 		}
+		//*/
 	}
 }
 

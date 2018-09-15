@@ -13,12 +13,15 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"config"
+
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
 // TxnManager tuple.
 type TxnManager struct {
 	log        *xlog.Log
+	xaCheck    *XaCheck
 	txnid      uint64
 	txnNums    int64
 	commitLock sync.RWMutex
@@ -30,6 +33,17 @@ func NewTxnManager(log *xlog.Log) *TxnManager {
 		log:   log,
 		txnid: 0,
 	}
+}
+
+// Init is used to init the async worker.
+func (mgr *TxnManager) Init(scatter *Scatter, ScatterConf *config.ScatterConfig) error {
+	xaChecker := NewXaCheck(scatter, ScatterConf)
+	if err := xaChecker.Init(); err != nil {
+		return err
+	}
+	mgr.xaCheck = xaChecker
+
+	return nil
 }
 
 // GetID returns a new txnid.
