@@ -40,6 +40,7 @@ Contents
       * [create user](#create-user)
       * [update user](#update-user)
       * [drop user](#drop-user)
+      * [get users](#get-users)
    * [relay](#relay)
       * [status](#status-1)
       * [start](#start)
@@ -914,6 +915,28 @@ HTTP/1.1 200 OK
 Date: Tue, 10 Apr 2018 03:41:14 GMT
 Content-Length: 0
 Content-Type: text/plain; charset=utf-8
+```
+
+### get users
+```
+Path:    /v1/user/userz
+Method:  GET
+```
+
+`Status:`
+
+```
+	200: StatusOK
+	405: StatusMethodNotAllowed
+	500: StatusInternalServerError
+```
+
+`Example:`
+
+```
+$ curl http://127.0.0.1:8080/v1/user/userz
+---Response---
+[{"User":"root","Host":"%"},{"User":"test","Host":"%"},{"User":"mysql.session","Host":"localhost"},{"User":"mysql.sys","Host":"localhost"},{"User":"root","Host":"localhost"},{"User":"test","Host":"localhost"}]%
 ```
 
 ## relay

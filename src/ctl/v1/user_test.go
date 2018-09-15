@@ -16,6 +16,8 @@ import (
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/ant0ine/go-json-rest/rest/test"
+	"github.com/stretchr/testify/assert"
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
@@ -195,6 +197,82 @@ func TestCtlV1DropError(t *testing.T) {
 			User: "mock",
 		}
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/user/remove", p))
+		recorded.CodeIs(503)
+	}
+}
+
+func TestCtlV1Userz(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := proxy.MockProxy(log)
+	defer cleanup()
+
+	selectResult := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "User",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Host",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test1")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("localhost")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test2")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("localhost")),
+			},
+		},
+	}
+
+	//fakedbs.
+	{
+		fakedbs.AddQueryPattern("select .*", selectResult)
+	}
+
+	// server
+	api := rest.NewApi()
+	router, _ := rest.MakeRouter(
+		rest.Get("/v1/user/userz", UserzHandler(log, proxy)),
+	)
+	api.SetApp(router)
+	handler := api.MakeHandler()
+
+	{
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("GET", "http://localhost/v1/user/userz", nil))
+		recorded.CodeIs(200)
+
+		want := "[{\"User\":\"test1\",\"Host\":\"localhost\"},{\"User\":\"test2\",\"Host\":\"localhost\"}]"
+		got := recorded.Recorder.Body.String()
+		log.Debug(got)
+		assert.Equal(t, want, got)
+	}
+}
+
+func TestCtlV1UserzError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := proxy.MockProxy(log)
+	defer cleanup()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryErrorPattern("select .*", errors.New("api.v1.userz.get.mysql.user.error"))
+	}
+
+	// server
+	api := rest.NewApi()
+	router, _ := rest.MakeRouter(
+		rest.Get("/v1/user/userz", UserzHandler(log, proxy)),
+	)
+	api.SetApp(router)
+	handler := api.MakeHandler()
+
+	{
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("GET", "http://localhost/v1/user/userz", nil))
 		recorded.CodeIs(503)
 	}
 }
