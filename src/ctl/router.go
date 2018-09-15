@@ -38,6 +38,7 @@ func (admin *Admin) NewRouter() (rest.App, error) {
 		rest.Post("/v1/user/add", v1.CreateUserHandler(log, proxy)),
 		rest.Post("/v1/user/update", v1.AlterUserHandler(log, proxy)),
 		rest.Post("/v1/user/remove", v1.DropUserHandler(log, proxy)),
+		rest.Get("/v1/user/userz", v1.UserzHandler(log, proxy)),
 
 		// shard
 		rest.Get("/v1/shard/shardz", v1.ShardzHandler(log, proxy)),

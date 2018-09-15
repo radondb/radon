@@ -10,6 +10,7 @@ package v1
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 
 	"proxy"
@@ -99,4 +100,40 @@ func dropUserHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r
 		log.Error("api.v1.drop.user[%+v].error:%+v", p.User, err)
 		rest.Error(w, err.Error(), http.StatusServiceUnavailable)
 	}
+}
+
+// UserzHandler impl.
+func UserzHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFunc {
+	f := func(w rest.ResponseWriter, r *rest.Request) {
+		userzHandler(log, proxy, w, r)
+	}
+	return f
+}
+
+func userzHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Request) {
+	scatter := proxy.Scatter()
+	spanner := proxy.Spanner()
+	backends := scatter.Backends()
+	backend := backends[rand.Intn(len(backends))]
+	log.Warning("api.v1.userz[from:%v]", r.RemoteAddr)
+
+	query := "SELECT user,host FROM mysql.user"
+	qr, err := spanner.ExecuteOnThisBackend(backend, query)
+	if err != nil {
+		log.Error("api.v1.userz.get.mysql.user[from.backend:%v].error:%+v", backend, err)
+		rest.Error(w, err.Error(), http.StatusServiceUnavailable)
+		return
+	}
+
+	type UserInfo struct {
+		User string
+		Host string
+	}
+	var Users = make([]UserInfo, len(qr.Rows))
+	for i, row := range qr.Rows {
+		Users[i].User = string(row[0].Raw())
+		Users[i].Host = string(row[1].Raw())
+	}
+
+	w.WriteJson(Users)
 }
