@@ -327,13 +327,11 @@ func (txn *Txn) Commit() error {
 	case xcontext.TxnWrite:
 		// 1. XA END.
 		if err := txn.xaEnd(); err != nil {
-			txn.Rollback()
 			return err
 		}
 
 		// 2. XA PREPARE.
 		if err := txn.xaPrepare(); err != nil {
-			txn.Rollback()
 			return err
 		}
 
@@ -354,11 +352,16 @@ func (txn *Txn) Rollback() error {
 	switch txn.req.TxnMode {
 	case xcontext.TxnWrite:
 		log.Warning("txn.rollback.xid[%v]", txn.xid)
-		switch txnXAState(txn.xaState.Get()) {
-		// XA Prepare error, rollback prepare txn.
-		case txnXAStatePrepareFinished:
-			return txn.xaRollback()
+		// 1. XA END.
+		if err := txn.xaEnd(); err != nil {
+			return err
 		}
+
+		// 2. XA PREPARE.
+		if err := txn.xaPrepare(); err != nil {
+			return err
+		}
+		return txn.xaRollback()
 	}
 	return nil
 }
