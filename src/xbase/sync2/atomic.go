@@ -135,6 +135,7 @@ type AtomicString struct {
 	str string
 }
 
+// NewAtomicString ...
 func NewAtomicString(s string) AtomicString {
 	return AtomicString{str: s}
 }

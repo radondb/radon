@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	radon_test_json = "radon.test.config.json"
+	radonTestJSON = "radon.test.config.json"
 )
 
 func TestWriteConfig(t *testing.T) {
@@ -36,7 +36,7 @@ func TestWriteConfig(t *testing.T) {
 		Router: DefaultRouterConfig(),
 	}
 
-	path := path.Join(tmpDir, radon_test_json)
+	path := path.Join(tmpDir, radonTestJSON)
 	err := WriteConfig(path, conf)
 	assert.Nil(t, err)
 
@@ -50,7 +50,7 @@ func TestLoadConfig(t *testing.T) {
 	tmpDir := getTmpDir("", "radon_config_", log)
 	defer os.RemoveAll(tmpDir)
 
-	path := path.Join(tmpDir, radon_test_json)
+	path := path.Join(tmpDir, radonTestJSON)
 	{
 		_, err := LoadConfig(path)
 		assert.NotNil(t, err)
@@ -131,7 +131,7 @@ func TestWriteLoadConfig(t *testing.T) {
 	tmpDir := getTmpDir("", "radon_config_", log)
 	defer os.RemoveAll(tmpDir)
 
-	path := path.Join(tmpDir, radon_test_json)
+	path := path.Join(tmpDir, radonTestJSON)
 
 	conf := &Config{
 		Proxy: MockProxyConfig,
@@ -267,7 +267,7 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 	tmpDir := getTmpDir("", "radon_config_", log)
 	defer os.RemoveAll(tmpDir)
 
-	path := path.Join(tmpDir, radon_test_json)
+	path := path.Join(tmpDir, radonTestJSON)
 
 	// All nil.
 	{

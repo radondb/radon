@@ -76,6 +76,7 @@ func NewRates(name string, countTracker CountTracker, samples int, interval time
 	return rt
 }
 
+// Close ...
 func (rt *Rates) Close() {
 	close(rt.closed)
 	rt.wg.Wait()

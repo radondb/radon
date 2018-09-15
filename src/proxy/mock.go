@@ -102,8 +102,8 @@ func MockProxy1(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func())
 	}
 
 	// Proxy.
-	mockJson := tmpDir + "/radon_mock.json"
-	proxy := NewProxy(log, mockJson, conf)
+	mockJSON := tmpDir + "/radon_mock.json"
+	proxy := NewProxy(log, mockJSON, conf)
 	proxy.Start()
 	return fakedbs, proxy, func() {
 		proxy.Stop()
@@ -141,8 +141,8 @@ func MockProxy2(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func())
 	}
 
 	// Proxy.
-	mockJson := tmpDir + "/radon_mock.json"
-	proxy := NewProxy(log, mockJson, conf)
+	mockJSON := tmpDir + "/radon_mock.json"
+	proxy := NewProxy(log, mockJSON, conf)
 	proxy.Start()
 	return fakedbs, proxy, func() {
 		proxy.Stop()

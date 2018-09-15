@@ -26,12 +26,12 @@ import (
 )
 
 var (
-	flag_conf string
+	flagConf string
 )
 
 func init() {
-	flag.StringVar(&flag_conf, "c", "", "radon config file")
-	flag.StringVar(&flag_conf, "config", "", "radon config file")
+	flag.StringVar(&flagConf, "c", "", "radon config file")
+	flag.StringVar(&flagConf, "config", "", "radon config file")
 }
 
 func usage() {
@@ -48,12 +48,12 @@ func main() {
 	// config
 	flag.Usage = func() { usage() }
 	flag.Parse()
-	if flag_conf == "" {
+	if flagConf == "" {
 		usage()
 		os.Exit(0)
 	}
 
-	conf, err := config.LoadConfig(flag_conf)
+	conf, err := config.LoadConfig(flagConf)
 	if err != nil {
 		log.Panic("radon.load.config.error[%v]", err)
 	}
@@ -63,7 +63,7 @@ func main() {
 	monitor.Start("", "")
 
 	// Proxy.
-	proxy := proxy.NewProxy(log, flag_conf, conf)
+	proxy := proxy.NewProxy(log, flagConf, conf)
 	proxy.Start()
 
 	// Admin portal.
