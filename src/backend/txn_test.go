@@ -580,7 +580,8 @@ func TestTxnTwoPCRollback(t *testing.T) {
 
 	// 2PC Rollback.
 	{
-		txn.Rollback()
+		err = txn.Rollback()
+		assert.Nil(t, err)
 	}
 }
 
@@ -626,7 +627,10 @@ func TestTxnTwoPCRollbackError(t *testing.T) {
 			}
 			_, err = txn.Execute(rctx)
 			assert.Nil(t, err)
-			txn.Rollback()
+			err = txn.Rollback()
+			got := err.Error()
+			want := "mock.xa.end.error (errno 1105) (sqlstate HY000)"
+			assert.Equal(t, want, got)
 		}
 
 		// XA PREPARE error.
@@ -648,7 +652,10 @@ func TestTxnTwoPCRollbackError(t *testing.T) {
 			}
 			_, err = txn.Execute(rctx)
 			assert.Nil(t, err)
-			txn.Rollback()
+			err = txn.Rollback()
+			got := err.Error()
+			want := "mock.xa.prepare.error (errno 1105) (sqlstate HY000)"
+			assert.Equal(t, want, got)
 		}
 
 		// ROLLBACK error.
@@ -670,7 +677,30 @@ func TestTxnTwoPCRollbackError(t *testing.T) {
 			}
 			_, err = txn.Execute(rctx)
 			assert.Nil(t, err)
-			txn.Rollback()
+			err = txn.Rollback()
+			got := err.Error()
+			want := "XAER_NOTA: Unknown XID (errno 1397) (sqlstate XAE04)"
+			assert.Equal(t, want, got)
+		}
+
+		// ROLLBACK nothing for read-txn.
+		{
+			txn, err := txnMgr.CreateTxn(backends)
+			assert.Nil(t, err)
+			defer txn.Finish()
+
+			err = txn.Begin()
+			assert.Nil(t, err)
+
+			rctx := &xcontext.RequestContext{
+				Mode:    xcontext.ReqNormal,
+				TxnMode: xcontext.TxnRead,
+				Querys:  querys,
+			}
+			_, err = txn.Execute(rctx)
+			assert.Nil(t, err)
+			err = txn.Rollback()
+			assert.Nil(t, err)
 		}
 	}
 }
