@@ -69,6 +69,12 @@ var (
 		},
 		[]string{"command", "result"},
 	)
+
+	peerNum = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "peer_number",
+			Help: "radon peer Number",
+		})
 )
 
 func init() {
@@ -78,6 +84,7 @@ func init() {
 	prometheus.MustRegister(backendNum)
 	prometheus.MustRegister(diskUsage)
 	prometheus.MustRegister(slowQueryTotalCounter)
+	prometheus.MustRegister(peerNum)
 }
 
 // Start monitor
@@ -139,4 +146,19 @@ func DiskUsageSet(v float64) {
 // SlowQueryTotalCounterInc add 1
 func SlowQueryTotalCounterInc(command string, result string) {
 	slowQueryTotalCounter.WithLabelValues(command, result).Inc()
+}
+
+//PeerNumInc add 1
+func PeerNumInc() {
+	peerNum.Inc()
+}
+
+//PeerNumDec dec 1
+func PeerNumDec() {
+	peerNum.Dec()
+}
+
+//PeerNumSet set value
+func PeerNumSet(v float64) {
+	peerNum.Set(v)
 }

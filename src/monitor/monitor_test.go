@@ -149,6 +149,28 @@ func TestSlowQueryTotalCounterInc(t *testing.T) {
 	assert.EqualValues(t, 1, v)
 }
 
+func TestPeerNum(t *testing.T) {
+	PeerNumSet(1)
+
+	var m dto.Metric
+	peerNum.Write(&m)
+	v := m.GetGauge().GetValue()
+
+	assert.EqualValues(t, 1, v)
+
+	PeerNumInc()
+	peerNum.Write(&m)
+	v = m.GetGauge().GetValue()
+
+	assert.EqualValues(t, 2, v)
+
+	PeerNumDec()
+	peerNum.Write(&m)
+	v = m.GetGauge().GetValue()
+
+	assert.EqualValues(t, 1, v)
+}
+
 func TestMonitorStart(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	var conf config.Config
