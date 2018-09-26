@@ -11,6 +11,7 @@ package syncer
 import (
 	"encoding/json"
 	"errors"
+	"monitor"
 	"os"
 	"path"
 	"sync"
@@ -53,6 +54,7 @@ func (p *Peer) LoadConfig() error {
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		// peers.json does not exists.
 		p.peers = append(p.peers, p.self)
+		monitor.PeerNumSet(1)
 		return nil
 	}
 	peers, err := p.readJSON()
@@ -90,6 +92,7 @@ func (p *Peer) Add(peer string) error {
 		}
 	}
 	p.peers = append(p.peers, peer)
+	monitor.PeerNumInc()
 	return p.writeJSON(p.peers)
 }
 
@@ -102,6 +105,7 @@ func (p *Peer) Remove(peer string) error {
 	for i := range p.peers {
 		if p.peers[i] == peer {
 			p.peers = append(p.peers[:i], p.peers[i+1:]...)
+			monitor.PeerNumDec()
 			return p.writeJSON(p.peers)
 		}
 	}
