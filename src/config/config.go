@@ -149,7 +149,7 @@ func (c *LogConfig) UnmarshalJSON(b []byte) error {
 
 // MonitorConfig tuple
 type MonitorConfig struct {
-	MonitorAddress string `json:monitor-address`
+	MonitorAddress string `json:"monitor-address"`
 }
 
 // DefaultMonitorConfig returns default monitor config.
