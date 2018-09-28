@@ -94,9 +94,9 @@ func Start(log *xlog.Log, conf *config.Config) {
 		panic(err)
 	}
 
-	log.Info("[prometheus metrics]:\thttp://{%s}:%s%s\n",
+	log.Info("[prometheus metrics]:\thttp://%s:%s%s\n",
 		webMonitorIP, webMonitorPort, webMonitorURL)
-	log.Info("[pprof web]:\t\thttp://{%s}:%s/debug/pprof/\n",
+	log.Info("[pprof web]:\t\thttp://%s:%s/debug/pprof/\n",
 		webMonitorIP, webMonitorPort)
 
 	http.Handle(webMonitorURL, promhttp.Handler())
