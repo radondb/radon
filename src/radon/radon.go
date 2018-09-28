@@ -14,7 +14,9 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
 	"syscall"
+	"time"
 
 	"build"
 	"config"
@@ -26,7 +28,9 @@ import (
 )
 
 var (
-	flagConf string
+	flagConf   string
+	fcpu       *os.File
+	pprofCpuOn = flag.Bool("pcpu", false, "is cpu prof enable, default false")
 )
 
 func init() {
@@ -36,6 +40,28 @@ func init() {
 
 func usage() {
 	fmt.Println("Usage: " + os.Args[0] + " [-c|--config] <radon-config-file>")
+}
+
+func startPprof() {
+	nowStr := time.Now().Format(time.RFC3339)
+	if *pprofCpuOn {
+		cpuFile := "pprof_cpu_" + nowStr
+		fcpu, err := os.Create(cpuFile)
+		if err != nil {
+			fmt.Println("start pprof cpu failed", err)
+			os.Exit(1)
+		}
+
+		pprof.StartCPUProfile(fcpu)
+		fmt.Println("[pprof cpu]:\t" + cpuFile)
+	}
+}
+
+func stopPprof() {
+	if *pprofCpuOn {
+		pprof.StopCPUProfile()
+		fcpu.Close()
+	}
 }
 
 func main() {
@@ -58,6 +84,10 @@ func main() {
 		log.Panic("radon.load.config.error[%v]", err)
 	}
 	log.SetLevel(conf.Log.Level)
+
+	// pprof
+	startPprof()
+	defer stopPprof()
 
 	// Monitor
 	monitor.Start(log, conf)
