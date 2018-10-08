@@ -54,7 +54,7 @@ func (executor *SelectExecutor) Execute(ctx *xcontext.ResultContext) error {
 		return err
 	}
 
-	// Execute all the chilren plan.
+	// Execute all the children plan.
 	if subPlanTree != nil {
 		for _, subPlan := range subPlanTree.Plans() {
 			switch subPlan.Type() {
