@@ -206,7 +206,7 @@ func (p *Proxy) SetQueryTimeout(timeout int) {
 	p.conf.Proxy.QueryTimeout = timeout
 }
 
-// Set long Query Time used to set long query time.
+// SetLongQueryTime Set long Query Time used to set long query time.
 func (p *Proxy) SetLongQueryTime(longQueryTime int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

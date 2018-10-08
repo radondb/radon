@@ -457,7 +457,7 @@ func TestProxyDDLCreateTableError(t *testing.T) {
 	results := []string{
 		"create table must end with 'PARTITION BY HASH(shard-key)' (errno 1105) (sqlstate HY000)",
 		"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use, syntax error at position 33 near 'partition' (errno 1149) (sqlstate 42000)",
-		"spanner.ddl.check.create.table[dual].error:not surpport (errno 1105) (sqlstate HY000)",
+		"spanner.ddl.check.create.table[dual].error:not support (errno 1105) (sqlstate HY000)",
 	}
 
 	for i, query := range querys {

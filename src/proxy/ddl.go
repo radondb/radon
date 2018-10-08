@@ -37,7 +37,7 @@ func CheckCreateTable(ddl *sqlparser.DDL) error {
 	}
 
 	if "dual" == table {
-		return fmt.Errorf("spanner.ddl.check.create.table[%s].error:not surpport", table)
+		return fmt.Errorf("spanner.ddl.check.create.table[%s].error:not support", table)
 	}
 
 	// UNIQUE/PRIMARY constraint check.
