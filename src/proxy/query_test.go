@@ -375,7 +375,13 @@ func TestLongQuery(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
+
+	// set longQueryTime = 0s
+	proxy.SetLongQueryTime(0)
 	address := proxy.Address()
+	client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+	assert.Nil(t, err)
+	defer client.Close()
 
 	querys := []string{
 		"select 1 from dual",
@@ -389,15 +395,9 @@ func TestLongQuery(t *testing.T) {
 		fakedbs.AddQueryPattern("select 1 from dual", &sqltypes.Result{})
 	}
 
-	// set longQueryTime = 0s
 	{
-		proxy.SetLongQueryTime(0)
 		// long query success
 		{
-			client, err := driver.NewConn("mock", "mock", address, "", "utf8")
-			assert.Nil(t, err)
-			defer client.Close()
-
 			for _, query := range querys {
 				_, err = client.FetchAll(query, -1)
 				assert.Nil(t, err)
@@ -405,31 +405,41 @@ func TestLongQuery(t *testing.T) {
 		}
 		// long query failed
 		{
-			client, err := driver.NewConn("mock", "mock", address, "", "utf8")
-			assert.Nil(t, err)
-			defer client.Close()
-
 			for _, query := range querysError {
 				_, err = client.FetchAll(query, -1)
 				assert.NotNil(t, err)
 			}
 		}
 	}
+}
 
+// Test with long query time
+func TestLongQuery2(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+
+	// set longQueryTime = 5s
+	proxy.SetLongQueryTime(5)
+	address := proxy.Address()
+	client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+	assert.Nil(t, err)
+	defer client.Close()
+
+	querys := []string{
+		"select 1 from dual",
+	}
+	querysError := []string{
+		"select a a from dual",
+	}
 	// fakedbs: add a query and returns the expected result returned by delay 6s
 	{
 		fakedbs.AddQueryDelay("select 1 from dual", &sqltypes.Result{}, 6*1000)
 	}
 
-	// set longQueryTime = 5s
 	{
-		proxy.SetLongQueryTime(5)
 		// long query success
 		{
-			client, err := driver.NewConn("mock", "mock", address, "", "utf8")
-			assert.Nil(t, err)
-			defer client.Close()
-
 			for _, query := range querys {
 				_, err = client.FetchAll(query, -1)
 				assert.Nil(t, err)
@@ -437,10 +447,6 @@ func TestLongQuery(t *testing.T) {
 		}
 		// long query failed
 		{
-			client, err := driver.NewConn("mock", "mock", address, "", "utf8")
-			assert.Nil(t, err)
-			defer client.Close()
-
 			for _, query := range querysError {
 				_, err = client.FetchAll(query, -1)
 				assert.NotNil(t, err)
@@ -448,54 +454,3 @@ func TestLongQuery(t *testing.T) {
 		}
 	}
 }
-
-/*
-func TestProxyQueryBench(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
-	fakedbs, proxy, cleanup := MockProxy(log)
-	defer cleanup()
-	address := proxy.Address()
-
-	// fakedbs.
-	{
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
-	}
-
-	// create test table.
-	{
-		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
-		assert.Nil(t, err)
-		query := "create table test.t1(id int, b int) partition by hash(id)"
-		_, err = client.FetchAll(query, -1)
-		assert.Nil(t, err)
-	}
-
-	// insert.
-	{
-		var wg sync.WaitGroup
-
-		l := 1000
-		threads := 64
-		now := time.Now()
-		for k := 0; k < threads; k++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				client, err := driver.NewConn("mock", "mock", address, "", "utf8")
-				assert.Nil(t, err)
-				for i := 0; i < l; i++ {
-					query := "insert into test.t1(id, b) values(1,1)"
-					_, err := client.FetchAll(query, -1)
-					assert.Nil(t, err)
-				}
-			}()
-
-		}
-		wg.Wait()
-		n := l * threads
-		took := time.Since(now)
-		fmt.Printf(" LOOP\t%v COST %v, avg:%v/s\n", n, took, (int64(n)/(took.Nanoseconds()/1e6))*1000)
-	}
-}
-*/
