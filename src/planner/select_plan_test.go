@@ -293,16 +293,18 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select id from A limit x",
 		"select age,count(*) from A group by age having count(*) >=2",
 		"select id from A,b limit x",
+		"select * from (A,B)",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
 		"unsupported: distinct",
-		"unsupported: JOIN.expression",
+		"unsupported: more.than.one.shard.tables",
 		"unsupported: function:rand",
 		"unsupported: orderby[b].should.in.select.list",
 		"unsupported: limit.offset.or.counts.must.be.IntVal",
 		"unsupported: expr[count(*)].in.having.clause",
 		"unsupported: subqueries.in.select",
+		"unsupported: ParenTableExpr.in.select",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -469,5 +471,54 @@ func TestSelectPlanDatabaseNotFound(t *testing.T) {
 			err := planTree.Build()
 			assert.NotNil(t, err)
 		}
+	}
+}
+
+func TestSelectPlanGetTableInfoErr(t *testing.T) {
+	query := "select * from (select * from C) as D join B on B.a = D.a join A on D.a = A.a join (E, F) on (E.a = A.a and F.a = A.a)"
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+	plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+	{
+		_, err = plan.getOneTableInfo(nil)
+		want := "unsupported: aliasTableExpr cannot be nil"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	{
+		tbExpr := &sqlparser.AliasedTableExpr{}
+		expr := sqlparser.TableName{
+			Name: sqlparser.NewTableIdent("C"),
+		}
+		tbExpr.Expr = expr
+		_, err = plan.getOneTableInfo(tbExpr)
+		want := "Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	{
+		tableInfos := make([]TableInfo, 0, 4)
+		err = plan.getJoinTableInfos(plan.node.From[0].(*sqlparser.JoinTableExpr), &tableInfos)
+		want := "unsupported: JOIN.expression"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	{
+		tableInfos := make([]TableInfo, 0, 4)
+		joinExpr := plan.node.From[0].(*sqlparser.JoinTableExpr)
+		err = plan.getJoinTableInfos(joinExpr.LeftExpr.(*sqlparser.JoinTableExpr), &tableInfos)
+		want := "unsupported: subqueries.in.select"
+		got := err.Error()
+		assert.Equal(t, want, got)
 	}
 }

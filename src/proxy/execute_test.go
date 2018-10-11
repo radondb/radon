@@ -242,22 +242,35 @@ func TestProxyExecuteSelectError(t *testing.T) {
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
-		query := "create table test.t1(id int, b int) partition by hash(id)"
-		_, err = client.FetchAll(query, -1)
-		assert.Nil(t, err)
+		querys := []string{
+			"create table test.t1(id int, b int) partition by hash(id)",
+			"create table test.t2(id int, b int) partition by hash(id)",
+		}
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
 	}
 
 	// select.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
-		query := "select * from test.t1 join test.t2"
-		fakedbs.AddQuery(query, fakedb.Result3)
-		_, err = client.FetchAll(query, -1)
+		querys := []string{
+			"select * from test.t1 join test.t2",
+			"select * from test.t1, test.t2",
+		}
+		wants := []string{
+			"unsupported: more.than.one.shard.tables (errno 1105) (sqlstate HY000)",
+			"unsupported: subqueries.in.select (errno 1105) (sqlstate HY000)",
+		}
+		for i, query := range querys {
+			fakedbs.AddQuery(query, fakedb.Result3)
+			_, err = client.FetchAll(query, -1)
 
-		want := "unsupported: JOIN.expression (errno 1105) (sqlstate HY000)"
-		got := err.Error()
-		assert.Equal(t, want, got)
+			got := err.Error()
+			assert.Equal(t, wants[i], got)
+		}
 	}
 }
 

@@ -40,10 +40,8 @@ func TestJoinPlan(t *testing.T) {
 func TestJoinUnsupportedPlan(t *testing.T) {
 	querys := []string{
 		"select x.id, y.id from x,y where x.id=y.id",
-		"select x.id, y.id from x join y on x.id=y.id where x.id=1",
 	}
 	results := []string{
-		"unsupported: JOIN.expression",
 		"unsupported: JOIN.expression",
 	}
 
