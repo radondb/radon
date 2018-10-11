@@ -315,3 +315,84 @@ func TestInsertPlanError(t *testing.T) {
 		assert.NotNil(t, err)
 	}
 }
+
+func TestInsertPlanGlobal(t *testing.T) {
+	results := []string{
+		`{
+	"RawQuery": "insert into G(id, b, c) values(1,2,3) on duplicate key update c=11",
+	"Partitions": [
+		{
+			"Query": "insert into sbtest.G(id, b, c) values (1, 2, 3) on duplicate key update c = 11",
+			"Backend": "backend1",
+			"Range": ""
+		},
+		{
+			"Query": "insert into sbtest.G(id, b, c) values (1, 2, 3) on duplicate key update c = 11",
+			"Backend": "backend2",
+			"Range": ""
+		}
+	]
+}`,
+		`{
+	"RawQuery": "insert into G(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+	"Partitions": [
+		{
+			"Query": "insert into sbtest.G(id, b, c) values (1, 2, 3), (23, 4, 5), (65536, 3, 4)",
+			"Backend": "backend1",
+			"Range": ""
+		},
+		{
+			"Query": "insert into sbtest.G(id, b, c) values (1, 2, 3), (23, 4, 5), (65536, 3, 4)",
+			"Backend": "backend2",
+			"Range": ""
+		}
+	]
+}`,
+		`{
+	"RawQuery": "insert into sbtest.G(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+	"Partitions": [
+		{
+			"Query": "insert into sbtest.G(id, b, c) values (1, 2, 3), (23, 4, 5), (65536, 3, 4)",
+			"Backend": "backend1",
+			"Range": ""
+		},
+		{
+			"Query": "insert into sbtest.G(id, b, c) values (1, 2, 3), (23, 4, 5), (65536, 3, 4)",
+			"Backend": "backend2",
+			"Range": ""
+		}
+	]
+}`,
+	}
+	querys := []string{
+		"insert into G(id, b, c) values(1,2,3) on duplicate key update c=11",
+		"insert into G(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+		"insert into sbtest.G(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableGConfig())
+	assert.Nil(t, err)
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewInsertPlan(log, database, query, node.(*sqlparser.Insert), route)
+
+		// plan build
+		{
+			err := plan.Build()
+			assert.Nil(t, err)
+			got := plan.JSON()
+			log.Info(got)
+			want := results[i]
+			assert.Equal(t, want, got)
+			plan.Type()
+			plan.Size()
+		}
+	}
+}
