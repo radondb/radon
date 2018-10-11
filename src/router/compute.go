@@ -70,3 +70,30 @@ func (r *Router) HashUniform(table, shardkey string, backends []string) (*config
 	}
 	return tableConf, nil
 }
+
+// GlobalUniform used to uniform the global table to backends.
+func (r *Router) GlobalUniform(table string, backends []string) (*config.TableConfig, error) {
+	if table == "" {
+		return nil, errors.New("table.cant.be.null")
+	}
+	nums := len(backends)
+	if nums == 0 {
+		return nil, errors.New("router.compute.backends.is.null")
+	}
+
+	tableConf := &config.TableConfig{
+		Name:       table,
+		ShardType:  "GLOBAL",
+		ShardKey:   "",
+		Partitions: make([]*config.PartitionConfig, 0, 16),
+	}
+
+	for s := 0; s < nums; s++ {
+		partConf := &config.PartitionConfig{
+			Table:   table,
+			Backend: backends[s],
+		}
+		tableConf.Partitions = append(tableConf.Partitions, partConf)
+	}
+	return tableConf, nil
+}

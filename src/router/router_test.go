@@ -105,6 +105,49 @@ func TestRouteradd(t *testing.T) {
 	}
 }
 
+func TestRouteraddGlobal(t *testing.T) {
+	results := []string{`{
+	"Schemas": {
+		"sbtest": {
+			"DB": "sbtest",
+			"Tables": {
+				"G": {
+					"Name": "G",
+					"Partition": {
+						"Segments": [
+							{
+								"Table": "G",
+								"Backend": "backend1",
+								"Range": {}
+							},
+							{
+								"Table": "G",
+								"Backend": "backend2",
+								"Range": {}
+							}
+						]
+					}
+				}
+			}
+		}
+	}
+}`}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+	assert.NotNil(t, router)
+
+	// router
+	{
+		err := router.add("sbtest", MockTableGConfig())
+		assert.Nil(t, err)
+		want := results[0]
+		got := router.JSON()
+		log.Debug(got)
+		assert.Equal(t, want, got)
+	}
+}
+
 func TestRouterremove(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)
@@ -113,7 +156,7 @@ func TestRouterremove(t *testing.T) {
 
 	// router
 	{
-		err := router.remove("sbtest", MockTableAConfig().Name)
+		err := router.remove("sbtest", MockTableBConfig().Name)
 		want := "router.can.not.find.db[sbtest]"
 		got := err.Error()
 		assert.Equal(t, want, got)
@@ -121,7 +164,7 @@ func TestRouterremove(t *testing.T) {
 
 	// add router of sbtest.A
 	{
-		err := router.add("sbtest", MockTableAConfig())
+		err := router.add("sbtest", MockTableMConfig())
 		assert.Nil(t, err)
 
 		strVal := sqlparser.NewStrVal([]byte("shardkey"))
