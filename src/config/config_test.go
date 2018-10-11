@@ -13,6 +13,7 @@ import (
 	_ "log"
 	"os"
 	"path"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -344,4 +345,27 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 		}
 		assert.Equal(t, want, got)
 	}
+}
+
+func TestPartitionConfigsSort(t *testing.T) {
+	p1 := &PartitionConfig{
+		Table:   "G",
+		Backend: "backend1",
+	}
+	p3 := &PartitionConfig{
+		Table:   "G",
+		Backend: "backend3",
+	}
+	p2 := &PartitionConfig{
+		Table:   "G",
+		Backend: "backend2",
+	}
+	p := make(PartitionConfigs, 0, 16)
+	p = append(p, p1, p3, p2)
+	want := "backend2"
+	assert.Equal(t, want, p[2].Backend)
+
+	sort.Sort(p)
+	want = "backend3"
+	assert.Equal(t, want, p[2].Backend)
 }
