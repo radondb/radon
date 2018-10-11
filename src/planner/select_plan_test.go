@@ -293,16 +293,18 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select id from A limit x",
 		"select age,count(*) from A group by age having count(*) >=2",
 		"select id from A,b limit x",
+		"select * from (A,B)",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
 		"unsupported: distinct",
-		"unsupported: JOIN.expression",
+		"unsupported: more.than.one.shard.tables",
 		"unsupported: function:rand",
 		"unsupported: orderby[b].should.in.select.list",
 		"unsupported: limit.offset.or.counts.must.be.IntVal",
 		"unsupported: expr[count(*)].in.having.clause",
 		"unsupported: subqueries.in.select",
+		"unsupported: ParenTableExpr.in.select",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -441,7 +443,7 @@ func TestSelectPlanAs(t *testing.T) {
 
 func TestSelectPlanDatabaseNotFound(t *testing.T) {
 	querys := []string{
-		"select * from A as A1 where id in (select id from B)",
+		"select * from A as A1 where id = 10",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -467,7 +469,89 @@ func TestSelectPlanDatabaseNotFound(t *testing.T) {
 		// plan build
 		{
 			err := planTree.Build()
-			assert.NotNil(t, err)
+			want := "No database selected (errno 1046) (sqlstate 3D000)"
+			got := err.Error()
+			assert.Equal(t, want, got)
+		}
+	}
+}
+
+func TestSelectPlanGetOneTableInfo(t *testing.T) {
+	querys := []string{
+		"select * from  C where C.id=1",
+		"select * from (select * from C) as D",
+	}
+	wants := []string{
+		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
+		"unsupported: subqueries.in.select",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		{
+			_, err = plan.getOneTableInfo(plan.node.From[0].(*sqlparser.AliasedTableExpr))
+			got := err.Error()
+			assert.Equal(t, wants[i], got)
+		}
+	}
+
+	query := "select * from A as a1 where a1.id=1"
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+	plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+	{
+		_, err = plan.getOneTableInfo(nil)
+		want := "unsupported: aliasTableExpr cannot be nil"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	{
+		_, err = plan.getOneTableInfo(plan.node.From[0].(*sqlparser.AliasedTableExpr))
+		assert.Nil(t, err)
+	}
+}
+
+func TestSelectPlanGetJoinTableInfo(t *testing.T) {
+	querys := []string{
+		"select * from A join (E, F) on (E.a = A.a and F.a = A.a)",
+		"select * from (select * from C) as D join B on B.a = D.a join A on D.a = A.a",
+		"select * from (E, F) join A on (E.a = A.a and F.a = A.a)",
+		"select * from B join (select * from A) as D on B.a = D.a",
+	}
+
+	wants := []string{
+		"unsupported: JOIN.expression",
+		"unsupported: subqueries.in.select",
+		"unsupported: ParenTableExpr.in.select",
+		"unsupported: subqueries.in.select",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		{
+			tableInfos := make([]TableInfo, 0, 4)
+			_, err = plan.getJoinTableInfos(plan.node.From[0].(*sqlparser.JoinTableExpr), tableInfos)
+			got := err.Error()
+			assert.Equal(t, wants[i], got)
 		}
 	}
 }

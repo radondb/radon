@@ -39,18 +39,15 @@ func NewJoinPlan(log *xlog.Log, node *sqlparser.Select) *JoinPlan {
 }
 
 // analyze used to check the join is at the support level.
-// unsupported join.
 func (p *JoinPlan) analyze() error {
 	node := p.node
 	for _, tab := range node.From {
 		switch tab.(type) {
 		case *sqlparser.AliasedTableExpr:
-			// select * from a,b where a.id=b.id
+			// select * from a,b where a.id=b.id.
 			if len(node.From) > 1 && node.Where != nil {
 				return errors.New("unsupported: JOIN.expression")
 			}
-		case *sqlparser.JoinTableExpr:
-			return errors.New("unsupported: JOIN.expression")
 		}
 	}
 	return nil
