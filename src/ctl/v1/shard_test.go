@@ -9,6 +9,7 @@
 package v1
 
 import (
+	"router"
 	"strings"
 	"testing"
 
@@ -162,6 +163,128 @@ func TestCtlV1ShardBalanceAdvice1(t *testing.T) {
 		got := recorded.Recorder.Body.String()
 		log.Debug(got)
 		assert.True(t, strings.Contains(got, `"to-datasize":3072,"to-user":"mock","to-password":"pwd","database":"test","table":"t1_00002","tablesize":2048`))
+	}
+}
+
+func TestCtlV1ShardBalanceAdviceGlobal(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := proxy.MockProxy(log)
+	defer cleanup()
+	proxy.Router().AddForTest("sbtest", router.MockTableGConfig())
+
+	rdbs := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "Databases",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("sbtest")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("information_schema")),
+			},
+		},
+	}
+
+	r10 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "SizeInMB",
+				Type: querypb.Type_DECIMAL,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("8192")),
+			},
+		},
+	}
+
+	// fakedbs.
+	{
+		fakedbs.AddQuery("show databases", rdbs)
+		fakedbs.AddQuery("create database if not exists `sbtest`", &sqltypes.Result{})
+		fakedbs.AddQuery("SELECT ROUND((SUM(data_length+index_length)) / 1024/ 1024, 0) AS sizeMB FROM information_schema.TABLES WHERE TABLE_NAME = 'G' AND TABLE_SCHEMA = 'sbtest'", r10)
+	}
+
+	{
+		api := rest.NewApi()
+		route, _ := rest.MakeRouter(
+			rest.Get("/v1/shard/balanceadvice", ShardBalanceAdviceHandler(log, proxy)),
+		)
+		api.SetApp(route)
+		handler := api.MakeHandler()
+
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("GET", "http://localhost/v1/shard/balanceadvice", nil))
+		recorded.CodeIs(200)
+
+		got := recorded.Recorder.Body.String()
+		log.Debug(got)
+		assert.True(t, strings.Contains(got, `"to-datasize":0,"to-user":"mock","to-password":"pwd","database":"sbtest","table":"G","tablesize":8192`))
+	}
+}
+
+func TestCtlV1ShardBalanceAdviceGlobal1(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := proxy.MockProxy(log)
+	defer cleanup()
+	proxy.Router().AddForTest("sbtest", router.MockTableG1Config())
+
+	rdbs := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "Databases",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("sbtest")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("information_schema")),
+			},
+		},
+	}
+
+	r10 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "SizeInMB",
+				Type: querypb.Type_DECIMAL,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("8192")),
+			},
+		},
+	}
+
+	// fakedbs.
+	{
+		fakedbs.AddQuery("show databases", rdbs)
+		fakedbs.AddQuery("create database if not exists `sbtest`", &sqltypes.Result{})
+		fakedbs.AddQuery("SELECT ROUND((SUM(data_length+index_length)) / 1024/ 1024, 0) AS sizeMB FROM information_schema.TABLES WHERE TABLE_NAME = 'G1' AND TABLE_SCHEMA = 'sbtest'", r10)
+	}
+
+	{
+		api := rest.NewApi()
+		route, _ := rest.MakeRouter(
+			rest.Get("/v1/shard/balanceadvice", ShardBalanceAdviceHandler(log, proxy)),
+		)
+		api.SetApp(route)
+		handler := api.MakeHandler()
+
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("GET", "http://localhost/v1/shard/balanceadvice", nil))
+		recorded.CodeIs(200)
+
+		got := recorded.Recorder.Body.String()
+		log.Debug(got)
+		assert.True(t, strings.Contains(got, `"to-datasize":0,"to-user":"mock","to-password":"pwd","database":"sbtest","table":"G1","tablesize":8192`))
 	}
 }
 

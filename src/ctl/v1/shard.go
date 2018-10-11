@@ -61,6 +61,8 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 	scatter := proxy.Scatter()
 	spanner := proxy.Spanner()
 	backends := scatter.Backends()
+	length := len(backends)
+	router := proxy.Router()
 
 	type backendSize struct {
 		name    string
@@ -70,44 +72,140 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 		passwd  string
 	}
 
+	found := false
 	// 1.Find the max and min backend.
 	var max, min backendSize
-	for _, backend := range backends {
-		query := "select round((sum(data_length) + sum(index_length)) / 1024/ 1024, 0)  as SizeInMB from information_schema.tables"
-		qr, err := spanner.ExecuteOnThisBackend(backend, query)
-		if err != nil {
-			log.Error("api.v1.balance.advice.backend[%s].error:%+v", backend, err)
-			rest.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+	var tableSize float64
+	var database, table string
+	for _, schema := range router.Schemas {
+		if found {
+			break
 		}
+		for _, tb := range schema.Tables {
+			if tb.ShardKey == "" && len(tb.TableConfig.Partitions) < length {
+				for i, part := range tb.TableConfig.Partitions {
+					if backends[i] != part.Backend {
+						found = true
+						max.name = part.Backend
+						min.name = backends[i]
+						break
+					}
+				}
+				if !found {
+					found = true
+					max.name = backends[0]
+					min.name = backends[len(tb.TableConfig.Partitions)]
+				}
+				table = tb.Name
+				database = schema.DB
+				query := fmt.Sprintf("SELECT ROUND((SUM(data_length+index_length)) / 1024/ 1024, 0) AS sizeMB FROM information_schema.TABLES WHERE TABLE_NAME = '%s' AND TABLE_SCHEMA = '%s'", table, database)
+				qr, err := spanner.ExecuteOnThisBackend(max.name, query)
+				if err != nil {
+					log.Error("api.v1.balance.advice.get.max[%+v].tables.error:%+v", max, err)
+					rest.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
 
-		if len(qr.Rows) > 0 {
-			valStr := string(qr.Rows[0][0].Raw())
-			datasize, err := strconv.ParseFloat(valStr, 64)
+				row := qr.Rows[0]
+				valStr := string(row[0].Raw())
+				tblSize, err := strconv.ParseFloat(valStr, 64)
+				if err != nil {
+					log.Error("api.v1.balance.advice.get.tables.parse.value[%s].error:%+v", valStr, err)
+					rest.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				tableSize = tblSize
+				break
+			}
+		}
+	}
+
+	if !found {
+		for _, backend := range backends {
+			query := "select round((sum(data_length) + sum(index_length)) / 1024/ 1024, 0)  as SizeInMB from information_schema.tables"
+			qr, err := spanner.ExecuteOnThisBackend(backend, query)
 			if err != nil {
-				log.Error("api.v1.balance.advice.parse.value[%s].error:%+v", valStr, err)
+				log.Error("api.v1.balance.advice.backend[%s].error:%+v", backend, err)
 				rest.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			if datasize > max.size {
-				max.name = backend
-				max.size = datasize
-			}
+			if len(qr.Rows) > 0 {
+				valStr := string(qr.Rows[0][0].Raw())
+				datasize, err := strconv.ParseFloat(valStr, 64)
+				if err != nil {
+					log.Error("api.v1.balance.advice.parse.value[%s].error:%+v", valStr, err)
+					rest.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
 
-			if min.size == 0 {
-				min.name = backend
-				min.size = datasize
-			}
-			if datasize < min.size {
-				min.name = backend
-				min.size = datasize
+				if datasize > max.size {
+					max.name = backend
+					max.size = datasize
+				}
+
+				if min.size == 0 {
+					min.name = backend
+					min.size = datasize
+				}
+				if datasize < min.size {
+					min.name = backend
+					min.size = datasize
+				}
 			}
 		}
+
+		// The differ must big than 256MB.
+		delta := float64(256)
+		differ := (max.size - min.size)
+		if differ < delta {
+			log.Warning("api.v1.balance.advice.return.nil.since.differ[%+vMB].less.than.%vMB", differ, delta)
+			w.WriteJson(nil)
+			return
+		}
+
+		// 2. Find the best table.
+		query := "SELECT table_schema, table_name, ROUND((SUM(data_length+index_length)) / 1024/ 1024, 0) AS sizeMB FROM information_schema.TABLES GROUP BY table_name HAVING SUM(data_length + index_length)>10485760 ORDER BY (data_length + index_length) DESC"
+		qr, err := spanner.ExecuteOnThisBackend(max.name, query)
+		if err != nil {
+			log.Error("api.v1.balance.advice.get.max[%+v].tables.error:%+v", max, err)
+			rest.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		for _, row := range qr.Rows {
+			db := string(row[0].Raw())
+			tbl := string(row[1].Raw())
+			valStr := string(row[2].Raw())
+			tblSize, err := strconv.ParseFloat(valStr, 64)
+			if err != nil {
+				log.Error("api.v1.balance.advice.get.tables.parse.value[%s].error:%+v", valStr, err)
+				rest.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// Make sure the table is small enough.
+			if (min.size + tblSize) < (max.size - tblSize) {
+				// Find the advice table.
+				database = db
+				table = tbl
+				tableSize = tblSize
+				break
+			}
+		}
+
+		// No best.
+		if database == "" || table == "" {
+			log.Warning("api.v1.balance.advice.return.nil.since.cant.find.the.best.table")
+			w.WriteJson(nil)
+			return
+		}
 	}
+
 	log.Warning("api.v1.balance.advice.max:[%+v], min:[%+v]", max, min)
 
-	// 2. Try to sync all databases from max.databases to min.databases.
+	// 3. Try to sync all databases from max.databases to min.databases.
 	query := "show databases"
 	qr, err := spanner.ExecuteOnThisBackend(max.name, query)
 	if err != nil {
@@ -135,15 +233,6 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 	}
 	log.Warning("api.v1.balance.advice.sync.database.done")
 
-	// The differ must big than 256MB.
-	delta := float64(256)
-	differ := (max.size - min.size)
-	if differ < delta {
-		log.Warning("api.v1.balance.advice.return.nil.since.differ[%+vMB].less.than.%vMB", differ, delta)
-		w.WriteJson(nil)
-		return
-	}
-
 	backendConfs := scatter.BackendConfigsClone()
 	for _, bconf := range backendConfs {
 		if bconf.Name == max.name {
@@ -155,45 +244,6 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 			min.user = bconf.User
 			min.passwd = bconf.Password
 		}
-	}
-
-	// 3. Find the best table.
-	query = "SELECT table_schema, table_name, ROUND((SUM(data_length+index_length)) / 1024/ 1024, 0) AS sizeMB FROM information_schema.TABLES GROUP BY table_name HAVING SUM(data_length + index_length)>10485760 ORDER BY (data_length + index_length) DESC"
-	qr, err = spanner.ExecuteOnThisBackend(max.name, query)
-	if err != nil {
-		log.Error("api.v1.balance.advice.get.max[%+v].tables.error:%+v", max, err)
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	var tableSize float64
-	var database, table string
-	for _, row := range qr.Rows {
-		db := string(row[0].Raw())
-		tbl := string(row[1].Raw())
-		valStr := string(row[2].Raw())
-		tblSize, err := strconv.ParseFloat(valStr, 64)
-		if err != nil {
-			log.Error("api.v1.balance.advice.get.tables.parse.value[%s].error:%+v", valStr, err)
-			rest.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Make sure the table is small enough.
-		if (min.size + tblSize) < (max.size - tblSize) {
-			// Find the advice table.
-			database = db
-			table = tbl
-			tableSize = tblSize
-			break
-		}
-	}
-
-	// No best.
-	if database == "" || table == "" {
-		log.Warning("api.v1.balance.advice.return.nil.since.cant.find.the.best.table")
-		w.WriteJson(nil)
-		return
 	}
 
 	type balanceAdvice struct {
