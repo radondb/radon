@@ -522,3 +522,135 @@ func TestSelectPlanGetTableInfoErr(t *testing.T) {
 		assert.Equal(t, want, got)
 	}
 }
+
+func TestSelectPlanGlobal(t *testing.T) {
+	results := []string{
+		`{
+	"RawQuery": "select 1, sum(a),avg(a),a,b from sbtest.G where id\u003e1 group by a,b order by a desc limit 10 offset 100",
+	"Project": "1, sum(a), avg(a), a, b",
+	"Partitions": [
+		{
+			"Query": "select 1, sum(a), avg(a), a, b from sbtest.G where id \u003e 1 group by a, b order by a desc limit 100, 10",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
+	}
+	querys := []string{
+		"select 1, sum(a),avg(a),a,b from sbtest.G where id>1 group by a,b order by a desc limit 10 offset 100",
+	}
+
+	// Database not null.
+	{
+		log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+		database := "sbtest"
+
+		route, cleanup := router.MockNewRouter(log)
+		defer cleanup()
+
+		err := route.AddForTest(database, router.MockTableGConfig())
+		assert.Nil(t, err)
+		for i, query := range querys {
+			node, err := sqlparser.Parse(query)
+			assert.Nil(t, err)
+			plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+
+			// plan build
+			{
+				log.Info("--select.query:%+v", query)
+				err := plan.Build()
+				assert.Nil(t, err)
+				got := plan.JSON()
+				want := results[i]
+				assert.Equal(t, want, got)
+				assert.Equal(t, PlanTypeSelect, plan.Type())
+				assert.NotNil(t, plan.Children())
+			}
+		}
+	}
+}
+
+func TestSelectPlanJoin(t *testing.T) {
+	results := []string{
+		`{
+	"RawQuery": "select G.a, G.b from G join B on G.a = B.a where B.id=1",
+	"Project": "G.a, G.b",
+	"Partitions": [
+		{
+			"Query": "select G.a, G.b from sbtest.G join sbtest.B1 as B on G.a = B.a where B.id = 1",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+	}
+	querys := []string{
+		"select G.a, G.b from G join B on G.a = B.a where B.id=1",
+	}
+
+	// Database not null.
+	{
+		log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+		database := "sbtest"
+
+		route, cleanup := router.MockNewRouter(log)
+		defer cleanup()
+
+		err := route.AddForTest(database, router.MockTableGConfig(), router.MockTableBConfig())
+		assert.Nil(t, err)
+		for i, query := range querys {
+			node, err := sqlparser.Parse(query)
+			assert.Nil(t, err)
+			plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+
+			// plan build
+			{
+				log.Info("--select.query:%+v", query)
+				err := plan.Build()
+				assert.Nil(t, err)
+				got := plan.JSON()
+				want := results[i]
+				assert.Equal(t, want, got)
+				assert.Equal(t, PlanTypeSelect, plan.Type())
+				assert.NotNil(t, plan.Children())
+			}
+		}
+	}
+}
+
+func TestSelectPlanJoinErr(t *testing.T) {
+	querys := []string{
+		"select G.a, G.b from sbtest.G join sbtest.B on G.id = B.id join sbtest.A on B.id = A.id where A.id=1",
+		"select K.a, K.b from sbtest.B join sbtest.A on B.id = A.id where A.id=1",
+		"select G.a, G.b from sbtest.G join (B,A) on (B.id = G.id and A.id = G.id)",
+	}
+	results := []string{
+		"unsupported: more.than.one.shard.tables",
+		"unsupported: more.than.one.shard.tables",
+		"unsupported: JOIN.expression",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableGConfig(), router.MockTableMConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+
+		// plan build
+		{
+			err := plan.Build()
+			want := results[i]
+			got := err.Error()
+			assert.Equal(t, want, got)
+		}
+	}
+}
