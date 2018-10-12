@@ -588,7 +588,7 @@ func TestTxnTwoPCRollbackError(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	// commit err and rollback err will WriteXaCommitErrLog, need the scatter
-	fakedb, txnMgr, backends, _, addrs, scatter, cleanup:= MockTxnMgrScatter(log, 2)
+	fakedb, txnMgr, backends, _, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
 	defer cleanup()
 	scatter.Init(MockScatterDefault(log))
 
@@ -844,7 +844,7 @@ func TestTxnTwoPCExecuteError(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	// commit err and rollback err will WriteXaCommitErrLog, need the scatter
-	fakedb, txnMgr, backends, _, addrs, scatter, cleanup:= MockTxnMgrScatter(log, 2)
+	fakedb, txnMgr, backends, _, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
 	defer cleanup()
 	scatter.Init(MockScatterDefault(log))
 

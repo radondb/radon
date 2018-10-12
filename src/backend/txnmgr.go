@@ -47,7 +47,7 @@ func (mgr *TxnManager) Init(scatter *Scatter, ScatterConf *config.ScatterConfig)
 
 // Close is used to close the async worker xaCheck.
 func (mgr *TxnManager) Close() {
-	if (mgr.xaCheck != nil) {
+	if mgr.xaCheck != nil {
 		mgr.xaCheck.Close()
 		mgr.xaCheck = nil
 	}
