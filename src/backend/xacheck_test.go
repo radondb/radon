@@ -80,6 +80,36 @@ var (
 			},
 		},
 	}
+
+	xaRecoverResult3 = &sqltypes.Result{
+		RowsAffected: 1,
+		Fields: []*querypb.Field{
+			{
+				Name: "formatID",
+				Type: querypb.Type_INT64,
+			},
+			{
+				Name: "gtrid_length",
+				Type: querypb.Type_INT64,
+			},
+			{
+				Name: "bqual_length",
+				Type: querypb.Type_INT64,
+			},
+			{
+				Name: "data",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("1")),
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("21")),
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("RXID-20180903103146-1")),
+			},
+		},
+	}
 )
 
 func TestWriteXaCommitErrorLogsAddXidDuplicate(t *testing.T) {
@@ -95,22 +125,28 @@ func TestWriteXaCommitErrorLogsAddXidDuplicate(t *testing.T) {
 	txn1, err := scatter.CreateTransaction()
 	assert.Nil(t, err)
 	defer txn1.Finish()
-
 	txn1.xid = "RXID-20180903103145-1"
-	backend := "backend0"
-
-	err = scatter.txnMgr.xaCheck.WriteXaCommitErrLog(txn1, backend)
+	state := "rollback"
+	err = scatter.txnMgr.xaCheck.WriteXaCommitErrLog(txn1, state)
 	assert.Nil(t, err)
-	//scatter.txnMgr.xaCheck.RemoveXaRedoLogs()
+
+	//the same xid, it is error
 	txn2, err := scatter.CreateTransaction()
 	assert.Nil(t, err)
 	defer txn2.Finish()
-
 	txn2.xid = "RXID-20180903103145-1"
-	backend = "backend0"
-
-	err = scatter.txnMgr.xaCheck.WriteXaCommitErrLog(txn2, backend)
+	state = "commit"
+	err = scatter.txnMgr.xaCheck.WriteXaCommitErrLog(txn2, state)
 	assert.NotNil(t, err)
+
+	//add another errlog
+	txn3, err := scatter.CreateTransaction()
+	assert.Nil(t, err)
+	defer txn3.Finish()
+	txn3.xid = "RXID-20180903103146-1"
+	state = "commit"
+	err = scatter.txnMgr.xaCheck.WriteXaCommitErrLog(txn3, state)
+	assert.Nil(t, err)
 }
 
 func TestReadXaCommitErrorLogsWithoutBackend(t *testing.T) {
@@ -563,7 +599,7 @@ func TestXaCheckFromFileRollback(t *testing.T) {
 
 		resetFunc1(txn2)
 		fakedb1.AddQuery("XA RECOVER", xaRecoverResult1)
-		fakedb1.AddQuery("XA ROLLBCAK .*", result1)
+		fakedb1.AddQuery("XA ROLLBACK .*", result1)
 
 		err = txn2.Begin()
 		assert.Nil(t, err)
@@ -579,6 +615,160 @@ func TestXaCheckFromFileRollback(t *testing.T) {
 		assert.Nil(t, err)
 
 		time.Sleep(2 * time.Second)
+	}
+}
+
+func TestXaCheckFromFileCommitRollbacks(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+
+	data := `{
+    "xacommit-errs": [
+        {
+            "time": "20180903103145",
+            "xaid": "RXID-20180903103145-1",
+            "state": "commit"
+        },
+        {
+            "time": "20180903103146",
+            "xaid": "RXID-20180903103146-1",
+            "state": "rollback"
+        }
+    ]
+}`
+	dir := fakedb.GetTmpDir("/tmp", "xacheck", log)
+	file := path.Join(dir, xacheckJSONFile)
+	ioutil.WriteFile(file, []byte(data), 0644)
+	// it is no need to remove the file, if it is successful, err item in the file will be removed
+	//defer os.RemoveAll(file)
+
+	scatter, fakedb1, cleanup1 := MockScatter(log, 2)
+	defer cleanup1()
+
+	scatter.Init(MockScatterDefault2(dir))
+	var backend [2]string
+	var i int
+	for k := range scatter.backends {
+		backend[i] = k
+		i++
+	}
+
+	querys1 := []xcontext.QueryTuple{
+		xcontext.QueryTuple{Query: "update", Backend: backend[0]},
+		xcontext.QueryTuple{Query: "update", Backend: backend[1]},
+	}
+
+	fakedb1.AddQuery(querys1[0].Query, result1)
+	fakedb1.AddQueryDelay(querys1[1].Query, result2, 100)
+
+	// Set 2PC conds.
+	resetFunc1 := func(txn *Txn) {
+		fakedb1.ResetAll()
+		fakedb1.AddQuery(querys1[0].Query, result1)
+		fakedb1.AddQueryDelay(querys1[1].Query, result2, 100)
+		fakedb1.AddQueryPattern("XA .*", result1)
+	}
+
+	// XA RECOVER ok
+	// XA COMMIT ok
+	{
+		txn1, err := scatter.CreateTransaction()
+		assert.Nil(t, err)
+
+		resetFunc1(txn1)
+		fakedb1.AddQuery("XA RECOVER", xaRecoverResult1)
+		fakedb1.AddQuery("XA COMMIT .*", result1)
+
+		err = txn1.Begin()
+		assert.Nil(t, err)
+
+		rctx := &xcontext.RequestContext{
+			Mode:    xcontext.ReqNormal,
+			TxnMode: xcontext.TxnWrite,
+			Querys:  querys1,
+		}
+		_, err = txn1.Execute(rctx)
+		assert.Nil(t, err)
+		err = txn1.Commit()
+		assert.Nil(t, err)
+
+		txn1.Finish()
+
+		time.Sleep(1 * time.Second)
+	}
+
+	// XA RECOVER and return err
+	// XA ROLLBACK ok
+	{
+		txn2, err := scatter.CreateTransaction()
+		assert.Nil(t, err)
+
+		resetFunc1(txn2)
+		fakedb1.AddQueryError("XA RECOVER", errors.New("connection.is.lost"))
+		//fakedb1.AddQuery("XA RECOVER", xaRecoverResult2)
+		fakedb1.AddQuery("XA ROLLBACK .*", result1)
+
+		err = txn2.Begin()
+		assert.Nil(t, err)
+
+		rctx := &xcontext.RequestContext{
+			Mode:    xcontext.ReqNormal,
+			TxnMode: xcontext.TxnWrite,
+			Querys:  querys1,
+		}
+		_, err = txn2.Execute(rctx)
+		assert.Nil(t, err)
+		err = txn2.Commit()
+		assert.Nil(t, err)
+
+		txn2.Finish()
+
+		time.Sleep(1 * time.Second)
+	}
+
+	// XA RECOVER and return nil
+	// XA ROLLBACK ok
+	{
+		txn2, err := scatter.CreateTransaction()
+		assert.Nil(t, err)
+
+		resetFunc1(txn2)
+
+		txn2.Finish()
+
+		time.Sleep(1 * time.Second)
+	}
+
+	// XA RECOVER ok
+	// XA ROLLBACK ok
+	{
+		assert.Equal(t, 1, scatter.txnMgr.xaCheck.GetRetrysLen())
+
+		txn3, err := scatter.CreateTransaction()
+		assert.Nil(t, err)
+		defer txn3.Finish()
+
+		resetFunc1(txn3)
+		fakedb1.AddQuery("XA RECOVER", xaRecoverResult3)
+		fakedb1.AddQuery("XA ROLLBACK .*", result1)
+
+		err = txn3.Begin()
+		assert.Nil(t, err)
+
+		rctx := &xcontext.RequestContext{
+			Mode:    xcontext.ReqNormal,
+			TxnMode: xcontext.TxnWrite,
+			Querys:  querys1,
+		}
+		_, err = txn3.Execute(rctx)
+		assert.Nil(t, err)
+		err = txn3.Commit()
+		assert.Nil(t, err)
+
+		time.Sleep(2 * time.Second)
+
+		assert.Equal(t, 0, scatter.txnMgr.xaCheck.GetRetrysLen())
 	}
 }
 
@@ -614,9 +804,9 @@ func TestReadXaCommitRrrLogs1(t *testing.T) {
 
 	MockXaredologs := []*XaCommitErr{
 		&XaCommitErr{
-			Time:     "20180903103145",
-			Xaid:     "RXID-20180903103145-1",
-			State:    txnXACommitErrStateRollback,
+			Time:  "20180903103145",
+			Xaid:  "RXID-20180903103145-1",
+			State: txnXACommitErrStateRollback,
 		},
 	}
 
@@ -671,9 +861,9 @@ func TestReadXaCommitRrrLogsInit(t *testing.T) {
 
 	MockXaredologs := []*XaCommitErr{
 		&XaCommitErr{
-			Time:     "20180903103145",
-			Xaid:     "RXID-20180903103145-1",
-			State:    txnXACommitErrStateRollback,
+			Time:  "20180903103145",
+			Xaid:  "RXID-20180903103145-1",
+			State: txnXACommitErrStateRollback,
 		},
 	}
 	dir := fakedb.GetTmpDir("/tmp", "xacheck", log)
