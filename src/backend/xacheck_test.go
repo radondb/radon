@@ -95,22 +95,28 @@ func TestWriteXaCommitErrorLogsAddXidDuplicate(t *testing.T) {
 	txn1, err := scatter.CreateTransaction()
 	assert.Nil(t, err)
 	defer txn1.Finish()
-
 	txn1.xid = "RXID-20180903103145-1"
-	backend := "backend0"
-
-	err = scatter.txnMgr.xaCheck.WriteXaCommitErrLog(txn1, backend)
+	state := "rollback"
+	err = scatter.txnMgr.xaCheck.WriteXaCommitErrLog(txn1, state)
 	assert.Nil(t, err)
-	//scatter.txnMgr.xaCheck.RemoveXaRedoLogs()
+
+	//the same xid, it is error
 	txn2, err := scatter.CreateTransaction()
 	assert.Nil(t, err)
 	defer txn2.Finish()
-
 	txn2.xid = "RXID-20180903103145-1"
-	backend = "backend0"
-
-	err = scatter.txnMgr.xaCheck.WriteXaCommitErrLog(txn2, backend)
+	state = "commit"
+	err = scatter.txnMgr.xaCheck.WriteXaCommitErrLog(txn2, state)
 	assert.NotNil(t, err)
+
+	//add another errlog
+	txn3, err := scatter.CreateTransaction()
+	assert.Nil(t, err)
+	defer txn3.Finish()
+	txn3.xid = "RXID-20180903103146-1"
+	state = "commit"
+	err = scatter.txnMgr.xaCheck.WriteXaCommitErrLog(txn3, state)
+	assert.Nil(t, err)
 }
 
 func TestReadXaCommitErrorLogsWithoutBackend(t *testing.T) {

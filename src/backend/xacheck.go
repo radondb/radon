@@ -114,6 +114,7 @@ func (xc *XaCheck) flushXaCommitErrLog() error {
 	log := xc.log
 	file := path.Join(xc.dir, xacheckJSONFile)
 
+	// stored in the way of the array
 	var xaCommitErrs XaCommitErrs
 	for _, v := range xc.retrys {
 		xaCommitErrs.Logs = append(xaCommitErrs.Logs, v)
@@ -159,7 +160,7 @@ func (xc *XaCheck) commitRetryBackends(query string, scatter *Scatter, xid strin
 	backends := scatter.Backends()
 	log := xc.log
 
-	// if the backend is empty, output warning log.
+	// if the backend is empty, output error log.
 	if len(backends) == 0 {
 		log.Error("xacheck.commitRetryBackends.backend.empty.")
 		return false, errors.New("xacheck.backend.empty")
@@ -175,7 +176,7 @@ func (xc *XaCheck) commitRetryBackends(query string, scatter *Scatter, xid strin
 	// the 1st stage: xa recover
 	xaRecoverQuery := "xa recover"
 	var needCommitBackends []string
-	// if one backend return the err, the carsh server may not be ok
+	// if one backend return the err, the crash server may not be ok
 	// when all backends are ready，the needCommitBackends is valuable, or else it is misleading
 	for _, backend := range backends {
 		result, err := txn.ExecuteOnThisBackend(backend, xaRecoverQuery)
@@ -185,7 +186,8 @@ func (xc *XaCheck) commitRetryBackends(query string, scatter *Scatter, xid strin
 		}
 
 		if result != nil && result.RowsAffected > 0 && len(result.Fields) == 4 {
-			for _, row := range(result.Rows) {
+			for _, row := range result.Rows {
+				// just find the xaid in the row from the cmd of 'xa recover'
 				valStr := string(row[3].Raw())
 				if strings.EqualFold(valStr, xid) {
 					log.Info("xacheck.commitRetryBackends.recover.query[%v].needCommitBackend[%v]", query, backend)
@@ -197,6 +199,7 @@ func (xc *XaCheck) commitRetryBackends(query string, scatter *Scatter, xid strin
 
 	if len(needCommitBackends) == 0 {
 		log.Info("xacheck.commitRetryBackends.recover.query[%v].find.no.needCommitBackends", query)
+		return false, nil
 	}
 
 	// the 2nd stage: xa commit/rollback '$xid'
@@ -208,6 +211,7 @@ func (xc *XaCheck) commitRetryBackends(query string, scatter *Scatter, xid strin
 			ExecuteOKCount++
 		} else {
 			log.Warning("xacheck.commitRetryBackends.query[%v].backend[%v].error[%T]:%+v", query, backend, err, err)
+			break
 		}
 	}
 
@@ -215,27 +219,31 @@ func (xc *XaCheck) commitRetryBackends(query string, scatter *Scatter, xid strin
 	if ExecuteOKCount > 0 && ExecuteOKCount == len(needCommitBackends) {
 		return true, nil
 	}
-	return false, nil
+	return false, err
 }
 
 // xaCommitsRetryMain in which the retrys maybe reduce when the valid backends need commit and succeed
 func (xc *XaCheck) xaCommitsRetryMain() error {
 	log := xc.log
 	retrys := xc.retrys
-	if (len(retrys) > 0) {
+	if len(retrys) > 0 {
 		log.Info("xacheck.commit.retry %v.", retrys)
 	}
 
 	for _, retry := range retrys {
 		query := fmt.Sprintf("xa %s '%s' ", retry.State, retry.Xaid)
-		committed, err := xc.commitRetryBackends(query, xc.scatter, retry.Xaid);
+		committed, err := xc.commitRetryBackends(query, xc.scatter, retry.Xaid)
 		if err != nil {
 			log.Warning("xacheck.commits.retry failed.")
 			return err
 		}
 
 		if committed {
+			// update the mem and file
 			delete(xc.retrys, retry.Xaid)
+			if err := xc.flushXaCommitErrLog(); err != nil {
+				return errors.WithStack(err)
+			}
 		}
 	}
 	return nil
@@ -245,17 +253,9 @@ func (xc *XaCheck) xaCommitsRetry() error {
 	xc.mu.Lock()
 	defer xc.mu.Unlock()
 
-	oldCountXaRetrys := len(xc.retrys)
 	// xaCommitsRetryMain
 	if err := xc.xaCommitsRetryMain(); err != nil {
 		return err
-	}
-
-	// when the count of the retrys reduces, flush the mem to the file
-	if oldCountXaRetrys > len(xc.retrys) {
-		if err := xc.flushXaCommitErrLog(); err != nil {
-			return errors.WithStack(err)
-		}
 	}
 	return nil
 }
