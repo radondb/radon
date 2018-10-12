@@ -11,6 +11,7 @@ package config
 import (
 	"encoding/json"
 	"io/ioutil"
+	"strings"
 
 	"xbase"
 
@@ -194,12 +195,32 @@ type PartitionConfig struct {
 	Backend string `json:"backend"`
 }
 
+// PartitionConfigs slice.
+type PartitionConfigs []*PartitionConfig
+
+// Len impl.
+func (p PartitionConfigs) Len() int { return len(p) }
+
+// Swap impl.
+func (p PartitionConfigs) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
+}
+
+// Less impl.
+func (p PartitionConfigs) Less(i, j int) bool {
+	r := strings.Compare(p[i].Backend, p[j].Backend)
+	if r == -1 {
+		return true
+	}
+	return false
+}
+
 // TableConfig tuple.
 type TableConfig struct {
-	Name       string             `json:"name"`
-	ShardType  string             `json:"shardtype"`
-	ShardKey   string             `json:"shardkey"`
-	Partitions []*PartitionConfig `json:"partitions"`
+	Name       string           `json:"name"`
+	ShardType  string           `json:"shardtype"`
+	ShardKey   string           `json:"shardkey"`
+	Partitions PartitionConfigs `json:"partitions"`
 }
 
 // SchemaConfig tuple.
@@ -239,7 +260,7 @@ type ScatterConfig struct {
 	XaCheckDir      string `json:"xa-check-dir"`
 }
 
-// DefaultXaCheckConfig returns default XaCheckConfig config.
+// DefaultScatterConfig returns default XaCheckConfig config.
 func DefaultScatterConfig() *ScatterConfig {
 	return &ScatterConfig{
 		XaCheckInterval: 10,

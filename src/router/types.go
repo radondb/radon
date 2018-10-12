@@ -13,5 +13,6 @@ type MethodType string
 
 const (
 	// methodTypeHash type.
-	methodTypeHash = "HASH"
+	methodTypeHash   = "HASH"
+	methodTypeGlobal = "GLOBAL"
 )

@@ -10,6 +10,7 @@ package router
 
 import (
 	"config"
+	"sort"
 
 	"github.com/pkg/errors"
 )
@@ -113,12 +114,35 @@ func (r *Router) changeTheRuleBackend(fromBackend string, toBackend string, data
 	}
 
 	// 2. Change the backend to to-backend.
-	partitionConfig.Backend = toBackend
+	if tableConfig.ShardType == "GLOBAL" {
+		for _, partition := range tableConfig.Partitions {
+			if partition.Backend == toBackend {
+				return "", errors.Errorf("the.table:[%s].already.exists.in.the.backend[%s]", partitionTable, toBackend)
+			}
+		}
+		partConf := &config.PartitionConfig{
+			Table:   table,
+			Backend: toBackend,
+		}
+		tableConfig.Partitions = append(tableConfig.Partitions, partConf)
+		sort.Sort(tableConfig.Partitions)
+	} else {
+		partitionConfig.Backend = toBackend
+	}
 
 	// 3. Flush table config to disk.
 	if err := r.writeFrmData(database, table, tableConfig); err != nil {
 		// Memory config reset.
-		partitionConfig.Backend = fromBackend
+		if tableConfig.ShardType == "GLOBAL" {
+			for i, partition := range tableConfig.Partitions {
+				if partition.Backend == toBackend {
+					tableConfig.Partitions = append(tableConfig.Partitions[:i], tableConfig.Partitions[i+1:]...)
+					break
+				}
+			}
+		} else {
+			partitionConfig.Backend = fromBackend
+		}
 		return "", err
 	}
 

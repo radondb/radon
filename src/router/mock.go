@@ -116,25 +116,15 @@ func MockTableBConfig() *config.TableConfig {
 	S0512 := &config.PartitionConfig{
 		Table:   "B0",
 		Segment: "0-512",
-		Backend: "backend0",
+		Backend: "backend1",
 	}
 	S11024 := &config.PartitionConfig{
 		Table:   "B1",
 		Segment: "512-4096",
-		Backend: "backend512",
+		Backend: "backend2",
 	}
 
 	mock.Partitions = append(mock.Partitions, S0512, S11024)
-	return mock
-}
-
-// MockTableNULLConfig config.
-func MockTableNULLConfig() *config.TableConfig {
-	mock := &config.TableConfig{
-		Name:      "B",
-		ShardType: "HASH",
-		ShardKey:  "id",
-	}
 	return mock
 }
 
@@ -288,6 +278,52 @@ func MockTableE1Config() *config.TableConfig {
 	}
 
 	mock.Partitions = append(mock.Partitions, S02, S81024)
+	return mock
+}
+
+// MockTableGConfig config, global shardtype.
+func MockTableGConfig() *config.TableConfig {
+	mock := &config.TableConfig{
+		Name:       "G",
+		ShardType:  "GLOBAL",
+		ShardKey:   "",
+		Partitions: make([]*config.PartitionConfig, 0, 16),
+	}
+	S101 := &config.PartitionConfig{
+		Table:   "G",
+		Segment: "",
+		Backend: "backend1",
+	}
+	S102 := &config.PartitionConfig{
+		Table:   "G",
+		Segment: "",
+		Backend: "backend2",
+	}
+
+	mock.Partitions = append(mock.Partitions, S101, S102)
+	return mock
+}
+
+// MockTableG1Config config, global shardtype.
+func MockTableG1Config() *config.TableConfig {
+	mock := &config.TableConfig{
+		Name:       "G1",
+		ShardType:  "GLOBAL",
+		ShardKey:   "",
+		Partitions: make([]*config.PartitionConfig, 0, 16),
+	}
+	S101 := &config.PartitionConfig{
+		Table:   "G1",
+		Segment: "",
+		Backend: "backend0",
+	}
+	S102 := &config.PartitionConfig{
+		Table:   "G1",
+		Segment: "",
+		Backend: "backend1",
+	}
+
+	mock.Partitions = append(mock.Partitions, S101, S102)
 	return mock
 }
 

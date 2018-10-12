@@ -10,7 +10,6 @@ package planner
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"router"
 	"xcontext"
@@ -54,6 +53,17 @@ type SelectPlan struct {
 	children *PlanTree
 }
 
+// TableInfo represents table information
+type TableInfo struct {
+	database string
+
+	tableName string
+
+	shardKey string
+
+	tableExpr *sqlparser.AliasedTableExpr
+}
+
 // NewSelectPlan used to create SelectPlan
 func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser.Select, router *router.Router) *SelectPlan {
 	return &SelectPlan{
@@ -71,73 +81,65 @@ func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser
 // analyze used to check the 'select' is at the support level, and get the db, table, etc..
 // Unsupports:
 // 1. subquery
-func (p *SelectPlan) analyze() (string, string, string, error) {
-	var shardDatabase string
-	var shardTable string
-	var aliasTable string
-	var tableExpr *sqlparser.AliasedTableExpr
+func (p *SelectPlan) analyze() ([]TableInfo, error) {
+	tableInfos := make([]TableInfo, 0, 4)
 	node := p.node
 
 	// Check subquery.
 	if hasSubquery(node) || len(node.From) > 1 {
-		return shardDatabase, shardTable, aliasTable, errors.New("unsupported: subqueries.in.select")
+		return nil, errors.New("unsupported: subqueries.in.select")
 	}
 
-	// Find the first table in the node.From.
-	// Currently only support AliasedTableExpr, JoinTableExpr select.
+	// Get table info in the node.From.
+	// Only support AliasedTableExpr, JoinTableExpr select.
 	switch expr := (node.From[0]).(type) {
 	case *sqlparser.AliasedTableExpr:
-		tableExpr = expr
+		tableInfo, err := p.getOneTableInfo(expr)
+		if err != nil {
+			return nil, err
+		}
+		tableInfos = append(tableInfos, tableInfo)
 	case *sqlparser.JoinTableExpr:
-		if v, ok := (expr.LeftExpr).(*sqlparser.AliasedTableExpr); ok {
-			tableExpr = v
+		if err := p.getJoinTableInfos(expr, &tableInfos); err != nil {
+			return nil, err
 		}
+	default:
+		return nil, errors.New("unsupported: ParenTableExpr.in.select")
 	}
-
-	if tableExpr != nil {
-		aliasTable = tableExpr.As.String()
-
-		switch expr := tableExpr.Expr.(type) {
-		case sqlparser.TableName:
-			if !expr.Qualifier.IsEmpty() {
-				shardDatabase = expr.Qualifier.String()
-			}
-			shardTable = expr.Name.String()
-		}
-	}
-	return shardDatabase, shardTable, aliasTable, nil
+	return tableInfos, nil
 }
 
 // Build used to build distributed querys.
 // For now, we don't support subquery in select.
 func (p *SelectPlan) Build() error {
-	var err error
-	var shardTable string
-	var aliasTable string
-	var shardDatabase string
-
 	log := p.log
 	node := p.node
-	if shardDatabase, shardTable, aliasTable, err = p.analyze(); err != nil {
-		return err
-	}
-	if shardDatabase == "" {
-		shardDatabase = p.database
-	}
-	if aliasTable == "" {
-		aliasTable = shardTable
-	}
 
-	// Get the routing segments info.
-	shardkey, err := p.router.ShardKey(shardDatabase, shardTable)
+	tableInfos, err := p.analyze()
 	if err != nil {
 		return err
 	}
-	segments, err := getDMLRouting(shardDatabase, shardTable, shardkey, node.Where, p.router)
+	t := tableInfos[0]
+	// Support only one shard tables
+	var num int
+	for _, tableInfo := range tableInfos {
+		if tableInfo.shardKey != "" {
+			t = tableInfo
+			num++
+		}
+		if num > 1 {
+			return errors.New("unsupported: more.than.one.shard.tables")
+		}
+	}
+
+	segments, err := getDMLRouting(t.database, t.tableName, t.shardKey, node.Where, p.router)
 	if err != nil {
 		return err
 	}
-
+	// The tables are global tables, send to one backend
+	if num == 0 {
+		segments = segments[:1]
+	}
 	// Add sub-plans.
 	children := p.children
 	if len(segments) > 1 {
@@ -186,20 +188,14 @@ func (p *SelectPlan) Build() error {
 		}
 	}
 
+	expr, _ := t.tableExpr.Expr.(sqlparser.TableName)
 	// Rewritten the query.
 	for _, segment := range segments {
-		tn := sqlparser.TableName{
-			Name:      sqlparser.NewTableIdent(segment.Table),
-			Qualifier: sqlparser.NewTableIdent(shardDatabase),
-		}
-		as := fmt.Sprintf(" as %s", aliasTable)
+		// Rewrite the shard table's name
+		expr.Name = sqlparser.NewTableIdent(segment.Table)
+		t.tableExpr.Expr = expr
 		buf := sqlparser.NewTrackedBuffer(nil)
-		buf.Myprintf("select %v%s%v from %v%s%v%v%v%v%v",
-			node.Comments, node.Hints, node.SelectExprs,
-			tn, as,
-			node.Where,
-			node.GroupBy, node.Having, node.OrderBy,
-			node.Limit)
+		node.Format(buf)
 		rewritten := buf.String()
 
 		tuple := xcontext.QueryTuple{
@@ -292,4 +288,61 @@ func (p *SelectPlan) Size() int {
 		size += len(q.Query)
 	}
 	return size
+}
+
+// getOneTableInfo returns one table info
+func (p *SelectPlan) getOneTableInfo(aliasTableExpr *sqlparser.AliasedTableExpr) (TableInfo, error) {
+	var tableInfo TableInfo
+	if aliasTableExpr == nil {
+		return tableInfo, errors.New("unsupported: aliasTableExpr cannot be nil")
+	}
+
+	switch expr := aliasTableExpr.Expr.(type) {
+	case sqlparser.TableName:
+		if expr.Qualifier.IsEmpty() {
+			expr.Qualifier = sqlparser.NewTableIdent(p.database)
+		}
+		aliasTableExpr.Expr = expr
+		tableInfo.database = expr.Qualifier.String()
+		tableInfo.tableName = expr.Name.String()
+		shardkey, err := p.router.ShardKey(tableInfo.database, tableInfo.tableName)
+		if err != nil {
+			return tableInfo, err
+		}
+		tableInfo.shardKey = shardkey
+		tableInfo.tableExpr = aliasTableExpr
+	default:
+		return tableInfo, errors.New("unsupported: subqueries.in.select")
+	}
+
+	if tableInfo.shardKey != "" && aliasTableExpr.As.String() == "" {
+		aliasTableExpr.As = sqlparser.NewTableIdent(tableInfo.tableName)
+	}
+	return tableInfo, nil
+}
+
+// getJoinTableInfos used to get the tables' info for join type
+func (p *SelectPlan) getJoinTableInfos(joinTableExpr *sqlparser.JoinTableExpr, tableInfos *[]TableInfo) error {
+	rightExpr, OK := (joinTableExpr.RightExpr).(*sqlparser.AliasedTableExpr)
+	if !OK {
+		return errors.New("unsupported: JOIN.expression")
+	}
+	tableInfo, err := p.getOneTableInfo(rightExpr)
+	if err != nil {
+		return err
+	}
+	*tableInfos = append(*tableInfos, tableInfo)
+	switch joinTableExpr.LeftExpr.(type) {
+	case *sqlparser.AliasedTableExpr:
+		tableInfo, err = p.getOneTableInfo(joinTableExpr.LeftExpr.(*sqlparser.AliasedTableExpr))
+		if err != nil {
+			return err
+		}
+		*tableInfos = append(*tableInfos, tableInfo)
+	case *sqlparser.JoinTableExpr:
+		return p.getJoinTableInfos(joinTableExpr.LeftExpr.(*sqlparser.JoinTableExpr), tableInfos)
+	default:
+		return errors.New("unsupported: JOIN.expression")
+	}
+	return nil
 }

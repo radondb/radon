@@ -118,6 +118,118 @@ func TestApiPartitionRuleShift(t *testing.T) {
 	}
 }
 
+func TestApiPartitionRuleShiftGlobal(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+	// add router of sbtest.G
+	{
+		err := router.add("sbtest", MockTableGConfig())
+		assert.Nil(t, err)
+
+		tConf, err := router.TableConfig("sbtest", "G")
+		assert.Nil(t, err)
+		assert.NotNil(t, tConf)
+	}
+
+	// Shift backend from backend1 to backend0 for sbtest/G.
+	{
+		from := "backend1"
+		to := "backend0"
+		database := "sbtest"
+		table := "G"
+		err := router.PartitionRuleShift(from, to, database, table)
+		assert.Nil(t, err)
+		want := `{
+	"Schemas": {
+		"sbtest": {
+			"DB": "sbtest",
+			"Tables": {
+				"G": {
+					"Name": "G",
+					"Partition": {
+						"Segments": [
+							{
+								"Table": "G",
+								"Backend": "backend0",
+								"Range": {}
+							},
+							{
+								"Table": "G",
+								"Backend": "backend1",
+								"Range": {}
+							},
+							{
+								"Table": "G",
+								"Backend": "backend2",
+								"Range": {}
+							}
+						]
+					}
+				}
+			}
+		}
+	}
+}`
+		got := router.JSON()
+		assert.Equal(t, want, got)
+	}
+
+	// Shift backend from backend1 to backend3 for sbtest/G.
+	{
+		from := "backend1"
+		to := "backend3"
+		database := "sbtest"
+		table := "G"
+		err := router.PartitionRuleShift(from, to, database, table)
+		assert.Nil(t, err)
+		want := `{
+	"Schemas": {
+		"sbtest": {
+			"DB": "sbtest",
+			"Tables": {
+				"G": {
+					"Name": "G",
+					"Partition": {
+						"Segments": [
+							{
+								"Table": "G",
+								"Backend": "backend0",
+								"Range": {}
+							},
+							{
+								"Table": "G",
+								"Backend": "backend1",
+								"Range": {}
+							},
+							{
+								"Table": "G",
+								"Backend": "backend2",
+								"Range": {}
+							},
+							{
+								"Table": "G",
+								"Backend": "backend3",
+								"Range": {}
+							}
+						]
+					}
+				}
+			}
+		}
+	}
+}`
+		got := router.JSON()
+		assert.Equal(t, want, got)
+	}
+
+	// Drop.
+	{
+		err := router.DropDatabase("sbtest")
+		assert.Nil(t, err)
+	}
+}
+
 func TestApiPartitionRuleShiftErrors(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)
@@ -167,6 +279,48 @@ func TestApiPartitionRuleShiftErrors(t *testing.T) {
 		want := "router.rule.change.cant.found.backend[backend8]+table:[A88]"
 		got := err.Error()
 		assert.Equal(t, want, got)
+	}
+
+	// add router of sbtest.G
+	{
+		err := router.add("sbtest", MockTableGConfig())
+		assert.Nil(t, err)
+
+		tConf, err := router.TableConfig("sbtest", "G")
+		assert.Nil(t, err)
+		assert.NotNil(t, tConf)
+	}
+
+	{
+		from := "backend1"
+		to := "backend2"
+		database := "sbtest"
+		table := "G"
+		err := router.PartitionRuleShift(from, to, database, table)
+		want := "the.table:[G].already.exists.in.the.backend[backend2]"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+
+	// writeFrmData err
+	{
+		router.metadir = "/u100000/xx"
+		from := "backend8"
+		to := "backend4"
+		database := "sbtest"
+		table := "A8"
+		err := router.PartitionRuleShift(from, to, database, table)
+		assert.NotNil(t, err)
+	}
+
+	// writeFrmData err
+	{
+		from := "backend1"
+		to := "backend3"
+		database := "sbtest"
+		table := "G"
+		err := router.PartitionRuleShift(from, to, database, table)
+		assert.NotNil(t, err)
 	}
 }
 

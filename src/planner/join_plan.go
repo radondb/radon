@@ -49,8 +49,6 @@ func (p *JoinPlan) analyze() error {
 			if len(node.From) > 1 && node.Where != nil {
 				return errors.New("unsupported: JOIN.expression")
 			}
-		case *sqlparser.JoinTableExpr:
-			return errors.New("unsupported: JOIN.expression")
 		}
 	}
 	return nil

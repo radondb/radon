@@ -293,16 +293,18 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select id from A limit x",
 		"select age,count(*) from A group by age having count(*) >=2",
 		"select id from A,b limit x",
+		"select * from (A,B)",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
 		"unsupported: distinct",
-		"unsupported: JOIN.expression",
+		"unsupported: more.than.one.shard.tables",
 		"unsupported: function:rand",
 		"unsupported: orderby[b].should.in.select.list",
 		"unsupported: limit.offset.or.counts.must.be.IntVal",
 		"unsupported: expr[count(*)].in.having.clause",
 		"unsupported: subqueries.in.select",
+		"unsupported: ParenTableExpr.in.select",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -468,6 +470,187 @@ func TestSelectPlanDatabaseNotFound(t *testing.T) {
 		{
 			err := planTree.Build()
 			assert.NotNil(t, err)
+		}
+	}
+}
+
+func TestSelectPlanGetTableInfoErr(t *testing.T) {
+	query := "select * from (select * from C) as D join B on B.a = D.a join A on D.a = A.a join (E, F) on (E.a = A.a and F.a = A.a)"
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+	plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+	{
+		_, err = plan.getOneTableInfo(nil)
+		want := "unsupported: aliasTableExpr cannot be nil"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	{
+		tbExpr := &sqlparser.AliasedTableExpr{}
+		expr := sqlparser.TableName{
+			Name: sqlparser.NewTableIdent("C"),
+		}
+		tbExpr.Expr = expr
+		_, err = plan.getOneTableInfo(tbExpr)
+		want := "Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	{
+		tableInfos := make([]TableInfo, 0, 4)
+		err = plan.getJoinTableInfos(plan.node.From[0].(*sqlparser.JoinTableExpr), &tableInfos)
+		want := "unsupported: JOIN.expression"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	{
+		tableInfos := make([]TableInfo, 0, 4)
+		joinExpr := plan.node.From[0].(*sqlparser.JoinTableExpr)
+		err = plan.getJoinTableInfos(joinExpr.LeftExpr.(*sqlparser.JoinTableExpr), &tableInfos)
+		want := "unsupported: subqueries.in.select"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+}
+
+func TestSelectPlanGlobal(t *testing.T) {
+	results := []string{
+		`{
+	"RawQuery": "select 1, sum(a),avg(a),a,b from sbtest.G where id\u003e1 group by a,b order by a desc limit 10 offset 100",
+	"Project": "1, sum(a), avg(a), a, b",
+	"Partitions": [
+		{
+			"Query": "select 1, sum(a), avg(a), a, b from sbtest.G where id \u003e 1 group by a, b order by a desc limit 100, 10",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
+	}
+	querys := []string{
+		"select 1, sum(a),avg(a),a,b from sbtest.G where id>1 group by a,b order by a desc limit 10 offset 100",
+	}
+
+	// Database not null.
+	{
+		log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+		database := "sbtest"
+
+		route, cleanup := router.MockNewRouter(log)
+		defer cleanup()
+
+		err := route.AddForTest(database, router.MockTableGConfig())
+		assert.Nil(t, err)
+		for i, query := range querys {
+			node, err := sqlparser.Parse(query)
+			assert.Nil(t, err)
+			plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+
+			// plan build
+			{
+				log.Info("--select.query:%+v", query)
+				err := plan.Build()
+				assert.Nil(t, err)
+				got := plan.JSON()
+				want := results[i]
+				assert.Equal(t, want, got)
+				assert.Equal(t, PlanTypeSelect, plan.Type())
+				assert.NotNil(t, plan.Children())
+			}
+		}
+	}
+}
+
+func TestSelectPlanJoin(t *testing.T) {
+	results := []string{
+		`{
+	"RawQuery": "select G.a, G.b from G join B on G.a = B.a where B.id=1",
+	"Project": "G.a, G.b",
+	"Partitions": [
+		{
+			"Query": "select G.a, G.b from sbtest.G join sbtest.B1 as B on G.a = B.a where B.id = 1",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+	}
+	querys := []string{
+		"select G.a, G.b from G join B on G.a = B.a where B.id=1",
+	}
+
+	// Database not null.
+	{
+		log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+		database := "sbtest"
+
+		route, cleanup := router.MockNewRouter(log)
+		defer cleanup()
+
+		err := route.AddForTest(database, router.MockTableGConfig(), router.MockTableBConfig())
+		assert.Nil(t, err)
+		for i, query := range querys {
+			node, err := sqlparser.Parse(query)
+			assert.Nil(t, err)
+			plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+
+			// plan build
+			{
+				log.Info("--select.query:%+v", query)
+				err := plan.Build()
+				assert.Nil(t, err)
+				got := plan.JSON()
+				want := results[i]
+				assert.Equal(t, want, got)
+				assert.Equal(t, PlanTypeSelect, plan.Type())
+				assert.NotNil(t, plan.Children())
+			}
+		}
+	}
+}
+
+func TestSelectPlanJoinErr(t *testing.T) {
+	querys := []string{
+		"select G.a, G.b from sbtest.G join sbtest.B on G.id = B.id join sbtest.A on B.id = A.id where A.id=1",
+		"select K.a, K.b from sbtest.B join sbtest.A on B.id = A.id where A.id=1",
+		"select G.a, G.b from sbtest.G join (B,A) on (B.id = G.id and A.id = G.id)",
+	}
+	results := []string{
+		"unsupported: more.than.one.shard.tables",
+		"unsupported: more.than.one.shard.tables",
+		"unsupported: JOIN.expression",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableGConfig(), router.MockTableMConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+
+		// plan build
+		{
+			err := plan.Build()
+			want := results[i]
+			got := err.Error()
+			assert.Equal(t, want, got)
 		}
 	}
 }
