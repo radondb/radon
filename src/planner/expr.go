@@ -19,7 +19,7 @@ import (
 
 // getDMLRouting used to get the routing from the where clause.
 func getDMLRouting(database, table, shardkey string, where *sqlparser.Where, router *router.Router) ([]router.Segment, error) {
-	if where != nil {
+	if shardkey != "" && where != nil {
 		filters := splitAndExpression(nil, where.Expr)
 		for _, filter := range filters {
 			comparison, ok := filter.(*sqlparser.ComparisonExpr)
@@ -30,7 +30,7 @@ func getDMLRouting(database, table, shardkey string, where *sqlparser.Where, rou
 			// Only deal with Equal statement.
 			switch comparison.Operator {
 			case sqlparser.EqualStr:
-				if nameMatch(comparison.Left, shardkey) {
+				if nameMatch(comparison.Left, table, shardkey) {
 					sqlval, ok := comparison.Right.(*sqlparser.SQLVal)
 					if ok {
 						return router.Lookup(database, table, sqlval, sqlval)
@@ -54,9 +54,9 @@ func hasSubquery(node sqlparser.SQLNode) bool {
 	return has
 }
 
-func nameMatch(node sqlparser.Expr, shardkey string) bool {
+func nameMatch(node sqlparser.Expr, table, shardkey string) bool {
 	colname, ok := node.(*sqlparser.ColName)
-	return ok && (colname.Name.String() == shardkey)
+	return ok && (colname.Qualifier.Name.String() == "" || colname.Qualifier.Name.String() == table) && (colname.Name.String() == shardkey)
 }
 
 // isShardKeyChanging returns true if any of the update
