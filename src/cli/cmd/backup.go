@@ -24,6 +24,7 @@ var (
 	backupEngine = "tokudb"
 )
 
+// NewBackupCommand creates new backup command.
 func NewBackupCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "backup",
@@ -33,6 +34,7 @@ func NewBackupCommand() *cobra.Command {
 	return cmd
 }
 
+// NewBackupRebuildCommand is used to rebuild backup.
 func NewBackupRebuildCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "rebuild",

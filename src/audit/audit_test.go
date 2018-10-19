@@ -135,7 +135,8 @@ func TestPurge(t *testing.T) {
 	ts := time.Unix(0, l0.Ts).UTC().Add(time.Duration(time.Hour * time.Duration(-2)))
 	timestamp := ts.Format(fileFormat)
 	newName := filepath.Join(conf.LogDir, fmt.Sprintf("%s%s%s", prefix, timestamp, extension))
-	os.Rename(filepath.Join(conf.LogDir, l0.Name), newName)
+	err = os.Rename(filepath.Join(conf.LogDir, l0.Name), newName)
+	assert.Nil(t, err)
 	audit.doPurge()
 
 	logs1, _ := audit.rfile.GetOldLogInfos()

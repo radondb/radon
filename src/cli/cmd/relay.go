@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewRelayCommand creates new relay command.
 func NewRelayCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "relay",
@@ -36,6 +37,7 @@ func NewRelayCommand() *cobra.Command {
 	return cmd
 }
 
+// NewRelayStatusCommand is used to show relay status.
 func NewRelayStatusCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
@@ -46,14 +48,15 @@ func NewRelayStatusCommand() *cobra.Command {
 }
 
 func relayStatusCommand(cmd *cobra.Command, args []string) {
-	relayUrl := "http://" + radonHost + ":8080/v1/relay/status"
-	resp, err := xbase.HTTPGet(relayUrl)
+	relayURL := "http://" + radonHost + ":8080/v1/relay/status"
+	resp, err := xbase.HTTPGet(relayURL)
 	if err != nil {
 		log.Panicf("error:%+v", err)
 	}
-	fmt.Printf(resp)
+	fmt.Print(resp)
 }
 
+// NewRelayInfosCommand is used to show relay all infos.
 func NewRelayInfosCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "infos",
@@ -64,12 +67,12 @@ func NewRelayInfosCommand() *cobra.Command {
 }
 
 func relayInfosCommand(cmd *cobra.Command, args []string) {
-	relayUrl := "http://" + radonHost + ":8080/v1/relay/infos"
-	resp, err := xbase.HTTPGet(relayUrl)
+	relayURL := "http://" + radonHost + ":8080/v1/relay/infos"
+	resp, err := xbase.HTTPGet(relayURL)
 	if err != nil {
 		log.Panicf("error:%+v", err)
 	}
-	fmt.Printf(resp)
+	fmt.Print(resp)
 }
 
 func setRelay(url string) {
@@ -85,6 +88,7 @@ func setRelay(url string) {
 	}
 }
 
+// NewRelayStartCommand is used to start the relay worker.
 func NewRelayStartCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
@@ -95,10 +99,11 @@ func NewRelayStartCommand() *cobra.Command {
 }
 
 func relayStartCommand(cmd *cobra.Command, args []string) {
-	relayUrl := "http://" + radonHost + ":8080/v1/relay/start"
-	setRelay(relayUrl)
+	relayURL := "http://" + radonHost + ":8080/v1/relay/start"
+	setRelay(relayURL)
 }
 
+// NewRelayStopCommand is used to stop the relay worker.
 func NewRelayStopCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stop",
@@ -109,8 +114,8 @@ func NewRelayStopCommand() *cobra.Command {
 }
 
 func relayStopCommand(cmd *cobra.Command, args []string) {
-	relayUrl := "http://" + radonHost + ":8080/v1/relay/stop"
-	setRelay(relayUrl)
+	relayURL := "http://" + radonHost + ":8080/v1/relay/stop"
+	setRelay(relayURL)
 }
 
 func setParallelType(url string, t int32) {
@@ -133,6 +138,7 @@ func setParallelType(url string, t int32) {
 	}
 }
 
+// NewRelayParallelTypeCommand is used to set parallel type.
 func NewRelayParallelTypeCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "paralleltype",
@@ -153,7 +159,7 @@ func relayResetGTID(gtid int64) {
 		log.Panicf("gtid[%v].less.than[1514254947594569594].should.be.UTC().UnixNano()", gtid)
 	}
 
-	relayUrl := "http://" + radonHost + ":8080/v1/relay/reset"
+	relayURL := "http://" + radonHost + ":8080/v1/relay/reset"
 	type request struct {
 		GTID int64 `json:"gtid"`
 	}
@@ -161,7 +167,7 @@ func relayResetGTID(gtid int64) {
 	req := &request{
 		GTID: gtid,
 	}
-	resp, cleanup, err := xbase.HTTPPost(relayUrl, &req)
+	resp, cleanup, err := xbase.HTTPPost(relayURL, &req)
 	defer cleanup()
 
 	if err != nil {
@@ -169,11 +175,12 @@ func relayResetGTID(gtid int64) {
 	}
 
 	if resp == nil || resp.StatusCode != http.StatusOK {
-		log.Panicf("radoncli.set.relay.to.[%v].url[%s].response.error:%+s", req, relayUrl, xbase.HTTPReadBody(resp))
+		log.Panicf("radoncli.set.relay.to.[%v].url[%s].response.error:%+s", req, relayURL, xbase.HTTPReadBody(resp))
 	}
 	log.Info("reset.relay.gtid.to[%v]", gtid)
 }
 
+// NewRelayResetCommand is used to reset the relay worker GTID.
 func NewRelayResetCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reset",
@@ -188,6 +195,7 @@ func relayResetCommand(cmd *cobra.Command, args []string) {
 	relayResetGTID(localFlags.gtid)
 }
 
+// NewRelayResetToNowCommand is used to reset the relay worker GTID to now.
 func NewRelayResetToNowCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "resettonow",
@@ -201,6 +209,7 @@ func relayResetToNowCommand(cmd *cobra.Command, args []string) {
 	relayResetGTID(time.Now().UTC().UnixNano())
 }
 
+// NewRelayMaxWorkersCommand is used to set the max relay parallel workers.
 func NewRelayMaxWorkersCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "workers",
@@ -212,7 +221,7 @@ func NewRelayMaxWorkersCommand() *cobra.Command {
 }
 
 func relayMaxWorkersCommand(cmd *cobra.Command, args []string) {
-	relayUrl := "http://" + radonHost + ":8080/v1/relay/workers"
+	relayURL := "http://" + radonHost + ":8080/v1/relay/workers"
 	type request struct {
 		Workers int `json:"workers"`
 	}
@@ -220,7 +229,7 @@ func relayMaxWorkersCommand(cmd *cobra.Command, args []string) {
 	req := &request{
 		Workers: localFlags.maxWorkers,
 	}
-	resp, cleanup, err := xbase.HTTPPost(relayUrl, &req)
+	resp, cleanup, err := xbase.HTTPPost(relayURL, &req)
 	defer cleanup()
 
 	if err != nil {
@@ -228,10 +237,11 @@ func relayMaxWorkersCommand(cmd *cobra.Command, args []string) {
 	}
 
 	if resp == nil || resp.StatusCode != http.StatusOK {
-		log.Panicf("radoncli.relay.set.max.parallel.worker.to.[%v].url[%s].response.error:%+s", req, relayUrl, xbase.HTTPReadBody(resp))
+		log.Panicf("radoncli.relay.set.max.parallel.worker.to.[%v].url[%s].response.error:%+s", req, relayURL, xbase.HTTPReadBody(resp))
 	}
 }
 
+// NewRelayNowCommand is used to show current time by nanosecond.
 func NewRelayNowCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "now",

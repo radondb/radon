@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewDebugCommand creates new DebugCommand.
 func NewDebugCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "debug",
@@ -28,6 +29,7 @@ func NewDebugCommand() *cobra.Command {
 	return cmd
 }
 
+// NewDebugConfigzCommand is used to show config.
 func NewDebugConfigzCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "configz",
@@ -38,14 +40,15 @@ func NewDebugConfigzCommand() *cobra.Command {
 }
 
 func debugConfigzCommand(cmd *cobra.Command, args []string) {
-	configzUrl := "http://" + radonHost + ":8080/v1/debug/configz"
-	resp, err := xbase.HTTPGet(configzUrl)
+	configzURL := "http://" + radonHost + ":8080/v1/debug/configz"
+	resp, err := xbase.HTTPGet(configzURL)
 	if err != nil {
 		log.Panicf("error:%+v", err)
 	}
-	fmt.Printf(resp)
+	fmt.Print(resp)
 }
 
+// NewDebugBackendzCommand is used to show backend info.
 func NewDebugBackendzCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "backendz",
@@ -56,14 +59,15 @@ func NewDebugBackendzCommand() *cobra.Command {
 }
 
 func debugBackendzCommand(cmd *cobra.Command, args []string) {
-	backendzUrl := "http://" + radonHost + ":8080/v1/debug/backendz"
-	resp, err := xbase.HTTPGet(backendzUrl)
+	backendzURL := "http://" + radonHost + ":8080/v1/debug/backendz"
+	resp, err := xbase.HTTPGet(backendzURL)
 	if err != nil {
 		log.Panicf("error:%+v", err)
 	}
-	fmt.Printf(resp)
+	fmt.Print(resp)
 }
 
+// NewDebugSchemazCommand is used to show schema info.
 func NewDebugSchemazCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "schemaz",
@@ -74,10 +78,10 @@ func NewDebugSchemazCommand() *cobra.Command {
 }
 
 func debugSchemazCommand(cmd *cobra.Command, args []string) {
-	schemazUrl := "http://" + radonHost + ":8080/v1/debug/schemaz"
-	resp, err := xbase.HTTPGet(schemazUrl)
+	schemazURL := "http://" + radonHost + ":8080/v1/debug/schemaz"
+	resp, err := xbase.HTTPGet(schemazURL)
 	if err != nil {
 		log.Panicf("error:%+v", err)
 	}
-	fmt.Printf(resp)
+	fmt.Print(resp)
 }

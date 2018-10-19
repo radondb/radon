@@ -12,7 +12,6 @@ import (
 	"context"
 	"log"
 	"net/http"
-	_ "net/http/pprof"
 
 	"proxy"
 
@@ -26,12 +25,14 @@ func init() {
 	}()
 }
 
+// Admin tuple.
 type Admin struct {
 	log    *xlog.Log
 	proxy  *proxy.Proxy
 	server *http.Server
 }
 
+// NewAdmin creates the new admin.
 func NewAdmin(log *xlog.Log, proxy *proxy.Proxy) *Admin {
 	return &Admin{
 		log:   log,
@@ -60,6 +61,7 @@ func (admin *Admin) Start() {
 	}()
 }
 
+// Stop stops http server.
 func (admin *Admin) Stop() {
 	log := admin.log
 	admin.server.Shutdown(context.Background())

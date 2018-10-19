@@ -25,7 +25,7 @@ func TestCmdReadOnly(t *testing.T) {
 	admin := ctl.NewAdmin(log, proxy)
 	admin.Start()
 	defer admin.Stop()
-	time.Sleep(100)
+	time.Sleep(100 * time.Nanosecond)
 
 	// enable.
 	{

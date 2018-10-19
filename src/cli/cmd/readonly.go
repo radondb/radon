@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewReadonlyCommand creates new readonly command.
 func NewReadonlyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "readonly",
@@ -58,8 +59,8 @@ func NewReadonlyEnableCommand() *cobra.Command {
 }
 
 func readonlyEnableCommand(cmd *cobra.Command, args []string) {
-	readonlyUrl := "http://" + radonHost + ":8080/v1/radon/readonly"
-	setReadonly(readonlyUrl, true)
+	readonlyURL := "http://" + radonHost + ":8080/v1/radon/readonly"
+	setReadonly(readonlyURL, true)
 }
 
 // NewReadonlyDisableCommand disable readonly.
@@ -73,6 +74,6 @@ func NewReadonlyDisableCommand() *cobra.Command {
 }
 
 func readonlyDisableCommand(cmd *cobra.Command, args []string) {
-	readonlyUrl := "http://" + radonHost + ":8080/v1/radon/readonly"
-	setReadonly(readonlyUrl, false)
+	readonlyURL := "http://" + radonHost + ":8080/v1/radon/readonly"
+	setReadonly(readonlyURL, false)
 }

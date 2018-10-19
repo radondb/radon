@@ -526,7 +526,8 @@ func TestTxnTwoPCExecute(t *testing.T) {
 
 	// 2PC Commit.
 	{
-		txn.Commit()
+		err := txn.Commit()
+		assert.Nil(t, err)
 	}
 }
 
@@ -590,7 +591,8 @@ func TestTxnTwoPCRollbackError(t *testing.T) {
 	// commit err and rollback err will WriteXaCommitErrLog, need the scatter
 	fakedb, txnMgr, backends, _, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
 	defer cleanup()
-	scatter.Init(MockScatterDefault(log))
+	err := scatter.Init(MockScatterDefault(log))
+	assert.Nil(t, err)
 
 	querys := []xcontext.QueryTuple{
 		xcontext.QueryTuple{Query: "update", Backend: addrs[0]},
@@ -629,6 +631,7 @@ func TestTxnTwoPCRollbackError(t *testing.T) {
 			_, err = txn.Execute(rctx)
 			assert.Nil(t, err)
 			err = txn.Rollback()
+			assert.NotNil(t, err)
 		}
 
 		// XA PREPARE error.
@@ -651,6 +654,7 @@ func TestTxnTwoPCRollbackError(t *testing.T) {
 			_, err = txn.Execute(rctx)
 			assert.Nil(t, err)
 			err = txn.Rollback()
+			assert.NotNil(t, err)
 		}
 
 		// ROLLBACK error.
@@ -673,6 +677,7 @@ func TestTxnTwoPCRollbackError(t *testing.T) {
 			_, err = txn.Execute(rctx)
 			assert.Nil(t, err)
 			err = txn.Rollback()
+			assert.Nil(t, err)
 		}
 
 		// ROLLBACK nothing for read-txn.
@@ -742,7 +747,8 @@ func TestTxnTwoPCExecuteNormalOnOneBackend(t *testing.T) {
 
 	// 2PC Commit.
 	{
-		txn.Commit()
+		err := txn.Commit()
+		assert.Nil(t, err)
 	}
 }
 
@@ -795,7 +801,8 @@ func TestTxnTwoPCExecuteWrite(t *testing.T) {
 
 	// 2PC Commit.
 	{
-		txn.Commit()
+		err := txn.Commit()
+		assert.Nil(t, err)
 	}
 }
 
@@ -846,7 +853,8 @@ func TestTxnTwoPCExecuteError(t *testing.T) {
 	// commit err and rollback err will WriteXaCommitErrLog, need the scatter
 	fakedb, txnMgr, backends, _, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
 	defer cleanup()
-	scatter.Init(MockScatterDefault(log))
+	err := scatter.Init(MockScatterDefault(log))
+	assert.Nil(t, err)
 
 	querys := []xcontext.QueryTuple{
 		xcontext.QueryTuple{Query: "update", Backend: addrs[0]},
@@ -959,7 +967,8 @@ func TestTxnTwoPCExecuteError(t *testing.T) {
 			}
 			_, err = txn.Execute(rctx)
 			assert.Nil(t, err)
-			txn.Rollback()
+			err = txn.Rollback()
+			assert.Nil(t, err)
 		}
 
 		// XA COMMIT error.

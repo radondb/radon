@@ -33,8 +33,7 @@ func mockSyncer(log *xlog.Log, n int) ([]*Syncer, func()) {
 	dir := getCurrDir()
 
 	for i := 0; i < n; i++ {
-		var metadir string
-		metadir = dir + "/radon_test_syncer_meta" + strconv.Itoa(i)
+		metadir := dir + "/radon_test_syncer_meta" + strconv.Itoa(i)
 
 		os.Mkdir(metadir, 0777)
 		peerAddr := fmt.Sprintf("127.0.0.1:%d", 8081+i)

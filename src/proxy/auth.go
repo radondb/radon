@@ -21,10 +21,7 @@ import (
 )
 
 func localHostLogin(host string) bool {
-	if host == "127.0.0.1" {
-		return true
-	}
-	return false
+	return host == "127.0.0.1"
 }
 
 func localUserLogin(s *driver.Session) bool {

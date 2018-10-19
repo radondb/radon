@@ -29,7 +29,7 @@ func TestCmdDebugConfigz(t *testing.T) {
 	admin := ctl.NewAdmin(log, proxy)
 	admin.Start()
 	defer admin.Stop()
-	time.Sleep(100)
+	time.Sleep(100 * time.Nanosecond)
 
 	{
 		cmd := NewDebugCommand()
@@ -48,7 +48,7 @@ func TestCmdDebugBackendz(t *testing.T) {
 	admin := ctl.NewAdmin(log, proxy)
 	admin.Start()
 	defer admin.Stop()
-	time.Sleep(100)
+	time.Sleep(100 * time.Nanosecond)
 
 	{
 		cmd := NewDebugCommand()
@@ -68,7 +68,7 @@ func TestCmdDebugSchemaz(t *testing.T) {
 	admin := ctl.NewAdmin(log, proxy)
 	admin.Start()
 	defer admin.Stop()
-	time.Sleep(100)
+	time.Sleep(100 * time.Nanosecond)
 
 	// fakedbs.
 	{
