@@ -14,6 +14,7 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 )
 
+// NewRouter creates the new router.
 func (admin *Admin) NewRouter() (rest.App, error) {
 	log := admin.log
 	proxy := admin.proxy
@@ -30,7 +31,7 @@ func (admin *Admin) NewRouter() (rest.App, error) {
 		rest.Delete("/v1/radon/backend/:name", v1.RemoveBackendHandler(log, proxy)),
 		rest.Post("/v1/radon/backup", v1.AddBackupHandler(log, proxy)),
 		rest.Get("/v1/radon/backupconfig", v1.BackupConfigHandler(log, proxy)),
-		rest.Get("/v1/radon/restapiaddress", v1.RestApiAddressHandler(log, proxy)),
+		rest.Get("/v1/radon/restapiaddress", v1.RestAPIAddressHandler(log, proxy)),
 		rest.Delete("/v1/radon/backup/:name", v1.RemoveBackupHandler(log, proxy)),
 		rest.Get("/v1/radon/status", v1.StatusHandler(log, proxy)),
 

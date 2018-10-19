@@ -87,7 +87,8 @@ func TestSQLWorkerInitError(t *testing.T) {
 	// For mock.go code coverage.
 	{
 		sqlworker.rfile.Write([]byte{0x00})
-		sqlworker.rfile.Sync()
+		err := sqlworker.rfile.Sync()
+		assert.Nil(t, err)
 		sqlworker.rfile.GetOldLogInfos()
 		sqlworker.rfile.GetNextLogInfo("")
 	}

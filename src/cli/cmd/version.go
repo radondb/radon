@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewVersionCommand show the version number of radon client.
 func NewVersionCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",

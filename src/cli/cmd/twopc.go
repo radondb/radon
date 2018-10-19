@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewTwopcCommand creates new twopc command.
 func NewTwopcCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "twopc",
@@ -58,8 +59,8 @@ func NewTwopcEnableCommand() *cobra.Command {
 }
 
 func twopcEnableCommand(cmd *cobra.Command, args []string) {
-	twopcUrl := "http://" + radonHost + ":8080/v1/radon/twopc"
-	setTwopc(twopcUrl, true)
+	twopcURL := "http://" + radonHost + ":8080/v1/radon/twopc"
+	setTwopc(twopcURL, true)
 }
 
 // NewTwopcDisableCommand disable twopc.
@@ -73,6 +74,6 @@ func NewTwopcDisableCommand() *cobra.Command {
 }
 
 func twopcDisableCommand(cmd *cobra.Command, args []string) {
-	twopcUrl := "http://" + radonHost + ":8080/v1/radon/twopc"
-	setTwopc(twopcUrl, false)
+	twopcURL := "http://" + radonHost + ":8080/v1/radon/twopc"
+	setTwopc(twopcURL, false)
 }

@@ -43,6 +43,7 @@ func TestGetDMLRouting(t *testing.T) {
 		n := node.(*sqlparser.Select)
 		assert.Nil(t, err)
 		got, err := getDMLRouting(database, "B", "id", n.Where, route)
+		assert.Nil(t, err)
 		assert.Equal(t, want[i], len(got))
 	}
 }

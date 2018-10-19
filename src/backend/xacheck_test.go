@@ -121,7 +121,8 @@ func TestWriteXaCommitErrorLogsAddXidDuplicate(t *testing.T) {
 	scatter, _, cleanup := MockScatter(log, 2)
 	defer cleanup()
 
-	scatter.Init(MockScatterDefault(log))
+	err := scatter.Init(MockScatterDefault(log))
+	assert.Nil(t, err)
 	txn1, err := scatter.CreateTransaction()
 	assert.Nil(t, err)
 	defer txn1.Finish()
@@ -165,11 +166,13 @@ func TestReadXaCommitErrorLogsWithoutBackend(t *testing.T) {
 
 	dir := fakedb.GetTmpDir("/tmp", "xacheck", log)
 	file := path.Join(dir, xacheckJSONFile)
-	ioutil.WriteFile(file, []byte(data), 0644)
+	err := ioutil.WriteFile(file, []byte(data), 0644)
+	assert.Nil(t, err)
 	defer os.RemoveAll(file)
 
 	scatter := NewScatter(log, "")
-	scatter.Init(MockScatterDefault2(dir))
+	err = scatter.Init(MockScatterDefault2(dir))
+	assert.Nil(t, err)
 
 	time.Sleep(1 * time.Second)
 
@@ -184,7 +187,8 @@ func TestTxnTwoPCExecuteCommitError(t *testing.T) {
 	scatter, fakedb1, cleanup1 := MockScatter(log, 2)
 	defer cleanup1()
 
-	scatter.Init(MockScatterDefault(log))
+	err := scatter.Init(MockScatterDefault(log))
+	assert.Nil(t, err)
 	var backend [2]string
 	var i int
 	for k := range scatter.backends {
@@ -232,7 +236,7 @@ func TestTxnTwoPCExecuteCommitError(t *testing.T) {
 		time.Sleep(2 * time.Second)
 	}
 
-	_, err := os.Stat(scatter.txnMgr.xaCheck.GetXaCheckFile())
+	_, err = os.Stat(scatter.txnMgr.xaCheck.GetXaCheckFile())
 	assert.Nil(t, err)
 
 	err = scatter.txnMgr.xaCheck.RemoveXaCommitErrLogs()
@@ -249,7 +253,8 @@ func TestXaCheckFailed(t *testing.T) {
 	scatter, fakedb1, cleanup1 := MockScatter(log, 2)
 	defer cleanup1()
 
-	scatter.Init(MockScatterDefault(log))
+	err := scatter.Init(MockScatterDefault(log))
+	assert.Nil(t, err)
 	var backend [2]string
 	var i int
 	for k := range scatter.backends {
@@ -323,7 +328,7 @@ func TestXaCheckFailed(t *testing.T) {
 	}
 
 	// the xacheck is stil exit.
-	_, err := os.Stat(scatter.txnMgr.xaCheck.GetXaCheckFile())
+	_, err = os.Stat(scatter.txnMgr.xaCheck.GetXaCheckFile())
 	assert.Nil(t, err)
 
 }
@@ -344,14 +349,16 @@ func TestXaCheckFromFileCommit(t *testing.T) {
 }`
 	dir := fakedb.GetTmpDir("/tmp", "xacheck", log)
 	file := path.Join(dir, xacheckJSONFile)
-	ioutil.WriteFile(file, []byte(data), 0644)
+	err := ioutil.WriteFile(file, []byte(data), 0644)
+	assert.Nil(t, err)
 	// it is no need to remove the file, if it is successful, err item in the file will be removed
 	//defer os.RemoveAll(file)
 
 	scatter, fakedb1, cleanup1 := MockScatter(log, 2)
 	defer cleanup1()
 
-	scatter.Init(MockScatterDefault2(dir))
+	err = scatter.Init(MockScatterDefault2(dir))
+	assert.Nil(t, err)
 	var backend [2]string
 	var i int
 	for k := range scatter.backends {
@@ -478,14 +485,16 @@ func TestXaCheckFromFileRollback(t *testing.T) {
 }`
 	dir := fakedb.GetTmpDir("/tmp", "xacheck", log)
 	file := path.Join(dir, xacheckJSONFile)
-	ioutil.WriteFile(file, []byte(data), 0644)
+	err := ioutil.WriteFile(file, []byte(data), 0644)
+	assert.Nil(t, err)
 	// it is no need to remove the file, if it is successful, err item in the file will be removed
 	//defer os.RemoveAll(file)
 
 	scatter, fakedb1, cleanup1 := MockScatter(log, 2)
 	defer cleanup1()
 
-	scatter.Init(MockScatterDefault2(dir))
+	err = scatter.Init(MockScatterDefault2(dir))
+	assert.Nil(t, err)
 	var backend [2]string
 	var i int
 	for k := range scatter.backends {
@@ -639,14 +648,16 @@ func TestXaCheckFromFileCommitRollbacks(t *testing.T) {
 }`
 	dir := fakedb.GetTmpDir("/tmp", "xacheck", log)
 	file := path.Join(dir, xacheckJSONFile)
-	ioutil.WriteFile(file, []byte(data), 0644)
+	err := ioutil.WriteFile(file, []byte(data), 0644)
+	assert.Nil(t, err)
 	// it is no need to remove the file, if it is successful, err item in the file will be removed
 	//defer os.RemoveAll(file)
 
 	scatter, fakedb1, cleanup1 := MockScatter(log, 2)
 	defer cleanup1()
 
-	scatter.Init(MockScatterDefault2(dir))
+	err = scatter.Init(MockScatterDefault2(dir))
+	assert.Nil(t, err)
 	var backend [2]string
 	var i int
 	for k := range scatter.backends {
@@ -823,7 +834,8 @@ func TestReadXaCommitRrrLogs1(t *testing.T) {
 	got := xaCommitErrLogs
 	assert.Equal(t, want, got)
 	xaChecker.Close()
-	xaChecker.RemoveXaCommitErrLogs()
+	err = xaChecker.RemoveXaCommitErrLogs()
+	assert.Nil(t, err)
 }
 
 func TestReadXaCommitRrrLogsError2(t *testing.T) {
@@ -844,7 +856,8 @@ func TestReadXaCommitRrrLogsError2(t *testing.T) {
 }`
 
 	file := path.Join(xaChecker.dir, xacheckJSONFile)
-	ioutil.WriteFile(file, []byte(data1), 0644)
+	err = ioutil.WriteFile(file, []byte(data1), 0644)
+	assert.Nil(t, err)
 	defer os.RemoveAll(file)
 
 	err = xaChecker.Init()
@@ -868,12 +881,13 @@ func TestReadXaCommitRrrLogsInit(t *testing.T) {
 	}
 	dir := fakedb.GetTmpDir("/tmp", "xacheck", log)
 	file := path.Join(dir, xacheckJSONFile)
-	config.WriteConfig(file, &XaCommitErrs{Logs: MockXaredologs})
+	err := config.WriteConfig(file, &XaCommitErrs{Logs: MockXaredologs})
+	assert.Nil(t, err)
 	defer os.RemoveAll(file)
 
 	xaChecker := NewXaCheck(scatter, MockScatterDefault2(dir))
 
-	err := xaChecker.Init()
+	err = xaChecker.Init()
 	assert.Nil(t, err)
 	xaChecker.Close()
 }

@@ -170,8 +170,8 @@ func statusHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r *
 	w.WriteJson(statuz)
 }
 
-// RestApiAddressHandler impl.
-func RestApiAddressHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFunc {
+// RestAPIAddressHandler impl.
+func RestAPIAddressHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFunc {
 	f := func(w rest.ResponseWriter, r *rest.Request) {
 		type resp struct {
 			Addr string `json:"address"`

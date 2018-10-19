@@ -19,6 +19,14 @@ fmt:
 	go fmt ./...
 	go vet ./...
 
+allsubdir := $(shell find src -maxdepth 4 -type d | grep -v "github.com")
+
+lint:
+	# go get -u golang.org/x/tools/cmd/golint
+	golint $(allsubdir)
+	# go get -u -v github.com/golangci/golangci-lint/cmd/golangci-lint
+	golangci-lint run
+
 test:
 	@echo "--> Testing..."
 	@$(MAKE) testxbase

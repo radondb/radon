@@ -49,11 +49,13 @@ func TestQueryz(t *testing.T) {
 	// QueryRows
 	{
 		e1 := func(q string) {
-			conn1.Execute(q)
+			_, err := conn1.Execute(q)
+			assert.Nil(t, err)
 		}
 
 		e2 := func(q string) {
-			conn2.Execute(q)
+			_, err := conn2.Execute(q)
+			assert.Nil(t, err)
 		}
 		go e1(querys[0])
 		time.Sleep(100 * time.Millisecond)

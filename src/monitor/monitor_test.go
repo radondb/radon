@@ -24,7 +24,8 @@ func TestClientConnectionIncDec(t *testing.T) {
 
 	var m dto.Metric
 	g, _ := clientConnectionNum.GetMetricWithLabelValues(user)
-	g.Write(&m)
+	err := g.Write(&m)
+	assert.Nil(t, err)
 	v := m.GetGauge().GetValue()
 
 	assert.EqualValues(t, 1, v)
@@ -32,7 +33,8 @@ func TestClientConnectionIncDec(t *testing.T) {
 	ClientConnectionDec(user)
 
 	g, _ = clientConnectionNum.GetMetricWithLabelValues(user)
-	g.Write(&m)
+	err = g.Write(&m)
+	assert.Nil(t, err)
 	v = m.GetGauge().GetValue()
 
 	assert.EqualValues(t, 0, v)
@@ -44,7 +46,8 @@ func TestBackendConnectionIncDec(t *testing.T) {
 
 	var m dto.Metric
 	g, _ := backendConnectionNum.GetMetricWithLabelValues(address)
-	g.Write(&m)
+	err := g.Write(&m)
+	assert.Nil(t, err)
 	v := m.GetGauge().GetValue()
 
 	assert.EqualValues(t, 1, v)
@@ -52,7 +55,8 @@ func TestBackendConnectionIncDec(t *testing.T) {
 	BackendConnectionDec(address)
 
 	g, _ = backendConnectionNum.GetMetricWithLabelValues(address)
-	g.Write(&m)
+	err = g.Write(&m)
+	assert.Nil(t, err)
 	v = m.GetGauge().GetValue()
 
 	assert.EqualValues(t, 0, v)
@@ -66,7 +70,8 @@ func TestQueryTotalCounterInc(t *testing.T) {
 
 	var m dto.Metric
 	g, _ := queryTotalCounter.GetMetricWithLabelValues(command, result)
-	g.Write(&m)
+	err := g.Write(&m)
+	assert.Nil(t, err)
 	v := m.GetCounter().GetValue()
 	assert.EqualValues(t, 2, v)
 
@@ -75,7 +80,8 @@ func TestQueryTotalCounterInc(t *testing.T) {
 	QueryTotalCounterInc(command, result)
 
 	g, _ = queryTotalCounter.GetMetricWithLabelValues(command, result)
-	g.Write(&m)
+	err = g.Write(&m)
+	assert.Nil(t, err)
 	v = m.GetCounter().GetValue()
 
 	assert.EqualValues(t, 1, v)
@@ -85,7 +91,8 @@ func TestBackendIncDec(t *testing.T) {
 	getBackendNum := func(btype string) float64 {
 		var m dto.Metric
 		g, _ := backendNum.GetMetricWithLabelValues(btype)
-		g.Write(&m)
+		err := g.Write(&m)
+		assert.Nil(t, err)
 		return m.GetGauge().GetValue()
 	}
 
@@ -118,7 +125,8 @@ func TestDiskUsageSet(t *testing.T) {
 
 	var m dto.Metric
 	g, _ := diskUsage.GetMetricWithLabelValues("percent")
-	g.Write(&m)
+	err := g.Write(&m)
+	assert.Nil(t, err)
 	r := m.GetGauge().GetValue()
 
 	assert.EqualValues(t, v, r)
@@ -133,7 +141,8 @@ func TestSlowQueryTotalCounterInc(t *testing.T) {
 
 	var m dto.Metric
 	g, _ := queryTotalCounter.GetMetricWithLabelValues(command, result)
-	g.Write(&m)
+	err := g.Write(&m)
+	assert.Nil(t, err)
 	v := m.GetCounter().GetValue()
 	assert.EqualValues(t, 2, v)
 
@@ -143,7 +152,8 @@ func TestSlowQueryTotalCounterInc(t *testing.T) {
 	SlowQueryTotalCounterInc(command, result)
 
 	g, _ = queryTotalCounter.GetMetricWithLabelValues(command, result)
-	g.Write(&m)
+	err = g.Write(&m)
+	assert.Nil(t, err)
 	v = m.GetCounter().GetValue()
 
 	assert.EqualValues(t, 1, v)
@@ -153,19 +163,22 @@ func TestPeerNum(t *testing.T) {
 	PeerNumSet(1)
 
 	var m dto.Metric
-	peerNum.Write(&m)
+	err := peerNum.Write(&m)
+	assert.Nil(t, err)
 	v := m.GetGauge().GetValue()
 
 	assert.EqualValues(t, 1, v)
 
 	PeerNumInc()
-	peerNum.Write(&m)
+	err = peerNum.Write(&m)
+	assert.Nil(t, err)
 	v = m.GetGauge().GetValue()
 
 	assert.EqualValues(t, 2, v)
 
 	PeerNumDec()
-	peerNum.Write(&m)
+	err = peerNum.Write(&m)
+	assert.Nil(t, err)
 	v = m.GetGauge().GetValue()
 
 	assert.EqualValues(t, 1, v)

@@ -330,7 +330,7 @@ func TestCtlV1RadonApiAddress(t *testing.T) {
 	{
 		api := rest.NewApi()
 		router, _ := rest.MakeRouter(
-			rest.Get("/v1/radon/restapiaddress", RestApiAddressHandler(log, proxy)),
+			rest.Get("/v1/radon/restapiaddress", RestAPIAddressHandler(log, proxy)),
 		)
 		api.SetApp(router)
 		handler := api.MakeHandler()
