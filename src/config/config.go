@@ -239,7 +239,7 @@ type ScatterConfig struct {
 	XaCheckDir      string `json:"xa-check-dir"`
 }
 
-// DefaultXaCheckConfig returns default XaCheckConfig config.
+// DefaultScatterConfig returns default ScatterConfig config.
 func DefaultScatterConfig() *ScatterConfig {
 	return &ScatterConfig{
 		XaCheckInterval: 10,
