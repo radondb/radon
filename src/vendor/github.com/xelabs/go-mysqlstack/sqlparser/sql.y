@@ -173,7 +173,10 @@ func forceEOF(yylex interface{}) {
 // RadonDB
 %token <empty> PARTITION PARTITIONS HASH XA
 %type <statement> truncate_statement xa_statement explain_statement kill_statement transaction_statement
-%token <bytes> ENGINES VERSIONS PROCESSLIST QUERYZ TXNZ KILL START TRANSACTION COMMIT SESSION ENGINE
+%token <bytes> ENGINES VERSIONS PROCESSLIST QUERYZ TXNZ KILL SESSION ENGINE
+// Transaction Tokens
+%token <bytes> BEGIN START TRANSACTION COMMIT ROLLBACK
+
 
 %type <statement> command
 %type <selStmt> select_statement base_select union_lhs union_rhs
@@ -960,9 +963,17 @@ kill_statement:
   }
 
 transaction_statement:
-  START TRANSACTION force_eof
+  BEGIN force_eof
+  {
+    $$ = &Transaction{ Action: BeginTxnStr}
+  }
+| START TRANSACTION force_eof
   {
     $$ = &Transaction{ Action: StartTxnStr}
+  }
+| ROLLBACK force_eof
+  {
+    $$ = &Transaction{ Action: RollbackTxnStr}
   }
 | COMMIT force_eof
   {

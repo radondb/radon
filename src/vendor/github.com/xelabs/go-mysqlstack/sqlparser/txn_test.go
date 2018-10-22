@@ -28,7 +28,14 @@ func TestTxn(t *testing.T) {
 			input:  "start transaction",
 			output: "start transaction",
 		},
-
+		{
+			input:  "begin",
+			output: "begin",
+		},
+		{
+			input:  "rollback",
+			output: "rollback",
+		},
 		{
 			input:  "commit",
 			output: "commit",

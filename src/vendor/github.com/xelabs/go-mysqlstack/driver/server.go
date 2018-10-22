@@ -176,7 +176,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32) {
 		return
 	}
 
-
 	l.handler.SessionInc(session)
 	defer l.handler.SessionDec(session)
 
