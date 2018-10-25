@@ -32,33 +32,32 @@ func (spanner *Spanner) ExecuteTwoPC(session *driver.Session, database string, q
 
 	var err error
 	var txn backend.Transaction
-	singleStatement := false
 
-	// transaction.
-	mysession := sessions.getTxnSession(session)
-	txn = mysession.transaction
-	if txn == nil {
-		txn, err = scatter.CreateTransaction()
-		if err != nil {
-			log.Error("spanner.txn.create.error:[%v]", err)
-			return nil, err
-		}
-		defer txn.Finish()
+	txn, err = scatter.CreateTransaction()
+	if err != nil {
+		log.Error("spanner.txn.create.error:[%v]", err)
+		return nil, err
+	}
+	defer txn.Finish()
 
-		// txn limits.
-		txn.SetTimeout(conf.Proxy.QueryTimeout)
-		txn.SetMaxResult(conf.Proxy.MaxResultSize)
+	// txn limits.
+	txn.SetTimeout(conf.Proxy.QueryTimeout)
+	txn.SetMaxResult(conf.Proxy.MaxResultSize)
+	switch node.(type) {
+	case *sqlparser.Select:
+		txn.SetSingleStmtRead(true)
+	default:
+		// nothing to do
+	}
 
-		// binding.
-		sessions.TxnBinding(session, txn, node, query)
-		defer sessions.TxnUnBinding(session)
+	// binding.
+	sessions.TxnBinding(session, txn, node, query)
+	defer sessions.TxnUnBinding(session)
 
-		// Transaction begin.
-		if err := txn.Begin(); err != nil {
-			log.Error("spanner.execute.2pc.txn.begin.error:[%v]", err)
-			return nil, err
-		}
-		singleStatement = true
+	// Transaction begin.
+	if err := txn.Begin(); err != nil {
+		log.Error("spanner.execute.2pc.txn.begin.error:[%v]", err)
+		return nil, err
 	}
 
 	// Transaction execute.
@@ -76,11 +75,9 @@ func (spanner *Spanner) ExecuteTwoPC(session *driver.Session, database string, q
 		return nil, err
 	}
 
-	if singleStatement {
-		if err := txn.Commit(); err != nil {
-			log.Error("spanner.execute.2pc.txn.commit.error:[%v]", err)
-			return nil, err
-		}
+	if err := txn.Commit(); err != nil {
+		log.Error("spanner.execute.2pc.txn.commit.error:[%v]", err)
+		return nil, err
 	}
 	return qr, nil
 }

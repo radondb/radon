@@ -93,6 +93,7 @@ type Transaction interface {
 
 	SetTimeout(timeout int)
 	SetMaxResult(max int)
+	SetSingleStmtRead(isSingleStmt bool)
 
 	Execute(req *xcontext.RequestContext) (*sqltypes.Result, error)
 	ExecuteRaw(database string, query string) (*sqltypes.Result, error)
@@ -108,6 +109,7 @@ type Txn struct {
 	req               *xcontext.RequestContext
 	txnd              *TxnDetail
 	twopc             bool
+	isSingleStmtRead  bool
 	start             time.Time
 	state             sync2.AtomicInt32
 	xaState           sync2.AtomicInt32
@@ -148,6 +150,11 @@ func (txn *Txn) SetTimeout(timeout int) {
 // SetMaxResult used to set the txn max result.
 func (txn *Txn) SetMaxResult(max int) {
 	txn.maxResult = max
+}
+
+// SetSingleStmtRead used to set the isSingleStmtRead true or not.
+func (txn *Txn) SetSingleStmtRead(isSingleStmtRead bool) {
+	txn.isSingleStmtRead = isSingleStmtRead
 }
 
 // TxID returns txn id.
@@ -329,6 +336,11 @@ func (txn *Txn) Begin() error {
 
 	txn.req = xcontext.NewRequestContext()
 	txn.req.Mode = xcontext.ReqScatter
+
+	// Optimize for single statement read, return nil and do not execute xa start
+	if txn.isSingleStmtRead {
+		return nil
+	}
 	return txn.xaStart()
 }
 
@@ -339,10 +351,11 @@ func (txn *Txn) Begin() error {
 func (txn *Txn) Commit() error {
 	txn.state.Set(int32(txnStateCommitting))
 
-	// Here, we only handle the write-txn.
-	// Commit nothing for read-txn.
-	switch txn.req.TxnMode {
-	case xcontext.TxnWrite:
+	// Here, we only handle the write-txn and optimize for single
+	// statement(read-txn, commit nothing).
+	if txn.isSingleStmtRead == true {
+		return nil
+	} else {
 		// 1. XA END.
 		if err := txn.xaEnd(); err != nil {
 			return err
@@ -355,8 +368,8 @@ func (txn *Txn) Commit() error {
 
 		// 3. XA COMMIT
 		txn.xaCommit()
+		return nil
 	}
-	return nil
 }
 
 // Rollback used to rollback a XA transaction.
