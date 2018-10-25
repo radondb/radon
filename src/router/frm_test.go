@@ -66,6 +66,13 @@ func TestFrmTable(t *testing.T) {
 		assert.NotNil(t, err)
 	}
 
+	// Add global table.
+	{
+		backends := []string{"backend1", "backend2"}
+		err := router.CreateTable("test", "t3", "", backends)
+		assert.Nil(t, err)
+	}
+
 	// Remove 2.
 	{
 		tmpRouter := router
@@ -84,6 +91,11 @@ func TestFrmTable(t *testing.T) {
 		{
 			err := router.RefreshTable("test", "t2")
 			assert.NotNil(t, err)
+		}
+
+		{
+			err := router.RefreshTable("test", "t3")
+			assert.Nil(t, err)
 		}
 	}
 }
@@ -104,13 +116,6 @@ func TestFrmTableError(t *testing.T) {
 	{
 		backends := []string{"backend1", "backend2"}
 		err := router.CreateTable("test", "", "id", backends)
-		assert.NotNil(t, err)
-	}
-
-	// Add 2.
-	{
-		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t2", "", backends)
 		assert.NotNil(t, err)
 	}
 
