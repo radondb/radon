@@ -39,6 +39,7 @@ func TestBackupTxnExecute(t *testing.T) {
 	// backup execute.
 	{
 		txn, err := txnMgr.CreateBackupTxn(backup)
+		txn.SetSingleStmtRead(true)
 		assert.Nil(t, err)
 
 		got, err := txn.ExecuteRaw("", "select * from backup")

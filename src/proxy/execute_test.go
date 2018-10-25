@@ -12,6 +12,7 @@ import (
 	"errors"
 	"testing"
 
+	"config"
 	"fakedb"
 
 	"github.com/stretchr/testify/assert"
@@ -87,6 +88,7 @@ func TestProxyExecute2PCError(t *testing.T) {
 	{
 		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("xa .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("insert into test.t1(id, b) values (1, 2)", &sqltypes.Result{})
 		fakedbs.AddQueryError("insert into test.t1_0008(id, b) values (1, 2)", errors.New("xx"))
 	}
 
@@ -106,6 +108,24 @@ func TestProxyExecute2PCError(t *testing.T) {
 		assert.Nil(t, err)
 		query := "insert into test.t1 (id, b) values(1,2),(3,4)"
 		fakedbs.AddQuery(query, fakedb.Result3)
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// Insert with 2PC but execute error with no backends.
+	{
+		proxy.conf.Proxy.TwopcEnable = true
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "insert into test.t1 (id, b) values(1,2)"
+		fakedbs.AddQuery(query, fakedb.Result3)
+
+		// remove all backends
+		scatter := proxy.Scatter()
+		backendsConf := &config.BackendsConfig{Backends: fakedbs.BackendConfs()}
+		for _, backendConf := range backendsConf.Backends {
+			scatter.Remove(backendConf)
+		}
 		_, err = client.FetchAll(query, -1)
 		assert.NotNil(t, err)
 	}
@@ -363,5 +383,112 @@ func TestProxyExecuteStreamFetch(t *testing.T) {
 		fakedbs.AddQuery(query, fakedb.Result3)
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
+	}
+}
+
+func TestProxyExecuteStreamFetchError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// select with stream.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "select * from test.t1"
+		fakedbs.AddQuery(query, fakedb.Result3)
+
+		// remove all backends
+		scatter := proxy.Scatter()
+		backendsConf := &config.BackendsConfig{Backends: fakedbs.BackendConfs()}
+		for _, backendConf := range backendsConf.Backends {
+			scatter.Remove(backendConf)
+		}
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+}
+
+func TestProxyExecuteSingleError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// select with single.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "select 1 from dual"
+		fakedbs.AddQuery(query, fakedb.Result3)
+
+		// remove all backends
+		scatter := proxy.Scatter()
+		backendsConf := &config.BackendsConfig{Backends: fakedbs.BackendConfs()}
+		for _, backendConf := range backendsConf.Backends {
+			scatter.Remove(backendConf)
+		}
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+}
+
+func TestProxyExecuteScatterError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.t1(id int, b int) partition by hash(id)"
+
+		// remove all backends
+		scatter := proxy.Scatter()
+		backendsConf := &config.BackendsConfig{Backends: fakedbs.BackendConfs()}
+		for _, backendConf := range backendsConf.Backends {
+			scatter.Remove(backendConf)
+		}
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
 	}
 }

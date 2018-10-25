@@ -48,6 +48,12 @@ func (spanner *Spanner) ExecuteTwoPC(session *driver.Session, database string, q
 		// txn limits.
 		txn.SetTimeout(conf.Proxy.QueryTimeout)
 		txn.SetMaxResult(conf.Proxy.MaxResultSize)
+		switch node.(type) {
+		case *sqlparser.Select:
+			txn.SetSingleStmtRead(true)
+		default:
+			// nothing to do
+		}
 
 		// binding.
 		sessions.TxnBinding(session, txn, node, query)

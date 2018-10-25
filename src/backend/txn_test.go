@@ -473,6 +473,11 @@ func TestTxnTwoPCExecute(t *testing.T) {
 		fakedb.AddQueryPattern("XA .*", result1)
 	}
 
+	// Set isSingleStmtRead true
+	{
+		txn.SetSingleStmtRead(true)
+	}
+
 	// Begin.
 	{
 		err := txn.Begin()
@@ -716,6 +721,9 @@ func TestTxnTwoPCExecuteNormalOnOneBackend(t *testing.T) {
 	}
 
 	fakedb.AddQueryPattern("xa start .*", &sqltypes.Result{})
+	fakedb.AddQueryPattern("xa prepare .*", &sqltypes.Result{})
+	fakedb.AddQueryPattern("xa end .*", &sqltypes.Result{})
+	fakedb.AddQueryPattern("xa commit .*", &sqltypes.Result{})
 	fakedb.AddQuery(querys[0].Query, result2)
 	fakedb.AddQueryDelay(querys[1].Query, result2, 100)
 	fakedb.AddQueryDelay(querys[2].Query, result2, 150)
@@ -818,6 +826,9 @@ func TestTxnTwoPCExecuteScatterOnOneBackend(t *testing.T) {
 		xcontext.QueryTuple{Query: "select * from node1", Backend: addrs[0]},
 	}
 	fakedb.AddQueryPattern("xa start .*", &sqltypes.Result{})
+	fakedb.AddQueryPattern("xa prepare .*", &sqltypes.Result{})
+	fakedb.AddQueryPattern("xa end .*", &sqltypes.Result{})
+	fakedb.AddQueryPattern("xa commit .*", &sqltypes.Result{})
 	fakedb.AddQuery(querys[0].Query, result2)
 
 	txn, err := txnMgr.CreateTxn(backends)
@@ -845,7 +856,8 @@ func TestTxnTwoPCExecuteScatterOnOneBackend(t *testing.T) {
 
 	// 2PC Commit.
 	{
-		txn.Commit()
+		err := txn.Commit()
+		assert.Nil(t, err)
 	}
 }
 
