@@ -473,6 +473,11 @@ func TestTxnTwoPCExecute(t *testing.T) {
 		fakedb.AddQueryPattern("XA .*", result1)
 	}
 
+	// Set isSingleStmtRead true
+	{
+		txn.SetSingleStmtRead(true)
+	}
+
 	// Begin.
 	{
 		err := txn.Begin()

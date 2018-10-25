@@ -71,6 +71,11 @@ func (txn *BackupTxn) SetMaxResult(max int) {
 	txn.maxResult = max
 }
 
+// SetSingleStmtRead used to set the isSingleStmtRead true or not.
+func (txn *BackupTxn) SetSingleStmtRead(isSingleStmtRead bool) {
+	// nothing to do
+}
+
 // TxID returns txn id.
 func (txn *BackupTxn) TxID() uint64 {
 	return txn.id
