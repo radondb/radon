@@ -15,6 +15,8 @@ import (
 	"path"
 
 	"config"
+
+	"github.com/pkg/errors"
 )
 
 // writeFrmData used to write table's json schema to file.
@@ -23,7 +25,10 @@ import (
 func (r *Router) writeFrmData(db string, table string, tconf *config.TableConfig) error {
 	log := r.log
 	dir := path.Join(r.metadir, db)
-	log.Info("frm.write.data[db:%s, table:%s]", db, table)
+	if tconf == nil {
+		return errors.New("table.config..can't.be.nil")
+	}
+	log.Info("frm.write.data[db:%s, table:%s, shardType:%s]", db, table, tconf.ShardType)
 	// Create dir.
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if x := os.MkdirAll(dir, os.ModePerm); x != nil {
@@ -121,24 +126,30 @@ func (r *Router) CreateTable(db, table, shardKey string, backends []string) erro
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	var err error
+	var tableConf *config.TableConfig
 	log := r.log
 	// Compute the shards config.
-	tableConf, err := r.HashUniform(table, shardKey, backends)
+	if shardKey == "" {
+		tableConf, err = r.GlobalUniform(table, backends)
+	} else {
+		tableConf, err = r.HashUniform(table, shardKey, backends)
+	}
 	if err != nil {
 		log.Error("frm.create.table[%s.%s].compute.error:%v", db, table, err)
 		return err
 	}
 	// add config to router.
-	if err := r.add(db, tableConf); err != nil {
+	if err = r.add(db, tableConf); err != nil {
 		log.Error("frm.create.add.route.error:%v", err)
 		return err
 	}
-	if err := r.writeFrmData(db, table, tableConf); err != nil {
+	if err = r.writeFrmData(db, table, tableConf); err != nil {
 		log.Error("frm.create.table[db:%v, table:%v].file.error:%+v", db, tableConf.Name, err)
 		return err
 	}
 
-	if err := config.UpdateVersion(r.metadir); err != nil {
+	if err = config.UpdateVersion(r.metadir); err != nil {
 		log.Panicf("frm.create.table.update.version.error:%v", err)
 		return err
 	}

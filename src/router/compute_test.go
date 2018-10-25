@@ -240,3 +240,64 @@ func TestRouterComputeHashError1(t *testing.T) {
 		assert.NotNil(t, err)
 	}
 }
+
+func TestRouterComputeGlobalError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+	// backends is NULL.
+	{
+		assert.NotNil(t, router)
+		backends := []string{}
+		_, err := router.GlobalUniform("t1", backends)
+		assert.NotNil(t, err)
+	}
+
+	// Table is null.
+	{
+		assert.NotNil(t, router)
+		backends := []string{"backend1"}
+		_, err := router.GlobalUniform("", backends)
+		assert.NotNil(t, err)
+	}
+}
+
+func TestRouterComputeGlobal(t *testing.T) {
+	datas := `{
+	"name": "t1",
+	"shardtype": "GLOBAL",
+	"shardkey": "",
+	"partitions": [
+		{
+			"table": "t1",
+			"segment": "",
+			"backend": "192.168.0.1"
+		},
+		{
+			"table": "t1",
+			"segment": "",
+			"backend": "192.168.0.2"
+		},
+		{
+			"table": "t1",
+			"segment": "",
+			"backend": "192.168.0.3"
+		}
+	]
+}`
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+	assert.NotNil(t, router)
+
+	backends := []string{
+		"192.168.0.1",
+		"192.168.0.2",
+		"192.168.0.3",
+	}
+	got, err := router.GlobalUniform("t1", backends)
+	assert.Nil(t, err)
+	want, err := config.ReadTableConfig(datas)
+	assert.Nil(t, err)
+	assert.Equal(t, want, got)
+}
