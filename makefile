@@ -1,5 +1,5 @@
 PREFIX    :=/usr/local
-export GOPATH := $(shell pwd)
+export GOPATH := $(shell pwd):$(GOPATH)
 export PATH := $(GOPATH)/bin:$(PATH)
 
 build: LDFLAGS   += $(shell GOPATH=${GOPATH} src/build/ldflags.sh)
