@@ -23,19 +23,23 @@ func TestGlobal(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, string(global.Type()), methodTypeGlobal)
 	}
-}
-
-func TestGlobalLookup(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	global := NewGlobal(log, MockTableGConfig())
-	{
-		err := global.Build()
-		assert.Nil(t, err)
-	}
 
 	{
 		parts, err := global.Lookup(nil, nil)
 		assert.Nil(t, err)
 		assert.Equal(t, 2, len(parts))
+	}
+
+	global = NewGlobal(log, MockTableG1Config())
+	{
+		err := global.Build()
+		assert.Nil(t, err)
+		assert.Equal(t, string(global.Type()), methodTypeGlobal)
+	}
+
+	{
+		parts, err := global.Lookup(nil, nil)
+		assert.Nil(t, err)
+		assert.Equal(t, 3, len(parts))
 	}
 }

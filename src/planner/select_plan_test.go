@@ -555,3 +555,138 @@ func TestSelectPlanGetJoinTableInfo(t *testing.T) {
 		}
 	}
 }
+
+func TestSelectPlanGlobal(t *testing.T) {
+	querys := []string{
+		"select 1, sum(a),avg(a),a,b from sbtest.G where id>1 group by a,b order by a desc limit 10 offset 100",
+		"select G.a, G.b from G join G1 on G.a = G1.a where G1.id=1",
+	}
+
+	{
+		log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+		database := "sbtest"
+
+		route, cleanup := router.MockNewRouter(log)
+		defer cleanup()
+
+		err := route.AddForTest(database, router.MockTableGConfig(), router.MockTableG1Config())
+		assert.Nil(t, err)
+		for _, query := range querys {
+			node, err := sqlparser.Parse(query)
+			assert.Nil(t, err)
+			plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+
+			// plan build
+			{
+				log.Info("--select.query:%+v", query)
+				err := plan.Build()
+				assert.Nil(t, err)
+				want := 1
+				assert.Equal(t, want, len(plan.Querys))
+				assert.Equal(t, PlanTypeSelect, plan.Type())
+				assert.NotNil(t, plan.Children())
+			}
+		}
+	}
+}
+
+func TestSelectPlanJoin(t *testing.T) {
+	results := []string{
+		`{
+	"RawQuery": "select G.a, G.b from G join B on G.a = B.a where B.id=1",
+	"Project": "G.a, G.b",
+	"Partitions": [
+		{
+			"Query": "select G.a, G.b from sbtest.G join sbtest.B1 as B on G.a = B.a where B.id = 1",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+		`{
+	"RawQuery": "select G.a, G.b from G join B on G.a = B.a join G1 on G1.a = B.a where B.id=1",
+	"Project": "G.a, G.b",
+	"Partitions": [
+		{
+			"Query": "select G.a, G.b from sbtest.G join sbtest.B1 as B on G.a = B.a join sbtest.G1 on G1.a = B.a where B.id = 1",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+	}
+	querys := []string{
+		"select G.a, G.b from G join B on G.a = B.a where B.id=1",
+		"select G.a, G.b from G join B on G.a = B.a join G1 on G1.a = B.a where B.id=1",
+	}
+
+	{
+		log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+		database := "sbtest"
+
+		route, cleanup := router.MockNewRouter(log)
+		defer cleanup()
+
+		err := route.AddForTest(database, router.MockTableGConfig(), router.MockTableBConfig(), router.MockTableG1Config())
+		assert.Nil(t, err)
+		for i, query := range querys {
+			node, err := sqlparser.Parse(query)
+			assert.Nil(t, err)
+			plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+
+			// plan build
+			{
+				log.Info("--select.query:%+v", query)
+				err := plan.Build()
+				assert.Nil(t, err)
+				got := plan.JSON()
+				want := results[i]
+				assert.Equal(t, want, got)
+				assert.Equal(t, PlanTypeSelect, plan.Type())
+				assert.NotNil(t, plan.Children())
+			}
+		}
+	}
+}
+
+func TestSelectPlanJoinErr(t *testing.T) {
+	querys := []string{
+		"select G.a, G.b from sbtest.G join sbtest.B on G.id = B.id join sbtest.A on B.id = A.id where A.id=1",
+		"select K.a, K.b from sbtest.B join sbtest.A on B.id = A.id where A.id=1",
+		"select G.a, G.b from sbtest.G join (B,A) on (B.id = G.id and A.id = G.id)",
+		"select C.a, C.b from sbtest.C join sbtest.G on G.id = C.id where C.id=1",
+		"select G1.a, G1.b from sbtest.G1 join sbtest.B on G1.id = B.id where B.id=1",
+		"select G1.a, G1.b from sbtest.G1 join sbtest.C on G1.id = C.id where C.id=1",
+	}
+	results := []string{
+		"unsupported: more.than.one.shard.tables",
+		"unsupported: more.than.one.shard.tables",
+		"unsupported: JOIN.expression",
+		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
+		"Table 'G1' doesn't exist (errno 1146) (sqlstate 42S02)",
+		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableGConfig(), router.MockTableMConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+
+		// plan build
+		{
+			err := plan.Build()
+			want := results[i]
+			got := err.Error()
+			assert.Equal(t, want, got)
+		}
+	}
+}

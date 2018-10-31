@@ -10,6 +10,8 @@ package planner
 
 import (
 	"encoding/json"
+	"math/rand"
+	"time"
 
 	"router"
 	"xcontext"
@@ -135,6 +137,12 @@ func (p *SelectPlan) Build() error {
 	segments, err := getDMLRouting(t.database, t.tableName, t.shardKey, node.Where, p.router)
 	if err != nil {
 		return err
+	}
+	// The tables are global tables, send to the random backend
+	if num == 0 {
+		rand := rand.New(rand.NewSource(time.Now().UnixNano()))
+		index := rand.Intn(len(segments))
+		segments = segments[index : index+1]
 	}
 
 	// Add sub-plans.
