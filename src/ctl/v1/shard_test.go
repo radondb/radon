@@ -9,6 +9,7 @@
 package v1
 
 import (
+	"router"
 	"strings"
 	"testing"
 
@@ -870,5 +871,49 @@ func TestCtlV1ShardReLoadError(t *testing.T) {
 
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("GET", "http://localhost/v1/shard/reload", nil))
 		recorded.CodeIs(405)
+	}
+}
+
+func TestCtlV1Globals(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	_, proxy, cleanup := proxy.MockProxy(log)
+	defer cleanup()
+
+	{
+		err := proxy.Router().AddForTest("sbtest", router.MockTableMConfig())
+		assert.Nil(t, err)
+		api := rest.NewApi()
+		router, _ := rest.MakeRouter(
+			rest.Get("/v1/shard/globals", GlobalsHandler(log, proxy)),
+		)
+		api.SetApp(router)
+		handler := api.MakeHandler()
+
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("GET", "http://localhost/v1/shard/globals", nil))
+		recorded.CodeIs(200)
+
+		got := recorded.Recorder.Body.String()
+		log.Debug(got)
+		want := "null"
+		assert.Equal(t, want, got)
+	}
+
+	{
+		err := proxy.Router().AddForTest("sbtest", router.MockTableGConfig())
+		assert.Nil(t, err)
+		api := rest.NewApi()
+		router, _ := rest.MakeRouter(
+			rest.Get("/v1/shard/globals", GlobalsHandler(log, proxy)),
+		)
+		api.SetApp(router)
+		handler := api.MakeHandler()
+
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("GET", "http://localhost/v1/shard/globals", nil))
+		recorded.CodeIs(200)
+
+		got := recorded.Recorder.Body.String()
+		log.Debug(got)
+		want := "{\"schemas\":[{\"database\":\"sbtest\",\"tables\":[\"G\"]}]}"
+		assert.Equal(t, want, got)
 	}
 }
