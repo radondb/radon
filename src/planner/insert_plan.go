@@ -81,6 +81,29 @@ func (p *InsertPlan) Build() error {
 		return err
 	}
 
+	rows, ok := node.Rows.(sqlparser.Values)
+	if !ok {
+		return errors.Errorf("unsupported: rows.can.not.be.subquery[%T]", node.Rows)
+	}
+	// Table is global table.
+	if shardKey == "" {
+		segments, err := p.router.Lookup(database, table, nil, nil)
+		if err != nil {
+			return err
+		}
+		for _, segment := range segments {
+			buf := sqlparser.NewTrackedBuffer(nil)
+			buf.Myprintf("%s %v%sinto %s.%s%v %v%v", node.Action, node.Comments, node.Ignore, database, segment.Table, node.Columns, node.Rows, node.OnDup)
+			tuple := xcontext.QueryTuple{
+				Query:   buf.String(),
+				Backend: segment.Backend,
+				Range:   segment.Range.String(),
+			}
+			p.Querys = append(p.Querys, tuple)
+		}
+		return nil
+	}
+
 	// Check the OnDup.
 	if len(node.OnDup) > 0 {
 		// analyze shardkey changing.
@@ -109,10 +132,6 @@ func (p *InsertPlan) Build() error {
 		vals    sqlparser.Values
 	}
 	vals := make(map[string]*valTuple)
-	rows, ok := node.Rows.(sqlparser.Values)
-	if !ok {
-		return errors.Errorf("unsupported: rows.can.not.be.subquery[%T]", node.Rows)
-	}
 
 	for _, row := range rows {
 		if idx >= len(row) {
