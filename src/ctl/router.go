@@ -43,6 +43,7 @@ func (admin *Admin) NewRouter() (rest.App, error) {
 
 		// shard
 		rest.Get("/v1/shard/shardz", v1.ShardzHandler(log, proxy)),
+		rest.Get("/v1/shard/globals", v1.GlobalsHandler(log, proxy)),
 		rest.Get("/v1/shard/balanceadvice", v1.ShardBalanceAdviceHandler(log, proxy)),
 		rest.Post("/v1/shard/shift", v1.ShardRuleShiftHandler(log, proxy)),
 		rest.Post("/v1/shard/reload", v1.ShardReLoadHandler(log, proxy)),

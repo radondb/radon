@@ -872,3 +872,51 @@ func TestCtlV1ShardReLoadError(t *testing.T) {
 		recorded.CodeIs(405)
 	}
 }
+
+func TestCtlV1Globals(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := proxy.MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+	querys := []string{
+		"create table test.t1(id int, b int) partition by hash(id)",
+		"create table test.t2(id int, b int)",
+		"create table sbtest.t2(id int, b int)",
+	}
+	wants := []string{
+		"null",
+		"{\"schemas\":[{\"database\":\"test\",\"tables\":[\"t2\"]}]}",
+		"{\"schemas\":[{\"database\":\"test\",\"tables\":[\"t2\"]},{\"database\":\"sbtest\",\"tables\":[\"t2\"]}]}",
+	}
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+	}
+
+	for i, query := range querys {
+		// create test table.
+		{
+			client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+			assert.Nil(t, err)
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
+
+		{
+			api := rest.NewApi()
+			router, _ := rest.MakeRouter(
+				rest.Get("/v1/shard/globals", GlobalsHandler(log, proxy)),
+			)
+			api.SetApp(router)
+			handler := api.MakeHandler()
+
+			recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("GET", "http://localhost/v1/shard/globals", nil))
+			recorded.CodeIs(200)
+
+			got := recorded.Recorder.Body.String()
+			log.Debug(got)
+			assert.Equal(t, wants[i], got)
+		}
+	}
+
+}

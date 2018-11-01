@@ -310,3 +310,48 @@ func shardReLoadHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter
 	}
 	log.Warning("api.shard.reload.done...")
 }
+
+// GlobalsHandler used to get the global tables.
+func GlobalsHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFunc {
+	f := func(w rest.ResponseWriter, r *rest.Request) {
+		globalsHandler(log, proxy, w, r)
+	}
+	return f
+}
+
+func globalsHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Request) {
+	router := proxy.Router()
+
+	type databases struct {
+		Database string   `json:"database"`
+		Tables   []string `json:"tables"`
+	}
+
+	type schemas struct {
+		Schemas []databases `json:"schemas"`
+	}
+
+	var globals schemas
+	for _, schema := range router.Schemas {
+		var tables []string
+		for _, tb := range schema.Tables {
+			if tb.ShardKey == "" {
+				tables = append(tables, tb.Name)
+			}
+		}
+		if len(tables) > 0 {
+			db := databases{
+				Database: schema.DB,
+				Tables:   tables,
+			}
+			globals.Schemas = append(globals.Schemas, db)
+		}
+	}
+
+	if len(globals.Schemas) == 0 {
+		log.Warning("api.v1.globals.return.nil.since.cant.find.the.global.tables")
+		w.WriteJson(nil)
+		return
+	}
+	w.WriteJson(globals)
+}
