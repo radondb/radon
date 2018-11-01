@@ -10,6 +10,7 @@ Contents
       * [status](#status)
    * [shard](#shard)
       * [shardz](#shardz)
+      * [globals](#globals)
       * [balanceadvice](#balanceadvice)
       * [shift](#shift)
       * [reload](#reload)
@@ -208,6 +209,31 @@ $ curl http://127.0.0.1:8080/v1/shard/shardz
 {"Start":3584,"End":3712}},{"Table":"t1_0029","Backend":"backend1","Range":{"Start":3712,"End":3840}},{"Table":"t1_0030","Backend":"backend1","Range":{"Start":3840,"End":3968}},{"Table":"t1_0031","Backend":"backend1","Range":{"Start":3968,"End":4096}}]}}]}]}
 ```
 
+### globals
+
+This api used to get all global tables from router.
+
+```
+Path:    /v1/shard/globals
+Method:  GET
+```
+
+`Status:`
+
+```
+	200: StatusOK
+	405: StatusMethodNotAllowed
+	503: StatusServiceUnavailable, backend(s) MySQL seems to be down.
+```
+
+`Example: `
+
+```
+$ curl http://127.0.0.1:8080/v1/shard/globals
+
+---Response---
+{"schemas":[{"database":"db1","tables":["tb2","tb5"]},{"database":"zzq","tables":["tb2"]}]}
+```
 
 ### balanceadvice
 
