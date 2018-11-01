@@ -168,6 +168,7 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 
 	var tableSize float64
 	var database, table string
+	router := proxy.Router()
 	for _, row := range qr.Rows {
 		db := string(row[0].Raw())
 		tbl := string(row[1].Raw())
@@ -181,6 +182,12 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 
 		// Make sure the table is small enough.
 		if (min.size + tblSize) < (max.size - tblSize) {
+			// Filter the global table.
+			shardKey, err := router.ShardKey(db, tbl)
+			if err == nil && shardKey == "" {
+				log.Warning("api.v1.balance.advice.skip.the.global.table")
+				continue
+			}
 			// Find the advice table.
 			database = db
 			table = tbl
