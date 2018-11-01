@@ -9,6 +9,7 @@
 package v1
 
 import (
+	"router"
 	"strings"
 	"testing"
 
@@ -162,6 +163,110 @@ func TestCtlV1ShardBalanceAdvice1(t *testing.T) {
 		got := recorded.Recorder.Body.String()
 		log.Debug(got)
 		assert.True(t, strings.Contains(got, `"to-datasize":3072,"to-user":"mock","to-password":"pwd","database":"test","table":"t1_00002","tablesize":2048`))
+	}
+}
+
+func TestCtlV1ShardBalanceAdviceGlobal(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := proxy.MockProxy(log)
+	defer cleanup()
+	proxy.Router().AddForTest("sbtest", router.MockTableGConfig())
+
+	rdbs := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "Databases",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("sbtest")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("information_schema")),
+			},
+		},
+	}
+
+	r10 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "SizeInMB",
+				Type: querypb.Type_DECIMAL,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("8192")),
+			},
+		},
+	}
+
+	r11 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "SizeInMB",
+				Type: querypb.Type_DECIMAL,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("3072")),
+			},
+		},
+	}
+
+	r2 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "table_schema",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "table_name",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "sizeMB",
+				Type: querypb.Type_DECIMAL,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("sbtest")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_00002")),
+				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("6144")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("sbtest")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("G")),
+				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("2048")),
+			},
+		},
+	}
+
+	// fakedbs.
+	{
+		fakedbs.AddQuery("show databases", rdbs)
+		fakedbs.AddQuery("create database if not exists `sbtest`", &sqltypes.Result{})
+		fakedbs.AddQuerys("select round((sum(data_length) + sum(index_length)) / 1024/ 1024, 0)  as sizeinmb from information_schema.tables", r10, r11)
+		fakedbs.AddQuery("SELECT table_schema, table_name, ROUND((SUM(data_length+index_length)) / 1024/ 1024, 0) AS sizeMB FROM information_schema.TABLES GROUP BY table_name HAVING SUM(data_length + index_length)>10485760 ORDER BY (data_length + index_length) DESC", r2)
+	}
+
+	{
+		api := rest.NewApi()
+		router, _ := rest.MakeRouter(
+			rest.Get("/v1/shard/balanceadvice", ShardBalanceAdviceHandler(log, proxy)),
+		)
+		api.SetApp(router)
+		handler := api.MakeHandler()
+
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("GET", "http://localhost/v1/shard/balanceadvice", nil))
+		recorded.CodeIs(200)
+
+		got := recorded.Recorder.Body.String()
+		assert.Equal(t, "null", got)
 	}
 }
 

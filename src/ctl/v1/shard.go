@@ -195,6 +195,14 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 		w.WriteJson(nil)
 		return
 	}
+	// Filter the global table.
+	router := proxy.Router()
+	shardKey, err := router.ShardKey(database, table)
+	if err == nil && shardKey == "" {
+		log.Warning("api.v1.balance.advice.return.nil.since.find.the.table.is.global.table")
+		w.WriteJson(nil)
+		return
+	}
 
 	type balanceAdvice struct {
 		From         string  `json:"from-address"`
