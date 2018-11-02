@@ -31,30 +31,28 @@ var (
 func CheckCreateTable(ddl *sqlparser.DDL) error {
 	shardKey := ddl.PartitionName
 	table := ddl.Table.Name.String()
-	// Check the sharding key.
-	if shardKey == "" {
-		return fmt.Errorf("create table must end with 'PARTITION BY HASH(shard-key)'")
-	}
 
 	if "dual" == table {
 		return fmt.Errorf("spanner.ddl.check.create.table[%s].error:not support", table)
 	}
 
 	// UNIQUE/PRIMARY constraint check.
-	shardKeyOK := false
-	for _, col := range ddl.TableSpec.Columns {
-		colName := col.Name.String()
-		if colName == shardKey {
-			shardKeyOK = true
-		} else {
-			switch col.Type.KeyOpt {
-			case sqlparser.ColKeyUnique, sqlparser.ColKeyUniqueKey, sqlparser.ColKeyPrimary:
-				return fmt.Errorf("The unique/primary constraint only be defined on the sharding key column[%s] not [%s]", shardKey, colName)
+	if shardKey != "" {
+		shardKeyOK := false
+		for _, col := range ddl.TableSpec.Columns {
+			colName := col.Name.String()
+			if colName == shardKey {
+				shardKeyOK = true
+			} else {
+				switch col.Type.KeyOpt {
+				case sqlparser.ColKeyUnique, sqlparser.ColKeyUniqueKey, sqlparser.ColKeyPrimary:
+					return fmt.Errorf("The unique/primary constraint only be defined on the sharding key column[%s] not [%s]", shardKey, colName)
+				}
 			}
 		}
-	}
-	if !shardKeyOK {
-		return fmt.Errorf("Sharding Key column '%s' doesn't exist in table", shardKey)
+		if !shardKeyOK {
+			return fmt.Errorf("Sharding Key column '%s' doesn't exist in table", shardKey)
+		}
 	}
 
 	check := false
