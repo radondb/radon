@@ -78,14 +78,56 @@ func TestProxyDDLTable(t *testing.T) {
 		fakedbs.AddQueryPattern("truncate table .*", &sqltypes.Result{})
 	}
 
-	// create table error.
+	// create table without db.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
 		query := "create table t1(a int, b int)"
 		_, err = client.FetchAll(query, -1)
-		want := "create table must end with 'PARTITION BY HASH(shard-key)' (errno 1105) (sqlstate HY000)"
+		want := "db.can't.be.null (errno 1105) (sqlstate HY000)"
 		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+
+	// create global table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create table t2(a int, b int)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// check test.tables.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "show tables"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[[t2]]"
+		got := fmt.Sprintf("%+v", qr.Rows)
+		assert.Equal(t, want, got)
+	}
+
+	// drop global table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "drop table t2"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// check test.tables.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "show tables"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[]"
+		got := fmt.Sprintf("%+v", qr.Rows)
 		assert.Equal(t, want, got)
 	}
 
@@ -318,6 +360,26 @@ func TestProxyDDLColumn(t *testing.T) {
 	defer cleanup()
 	address := proxy.Address()
 
+	querys := []string{
+		"create table t1(id int, b int) partition by hash(id)",
+		"alter table t1 add column(c1 int, c2 varchar(100))",
+		"alter table t1 drop column c2",
+		"alter table t1 modify column c2 varchar(1)",
+		"create table t2(id int, b int)",
+		"alter table t2 add column(c1 int, c2 varchar(100))",
+		"alter table t2 drop column c2",
+		"alter table t2 modify column c2 varchar(1)",
+		"alter table t2 drop column id",
+		"alter table t2 modify column id bigint",
+	}
+	queryerr := []string{
+		"alter table t1 drop column id",
+		"alter table t1 modify column id bigint",
+	}
+	wants := []string{
+		"unsupported: cannot.drop.the.column.on.shard.key (errno 1105) (sqlstate HY000)",
+		"unsupported: cannot.modify.the.column.on.shard.key (errno 1105) (sqlstate HY000)",
+	}
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
@@ -325,62 +387,29 @@ func TestProxyDDLColumn(t *testing.T) {
 		fakedbs.AddQueryPattern("alter table .*", &sqltypes.Result{})
 	}
 
-	// create test table.
-	{
-		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
-		assert.Nil(t, err)
-		query := "create table t1(id int, b int) partition by hash(id)"
-		_, err = client.FetchAll(query, -1)
-		assert.Nil(t, err)
-	}
-
+	// create test table, t1 hash t2 global.
 	// add column.
-	{
-		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
-		assert.Nil(t, err)
-		query := "alter table t1 add column(c1 int, c2 varchar(100))"
-		_, err = client.FetchAll(query, -1)
-		assert.Nil(t, err)
-	}
-
 	// drop column.
-	{
-		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
-		assert.Nil(t, err)
-		query := "alter table t1 drop column c2"
-		_, err = client.FetchAll(query, -1)
-		assert.Nil(t, err)
-	}
-
-	// drop column error(drop the shardkey).
-	{
-		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
-		assert.Nil(t, err)
-		query := "alter table t1 drop column id"
-		_, err = client.FetchAll(query, -1)
-		want := "unsupported: cannot.drop.the.column.on.shard.key (errno 1105) (sqlstate HY000)"
-		got := err.Error()
-		assert.Equal(t, want, got)
-	}
-
 	// modify column.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
-		query := "alter table t1 modify column c2 varchar(1)"
-		_, err = client.FetchAll(query, -1)
-		assert.Nil(t, err)
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
 	}
 
+	// drop column error(drop the shardkey).
 	// modify column error(drop the shardkey).
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
-		query := "alter table t1 modify column id bigint"
-		_, err = client.FetchAll(query, -1)
-		want := "unsupported: cannot.modify.the.column.on.shard.key (errno 1105) (sqlstate HY000)"
-		got := err.Error()
-		assert.Equal(t, want, got)
+		for i, query := range queryerr {
+			_, err = client.FetchAll(query, -1)
+			got := err.Error()
+			assert.Equal(t, wants[i], got)
+		}
 	}
 }
 
@@ -450,12 +479,10 @@ func TestProxyDDLCreateTableError(t *testing.T) {
 	}
 
 	querys := []string{
-		"create table t1(a int, b int)",
 		"create table t2(a int, partition int) PARTiITION BY hash(a)",
 		"create table dual(a int) partition by hash(a)",
 	}
 	results := []string{
-		"create table must end with 'PARTITION BY HASH(shard-key)' (errno 1105) (sqlstate HY000)",
 		"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use, syntax error at position 33 near 'partition' (errno 1149) (sqlstate 42000)",
 		"spanner.ddl.check.create.table[dual].error:not support (errno 1105) (sqlstate HY000)",
 	}
