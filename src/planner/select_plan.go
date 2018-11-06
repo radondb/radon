@@ -90,24 +90,27 @@ func (p *SelectPlan) analyze() ([]TableInfo, error) {
 	node := p.node
 
 	// Check subquery.
-	if hasSubquery(node) || len(node.From) > 1 {
+	if hasSubquery(node) {
 		return nil, errors.New("unsupported: subqueries.in.select")
 	}
 
 	// Get table info in the node.From.
 	// Only support AliasedTableExpr, JoinTableExpr select.
-	switch expr := (node.From[0]).(type) {
-	case *sqlparser.AliasedTableExpr:
-		tableInfo, err := p.getOneTableInfo(expr)
-		if err != nil {
-			return nil, err
+	for _, from := range node.From {
+		switch expr := from.(type) {
+		case *sqlparser.AliasedTableExpr:
+			tableInfo, err := p.getOneTableInfo(expr)
+			if err != nil {
+				return nil, err
+			}
+			tableInfos = append(tableInfos, tableInfo)
+		case *sqlparser.JoinTableExpr:
+			tableInfos, err = p.getJoinTableInfos(expr, tableInfos)
+		default:
+			err = errors.New("unsupported: ParenTableExpr.in.select")
 		}
-		tableInfos = append(tableInfos, tableInfo)
-	case *sqlparser.JoinTableExpr:
-		tableInfos, err = p.getJoinTableInfos(expr, tableInfos)
-	default:
-		err = errors.New("unsupported: ParenTableExpr.in.select")
 	}
+
 	return tableInfos, err
 }
 

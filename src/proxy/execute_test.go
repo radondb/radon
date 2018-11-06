@@ -262,7 +262,7 @@ func TestProxyExecuteSelectError(t *testing.T) {
 		}
 		wants := []string{
 			"unsupported: more.than.one.shard.tables (errno 1105) (sqlstate HY000)",
-			"unsupported: subqueries.in.select (errno 1105) (sqlstate HY000)",
+			"unsupported: more.than.one.shard.tables (errno 1105) (sqlstate HY000)",
 		}
 		for i, query := range querys {
 			fakedbs.AddQuery(query, fakedb.Result3)

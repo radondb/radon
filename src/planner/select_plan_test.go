@@ -292,7 +292,6 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select id from A order by b",
 		"select id from A limit x",
 		"select age,count(*) from A group by age having count(*) >=2",
-		"select id from A,b limit x",
 		"select * from (A,B)",
 	}
 	results := []string{
@@ -303,7 +302,6 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: orderby[b].should.in.select.list",
 		"unsupported: limit.offset.or.counts.must.be.IntVal",
 		"unsupported: expr[count(*)].in.having.clause",
-		"unsupported: subqueries.in.select",
 		"unsupported: ParenTableExpr.in.select",
 	}
 
@@ -560,6 +558,7 @@ func TestSelectPlanGlobal(t *testing.T) {
 	querys := []string{
 		"select 1, sum(a),avg(a),a,b from sbtest.G where id>1 group by a,b order by a desc limit 10 offset 100",
 		"select G.a, G.b from G join G1 on G.a = G1.a where G1.id=1",
+		"select G.a, G.b from G, G1 where G.a = G1.a and G1.id=1",
 	}
 
 	{
@@ -614,10 +613,22 @@ func TestSelectPlanJoin(t *testing.T) {
 		}
 	]
 }`,
+		`{
+	"RawQuery": "select G.a, G.b from G, B where B.id=1",
+	"Project": "G.a, G.b",
+	"Partitions": [
+		{
+			"Query": "select G.a, G.b from sbtest.G, sbtest.B1 as B where B.id = 1",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
 	}
 	querys := []string{
 		"select G.a, G.b from G join B on G.a = B.a where B.id=1",
 		"select G.a, G.b from G join B on G.a = B.a join G1 on G1.a = B.a where B.id=1",
+		"select G.a, G.b from G, B where B.id=1",
 	}
 
 	{
@@ -657,6 +668,8 @@ func TestSelectPlanJoinErr(t *testing.T) {
 		"select C.a, C.b from sbtest.C join sbtest.G on G.id = C.id where C.id=1",
 		"select G1.a, G1.b from sbtest.G1 join sbtest.B on G1.id = B.id where B.id=1",
 		"select G1.a, G1.b from sbtest.G1 join sbtest.C on G1.id = C.id where C.id=1",
+		"select * from B, (G join A on G.a=A.a) where A.a=1",
+		"select * from B, A where A.id=1 and B.a=A.a",
 	}
 	results := []string{
 		"unsupported: more.than.one.shard.tables",
@@ -665,6 +678,8 @@ func TestSelectPlanJoinErr(t *testing.T) {
 		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
 		"Table 'G1' doesn't exist (errno 1146) (sqlstate 42S02)",
 		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
+		"unsupported: ParenTableExpr.in.select",
+		"unsupported: more.than.one.shard.tables",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
