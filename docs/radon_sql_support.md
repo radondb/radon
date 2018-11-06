@@ -100,12 +100,16 @@ Query OK, 0 rows affected (0.01 sec)
     (create_definition,...)
     [ENGINE={InnoDB|TokuDB}]
     [DEFAULT CHARSET=(charset)]
-    PARTITION BY HASH(shard-key)
+    [PARTITION BY HASH(shard-key)]
 ```
 
 `Instructions`
 * Create partition information and generate partition tables on each partition
 * Partition table syntax should include`PARTITION BY HASH(partition key)`
+* Without `PARTITION BY HASH(partition key)`, will create a global table. The global table has full data
+  at ervery backend, it can support join with a partition table.
+* The global tables are generally used for tables with fewer changes and smaller capacity, requiring frequent
+  association with other tables.
 * The partitioning key only supports specifying one column, the data type of this column is not limited(
   except for TYPE `BINARY/NULL`)
 * The partition mode is HASH, which is evenly distributed across the partitions according to the partition key
@@ -126,6 +130,12 @@ mysql> USE db_test1;
 Database changed
 mysql> CREATE TABLE t1(id int, age int) PARTITION BY HASH(id);
 Query OK, 0 rows affected (1.80 sec)
+
+mysql> CREATE TABLE t2(id int, age int);
+Query OK, 0 rows affected (1.80 sec)
+
+mysql> select * from t1 join t2 on t1.id=t2.id where t1.id=1;
+Empty set (0.19 sec)
 ```
 
 #### DROP TABLE
