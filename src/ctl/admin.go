@@ -12,6 +12,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 
 	"proxy"
 
