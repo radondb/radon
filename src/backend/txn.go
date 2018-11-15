@@ -91,6 +91,10 @@ type Transaction interface {
 	Commit() error
 	Finish() error
 
+	BeginScatter() error
+	CommitScatter() error
+	RollbackScatter() error
+
 	SetTimeout(timeout int)
 	SetMaxResult(max int)
 
@@ -385,6 +389,65 @@ func (txn *Txn) Rollback() error {
 	return nil
 }
 
+// BeginScatter() used to start a XA transaction in the multiple-statement transaction
+func (txn *Txn) BeginScatter() error {
+	txnCounters.Add(txnCounterTxnBegin, 1)
+	txn.twopc = true
+
+	txn.req = xcontext.NewRequestContext()
+	txn.req.Mode = xcontext.ReqScatter
+	return txn.xaStart()
+}
+
+// CommitScatter
+// 1. XA END
+// 2. XA PREPARE
+// 3. XA COMMIT
+func (txn *Txn) CommitScatter() error {
+	txn.state.Set(int32(txnStateCommitting))
+	txn.twopc = true
+	txn.req = xcontext.NewRequestContext()
+	txn.req.Mode = xcontext.ReqScatter
+
+	// 1. XA END.
+	if err := txn.xaEnd(); err != nil {
+		return err
+	}
+
+	// 2. XA PREPARE.
+	if err := txn.xaPrepare(); err != nil {
+		return err
+	}
+
+	// 3. XA COMMIT
+	txn.xaCommit()
+	return nil
+}
+
+// RollbackScatter
+func (txn *Txn) RollbackScatter() error {
+	log := txn.log
+	txn.state.Set(int32(txnStateRollbacking))
+	txn.twopc = true
+	txn.req = xcontext.NewRequestContext()
+	txn.req.Mode = xcontext.ReqScatter
+
+	log.Warning("txn.rollback.xid[%v]", txn.xid)
+	// 1. XA END.
+	if err := txn.xaEnd(); err != nil {
+		return err
+	}
+
+	// 2. XA PREPARE.
+	if err := txn.xaPrepare(); err != nil {
+		return err
+	}
+
+	// 3. XA ROLLBACK
+	txn.xaRollback()
+	return nil
+}
+
 // ExecuteRaw used to execute raw query, txn not implemented.
 func (txn *Txn) ExecuteRaw(database string, query string) (*sqltypes.Result, error) {
 	return nil, fmt.Errorf("txn.ExecuteRaw.not.implemented")
@@ -617,6 +680,19 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 				wg.Add(1)
 				go oneShard(state, back, txn, req.RawQuery)
 			}
+		}
+	case xcontext.ReqScatter:
+		backends := txn.backends
+		switch state {
+		case txnXAStateCommit, txnXAStateRollback:
+			// Acquire the commit lock if the txn is write.
+			txn.mgr.CommitLock()
+			defer txn.mgr.CommitUnlock()
+		}
+
+		for back := range backends {
+			wg.Add(1)
+			go oneShard(state, back, txn, req.RawQuery)
 		}
 	}
 
