@@ -168,4 +168,34 @@ func TestBackupTxnNotImplemented(t *testing.T) {
 		assert.NotNil(t, err)
 		txn.Finish()
 	}
+
+	// BeginScatter error.
+	{
+		txn, err := txnMgr.CreateBackupTxn(backup)
+		assert.Nil(t, err)
+
+		err = txn.BeginScatter()
+		assert.NotNil(t, err)
+		txn.Finish()
+	}
+
+	// CommitScatter error.
+	{
+		txn, err := txnMgr.CreateBackupTxn(backup)
+		assert.Nil(t, err)
+
+		err = txn.CommitScatter()
+		assert.NotNil(t, err)
+		txn.Finish()
+	}
+
+	// RollbackScatter error.
+	{
+		txn, err := txnMgr.CreateBackupTxn(backup)
+		assert.Nil(t, err)
+
+		err = txn.RollbackScatter()
+		assert.NotNil(t, err)
+		txn.Finish()
+	}
 }

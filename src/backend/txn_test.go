@@ -999,6 +999,362 @@ func TestTxnTwoPCExecuteError(t *testing.T) {
 	}
 }
 
+func TestTxnBeginScatter(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	defer cleanup()
+
+	querys := []xcontext.QueryTuple{
+		xcontext.QueryTuple{Query: "insert", Backend: addrs[0]},
+		xcontext.QueryTuple{Query: "insert", Backend: addrs[1]},
+	}
+
+	fakedb.AddQuery(querys[0].Query, result2)
+	fakedb.AddQuery(querys[1].Query, result2)
+
+	txn, err := txnMgr.CreateTxn(backends)
+	assert.Nil(t, err)
+	defer txn.Finish()
+
+	// Set 2PC conds.
+	{
+		fakedb.AddQueryPattern("XA .*", result1)
+	}
+
+	// Begin.
+	{
+		err := txn.BeginScatter()
+		assert.Nil(t, err)
+	}
+}
+
+func TestTxnBeginScatterError(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	defer cleanup()
+
+	querys := []xcontext.QueryTuple{
+		xcontext.QueryTuple{Query: "insert", Backend: addrs[0]},
+		xcontext.QueryTuple{Query: "insert", Backend: addrs[1]},
+	}
+
+	fakedb.AddQuery(querys[0].Query, result2)
+	fakedb.AddQuery(querys[1].Query, result2)
+
+	txn, err := txnMgr.CreateTxn(backends)
+	assert.Nil(t, err)
+	defer txn.Finish()
+
+	// Set 2PC conds.
+	{
+		fakedb.AddQueryErrorPattern("XA START .*", errors.New("mock.xa.start.error"))
+	}
+
+	// Begin.
+	{
+		err := txn.BeginScatter()
+		assert.NotNil(t, err)
+	}
+}
+
+func TestTxnCommitScatter(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	defer cleanup()
+
+	querys := []xcontext.QueryTuple{
+		xcontext.QueryTuple{Query: "insert", Backend: addrs[0]},
+		xcontext.QueryTuple{Query: "insert", Backend: addrs[1]},
+	}
+
+	fakedb.AddQuery(querys[0].Query, result2)
+	fakedb.AddQuery(querys[1].Query, result2)
+
+	txn, err := txnMgr.CreateTxn(backends)
+	assert.Nil(t, err)
+	defer txn.Finish()
+
+	// Set 2PC conds.
+	{
+		fakedb.AddQueryPattern("XA .*", result1)
+	}
+
+	// Begin.
+	{
+		err := txn.Begin()
+		assert.Nil(t, err)
+	}
+
+	// normal execute.
+	{
+		rctx := &xcontext.RequestContext{
+			TxnMode: xcontext.TxnWrite,
+			Querys:  querys,
+		}
+		got, err := txn.Execute(rctx)
+		assert.Nil(t, err)
+
+		want := &sqltypes.Result{}
+		want.AppendResult(result2)
+		want.AppendResult(result2)
+		assert.Equal(t, want, got)
+	}
+
+	// 2PC CommitScatter.
+	{
+		err = txn.CommitScatter()
+		assert.Nil(t, err)
+	}
+}
+
+func TestTxnCommitScatterError(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	// commit err and rollback err will WriteXaCommitErrLog, need the scatter
+	fakedb, txnMgr, backends, _, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
+	defer cleanup()
+	err := scatter.Init(MockScatterDefault(log))
+	assert.Nil(t, err)
+
+	querys := []xcontext.QueryTuple{
+		xcontext.QueryTuple{Query: "update", Backend: addrs[0]},
+		xcontext.QueryTuple{Query: "update", Backend: addrs[1]},
+	}
+	fakedb.AddQuery(querys[0].Query, result1)
+	fakedb.AddQueryDelay(querys[1].Query, result2, 100)
+
+	// Set 2PC conds.
+	resetFunc := func(txn *Txn) {
+		fakedb.ResetAll()
+		fakedb.AddQuery(querys[0].Query, result1)
+		fakedb.AddQueryDelay(querys[1].Query, result2, 100)
+		fakedb.AddQueryPattern("XA .*", result1)
+	}
+
+	// CommitScatter error.
+	{
+		// XA END error.
+		{
+			txn, err := txnMgr.CreateTxn(backends)
+			assert.Nil(t, err)
+			defer txn.Finish()
+
+			resetFunc(txn)
+			fakedb.AddQueryErrorPattern("XA END .*", errors.New("mock.xa.end.error"))
+
+			err = txn.BeginScatter()
+			assert.Nil(t, err)
+
+			rctx := &xcontext.RequestContext{
+				Mode:    xcontext.ReqNormal,
+				TxnMode: xcontext.TxnWrite,
+				Querys:  querys,
+			}
+			_, err = txn.Execute(rctx)
+			assert.Nil(t, err)
+			err = txn.CommitScatter()
+			assert.NotNil(t, err)
+		}
+
+		// XA PREPARE error.
+		{
+			txn, err := txnMgr.CreateTxn(backends)
+			assert.Nil(t, err)
+			defer txn.Finish()
+
+			resetFunc(txn)
+			fakedb.AddQueryErrorPattern("XA PREPARE .*", errors.New("mock.xa.prepare.error"))
+
+			err = txn.BeginScatter()
+			assert.Nil(t, err)
+
+			rctx := &xcontext.RequestContext{
+				Mode:    xcontext.ReqNormal,
+				TxnMode: xcontext.TxnWrite,
+				Querys:  querys,
+			}
+			_, err = txn.Execute(rctx)
+			assert.Nil(t, err)
+			err = txn.CommitScatter()
+			assert.NotNil(t, err)
+		}
+
+		// COMMIT error.
+		{
+			txn, err := txnMgr.CreateTxn(backends)
+			assert.Nil(t, err)
+			defer txn.Finish()
+
+			resetFunc(txn)
+			fakedb.AddQueryErrorPattern("XA COMMIT .*", sqldb.NewSQLError1(1397, "XAE04", "XAER_NOTA: Unknown XID"))
+
+			err = txn.Begin()
+			assert.Nil(t, err)
+
+			rctx := &xcontext.RequestContext{
+				Mode:    xcontext.ReqNormal,
+				TxnMode: xcontext.TxnWrite,
+				Querys:  querys,
+			}
+			_, err = txn.Execute(rctx)
+			assert.Nil(t, err)
+			err = txn.CommitScatter()
+			assert.Nil(t, err)
+		}
+	}
+}
+
+func TestTxnRollbackScatter(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	defer cleanup()
+
+	querys := []xcontext.QueryTuple{
+		xcontext.QueryTuple{Query: "insert", Backend: addrs[0]},
+		xcontext.QueryTuple{Query: "insert", Backend: addrs[1]},
+	}
+
+	fakedb.AddQuery(querys[0].Query, result2)
+	fakedb.AddQuery(querys[1].Query, result2)
+
+	txn, err := txnMgr.CreateTxn(backends)
+	assert.Nil(t, err)
+	defer txn.Finish()
+
+	// Set 2PC conds.
+	{
+		fakedb.AddQueryPattern("XA .*", result1)
+	}
+
+	// Begin.
+	{
+		err := txn.Begin()
+		assert.Nil(t, err)
+	}
+
+	// normal execute.
+	{
+		rctx := &xcontext.RequestContext{
+			TxnMode: xcontext.TxnWrite,
+			Querys:  querys,
+		}
+		got, err := txn.Execute(rctx)
+		assert.Nil(t, err)
+
+		want := &sqltypes.Result{}
+		want.AppendResult(result2)
+		want.AppendResult(result2)
+		assert.Equal(t, want, got)
+	}
+
+	// 2PC Rollback.
+	{
+		err = txn.RollbackScatter()
+		assert.Nil(t, err)
+	}
+}
+
+func TestTxnRollbackScatterError(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	// commit err and rollback err will WriteXaCommitErrLog, need the scatter
+	fakedb, txnMgr, backends, _, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
+	defer cleanup()
+	err := scatter.Init(MockScatterDefault(log))
+	assert.Nil(t, err)
+
+	querys := []xcontext.QueryTuple{
+		xcontext.QueryTuple{Query: "update", Backend: addrs[0]},
+		xcontext.QueryTuple{Query: "update", Backend: addrs[1]},
+	}
+	fakedb.AddQuery(querys[0].Query, result1)
+	fakedb.AddQueryDelay(querys[1].Query, result2, 100)
+
+	// Set 2PC conds.
+	resetFunc := func(txn *Txn) {
+		fakedb.ResetAll()
+		fakedb.AddQuery(querys[0].Query, result1)
+		fakedb.AddQueryDelay(querys[1].Query, result2, 100)
+		fakedb.AddQueryPattern("XA .*", result1)
+	}
+
+	// RollbackScatter error.
+	{
+		// XA END error.
+		{
+			txn, err := txnMgr.CreateTxn(backends)
+			assert.Nil(t, err)
+			defer txn.Finish()
+
+			resetFunc(txn)
+			fakedb.AddQueryErrorPattern("XA END .*", errors.New("mock.xa.end.error"))
+
+			err = txn.BeginScatter()
+			assert.Nil(t, err)
+
+			rctx := &xcontext.RequestContext{
+				Mode:    xcontext.ReqNormal,
+				TxnMode: xcontext.TxnWrite,
+				Querys:  querys,
+			}
+			_, err = txn.Execute(rctx)
+			assert.Nil(t, err)
+			err = txn.RollbackScatter()
+			assert.NotNil(t, err)
+		}
+
+		// XA PREPARE error.
+		{
+			txn, err := txnMgr.CreateTxn(backends)
+			assert.Nil(t, err)
+			defer txn.Finish()
+
+			resetFunc(txn)
+			fakedb.AddQueryErrorPattern("XA PREPARE .*", errors.New("mock.xa.prepare.error"))
+
+			err = txn.Begin()
+			assert.Nil(t, err)
+
+			rctx := &xcontext.RequestContext{
+				Mode:    xcontext.ReqNormal,
+				TxnMode: xcontext.TxnWrite,
+				Querys:  querys,
+			}
+			_, err = txn.Execute(rctx)
+			assert.Nil(t, err)
+			err = txn.RollbackScatter()
+			assert.NotNil(t, err)
+		}
+
+		// ROLLBACK error.
+		{
+			txn, err := txnMgr.CreateTxn(backends)
+			assert.Nil(t, err)
+			defer txn.Finish()
+
+			resetFunc(txn)
+			fakedb.AddQueryErrorPattern("XA ROLLBACK .*", sqldb.NewSQLError1(1397, "XAE04", "XAER_NOTA: Unknown XID"))
+
+			err = txn.Begin()
+			assert.Nil(t, err)
+
+			rctx := &xcontext.RequestContext{
+				Mode:    xcontext.ReqNormal,
+				TxnMode: xcontext.TxnWrite,
+				Querys:  querys,
+			}
+			_, err = txn.Execute(rctx)
+			assert.Nil(t, err)
+			err = txn.RollbackScatter()
+			assert.Nil(t, err)
+		}
+	}
+}
+
 /*****************************************************************/
 /*************************XA TESTS END****************************/
 /*****************************************************************/
