@@ -843,7 +843,8 @@ func TestTxnTwoPCExecuteScatterOnOneBackend(t *testing.T) {
 
 	// 2PC Commit.
 	{
-		txn.Commit()
+		err := txn.Commit()
+		assert.Nil(t, err)
 	}
 }
 
@@ -923,7 +924,8 @@ func TestTxnTwoPCExecuteError(t *testing.T) {
 			}
 			_, err = txn.Execute(rctx)
 			assert.Nil(t, err)
-			txn.Commit()
+			err = txn.Commit()
+			assert.NotNil(t, err)
 		}
 
 		// XA PREPARE error.
@@ -945,7 +947,8 @@ func TestTxnTwoPCExecuteError(t *testing.T) {
 			}
 			_, err = txn.Execute(rctx)
 			assert.Nil(t, err)
-			txn.Commit()
+			err = txn.Commit()
+			assert.NotNil(t, err)
 		}
 
 		// ROLLBACK error.
