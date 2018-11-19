@@ -63,7 +63,11 @@ When radon started, it will use three ports:
 
 ## Step4. Add a backend(mysql server) to radon
 This is an admin instruction of radon api, for more admin instructions, see  [radon admin API](api.md).
-Here we suppose  mysql has being installed and the mysql service has beeing started on your machine, the user and password logged in to mysql are all root.
+
+First, create an account on the MySQL server, and then add the MySQL server as a backend to radon by using the account. Radon uses the account to connect to the backend.
+
+Here we suppose mysql has being installed and the mysql service has beeing started on your machine, the user and password logged in to mysql are all root.
+
 `user`: the user to login mysql
 `password`: the password to login mysql
 ```
@@ -79,6 +83,25 @@ Date: Mon, 09 Apr 2018 03:23:02 GMT
 Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
+
+The backends information is recorded in the JSON file `$meta-dir\backend.json`. 
+```
+{
+        "backup": null,
+        "backends": [
+                {
+                        "name": "backend1",
+                        "address": "127.0.0.1:3306",
+                        "user": "root",
+                        "password": "root",
+                        "database": "",
+                        "charset": "utf8",
+                        "max-connections": 1024
+                }
+        ]
+}
+```
+
 ## Step5. Connect mysql client to radon
 Radon supports client connections to the MySQL protocol, like: mysql -uroot -h127.0.0.1 -P3308
 `root`:account login to radon, we provide default account 'root' with no password to login
