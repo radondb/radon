@@ -842,6 +842,8 @@ The normal users that can connect to radon with password.
 
 ### create user
 
+The api is used to create users for radon while creating the same user at the backends. In the backends, the created user is a localhost user only has select privileges. It is used to obtain authentication credentials for connecting to Radon Server. The user for handling business logic is in the `$meta-dir\backend.json` file, not the user created by api.
+
 ```
 Path:    /v1/user/add
 Method:  POST
