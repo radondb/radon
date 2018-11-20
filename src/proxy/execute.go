@@ -20,6 +20,30 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
+// ExecuteMultiStmtsInTxn used to execute multiple statements in the transaction.
+func (spanner *Spanner) ExecuteMultiStmtsInTxn(session *driver.Session, database string, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+	log := spanner.log
+	router := spanner.router
+	sessions := spanner.sessions
+	txSession := sessions.getTxnSession(session)
+
+	sessions.MultiStmtTxnBinding(session, nil, node, query)
+
+	plans, err := optimizer.NewSimpleOptimizer(log, database, query, node, router).BuildPlanTree()
+	if err != nil {
+		return nil, err
+	}
+	executors := executor.NewTree(log, plans, txSession.transaction)
+	qr, err := executors.Execute()
+	if err != nil {
+		// need the user to rollback
+		return nil, err
+	}
+
+	sessions.MultiStmtTxnUnBinding(session, false)
+	return qr, nil
+}
+
 // ExecuteSingleStmtTxnTwoPC used to execute single statement transaction with 2pc commit.
 func (spanner *Spanner) ExecuteSingleStmtTxnTwoPC(session *driver.Session, database string, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	log := spanner.log
@@ -83,6 +107,12 @@ func (spanner *Spanner) ExecuteNormal(session *driver.Session, database string, 
 func (spanner *Spanner) ExecuteDDL(session *driver.Session, database string, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	spanner.log.Info("spanner.execute.ddl.query:%s", query)
 	timeout := spanner.conf.Proxy.DDLTimeout
+
+	txSession := spanner.sessions.getTxnSession(session)
+	if spanner.isTwoPC() && txSession.transaction != nil {
+		return nil, errors.Errorf("in.multiStmtTrans.unsupported.DDL:%v.", query)
+	}
+
 	return spanner.executeWithTimeout(session, database, query, node, timeout)
 }
 
@@ -168,6 +198,8 @@ func (spanner *Spanner) ExecuteDML(session *driver.Session, database string, que
 		if spanner.IsDML(node) {
 			if txSession.transaction == nil {
 				return spanner.ExecuteSingleStmtTxnTwoPC(session, database, query, node)
+			} else {
+				return spanner.ExecuteMultiStmtsInTxn(session, database, query, node)
 			}
 		}
 		return spanner.ExecuteNormal(session, database, query, node)

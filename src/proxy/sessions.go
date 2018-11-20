@@ -62,6 +62,11 @@ func (ss *Sessions) txnAbort(txn backend.Transaction, node sqlparser.Statement) 
 				log.Error("proxy.session.txn.abort.error:%+v", err)
 				return
 			}
+		case *sqlparser.Transaction:
+			if err := txn.Abort(); err != nil {
+				log.Error("proxy.session.txn.abort.error:%+v", err)
+				return
+			}
 		}
 	}
 }
@@ -165,6 +170,52 @@ func (ss *Sessions) TxnUnBinding(s *driver.Session) {
 	session.node = nil
 	session.query = ""
 	session.transaction = nil
+	session.timestamp = time.Now().Unix()
+}
+
+// MultiStmtTxnBinding used to bind txn, node, query to the session
+func (ss *Sessions) MultiStmtTxnBinding(s *driver.Session, txn backend.Transaction, node sqlparser.Statement, query string) {
+	ss.mu.RLock()
+	session, ok := ss.sessions[s.ID()]
+	if !ok {
+		ss.mu.RUnlock()
+		return
+	}
+	ss.mu.RUnlock()
+
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	q := query
+	if len(query) > 128 {
+		q = query[:128]
+	}
+	session.query = q
+	session.node = node
+	// txn should not be nil when "begin" or "start transaction" is executed, to be set just once during the trans.
+	if txn != nil {
+		session.transaction = txn
+	}
+	session.timestamp = time.Now().Unix()
+}
+
+// MultiStmtTxnUnBinding used to set transaction by isEnd
+func (ss *Sessions) MultiStmtTxnUnBinding(s *driver.Session, isEnd bool) {
+	ss.mu.RLock()
+	session, ok := ss.sessions[s.ID()]
+	if !ok {
+		ss.mu.RUnlock()
+		return
+	}
+	ss.mu.RUnlock()
+
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	session.node = nil
+	session.query = ""
+	// If multiple-statement transaction is end or some errors happen, set transaction to be nil
+	if isEnd == true {
+		session.transaction = nil
+	}
 	session.timestamp = time.Now().Unix()
 }
 
