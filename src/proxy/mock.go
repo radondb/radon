@@ -18,7 +18,65 @@ import (
 	"config"
 	"fakedb"
 
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
+)
+
+var (
+	result1 = &sqltypes.Result{
+		RowsAffected: 2,
+		Fields: []*querypb.Field{
+			{
+				Name: "id",
+				Type: querypb.Type_INT32,
+			},
+			{
+				Name: "name",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("11")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("1nice name")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("12")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("12nice name")),
+			},
+		},
+	}
+
+	autocommitResult0 = &sqltypes.Result{
+		RowsAffected: 5,
+		Fields: []*querypb.Field{
+			{
+				Name: "@@autocommit",
+				Type: querypb.Type_INT64,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("0")),
+			},
+		},
+	}
+
+	autocommitResult1 = &sqltypes.Result{
+		RowsAffected: 5,
+		Fields: []*querypb.Field{
+			{
+				Name: "@@autocommit",
+				Type: querypb.Type_INT64,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("1")),
+			},
+		},
+	}
 )
 
 func randomPort(min int, max int) int {

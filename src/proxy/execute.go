@@ -9,56 +9,70 @@
 package proxy
 
 import (
-	"errors"
-
-	"backend"
 	"executor"
 	"optimizer"
 	"planner"
 	"xcontext"
 
+	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
-// ExecuteTwoPC allows multi-shards transactions with 2pc commit.
-func (spanner *Spanner) ExecuteTwoPC(session *driver.Session, database string, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+// ExecuteMultiStmtTxn used to execute multiple-statement transactions.
+func (spanner *Spanner) ExecuteMultiStmtTxn(session *driver.Session, database string, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+	log := spanner.log
+	router := spanner.router
+	sessions := spanner.sessions
+	mysession := sessions.getTxnSession(session)
+	txn := mysession.transaction
+
+	sessions.MultiStmtTxnBinding(session, nil, node, query)
+
+	plans, err := optimizer.NewSimpleOptimizer(log, database, query, node, router).BuildPlanTree()
+	if err != nil {
+		return nil, err
+	}
+	executors := executor.NewTree(log, plans, txn)
+	qr, err := executors.Execute()
+	if err != nil {
+		// need the user to rollback
+		return nil, err
+	}
+
+	sessions.MultiStmtTxnUnBinding(session, false)
+	return qr, nil
+}
+
+// ExecuteSingleStmtTxnTwoPC used to execute single statement transaction with 2pc commit.
+func (spanner *Spanner) ExecuteSingleStmtTxnTwoPC(session *driver.Session, database string, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	log := spanner.log
 	conf := spanner.conf
 	router := spanner.router
 	scatter := spanner.scatter
 	sessions := spanner.sessions
 
-	var err error
-	var txn backend.Transaction
-	singleStatement := false
-
 	// transaction.
-	mysession := sessions.getTxnSession(session)
-	txn = mysession.transaction
-	if txn == nil {
-		txn, err = scatter.CreateTransaction()
-		if err != nil {
-			log.Error("spanner.txn.create.error:[%v]", err)
-			return nil, err
-		}
-		defer txn.Finish()
+	txn, err := scatter.CreateTransaction()
+	if err != nil {
+		log.Error("spanner.txn.create.error:[%v]", err)
+		return nil, err
+	}
+	defer txn.Finish()
 
-		// txn limits.
-		txn.SetTimeout(conf.Proxy.QueryTimeout)
-		txn.SetMaxResult(conf.Proxy.MaxResultSize)
+	// txn limits.
+	txn.SetTimeout(conf.Proxy.QueryTimeout)
+	txn.SetMaxResult(conf.Proxy.MaxResultSize)
 
-		// binding.
-		sessions.TxnBinding(session, txn, node, query)
-		defer sessions.TxnUnBinding(session)
+	// binding.
+	sessions.TxnBinding(session, txn, node, query)
+	defer sessions.TxnUnBinding(session)
 
-		// Transaction begin.
-		if err := txn.Begin(); err != nil {
-			log.Error("spanner.execute.2pc.txn.begin.error:[%v]", err)
-			return nil, err
-		}
-		singleStatement = true
+	// Transaction begin.
+	if err := txn.Begin(); err != nil {
+		log.Error("spanner.execute.2pc.txn.begin.error:[%v]", err)
+		return nil, err
 	}
 
 	// Transaction execute.
@@ -76,11 +90,10 @@ func (spanner *Spanner) ExecuteTwoPC(session *driver.Session, database string, q
 		return nil, err
 	}
 
-	if singleStatement {
-		if err := txn.Commit(); err != nil {
-			log.Error("spanner.execute.2pc.txn.commit.error:[%v]", err)
-			return nil, err
-		}
+	// Transaction begin.
+	if err := txn.Commit(); err != nil {
+		log.Error("spanner.execute.2pc.txn.commit.error:[%v]", err)
+		return nil, err
 	}
 	return qr, nil
 }
@@ -95,6 +108,13 @@ func (spanner *Spanner) ExecuteNormal(session *driver.Session, database string, 
 func (spanner *Spanner) ExecuteDDL(session *driver.Session, database string, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	spanner.log.Info("spanner.execute.ddl.query:%s", query)
 	timeout := spanner.conf.Proxy.DDLTimeout
+
+	mysession := spanner.sessions.getTxnSession(session)
+	txn := mysession.transaction
+	if spanner.isTwoPC() && txn != nil {
+		return nil, errors.Errorf("in.multiStmtTrans.unsupported.DDL:%v.", query)
+	}
+
 	return spanner.executeWithTimeout(session, database, query, node, timeout)
 }
 
@@ -172,12 +192,17 @@ func (spanner *Spanner) ExecuteStreamFetch(session *driver.Session, database str
 	return txn.ExecuteStreamFetch(reqCtx, callback, streamBufferSize)
 }
 
-// Execute used to execute querys to shards.
+// Execute used to execute some DML querys to shards.
 func (spanner *Spanner) Execute(session *driver.Session, database string, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
-	// Execute.
 	if spanner.isTwoPC() {
+		mysession := spanner.sessions.getTxnSession(session)
+		txn := mysession.transaction
 		if spanner.IsDML(node) {
-			return spanner.ExecuteTwoPC(session, database, query, node)
+			if txn == nil {
+				return spanner.ExecuteSingleStmtTxnTwoPC(session, database, query, node)
+			} else {
+				return spanner.ExecuteMultiStmtTxn(session, database, query, node)
+			}
 		}
 		return spanner.ExecuteNormal(session, database, query, node)
 	}

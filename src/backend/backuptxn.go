@@ -173,6 +173,11 @@ func (txn *BackupTxn) RollbackScatter() error {
 	return fmt.Errorf("backup.txn.rollbackScatter.not.implemented")
 }
 
+// SetMultiStmtTxn not implemented.
+func (txn *BackupTxn) SetMultiStmtTxn() {
+
+}
+
 // Finish used to finish a transaction.
 // If the lastErr is nil, we will recycle all the twopc connections to the pool for reuse,
 // otherwise we wil close all of the them.
