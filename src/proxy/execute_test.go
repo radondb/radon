@@ -302,3 +302,82 @@ func TestProxyExecuteStreamFetch(t *testing.T) {
 		assert.Nil(t, err)
 	}
 }
+
+func TestProxyExecuteMultiStmtTxnDDLError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("begin", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("rollback", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("xa .*", &sqltypes.Result{})
+		fakedbs.AddQueryError("insert into test.t1_0008(id, b) values (1, 2)", errors.New("xx"))
+	}
+
+	//begin && create test table.
+	{
+		proxy.conf.Proxy.TwopcEnable = true
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "begin;"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+
+		query1 := "create table test.t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query1, -1)
+		assert.NotNil(t, err)
+
+		query2 := "rollback;"
+		_, err = client.FetchAll(query2, -1)
+		assert.Nil(t, err)
+	}
+}
+
+func TestProxyExecuteMultiStmtTxnDMLError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("begin", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("commit", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("xa .*", &sqltypes.Result{})
+	}
+
+	//begin && create test table.
+	{
+		proxy.conf.Proxy.TwopcEnable = true
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query1 := "create table test.t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query1, -1)
+		assert.Nil(t, err)
+
+		{
+			query := "begin;"
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			querys := []string{
+				"insert into test.t1 (id, b) values(1,2),(3,4)",
+				"update test.t1 set b=1 where id=3",
+				"delete from test.t1 where 1=1",
+			}
+			for _, query := range querys {
+				_, err = client.FetchAll(query, -1)
+				assert.NotNil(t, err)
+			}
+		}
+
+		query := "commit;"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+}

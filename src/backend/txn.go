@@ -94,6 +94,7 @@ type Transaction interface {
 	BeginScatter() error
 	CommitScatter() error
 	RollbackScatter() error
+	SetMultiStmtTxn()
 
 	SetTimeout(timeout int)
 	SetMaxResult(max int)
@@ -112,6 +113,7 @@ type Txn struct {
 	req               *xcontext.RequestContext
 	txnd              *TxnDetail
 	twopc             bool
+	isMultiStmtTxn    bool
 	start             time.Time
 	state             sync2.AtomicInt32
 	xaState           sync2.AtomicInt32
@@ -429,7 +431,7 @@ func (txn *Txn) RollbackScatter() error {
 	txn.req = xcontext.NewRequestContext()
 	txn.req.Mode = xcontext.ReqScatter
 
-	log.Warning("txn.rollback.xid[%v]", txn.xid)
+	log.Warning("txn.rollback.scatter.xid[%v]", txn.xid)
 	// 1. XA END.
 	if err := txn.xaEnd(); err != nil {
 		return err
@@ -443,6 +445,11 @@ func (txn *Txn) RollbackScatter() error {
 	// 3. XA ROLLBACK
 	txn.xaRollback()
 	return nil
+}
+
+// SetMultiStmtTxn ...
+func (txn *Txn) SetMultiStmtTxn() {
+	txn.isMultiStmtTxn = true
 }
 
 // ExecuteRaw used to execute raw query, txn not implemented.
@@ -461,9 +468,11 @@ func (txn *Txn) Execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 			txn.mgr.CommitRLock()
 			defer txn.mgr.CommitRUnlock()
 		case xcontext.TxnWrite:
-			// write-txn xa starts.
-			if err := txn.xaStart(); err != nil {
-				return nil, err
+			// write-txn xa starts to the single statement.
+			if txn.isMultiStmtTxn != true {
+				if err := txn.xaStart(); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -682,7 +691,7 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 		backends := txn.backends
 		switch state {
 		case txnXAStateCommit, txnXAStateRollback:
-			// Acquire the commit lock if the txn is write.
+			// Acquire the commit lock when the txn commit/rollback
 			txn.mgr.CommitLock()
 			defer txn.mgr.CommitUnlock()
 		}
@@ -889,7 +898,10 @@ func (txn *Txn) Finish() error {
 	defer txn.mu.Unlock()
 
 	defer tz.Remove(txn.txnd)
-	defer func() { txn.twopc = false }()
+	defer func() {
+		txn.twopc = false
+		txn.isMultiStmtTxn = false
+	}()
 
 	// If the txn has aborted, we won't do finish.
 	if txn.state.Get() == int32(txnStateAborting) {
@@ -929,7 +941,10 @@ func (txn *Txn) Abort() error {
 	defer txn.mu.Unlock()
 
 	defer tz.Remove(txn.txnd)
-	defer func() { txn.twopc = false }()
+	defer func() {
+		txn.twopc = false
+		txn.isMultiStmtTxn = false
+	}()
 
 	// If the txn has finished, we won't do abort.
 	if txn.state.Get() == int32(txnStateFinshing) {

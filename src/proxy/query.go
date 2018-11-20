@@ -254,12 +254,11 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Transaction:
 		// Support for myloader.
-		// TODO: handle Multi-statement Transaction
+		// Support Multiple-statement Transaction
 		log.Warning("proxy.query.transaction.query:%s", query)
-		if _, err = spanner.handleMultiStateTransaction(session, query, node); err != nil {
+		if qr, err = spanner.handleMultiStmtTxn(session, query, node); err != nil {
 			log.Error("proxy.transaction[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
-		qr = &sqltypes.Result{Warnings: 1}
 		spanner.auditLog(session, R, xbase.TRANSACTION, query, qr)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Set:

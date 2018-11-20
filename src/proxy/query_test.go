@@ -33,11 +33,13 @@ func TestProxyQueryTxn(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("XA .*", result1)
 		for _, query := range querys {
 			fakedbs.AddQueryPattern(query, &sqltypes.Result{})
 		}
 	}
 
+	proxy.SetTwoPC(true)
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
