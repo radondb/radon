@@ -25,6 +25,15 @@ func TestShow1(t *testing.T) {
 		output string
 	}{
 		{
+			input:  "show table status",
+			output: "show table status",
+		},
+		{
+			input:  "show table status from sbtest",
+			output: "show table status from sbtest",
+		},
+
+		{
 			input:  "show create table t1",
 			output: "show create table t1",
 		},
@@ -45,7 +54,7 @@ func TestShow1(t *testing.T) {
 		},
 
 		{
-			input: "show full tables where Table_type != 'VIEW'",
+			input:  "show full tables where Table_type != 'VIEW'",
 			output: "show full tables where Table_type != 'VIEW'",
 		},
 

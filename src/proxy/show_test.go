@@ -22,6 +22,203 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
+var (
+	showTableStatusResult1 = &sqltypes.Result{
+		RowsAffected: 13,
+		Fields: []*querypb.Field{
+			{
+				Name: "Name",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Engine",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Version",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Row_format",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Rows",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Avg_row_length",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Data_length",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Max_data_length",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Index_length",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Data_free",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Auto_increment",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Create_time",
+				Type: querypb.Type_DATETIME,
+			},
+			{
+				Name: "Update_time",
+				Type: querypb.Type_DATETIME,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("a_0000")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("InnoDB")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("10")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("Dynamic")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("2")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("8192")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("16384")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+				sqltypes.MakeTrusted(querypb.Type_DATETIME, []byte("2019-01-22 08:31:47")),
+				sqltypes.MakeTrusted(querypb.Type_DATETIME, []byte("2019-01-22 10:33:47")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("a_0001")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("InnoDB")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("10")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("Dynamic")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("3")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("16384")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("16384")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+				sqltypes.MakeTrusted(querypb.Type_DATETIME, []byte("2019-01-23 08:31:47")),
+				sqltypes.MakeTrusted(querypb.Type_DATETIME, []byte("2019-01-23 10:33:47")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("c")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("InnoDB")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("10")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("Dynamic")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("2")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("16384")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("16384")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+				sqltypes.MakeTrusted(querypb.Type_DATETIME, []byte("2019-01-22 08:31:47")),
+				sqltypes.MakeTrusted(querypb.Type_DATETIME, []byte("2019-01-22 10:33:47")),
+			},
+		},
+	}
+
+	showTableStatusResult2 = &sqltypes.Result{
+		RowsAffected: 2,
+		Fields: []*querypb.Field{
+			{
+				Name: "Name",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Engine",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Version",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Row_format",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Rows",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Avg_row_length",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Data_length",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Max_data_length",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Index_length",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Data_free",
+				Type: querypb.Type_UINT64,
+			},
+			{
+				Name: "Auto_increment",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Create_time",
+				Type: querypb.Type_DATETIME,
+			},
+			{
+				Name: "Update_time",
+				Type: querypb.Type_DATETIME,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("a")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("InnoDB")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("10")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("Dynamic")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("25")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("16384")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("16384")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+				sqltypes.MakeTrusted(querypb.Type_DATETIME, []byte("2019-01-22 08:31:47")),
+				sqltypes.MakeTrusted(querypb.Type_DATETIME, []byte("2019-01-23 10:33:47")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("c")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("InnoDB")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("10")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("Dynamic")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("2")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("16384")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("16384")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+				sqltypes.MakeTrusted(querypb.Type_DATETIME, []byte("2019-01-22 08:31:47")),
+				sqltypes.MakeTrusted(querypb.Type_DATETIME, []byte("2019-01-22 10:33:47")),
+			},
+		},
+	}
+)
+
 func TestProxyShowDatabases(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
@@ -129,6 +326,53 @@ func TestProxyShowTables(t *testing.T) {
 		assert.Nil(t, err)
 		defer client.Close()
 		query := "show tables from MYSQL"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+}
+
+func TestProxyShowTableStatus(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("show table status .*", showTableStatusResult1)
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+	}
+
+	// show tables.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show table status"
+		got, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := showTableStatusResult2
+		assert.Equal(t, want.Rows, got.Rows)
+		assert.Equal(t, want.RowsAffected, got.RowsAffected)
+	}
+
+	// show tables error with null database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show table status"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// show tables error with sys database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show table status from MYSQL"
 		_, err = client.FetchAll(query, -1)
 		assert.NotNil(t, err)
 	}
