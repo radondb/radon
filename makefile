@@ -43,6 +43,7 @@ test:
 	@$(MAKE) testbinlog
 	@$(MAKE) testctl
 	@$(MAKE) testmonitor
+	@$(MAKE) testfuzz
 
 testxbase:
 	go test -v -race xbase
@@ -78,6 +79,9 @@ testpoc:
 	go test -v poc
 testmonitor:
 	go test -v monitor
+
+testfuzz:
+	go test -v -race fuzz/sqlparser
 
 # code coverage
 allpkgs =	xbase/...\

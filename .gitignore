@@ -5,5 +5,10 @@ coverage*
 y.output
 src/github.com/*
 
+# Fuzz files
+*crashers*
+*suppressions*
+*.zip
+
 # IntelliJ project files
 .idea
