@@ -1,0 +1,1 @@
+DELETE FROM e1 WHERE d=1
