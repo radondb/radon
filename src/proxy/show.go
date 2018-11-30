@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
+	"time"
 )
 
 // handleShowDatabases used to handle the 'SHOW DATABASES' command.
@@ -38,6 +40,115 @@ func (spanner *Spanner) handleShowEngines(session *driver.Session, query string,
 // handleShowCreateDatabase used to handle the 'SHOW CREATE DATABASE' command.
 func (spanner *Spanner) handleShowCreateDatabase(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	return spanner.ExecuteSingle(query)
+}
+
+// handleShowTableStatus used to handle the 'SHOW TABLE STATUS' command.
+func (spanner *Spanner) handleShowTableStatus(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+	ast := node.(*sqlparser.Show)
+	router := spanner.router
+
+	database := session.Schema()
+	if !ast.Database.IsEmpty() {
+		database = ast.Database.Name.String()
+	}
+
+	if database == "" {
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR, "")
+	}
+	// Check the database ACL.
+	if err := router.DatabaseACL(database); err != nil {
+		return nil, err
+	}
+
+	rewritten := fmt.Sprintf("SHOW TABLE STATUS from %s", database)
+	qr, err := spanner.ExecuteScatter(rewritten)
+	if err != nil {
+		return nil, err
+	}
+
+	// we will do 4 things to merge the sharding tables to one table.
+	// 1. the Name(0) will be removed suffix.
+	// 2. the Rows(4) will be accumulated from the value which is estimated in the sharding tables.
+	// 3. the Avg_row_length(5) will be the biggest.
+	// 4. the Update_time(12) will be the most recent.
+	newqr := &sqltypes.Result{}
+	tables := make(map[string]*[]sqltypes.Value)
+	global := make(map[string]struct{})
+	for i, row := range qr.Rows {
+		name := string(row[0].Raw())
+		// the global table can't be suffixed with _0000.
+		var valid = regexp.MustCompile("_[0-9]{4}$")
+		Suffix := valid.FindAllStringSubmatch(name, -1)
+		var newName string
+		if len(Suffix) != 0 {
+			newName = strings.TrimSuffix(name, Suffix[0][0])
+		} else {
+			newName = name
+			global[newName] = struct{}{}
+		}
+
+		rewrittenRow, ok := tables[newName]
+		if !ok {
+			row[0] = sqltypes.MakeTrusted(row[0].Type(), []byte(newName))
+			newqr.Rows = append(newqr.Rows, row)
+			tables[newName] = &qr.Rows[i]
+		} else {
+			if _, ok = global[newName]; ok {
+				continue
+			}
+
+			v := (*rewrittenRow)[4].ToNative().(uint64) + row[4].ToNative().(uint64)
+			if (*rewrittenRow)[4], err = sqltypes.BuildConverted((*rewrittenRow)[4].Type(), v); err != nil {
+				return nil, err
+			}
+
+			if (*rewrittenRow)[5].ToNative().(uint64) < row[5].ToNative().(uint64) {
+				if (*rewrittenRow)[5], err = sqltypes.BuildConverted((*rewrittenRow)[5].Type(), row[5]); err != nil {
+					return nil, err
+				}
+			}
+
+			var curTime, oldTime time.Time
+			switch row[12].Type() {
+			case querypb.Type_DATETIME:
+
+				curStr := row[12].String()
+				curStr = strings.Replace(curStr, " ", "T", 1)
+				curStr = curStr + "Z"
+				if curTime, err = time.Parse(time.RFC3339, curStr); err != nil {
+					return nil, err
+				}
+				curSecond := curTime.Unix()
+
+				old := (*rewrittenRow)[12].String()
+				if old == "" {
+					old = "1970-01-01 00:00:00"
+					old = strings.Replace(old, " ", "T", 1)
+					old = old + "Z"
+				} else {
+					old = strings.Replace(old, " ", "T", 1)
+					old = old + "Z"
+				}
+
+				if oldTime, err = time.Parse(time.RFC3339, old); err != nil {
+					return nil, err
+				}
+				oldSecond := oldTime.Unix()
+
+				if curSecond > oldSecond {
+					if (*rewrittenRow)[12], err = sqltypes.BuildConverted((*rewrittenRow)[12].Type(), row[12]); err != nil {
+						return nil, err
+					}
+				}
+			}
+		}
+	}
+
+	len := len(newqr.Rows)
+	qr.RowsAffected = uint64(len)
+	qr.Rows = qr.Rows[0:0]
+	qr.Rows = append(qr.Rows, newqr.Rows...)
+	return qr, nil
 }
 
 // handleShowTables used to handle the 'SHOW TABLES' command.

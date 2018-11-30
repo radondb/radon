@@ -144,6 +144,11 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 			if qr, err = spanner.handleShowCreateDatabase(session, query, node); err != nil {
 				log.Error("proxy.show.create.database[%s].from.session[%v].error:%+v", query, session.ID(), err)
 			}
+		case sqlparser.ShowTableStatusStr:
+			// Support for Navicat.
+			if qr, err = spanner.handleShowTableStatus(session, query, node); err != nil {
+				log.Error("proxy.show.table.status[%s].from.session[%v].error:%+v", query, session.ID(), err)
+			}
 		case sqlparser.ShowWarningsStr, sqlparser.ShowVariablesStr:
 			// Support for JDBC.
 			if qr, err = spanner.handleJDBCShows(session, query, node); err != nil {

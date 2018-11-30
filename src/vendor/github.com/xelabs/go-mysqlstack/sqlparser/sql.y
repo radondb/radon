@@ -1027,7 +1027,7 @@ show_statement:
   {
     $$ = &Show{Type: $2}
   }
-|  SHOW TABLES FROM table_name force_eof
+| SHOW TABLES FROM table_name force_eof
   {
     $$ = &Show{Type: ShowTablesStr, Database: $4}
   }
@@ -1062,6 +1062,10 @@ show_statement:
 | SHOW STATUS force_eof
   {
     $$ = &Show{Type: ShowStatusStr}
+  }
+| SHOW TABLE STATUS database_from_opt force_eof
+  {
+    $$ = &Show{Type: ShowTableStatusStr, Database: $4}
   }
 
 binlog_from_opt:
