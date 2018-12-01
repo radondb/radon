@@ -8,7 +8,6 @@ before_install:
 script:
   - make build
   - make test
-  - make check
 
 after_success:
   # send coverage reports to Codecov
