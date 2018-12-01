@@ -255,7 +255,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 		// Support for myloader.
 		// TODO: handle Multi-statement Transaction
 		log.Warning("proxy.query.transaction.query:%s", query)
-		if qr, err = spanner.handleMultiStateTransaction(session, query, node); err != nil {
+		if _, err = spanner.handleMultiStateTransaction(session, query, node); err != nil {
 			log.Error("proxy.transaction[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
 		qr = &sqltypes.Result{Warnings: 1}
