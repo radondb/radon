@@ -19,14 +19,6 @@ fmt:
 	go fmt ./...
 	go vet ./...
 
-allsubdir := $(shell find src -maxdepth 4 -type d | grep -v "github.com")
-
-lint:
-	# go get -u golang.org/x/tools/cmd/golint
-	golint $(allsubdir)
-	# go get -u -v github.com/golangci/golangci-lint/cmd/golangci-lint
-	golangci-lint run
-
 test:
 	@echo "--> Testing..."
 	@$(MAKE) testxbase
@@ -84,7 +76,7 @@ testfuzz:
 	go test -v -race fuzz/sqlparser
 
 # code coverage
-allpkgs =	xbase/...\
+allpkgs =	xbase\
 			ctl/v1/\
 			xcontext\
 			config\
@@ -103,5 +95,17 @@ coverage:
 	src/vendor/github.com/pierrre/gotestcover/*.go;
 	bin/gotestcover -coverprofile=coverage.out -v $(allpkgs)
 	go tool cover -html=coverage.out
+
+check:
+	go get -v gopkg.in/alecthomas/gometalinter.v2
+	go get -v honnef.co/go/tools/cmd/megacheck
+	bin/gometalinter.v2 -j 4 --disable-all \
+	--enable=gofmt \
+	--enable=golint \
+	--enable=vet \
+	--enable=gosimple \
+	--enable=unconvert \
+	--deadline=10m $(allpkgs) 2>&1 | tee /dev/stderr
+	bin/megacheck $(allpkgs)  2>&1 | tee /dev/stderr
 
 .PHONY: build clean install fmt test coverage check

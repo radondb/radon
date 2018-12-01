@@ -3,7 +3,12 @@ pkg/*
 tags
 coverage*
 y.output
-src/github.com/*
+
+# Packages
+src/github.com
+src/golang.org
+src/gopkg.in
+src/honnef.co
 
 # Fuzz files
 *crashers*
