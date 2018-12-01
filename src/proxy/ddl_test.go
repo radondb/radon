@@ -23,7 +23,7 @@ import (
 
 func TestProxyDDLDB(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedbs, proxy, cleanup := MockProxyWithBackup(log)
+	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
 	address := proxy.Address()
 

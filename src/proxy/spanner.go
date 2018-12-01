@@ -33,7 +33,6 @@ type Spanner struct {
 	sessions    *Sessions
 	iptable     *IPTable
 	throttle    *xbase.Throttle
-	backupRelay *BackupRelay
 	diskChecker *DiskCheck
 	readonly    sync2.AtomicBool
 }
@@ -59,12 +58,6 @@ func (spanner *Spanner) Init() error {
 	log := spanner.log
 	conf := spanner.conf
 
-	backupRelay := NewBackupRelay(log, conf.Binlog, spanner)
-	if err := backupRelay.Init(); err != nil {
-		return err
-	}
-	spanner.backupRelay = backupRelay
-
 	diskChecker := NewDiskCheck(log, conf.Binlog.LogDir)
 	if err := diskChecker.Init(); err != nil {
 		return err
@@ -75,7 +68,6 @@ func (spanner *Spanner) Init() error {
 
 // Close used to close spanner.
 func (spanner *Spanner) Close() error {
-	spanner.backupRelay.Close()
 	spanner.diskChecker.Close()
 	spanner.log.Info("spanner.closed...")
 	return nil
@@ -109,11 +101,6 @@ func (spanner *Spanner) SessionDec(s *driver.Session) {
 // SessionClosed impl.
 func (spanner *Spanner) SessionClosed(s *driver.Session) {
 	spanner.sessions.Remove(s)
-}
-
-// BackupRelay returns BackupRelay tuple.
-func (spanner *Spanner) BackupRelay() *BackupRelay {
-	return spanner.backupRelay
 }
 
 func (spanner *Spanner) isTwoPC() bool {

@@ -85,20 +85,6 @@ func (mgr *TxnManager) CreateTxn(backends map[string]*Pool) (*Txn, error) {
 	return txn, nil
 }
 
-// CreateBackupTxn creates new backup txn.
-func (mgr *TxnManager) CreateBackupTxn(backup *Pool) (*BackupTxn, error) {
-	if backup == nil {
-		return nil, errors.New("backup.is.NULL")
-	}
-	txid := mgr.GetID()
-	txn, err := NewBackupTxn(mgr.log, txid, mgr, backup)
-	if err != nil {
-		return nil, err
-	}
-	mgr.Add()
-	return txn, nil
-}
-
 // CommitLock used to acquire the commit.
 func (mgr *TxnManager) CommitLock() {
 	mgr.commitLock.Lock()

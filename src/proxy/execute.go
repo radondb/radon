@@ -223,16 +223,3 @@ func (spanner *Spanner) ExecuteOnThisBackend(backend string, query string) (*sql
 	defer txn.Finish()
 	return txn.ExecuteOnThisBackend(backend, query)
 }
-
-// ExecuteOnBackup used to executye query on the backup.
-func (spanner *Spanner) ExecuteOnBackup(database string, query string) (*sqltypes.Result, error) {
-	log := spanner.log
-	scatter := spanner.scatter
-	txn, err := scatter.CreateBackupTransaction()
-	if err != nil {
-		log.Error("spanner.execute.on.backup..txn.create.error:[%v]", err)
-		return nil, err
-	}
-	defer txn.Finish()
-	return txn.ExecuteRaw(database, query)
-}

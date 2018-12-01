@@ -40,7 +40,6 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 	log := spanner.log
 	throttle := spanner.throttle
 	diskChecker := spanner.diskChecker
-	hasBackup := spanner.scatter.HasBackup()
 	timeStart := time.Now()
 	slowQueryTime := time.Duration(spanner.conf.Proxy.LongQueryTime) * time.Second
 
@@ -224,22 +223,10 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 				if table == "dual" {
 					if qr, err = spanner.handleDual(session, query, node); err != nil {
 						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
-						// Send to AP node if we have.
-						if hasBackup {
-							if qr, err = spanner.handleBackupQuery(session, query, node); err != nil {
-								log.Error("proxy.backup.select[%s].error:%+v", xbase.TruncateQuery(query, 256), err)
-							}
-						}
 					}
 				} else { // e.g.: select a from table [as] aliasTable;
 					if qr, err = spanner.handleSelect(session, query, node); err != nil {
 						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
-						// Send to AP node if we have.
-						if hasBackup {
-							if qr, err = spanner.handleBackupQuery(session, query, node); err != nil {
-								log.Error("proxy.backup.select[%s].error:%+v", xbase.TruncateQuery(query, 256), err)
-							}
-						}
 					}
 				}
 				spanner.auditLog(session, R, xbase.SELECT, query, qr)
@@ -247,12 +234,6 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 			default: // ParenTableExpr, JoinTableExpr
 				if qr, err = spanner.handleSelect(session, query, node); err != nil {
 					log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
-					// Send to AP node if we have.
-					if hasBackup {
-						if qr, err = spanner.handleBackupQuery(session, query, node); err != nil {
-							log.Error("proxy.backup.select[%s].error:%+v", xbase.TruncateQuery(query, 256), err)
-						}
-					}
 				}
 				spanner.auditLog(session, R, xbase.SELECT, query, qr)
 				return returnQuery(qr, callback, err)

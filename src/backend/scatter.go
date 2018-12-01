@@ -33,7 +33,6 @@ type Scatter struct {
 	txnMgr   *TxnManager
 	metadir  string
 	backends map[string]*Pool
-	backup   *Pool
 }
 
 // NewScatter creates a new scatter.
@@ -93,55 +92,6 @@ func (scatter *Scatter) Remove(config *config.BackendConfig) error {
 	return scatter.remove(config)
 }
 
-func (scatter *Scatter) addBackup(config *config.BackendConfig) error {
-	log := scatter.log
-	log.Warning("scatter.add.backup:%v", config.Name)
-
-	if scatter.backup != nil {
-		return errors.Errorf("scatter.backup.node[%+v].duplicate", config.Name)
-	}
-
-	pool := NewPool(scatter.log, config)
-	scatter.backup = pool
-	monitor.BackendInc("backup")
-	return nil
-}
-
-// AddBackup used to add the backup node to scatter.
-func (scatter *Scatter) AddBackup(config *config.BackendConfig) error {
-	scatter.mu.Lock()
-	defer scatter.mu.Unlock()
-	return scatter.addBackup(config)
-}
-
-// Remove backup node.
-func (scatter *Scatter) removeBackup(config *config.BackendConfig) error {
-	log := scatter.log
-	log.Warning("scatter.remove.backup:%v", config.Name)
-	if scatter.backup != nil && scatter.backup.conf.Name == config.Name {
-		scatter.backup.Close()
-		scatter.backup = nil
-		monitor.BackendDec("backup")
-	} else {
-		return errors.Errorf("scatter.backup[%v].can.not.be.found", config.Name)
-	}
-	return nil
-}
-
-// RemoveBackup used to remove the backup from the scatter.
-func (scatter *Scatter) RemoveBackup(config *config.BackendConfig) error {
-	scatter.mu.Lock()
-	defer scatter.mu.Unlock()
-	return scatter.removeBackup(config)
-}
-
-// HasBackup used to check the backup node whether nil.
-func (scatter *Scatter) HasBackup() bool {
-	scatter.mu.RLock()
-	defer scatter.mu.RUnlock()
-	return scatter.backup != nil
-}
-
 // Close used to clean the pools connections.
 func (scatter *Scatter) Close() {
 	scatter.mu.Lock()
@@ -160,11 +110,6 @@ func (scatter *Scatter) clear() {
 		v.Close()
 	}
 	scatter.backends = make(map[string]*Pool)
-
-	if scatter.backup != nil {
-		scatter.backup.Close()
-		scatter.backup = nil
-	}
 }
 
 // FlushConfig used to write the backends to file.
@@ -180,12 +125,7 @@ func (scatter *Scatter) FlushConfig() error {
 		backends.Backends = append(backends.Backends, v.conf)
 	}
 
-	// backup.
-	if scatter.backup != nil {
-		backends.Backup = scatter.backup.conf
-	}
-
-	log.Warning("scatter.flush.to.file[%v].backends.conf:%+v, backup.node:%+v", file, backends.Backends, backends.Backup)
+	log.Warning("scatter.flush.to.file[%v].backends.conf:%+v", file, backends.Backends)
 	if err := config.WriteConfig(file, backends); err != nil {
 		log.Panicf("scatter.flush.config.to.file[%v].error:%v", file, err)
 		return err
@@ -235,15 +175,6 @@ func (scatter *Scatter) LoadConfig() error {
 		}
 		log.Info("scatter.load.backend:%+v", backend.Name)
 	}
-
-	// Add backup node.
-	if conf.Backup != nil {
-		if err := scatter.addBackup(conf.Backup); err != nil {
-			log.Error("scatter.add.backup[%+v].error:%v", conf.Backup.Name, err)
-			return err
-		}
-		log.Warning("scatter.load.backup:%+v", conf.Backup.Name)
-	}
 	return nil
 }
 
@@ -270,28 +201,6 @@ func (scatter *Scatter) PoolClone() map[string]*Pool {
 	return poolMap
 }
 
-// BackupPool returns the backup pool.
-func (scatter *Scatter) BackupPool() *Pool {
-	scatter.mu.RLock()
-	defer scatter.mu.RUnlock()
-	return scatter.backup
-}
-
-// BackupBackend returns the backup name.
-func (scatter *Scatter) BackupBackend() string {
-	scatter.mu.RLock()
-	defer scatter.mu.RUnlock()
-	return scatter.backup.conf.Name
-}
-
-// BackupConfig returns the config of backup.
-// Used for backup rebuild.
-func (scatter *Scatter) BackupConfig() *config.BackendConfig {
-	scatter.mu.RLock()
-	defer scatter.mu.RUnlock()
-	return scatter.backup.conf
-}
-
 // BackendConfigsClone used to clone all the backend configs.
 func (scatter *Scatter) BackendConfigsClone() []*config.BackendConfig {
 	scatter.mu.RLock()
@@ -306,9 +215,4 @@ func (scatter *Scatter) BackendConfigsClone() []*config.BackendConfig {
 // CreateTransaction used to create a transaction.
 func (scatter *Scatter) CreateTransaction() (*Txn, error) {
 	return scatter.txnMgr.CreateTxn(scatter.PoolClone())
-}
-
-// CreateBackupTransaction used to create a backup transaction.
-func (scatter *Scatter) CreateBackupTransaction() (*BackupTxn, error) {
-	return scatter.txnMgr.CreateBackupTxn(scatter.backup)
 }

@@ -35,32 +35,4 @@ func TestTxnManager(t *testing.T) {
 		assert.Nil(t, err)
 		defer txn.Finish()
 	}
-
-	{
-		backTxn, err := txnmgr.CreateBackupTxn(backends[addrs[0]])
-		assert.Nil(t, err)
-		defer backTxn.Finish()
-	}
-}
-
-func TestTxnManagerBackendsNull(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb := fakedb.New(log, 2)
-	defer fakedb.Close()
-	backends := make(map[string]*Pool)
-	txnmgr := NewTxnManager(log)
-
-	{
-		_, err := txnmgr.CreateTxn(backends)
-		want := "backends.is.NULL"
-		got := err.Error()
-		assert.Equal(t, want, got)
-	}
-
-	{
-		_, err := txnmgr.CreateBackupTxn(nil)
-		want := "backup.is.NULL"
-		got := err.Error()
-		assert.Equal(t, want, got)
-	}
 }

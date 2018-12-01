@@ -137,7 +137,7 @@ func MockClientWithConfig(log *xlog.Log, conf *config.BackendConfig) (Connection
 }
 
 // MockTxnMgr mocks txn manager.
-func MockTxnMgr(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool, *Pool, []string, func()) {
+func MockTxnMgr(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool, []string, func()) {
 	fakedb := fakedb.New(log, n+1)
 	backends := make(map[string]*Pool)
 	addrs := fakedb.Addrs()
@@ -148,23 +148,19 @@ func MockTxnMgr(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool
 		backends[addr] = pool
 	}
 
-	addr := addrs[len(addrs)-1]
-	conf := MockBackendConfigDefault(addr, addr)
-	backup := NewPool(log, conf)
 	txnMgr := NewTxnManager(log)
-	return fakedb, txnMgr, backends, backup, addrs, func() {
+	return fakedb, txnMgr, backends, addrs, func() {
 		time.Sleep(time.Millisecond * 10)
 		for _, v := range backends {
 			v.Close()
 		}
-		backup.Close()
 		fakedb.Close()
 	}
 }
 
 // MockTxnMgrScatter used to mock a txnMgr and a scatter.
 // commit err and rollback err will WriteXaCommitErrLog, need the scatter
-func MockTxnMgrScatter(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool, *Pool, []string, *Scatter, func()) {
+func MockTxnMgrScatter(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool, []string, *Scatter, func()) {
 	scatter := NewScatter(log, "")
 	fakedb := fakedb.New(log, n)
 	backends := make(map[string]*Pool)
@@ -176,12 +172,8 @@ func MockTxnMgrScatter(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[strin
 	}
 	scatter.backends = backends
 
-	addr := addrs[len(addrs)-1]
-	conf := MockBackendConfigDefault(addr, addr)
-	backup := NewPool(log, conf)
 	txnMgr := scatter.txnMgr
-
-	return fakedb, txnMgr, backends, backup, addrs, scatter, func() {
+	return fakedb, txnMgr, backends, addrs, scatter, func() {
 		fakedb.Close()
 		scatter.Close()
 	}

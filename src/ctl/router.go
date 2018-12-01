@@ -29,10 +29,7 @@ func (admin *Admin) NewRouter() (rest.App, error) {
 		rest.Put("/v1/radon/throttle", v1.ThrottleHandler(log, proxy)),
 		rest.Post("/v1/radon/backend", v1.AddBackendHandler(log, proxy)),
 		rest.Delete("/v1/radon/backend/:name", v1.RemoveBackendHandler(log, proxy)),
-		rest.Post("/v1/radon/backup", v1.AddBackupHandler(log, proxy)),
-		rest.Get("/v1/radon/backupconfig", v1.BackupConfigHandler(log, proxy)),
 		rest.Get("/v1/radon/restapiaddress", v1.RestAPIAddressHandler(log, proxy)),
-		rest.Delete("/v1/radon/backup/:name", v1.RemoveBackupHandler(log, proxy)),
 		rest.Get("/v1/radon/status", v1.StatusHandler(log, proxy)),
 
 		// user
@@ -57,15 +54,6 @@ func (admin *Admin) NewRouter() (rest.App, error) {
 		rest.Get("/v1/peer/peerz", v1.PeerzHandler(log, proxy)),
 		rest.Post("/v1/peer/add", v1.AddPeerHandler(log, proxy)),
 		rest.Post("/v1/peer/remove", v1.RemovePeerHandler(log, proxy)),
-
-		// relay
-		rest.Get("/v1/relay/status", v1.RelayStatusHandler(log, proxy)),
-		rest.Get("/v1/relay/infos", v1.RelayInfosHandler(log, proxy)),
-		rest.Put("/v1/relay/start", v1.RelayStartHandler(log, proxy)),
-		rest.Put("/v1/relay/stop", v1.RelayStopHandler(log, proxy)),
-		rest.Put("/v1/relay/paralleltype", v1.RelayParallelTypeHandler(log, proxy)),
-		rest.Post("/v1/relay/reset", v1.RelayResetHandler(log, proxy)),
-		rest.Post("/v1/relay/workers", v1.RelayWorkersHandler(log, proxy)),
 
 		// debug
 		rest.Get("/v1/debug/processlist", v1.ProcesslistHandler(log, proxy)),

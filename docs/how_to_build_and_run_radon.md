@@ -87,7 +87,6 @@ Content-Type: text/plain; charset=utf-8
 The backends information is recorded in the JSON file `$meta-dir\backend.json`. 
 ```
 {
-        "backup": null,
         "backends": [
                 {
                         "name": "backend1",
