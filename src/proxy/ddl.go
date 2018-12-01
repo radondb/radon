@@ -36,9 +36,11 @@ func CheckCreateTable(ddl *sqlparser.DDL) error {
 		return fmt.Errorf("spanner.ddl.check.create.table[%s].error:not support", table)
 	}
 
-	// UNIQUE/PRIMARY constraint check.
+	// shard key and UNIQUE/PRIMARY KEY constraint check.
 	if shardKey != "" {
 		shardKeyOK := false
+		constraintCheckOK := true
+		// shardKey check and constraint check in column definition
 		for _, col := range ddl.TableSpec.Columns {
 			colName := col.Name.String()
 			if colName == shardKey {
@@ -46,12 +48,34 @@ func CheckCreateTable(ddl *sqlparser.DDL) error {
 			} else {
 				switch col.Type.KeyOpt {
 				case sqlparser.ColKeyUnique, sqlparser.ColKeyUniqueKey, sqlparser.ColKeyPrimary:
-					return fmt.Errorf("The unique/primary constraint only be defined on the sharding key column[%s] not [%s]", shardKey, colName)
+					constraintCheckOK = false
 				}
 			}
 		}
+
 		if !shardKeyOK {
 			return fmt.Errorf("Sharding Key column '%s' doesn't exist in table", shardKey)
+		}
+		if !constraintCheckOK {
+			return fmt.Errorf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
+		}
+
+		// constraint check in index definition
+		for _, index := range ddl.TableSpec.Indexes {
+			constraintCheckOK = false
+			info := index.Info
+			if info.Unique || info.Primary {
+				for _, colIdx := range index.Columns {
+					colName := colIdx.Column.String()
+					if colName == shardKey {
+						constraintCheckOK = true
+						break
+					}
+				}
+				if !constraintCheckOK {
+					return fmt.Errorf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
+				}
+			}
 		}
 	}
 
