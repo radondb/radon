@@ -60,12 +60,11 @@ func TestLoadConfig(t *testing.T) {
 
 	{
 		mockProxyConfig := &ProxyConfig{
-			TwopcEnable:         true,
-			Endpoint:            ":5566",
-			MaxConnections:      1024,
-			MetaDir:             "/tmp/radonmeta",
-			PeerAddress:         ":8080",
-			BackupDefaultEngine: "TokuDB",
+			TwopcEnable:    true,
+			Endpoint:       ":5566",
+			MaxConnections: 1024,
+			MetaDir:        "/tmp/radonmeta",
+			PeerAddress:    ":8080",
 		}
 		conf := &Config{
 			Proxy:   mockProxyConfig,
@@ -86,11 +85,10 @@ func TestLoadConfig(t *testing.T) {
 
 	{
 		mockProxyConfig := &ProxyConfig{
-			Endpoint:            ":5566",
-			MaxConnections:      1024,
-			MetaDir:             "/tmp/radonmeta",
-			PeerAddress:         ":8080",
-			BackupDefaultEngine: "TokuDB",
+			Endpoint:       ":5566",
+			MaxConnections: 1024,
+			MetaDir:        "/tmp/radonmeta",
+			PeerAddress:    ":8080",
 		}
 
 		conf := &Config{
@@ -168,15 +166,15 @@ func TestWriteLoadConfig(t *testing.T) {
 
 func TestReadBackendsConfig(t *testing.T) {
 	data := `{
-	"backends": [
-		{
-			"name": "backend1",
+       "backends": [
+               {
+                       "name": "backend1",
             "address": "127.0.0.1:3304",
-			"user": "root",
-			"password": "",
-			"max-connections": 1024
-		}
-	]
+                       "user": "root",
+                       "password": "",
+                       "max-connections": 1024
+               }
+       ]
 }`
 
 	backend, err := ReadBackendsConfig(data)
@@ -184,56 +182,6 @@ func TestReadBackendsConfig(t *testing.T) {
 	want := &BackendsConfig{Backends: MockBackends}
 	got := backend
 	assert.Equal(t, want, got)
-}
-
-func TestReadBackendsConfig1(t *testing.T) {
-	// backup is nil.
-	{
-		data := `{
-	"backends": [
-		{
-			"name": "backend1",
-            "address": "127.0.0.1:3304",
-			"user": "root",
-			"password": "",
-			"max-connections": 1024
-		}
-	]
-}`
-
-		backend, err := ReadBackendsConfig(data)
-		assert.Nil(t, err)
-		assert.Nil(t, backend.Backup)
-	}
-
-	// backup is not nil.
-	{
-		data := `{
-	"backup":
-		{
-			"name": "backupnode",
-            "address": "127.0.0.1:3304",
-			"user": "root",
-			"password": "",
-			"max-connections": 1024
-		},
-	"backends": [
-		{
-			"name": "backend1",
-            "address": "127.0.0.1:3304",
-			"user": "root",
-			"password": "",
-			"max-connections": 1024
-		}
-	]
-}`
-
-		backend, err := ReadBackendsConfig(data)
-		assert.Nil(t, err)
-		want := MockBackup
-		got := backend.Backup
-		assert.Equal(t, want, got)
-	}
 }
 
 func TestReadTableConfig(t *testing.T) {

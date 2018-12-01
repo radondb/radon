@@ -29,7 +29,7 @@ func TestTxnNormalExecute(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -101,7 +101,7 @@ func TestTxnNormalExecute(t *testing.T) {
 func TestTxnExecuteStreamFetch(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -205,7 +205,7 @@ func TestTxnExecuteStreamFetch(t *testing.T) {
 func TestTxnNormalError(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 3)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 3)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -232,7 +232,7 @@ func TestTxnNormalError(t *testing.T) {
 func TestTxnErrorBackendNotExists(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, _, cleanup := MockTxnMgr(log, 3)
+	fakedb, txnMgr, backends, _, cleanup := MockTxnMgr(log, 3)
 	defer cleanup()
 
 	fakedb.AddQuery("select * from node1", result1)
@@ -260,7 +260,7 @@ func TestTxnErrorBackendNotExists(t *testing.T) {
 func TestTxnExecuteSingle(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -283,7 +283,7 @@ func TestTxnExecuteSingle(t *testing.T) {
 func TestTxnExecuteScatter(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -308,7 +308,7 @@ func TestTxnExecuteScatter(t *testing.T) {
 func TestTxnExecuteOnThisBackend(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 	query := "select from node2"
 	backend := addrs[1]
@@ -328,7 +328,7 @@ func TestTxnExecuteOnThisBackend(t *testing.T) {
 func TestTxnSetting(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, _, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, _, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	query := "select * from node1"
@@ -373,7 +373,7 @@ func TestTxnSetting(t *testing.T) {
 func TestTxnAbort(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 3)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 3)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -451,7 +451,7 @@ func TestTxnAbort(t *testing.T) {
 func TestTxnTwoPCExecute(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -534,7 +534,7 @@ func TestTxnTwoPCExecute(t *testing.T) {
 func TestTxnTwoPCRollback(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -589,7 +589,7 @@ func TestTxnTwoPCRollbackError(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	// commit err and rollback err will WriteXaCommitErrLog, need the scatter
-	fakedb, txnMgr, backends, _, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
+	fakedb, txnMgr, backends, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
 	defer cleanup()
 	err := scatter.Init(MockScatterDefault(log))
 	assert.Nil(t, err)
@@ -705,7 +705,7 @@ func TestTxnTwoPCRollbackError(t *testing.T) {
 func TestTxnTwoPCExecuteNormalOnOneBackend(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	// All in one backends.
@@ -755,7 +755,7 @@ func TestTxnTwoPCExecuteNormalOnOneBackend(t *testing.T) {
 func TestTxnTwoPCExecuteWrite(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -809,7 +809,7 @@ func TestTxnTwoPCExecuteWrite(t *testing.T) {
 func TestTxnTwoPCExecuteScatterOnOneBackend(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 1)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 1)
 	defer cleanup()
 
 	// All in one backends.
@@ -852,7 +852,7 @@ func TestTxnTwoPCExecuteError(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	// commit err and rollback err will WriteXaCommitErrLog, need the scatter
-	fakedb, txnMgr, backends, _, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
+	fakedb, txnMgr, backends, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
 	defer cleanup()
 	err := scatter.Init(MockScatterDefault(log))
 	assert.Nil(t, err)
@@ -1002,7 +1002,7 @@ func TestTxnTwoPCExecuteError(t *testing.T) {
 func TestTxnBeginScatter(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -1032,7 +1032,7 @@ func TestTxnBeginScatter(t *testing.T) {
 func TestTxnBeginScatterError(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -1062,7 +1062,7 @@ func TestTxnBeginScatterError(t *testing.T) {
 func TestTxnCommitScatter(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -1114,7 +1114,7 @@ func TestTxnCommitScatterError(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	// commit err and rollback err will WriteXaCommitErrLog, need the scatter
-	fakedb, txnMgr, backends, _, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
+	fakedb, txnMgr, backends, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
 	defer cleanup()
 	err := scatter.Init(MockScatterDefault(log))
 	assert.Nil(t, err)
@@ -1210,7 +1210,7 @@ func TestTxnCommitScatterError(t *testing.T) {
 func TestTxnRollbackScatter(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
@@ -1262,7 +1262,7 @@ func TestTxnRollbackScatterError(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	// commit err and rollback err will WriteXaCommitErrLog, need the scatter
-	fakedb, txnMgr, backends, _, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
+	fakedb, txnMgr, backends, addrs, scatter, cleanup := MockTxnMgrScatter(log, 2)
 	defer cleanup()
 	err := scatter.Init(MockScatterDefault(log))
 	assert.Nil(t, err)

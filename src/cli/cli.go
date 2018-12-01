@@ -35,8 +35,6 @@ func init() {
 	rootCmd.AddCommand(cmd.NewReadonlyCommand())
 	rootCmd.AddCommand(cmd.NewTwopcCommand())
 	rootCmd.AddCommand(cmd.NewDebugCommand())
-	rootCmd.AddCommand(cmd.NewRelayCommand())
-	rootCmd.AddCommand(cmd.NewBackupCommand())
 }
 
 func main() {

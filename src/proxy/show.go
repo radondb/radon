@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"build"
 
@@ -252,40 +251,7 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 		sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte(txnCounter.String())),
 	})
 
-	// 4. relay info row.
-	bin := spanner.binlog
-	backupRelay := spanner.backupRelay
-	type relayStatus struct {
-		Status          bool   `json:"status"`
-		MaxWorkers      int32  `json:"max-workers"`
-		ParallelWorkers int32  `json:"parallel-workers"`
-		SecondBehinds   int64  `json:"second-behinds"`
-		RelayBinlog     string `json:"relay-binlog"`
-		RelayGTID       int64  `json:"relay-gtid"`
-		Rates           string `json:"rates"`
-	}
-	relay := &relayStatus{
-		Status:          backupRelay.RelayStatus(),
-		MaxWorkers:      backupRelay.MaxWorkers(),
-		ParallelWorkers: backupRelay.ParallelWorkers(),
-		SecondBehinds:   (bin.LastGTID() - backupRelay.RelayGTID()) / int64(time.Second),
-		RelayBinlog:     backupRelay.RelayBinlog(),
-		RelayGTID:       backupRelay.RelayGTID(),
-		Rates:           backupRelay.RelayRates(),
-	}
-	varname = "radon_relay"
-	var relayStatusJSON []byte
-	if b, err := json.Marshal(relay); err != nil {
-		relayStatusJSON = []byte(err.Error())
-	} else {
-		relayStatusJSON = b
-	}
-	qr.Rows = append(qr.Rows, []sqltypes.Value{
-		sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte(varname)),
-		sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte(relayStatusJSON)),
-	})
-
-	// 5. radon_backend_pool row.
+	// 4. radon_backend_pool row.
 	var poolJSON []byte
 	varname = "radon_backendpool"
 	type poolShow struct {
@@ -297,10 +263,6 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 		be.Pools = append(be.Pools, v.JSON())
 	}
 
-	// backup node.
-	if scatter.HasBackup() {
-		be.Pools = append(be.Pools, scatter.BackupPool().JSON())
-	}
 	sort.Strings(be.Pools)
 	if b, err := json.MarshalIndent(be, "", "\t\t\t"); err != nil {
 		poolJSON = []byte(err.Error())
@@ -312,7 +274,7 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 		sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte(poolJSON)),
 	})
 
-	// 6. backends row.
+	// 5. backends row.
 	var backendsJSON []byte
 	varname = "radon_backend"
 	type backendShow struct {
@@ -343,16 +305,6 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 			log.Error("proxy.show.execute.on.this.backend[%x].error:%+v", backend, err)
 		} else {
 			backShowFunc(backend, qr)
-		}
-	}
-
-	// backup node
-	if scatter.HasBackup() {
-		qr, err := spanner.ExecuteOnBackup("information_schema", sql)
-		if err != nil {
-			log.Error("proxy.show.execute.on.backend.error:%+v", err)
-		} else {
-			backShowFunc(scatter.BackupBackend(), qr)
 		}
 	}
 

@@ -24,27 +24,25 @@ type ProxyConfig struct {
 	Endpoint    string   `json:"endpoint"`
 	TwopcEnable bool     `json:"twopc-enable"`
 
-	MaxConnections      int    `json:"max-connections"`
-	MaxResultSize       int    `json:"max-result-size"`
-	DDLTimeout          int    `json:"ddl-timeout"`
-	QueryTimeout        int    `json:"query-timeout"`
-	PeerAddress         string `json:"peer-address,omitempty"`
-	BackupDefaultEngine string `json:"backup-default-engine"`
-	LongQueryTime       int    `json:"long-query-time"`
+	MaxConnections int    `json:"max-connections"`
+	MaxResultSize  int    `json:"max-result-size"`
+	DDLTimeout     int    `json:"ddl-timeout"`
+	QueryTimeout   int    `json:"query-timeout"`
+	PeerAddress    string `json:"peer-address,omitempty"`
+	LongQueryTime  int    `json:"long-query-time"`
 }
 
 // DefaultProxyConfig returns default proxy config.
 func DefaultProxyConfig() *ProxyConfig {
 	return &ProxyConfig{
-		MetaDir:             "./radon-meta",
-		Endpoint:            "127.0.0.1:3308",
-		MaxConnections:      1024,
-		MaxResultSize:       1024 * 1024 * 1024, // 1GB
-		DDLTimeout:          10 * 3600 * 1000,   // 10hours
-		QueryTimeout:        5 * 60 * 1000,      // 5minutes
-		PeerAddress:         "127.0.0.1:8080",
-		BackupDefaultEngine: "TokuDB", // Default MySQL storage engine for backup.
-		LongQueryTime:       5,        // 5 seconds
+		MetaDir:        "./radon-meta",
+		Endpoint:       "127.0.0.1:3308",
+		MaxConnections: 1024,
+		MaxResultSize:  1024 * 1024 * 1024, // 1GB
+		DDLTimeout:     10 * 3600 * 1000,   // 10hours
+		QueryTimeout:   5 * 60 * 1000,      // 5minutes
+		PeerAddress:    "127.0.0.1:8080",
+		LongQueryTime:  5, // 5 seconds
 	}
 }
 
@@ -183,7 +181,6 @@ type BackendConfig struct {
 
 // BackendsConfig tuple.
 type BackendsConfig struct {
-	Backup   *BackendConfig   `json:"backup"`
 	Backends []*BackendConfig `json:"backends"`
 }
 

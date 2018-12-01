@@ -126,7 +126,7 @@ func TestCtlV1Metaz(t *testing.T) {
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("GET", "http://localhost/v1/meta/metas", nil))
 		recorded.CodeIs(200)
 
-		prefix := "{\"metas\":{\"backend.json\":\"{\\n\\t\\\"backup\\\": null,\\n\\t\\\"backends"
+		prefix := "{\"metas\":{\"backend.json\":\"{\\n\\t\\\"backends"
 		got := strings.HasPrefix(recorded.Recorder.Body.String(), prefix)
 		assert.True(t, got)
 	}

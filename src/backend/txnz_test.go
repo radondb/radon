@@ -22,7 +22,7 @@ import (
 func TestTxnz(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, _, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
 	querys := []*xcontext.QueryTuple{
@@ -35,23 +35,6 @@ func TestTxnz(t *testing.T) {
 
 	{
 		txn, err := txnMgr.CreateTxn(backends)
-		assert.Nil(t, err)
-		defer txn.Finish()
-
-		qzRows := tz.GetTxnzRows()
-		assert.NotNil(t, qzRows)
-
-		time.Sleep(30 * time.Millisecond)
-		qzRows = tz.GetTxnzRows()
-		assert.NotNil(t, qzRows)
-
-		time.Sleep(100 * time.Millisecond)
-		qzRows = tz.GetTxnzRows()
-		assert.NotNil(t, qzRows)
-	}
-
-	{
-		txn, err := txnMgr.CreateBackupTxn(backends[addrs[0]])
 		assert.Nil(t, err)
 		defer txn.Finish()
 

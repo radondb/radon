@@ -471,41 +471,6 @@ func TestProxyShowStatus(t *testing.T) {
 	}
 }
 
-func TestProxyShowStatusWithBackup(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedbs, proxy, cleanup := MockProxyWithBackup(log)
-	defer cleanup()
-	address := proxy.Address()
-
-	// fakedbs.
-	{
-		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("select * .*", &sqltypes.Result{})
-	}
-
-	// create test table.
-	{
-		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
-		assert.Nil(t, err)
-		query := "create table t1(id int, b int) partition by hash(id)"
-		_, err = client.FetchAll(query, -1)
-		assert.Nil(t, err)
-		client.Quit()
-	}
-
-	// show status.
-	{
-		show, err := driver.NewConn("mock", "mock", address, "test", "utf8")
-		assert.Nil(t, err)
-		qr, err := show.FetchAll("show status", -1)
-		assert.Nil(t, err)
-		want := `{"max-connections":1024,"max-result-size":1073741824,"ddl-timeout":36000000,"query-timeout":300000,"twopc-enable":false,"allow-ip":null,"audit-log-mode":"N","readonly":false,"throttle":0}`
-		got := string(qr.Rows[1][1].Raw())
-		assert.Equal(t, want, got)
-	}
-}
-
 func TestProxyShowVersions(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)

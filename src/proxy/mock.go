@@ -65,16 +65,6 @@ func MockProxy(log *xlog.Log) (*fakedb.DB, *Proxy, func()) {
 	return MockProxy1(log, MockDefaultConfig())
 }
 
-// MockProxyWithBackup mocks the proxy with backup.
-func MockProxyWithBackup(log *xlog.Log) (*fakedb.DB, *Proxy, func()) {
-	conf := MockDefaultConfig()
-	conf.Binlog.RelayWaitMs = 100
-	conf.Binlog.EnableBinlog = true
-	conf.Binlog.EnableRelay = true
-	os.RemoveAll(conf.Binlog.LogDir)
-	return MockProxy2(log, conf)
-}
-
 // MockProxy1 mocks the proxy with config.
 func MockProxy1(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func()) {
 	tmpDir := fakedb.GetTmpDir("", "radon_mock_", log)
@@ -98,45 +88,6 @@ func MockProxy1(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func())
 	}
 
 	backendsConf := &config.BackendsConfig{Backends: fakedbs.BackendConfs()}
-	if err := config.WriteConfig(path.Join(conf.Proxy.MetaDir, "backend.json"), backendsConf); err != nil {
-		log.Panic("mock.proxy.write.backends.config.error:%+v", err)
-	}
-
-	// Proxy.
-	mockJSON := tmpDir + "/radon_mock.json"
-	proxy := NewProxy(log, mockJSON, conf)
-	proxy.Start()
-	return fakedbs, proxy, func() {
-		proxy.Stop()
-		fakedbs.Close()
-		os.RemoveAll(tmpDir)
-	}
-}
-
-// MockProxy2 mocks the proxy with the conf.
-func MockProxy2(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func()) {
-	tmpDir := fakedb.GetTmpDir("", "radon_mock_", log)
-	// Fake backends.
-	fakedbs := fakedb.New(log, 5)
-
-	port := randomPort(15000, 20000)
-	addr := fmt.Sprintf(":%d", port)
-
-	conf.Proxy.Endpoint = addr
-	metaDir := tmpDir + "/test_radonmeta_"
-	conf.Proxy.MetaDir = metaDir
-
-	os.RemoveAll(metaDir)
-	if x := os.MkdirAll(metaDir, 0777); x != nil {
-		log.Panic("%+v", x)
-	}
-
-	backends := fakedbs.BackendConfs()
-	backendLen := len(backends)
-	backendsConf := &config.BackendsConfig{
-		Backends: backends[0 : backendLen-1],
-		Backup:   backends[backendLen-1],
-	}
 	if err := config.WriteConfig(path.Join(conf.Proxy.MetaDir, "backend.json"), backendsConf); err != nil {
 		log.Panic("mock.proxy.write.backends.config.error:%+v", err)
 	}

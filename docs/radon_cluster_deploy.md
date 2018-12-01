@@ -15,10 +15,9 @@ Contents
       * [3.1 master node (IP: 192.168.0.16): add peer operation](#31-master-node-ip-192168016-add-peer-operation)
       * [3.2 slave node (IP: 192.168.0.17): add peer operation](#32-slave-node-ip-192168017-add-peer-operation)
       * [3.3 Check the meta data again in bin/radon-meta directory](#33-check-the-meta-data-again-in-binradon-meta-directory)
-   * [Step4 add backend and backup nodes to master node](#step4-add-backend-and-backup-nodes-to-master-node)
+   * [Step4 add backend nodes to master node](#step4-add-backend-nodes-to-master-node)
       * [4.1 add backend1 node(IP: 192.168.0.14)](#41-add-backend1-nodeip-192168014)
       * [4.2 add backend2 node(IP: 192.168.0.28)](#42-add-backend2-nodeip-192168028)
-      * [4.3 add backup node(IP: 192.168.0.15)](#43-add-backup-nodeip-192168015)
    * [Step5 Connect to master via mysql-cli](#step5-connect-to-master-via-mysql-cli)
 
 # Radon cluster deploy
@@ -26,7 +25,7 @@ Contents
 This part is about how to deploy `radon cluster`. By default,  we suppose you are already familiar with the startup and deployment of radon by `standalone mode`. If you are not familiar with it, please refer to it first according to the doc [how_to_build_and_run_radon](how_to_build_and_run_radon.md)。
 
 ## Step1 Environment preparation
-Here we deploy radon cluster by two nodes (a master and a slave, of course you can add more slaves, we use only two nodes just to show how to deploy the cluster). And we need two backend nodes (mysql-server) to storage,  one backup node to compute. The mysql-server requires five hosts (or virtual machines). The architecture of deployment and the IP address of each node are as follows:
+Here we deploy radon cluster by two nodes (a master and a slave, of course you can add more slaves, we use only two nodes just to show how to deploy the cluster). And we need two backend nodes (mysql-server) to storage. The mysql-server requires five hosts (or virtual machines). The architecture of deployment and the IP address of each node are as follows:
 
                        +----------------------------+     
                        |  SQL layer（radon cluster: | 
@@ -34,7 +33,6 @@ Here we deploy radon cluster by two nodes (a master and a slave, of course you c
                        +----------------------------+     
                        |  storage and compute layer:|
                        |  tow backend nodes and 1   |
-                       |  backup node            |  
                        |----------------------------|  
 
 
@@ -47,9 +45,7 @@ Here we deploy radon cluster by two nodes (a master and a slave, of course you c
 
 `node of backend2` : 192.168.0.28
 
-`node of backup`     :   192.168.0.15
-
-By default, we suppose the mysql account and password of mysql-server are all the same between each machine(e.g. account: `mysql`, password: `123455`). Of course,  mysql-server is deployed on backend1、backend2 and backup. Confirm that each mysql-server has granted all privileges to login from another machine, if not, please login mysql-server and execute the following command on each machine: 
+By default, we suppose the mysql account and password of mysql-server are all the same between each machine(e.g. account: `mysql`, password: `123455`). Of course,  mysql-server is deployed on backend1、backend2. Confirm that each mysql-server has granted all privileges to login from another machine, if not, please login mysql-server and execute the following command on each machine: 
 
 ```
 mysql> GRANT ALL PRIVILEGES ON *.* TO mysql@"%" IDENTIFIED BY '123456'  WITH GRANT OPTION;
@@ -125,7 +121,7 @@ $ ls bin/radon-meta/
 backend.json  peers.json  version.json
 ```
 
-## Step4 add backend and backup nodes to master node
+## Step4 add backend nodes to master node
 
 Switch to master node (`IP: 192.168.0.16`) and execute commands as follows:
 
@@ -141,12 +137,6 @@ $ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend2", "
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend1", "address": "192.168.0.28:3306", "user":"mysql", "password": "123456", "max-connections":1024}' http://192.168.0.16:8080/v1/radon/backend
 ```
 
-### 4.3 add backup node(IP: 192.168.0.15)
-
-```
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backupnode", "address": "192.168.0.15:3306", "user":"mysql", "password": "123456", "max-connections":1024}' http://192.168.0.16:8080/v1/radon/backup
-```
-
 From now on，radon cluster has being build. Use vim to view the backend.json file in the bin/radon-meta directory of the master node. You will see that the background node information has been added.
 
 ```
@@ -155,15 +145,6 @@ $ vim bin/radon-meta/backend.json
 
 ```
 {
-        "backup": {
-                "name": "backupnode",
-                "address": "192.168.0.15:3306",
-                "user": "mysql",
-                "password": "123456",
-                "database": "",
-                "charset": "utf8",
-                "max-connections": 1024
-        },
         "backends": [
                 {
                         "name": "backend2",
@@ -195,15 +176,6 @@ $ vim bin/radon-meta/backend.json
 
 ```
 {
-        "backup": {
-                "name": "backupnode",
-                "address": "192.168.0.15:3306",
-                "user": "mysql",
-                "password": "123456",
-                "database": "",
-                "charset": "utf8",
-                "max-connections": 1024
-        },
         "backends": [
                 {
                         "name": "backend2",

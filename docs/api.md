@@ -19,9 +19,6 @@ Contents
    * [backends](#backends)
       * [add](#add)
       * [remove](#remove)
-   * [backup](#backup)
-      * [add](#add-1)
-      * [remove](#remove-1)
    * [meta](#meta)
       * [versions](#versions)
       * [versioncheck](#versioncheck)
@@ -42,10 +39,6 @@ Contents
       * [update user](#update-user)
       * [drop user](#drop-user)
       * [get users](#get-users)
-   * [relay](#relay)
-      * [status](#status-1)
-      * [start](#start)
-      * [stop](#stop)
 
 # API
 
@@ -422,62 +415,6 @@ Method:  DELETE
 $ curl -X DELETE http://127.0.0.1:8080/v1/radon/backend/backend1
 ```
 
-## backup
-
-This api used to add/delete a backup node config.
-
-### add
-
-```
-Path:    /v1/radon/backup
-Method:  POST
-Request: {
-			"name":            "The unique name of this backup",[required]
-			"address":         "The endpoint of this backup",	[required]
-			"user":            "The user(super) for radon to be able to connect to the backend MySQL server",	[required]
-			"password":        "The password of the user",		[required]
-			"max-connections": The maximum permitted number of backend connection pool,			[optional]
-         }
-```
-
-`Example: `
-
-```
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backupnode", "address":  "127.0.0.1:3306", "user": "root", "password": "318831", "max-connections":1024}' \
-		 http://127.0.0.1:8080/v1/radon/backup
-
----Response---
-HTTP/1.1 200 OK
-Date: Tue, 10 Apr 2018 06:05:22 GMT
-Content-Length: 0
-Content-Type: text/plain; charset=utf-8
-```
-`Status:`
-```
-	200: StatusOK
-	405: StatusMethodNotAllowed
-	500: StatusInternalServerError
-```
-
-### remove
-
-```
-Path:    /v1/radon/backup/{backup-name}
-Method:  DELETE
-```
-
-`Status:`
-
-```
-	200: StatusOK
-	405: StatusMethodNotAllowed
-	500: StatusInternalServerError
-```
-`Example: `
-```
-$ curl -X DELETE http://127.0.0.1:8080/v1/radon/backup/backupnode
-```
-
 ## meta
 
 The API used to do multi-proxy meta synchronization.
@@ -561,7 +498,7 @@ Response:{
 $ curl http://127.0.0.1:8080/v1/meta/metas
 
 ---Response---
-{"metas":{"backend.json":"{\n\t\"backup\": null,\n\t\"backends\": null\n}","db_test1/t1.json":"{\n\t\"name\": \"t1\",\n\t\"shardtype\": \"HASH\",\n\t\"shardkey\": \"id\",\n\t\"partitions\": [\n\t\t{\n
+{"metas":{"backend.json":"{\n\t\"backends\": null\n}","db_test1/t1.json":"{\n\t\"name\": \"t1\",\n\t\"shardtype\": \"HASH\",\n\t\"shardkey\": \"id\",\n\t\"partitions\": [\n\t\t{\n
 .....
 .....
 t\t{\n\t\t\t\"table\": \"t2_0029\",\n\t\t\t\"segment\": \"3712-3840\",\n\t\t\t\"backend\": \"backend1\"\n\t\t},\n\t\t{\n\t\t\t\
@@ -685,7 +622,7 @@ Method:  GET
 $ curl http://127.0.0.1:8080/v1/debug/configz
 
 ---Response---
-{"proxy":{"allowip":["127.0.0.1","127.0.0.2"],"meta-dir":"bin/radon-meta","endpoint":":3306","twopc-enable":true,"max-connections":1024,"max-result-size":1073741824,"ddl-timeout":3600,"query-timeout":600,"peer-address":"127.0.0.1:8080","backup-default-engine":"TokuDB"},"audit":{"mode":"N","audit-dir":"bin/radon-audit","max-size":268435456,"expire-hours":1},"router":{"slots-readonly":4096,"blocks-readonly":128},"binlog":{"binlog-dir":"bin/radon-binlog","max-size":134217728,"relay-workers":32,"relay-wait-ms":5000,"enable-binlog":false,"enable-relay":false,"parallel-type":1},"log":{"level":"INFO"}}
+{"proxy":{"allowip":["127.0.0.1","127.0.0.2"],"meta-dir":"bin/radon-meta","endpoint":":3306","twopc-enable":true,"max-connections":1024,"max-result-size":1073741824,"ddl-timeout":3600,"query-timeout":600,"peer-address":"127.0.0.1:8080"},"audit":{"mode":"N","audit-dir":"bin/radon-audit","max-size":268435456,"expire-hours":1},"router":{"slots-readonly":4096,"blocks-readonly":128},"binlog":{"binlog-dir":"bin/radon-binlog","max-size":134217728},"log":{"level":"INFO"}}
 ```
 
 ### backendz
@@ -965,106 +902,4 @@ Method:  GET
 $ curl http://127.0.0.1:8080/v1/user/userz
 ---Response---
 [{"User":"root","Host":"%"},{"User":"test","Host":"%"},{"User":"mysql.session","Host":"localhost"},{"User":"mysql.sys","Host":"localhost"},{"User":"root","Host":"localhost"},{"User":"test","Host":"localhost"}]%
-```
-
-## relay
-
-The relay to backup node.
-
-### status
-
-```
-Path:    /v1/relay/status
-Method:  GET
-Response:{
-		Status          bool   `json:"status"`
-		MaxWorkers      int32  `json:"max-workers"`
-		ParallelWorkers int32  `json:"parallel-workers"`
-		SecondBehinds   int64  `json:"second-behinds"`
-		OrderCommit     bool   `json:"order-commit"`
-		RelayBinlog     string `json:"relay-binlog"`
-		RelayGTID       int64  `json:"relay-gtid"`
-		Rates           string `json:"rates"`
-}
-```
-
-`Status:`
-
-```
-	200: StatusOK
-	405: StatusMethodNotAllowed
-```
-
-`Example:`
-
-```
-$ curl http://127.0.0.1:8080/v1/relay/status
-
----Response---
-{"status":true,"max-workers":32,"parallel-workers":0,"second-behinds":0,"parallel-type":1,"relay-binlog":"","relay-gtid":0,"restart-gtid":0,"rates":"{\"All\":[0]}"}
-```
-
-### start
-
-start the relay worker.
-
-```
-Path:    /v1/relay/start
-Method:  PUT
-Request: nil
-```
-
-`Status:`
-
-```
-	200: StatusOK
-	405: StatusMethodNotAllowed
-	500: StatusInternalServerError
-```
-
-`Example:`
-
-```
-$ curl -i -H 'Content-Type: application/json' -X PUT http://127.0.0.1:8080/v1/relay/start
-
----Response---
-HTTP/1.1 200 OK
-Date: Tue, 10 Apr 2018 05:33:38 GMT
-Content-Length: 0
-Content-Type: text/plain; charset=utf-8
-```
-
-### stop
-
-stop the relay worker.
-
-```
-Path:    /v1/relay/stop
-Method:  PUT
-Request: nil
-```
-
-`Status:`
-
-```
-	200: StatusOK
-	405: StatusMethodNotAllowed
-	500: StatusInternalSserverError
-```
-
-`Example: `
-
-```
-$ curl -i -H 'Content-Type: application/json' -X PUT http://127.0.0.1:8080/v1/relay/stop
-
-HTTP/1.1 200 OK
-Date: Tue, 10 Apr 2018 05:37:02 GMT
-Content-Length: 0
-Content-Type: text/plain; charset=utf-8
-
-$  curl http://127.0.0.1:8080/v1/relay/status
-
-{"status":false,"max-workers":32,"parallel-workers":0,"second-behinds":0,"parallel-type":1,"relay-binlog":"","relay-gtid":0,"restart-gtid":0,"rates":"{\"All\":[0]}"}
-
----Now relay status is `false`
 ```

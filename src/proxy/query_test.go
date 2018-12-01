@@ -243,11 +243,11 @@ func TestProxyQueryStream(t *testing.T) {
 	}
 }
 
-// Proxy with backup
+// Proxy with backup stream fetch.
 func TestProxyQueryStreamWithBackup(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
-	fakedbs, proxy, cleanup := MockProxyWithBackup(log)
+	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
 	address := proxy.Address()
 
@@ -295,7 +295,7 @@ func TestProxyQueryStreamWithBackup(t *testing.T) {
 			query := "select /*backup*/ * from test.t1"
 			qr, err := client.FetchAll(query, -1)
 			assert.Nil(t, err)
-			want := 64544
+			want := 60510
 			got := int(qr.RowsAffected)
 			assert.Equal(t, want, got)
 		}
@@ -303,7 +303,7 @@ func TestProxyQueryStreamWithBackup(t *testing.T) {
 			query := "select * from test.t1 as aliaseTable"
 			qr, err := client.FetchAll(query, -1)
 			assert.Nil(t, err)
-			want := 64544
+			want := 60510
 			got := int(qr.RowsAffected)
 			assert.Equal(t, want, got)
 		}
@@ -311,7 +311,7 @@ func TestProxyQueryStreamWithBackup(t *testing.T) {
 			query := "select /*backup*/ * from test.t1 as aliaseTable"
 			qr, err := client.FetchAll(query, -1)
 			assert.Nil(t, err)
-			want := 64544
+			want := 60510
 			got := int(qr.RowsAffected)
 			assert.Equal(t, want, got)
 		}

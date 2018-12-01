@@ -83,22 +83,12 @@ var (
 		},
 	}
 
-	// MockBackup config.
-	MockBackup = &BackendConfig{
-		Name:           "backupnode",
-		Address:        "127.0.0.1:3304",
-		User:           "root",
-		Password:       "",
-		MaxConnections: 1024,
-	}
-
 	// MockProxyConfig config.
 	MockProxyConfig = &ProxyConfig{
-		Endpoint:            ":5566",
-		MaxConnections:      1024,
-		MetaDir:             "/tmp/radonmeta",
-		PeerAddress:         ":8080",
-		BackupDefaultEngine: "TokuDB",
+		Endpoint:       ":5566",
+		MaxConnections: 1024,
+		MetaDir:        "/tmp/radonmeta",
+		PeerAddress:    ":8080",
 	}
 
 	// MockLogConfig config.
