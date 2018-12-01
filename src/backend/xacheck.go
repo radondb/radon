@@ -29,9 +29,6 @@ const (
 )
 
 const (
-	xaRedoError = "error"
-	xaRedoOk    = "ok"
-
 	txnXACommitErrStateCommit   = "commit"
 	txnXACommitErrStateRollback = "rollback"
 )
