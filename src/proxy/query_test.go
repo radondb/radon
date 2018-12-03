@@ -221,6 +221,17 @@ func TestProxyQueryStream(t *testing.T) {
 		}
 	}
 
+	//select from `subquery` error
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "select id from (select * from test.t1) as aliaseTable"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+		want := "unsupported: subqueries.in.select (errno 1105) (sqlstate HY000)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
 	// select .* from dual  error
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
