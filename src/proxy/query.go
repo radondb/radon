@@ -218,13 +218,13 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 			switch snode.From[0].(type) {
 			case *sqlparser.AliasedTableExpr:
 				aliasTableExpr := snode.From[0].(*sqlparser.AliasedTableExpr)
-				tb := aliasTableExpr.Expr.(sqlparser.TableName)
-				table := tb.Name.String()
-				if table == "dual" {
+				tb, ok := aliasTableExpr.Expr.(sqlparser.TableName)
+				if ok && tb.Name.String() == "dual" {
 					if qr, err = spanner.handleDual(session, query, node); err != nil {
 						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
 					}
-				} else { // e.g.: select a from table [as] aliasTable;
+				} else {
+					// e.g.: select a from table [as] aliasTable;
 					if qr, err = spanner.handleSelect(session, query, node); err != nil {
 						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
 					}
