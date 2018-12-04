@@ -148,6 +148,11 @@ func (r *Router) DatabaseACL(database string) error {
 	return nil
 }
 
+// IsSystemDB used to check wheather the database is a system database.
+func (r *Router) IsSystemDB(database string) bool {
+	return r.dbACL.IsSystemDB(database)
+}
+
 func (r *Router) getTable(database string, tableName string) (*Table, error) {
 	var ok bool
 	var schema *Schema

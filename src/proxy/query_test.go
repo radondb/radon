@@ -221,6 +221,27 @@ func TestProxyQueryStream(t *testing.T) {
 		}
 	}
 
+	// select * from systemdatabase.table
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "select * from information_schema.SCHEMATA"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		fakedbs.AddQueryErrorPattern("select .*", errors.New("mysql.select.from.information_schema.error"))
+		query1 := "select * from information_schema.SCHEMATA"
+		_, err = client.FetchAll(query1, -1)
+		assert.NotNil(t, err)
+		want := "mysql.select.from.information_schema.error (errno 1105) (sqlstate HY000)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+
 	//select from `subquery` error
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
@@ -236,6 +257,7 @@ func TestProxyQueryStream(t *testing.T) {
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
+		fakedbs.ResetAll()
 		fakedbs.AddQueryErrorPattern("select .*", errors.New("mock.mysql.select.from.dual.error"))
 		{ // ERROR 1054 (42S22): Unknown column 'a' in 'field list'
 			query := "select a from dual"

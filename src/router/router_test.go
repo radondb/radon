@@ -328,6 +328,31 @@ func TestRouterDatabaseACL(t *testing.T) {
 	}
 }
 
+func TestRouterIsSystemDB(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+	assert.NotNil(t, router)
+
+	// true.
+	{
+		sysDB := []string{"SYS", "MYSQL", "performance_schema", "information_schema"}
+		for _, sys := range sysDB {
+			is := router.IsSystemDB(sys)
+			assert.Equal(t, is, true)
+		}
+	}
+
+	// false.
+	{
+		sysDB := []string{"SYS1", "MYSQL1", "performance_schema1", "information_schema1"}
+		for _, sys := range sysDB {
+			is := router.IsSystemDB(sys)
+			assert.Equal(t, is, false)
+		}
+	}
+}
+
 func TestRouterTableConfig(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)

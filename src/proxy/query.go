@@ -219,14 +219,20 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 			case *sqlparser.AliasedTableExpr:
 				aliasTableExpr := snode.From[0].(*sqlparser.AliasedTableExpr)
 				tb, ok := aliasTableExpr.Expr.(sqlparser.TableName)
-				if ok && tb.Name.String() == "dual" {
-					if qr, err = spanner.handleDual(session, query, node); err != nil {
+				if !ok {
+					// Subquery.
+					if qr, err = spanner.handleSelect(session, query, node); err != nil {
 						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
 					}
 				} else {
-					// e.g.: select a from table [as] aliasTable;
-					if qr, err = spanner.handleSelect(session, query, node); err != nil {
-						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
+					if tb.Name.String() == "dual" || spanner.router.IsSystemDB(tb.Qualifier.String()) {
+						if qr, err = spanner.ExecuteSingle(query); err != nil {
+							log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
+						}
+					} else {
+						if qr, err = spanner.handleSelect(session, query, node); err != nil {
+							log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
+						}
 					}
 				}
 				spanner.auditLog(session, R, xbase.SELECT, query, qr)
