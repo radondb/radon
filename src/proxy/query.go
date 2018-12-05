@@ -117,7 +117,9 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 			if qr, err = spanner.handleShowEngines(session, query, node); err != nil {
 				log.Error("proxy.show.engines[%s].from.session[%v].error:%+v", query, session.ID(), err)
 			}
-		case sqlparser.ShowTablesStr:
+		case sqlparser.ShowTablesStr, sqlparser.ShowFullTablesStr:
+			// Support for SHOW FULL TBALES which can be parsed used by Navicat
+			// TODO: need to support: SHOW [FULL] TABLES [FROM db_name] [like_or_where]
 			if qr, err = spanner.handleShowTables(session, query, node); err != nil {
 				log.Error("proxy.show.tables[%s].from.session[%v].error:%+v", query, session.ID(), err)
 			}

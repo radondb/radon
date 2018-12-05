@@ -870,6 +870,7 @@ type Show struct {
 	Database TableName
 	From     string
 	Limit    *Limit
+	Where    *Where
 }
 
 // The frollowing constants represent SHOW statements.
@@ -879,6 +880,7 @@ const (
 	ShowTablesStr         = "tables"
 	ShowColumnsStr        = "columns"
 	ShowTablesFromStr     = "tables from"
+	ShowFullTablesStr     = "full tables"
 	ShowCreateTableStr    = "create table"
 	ShowEnginesStr        = "engines"
 	ShowStatusStr         = "status"
@@ -901,6 +903,14 @@ func (node *Show) Format(buf *TrackedBuffer) {
 		buf.Myprintf("show %s %v", node.Type, node.Table)
 	case ShowTablesFromStr:
 		buf.Myprintf("show %s %v", node.Type, node.Database)
+	case ShowFullTablesStr:
+		buf.Myprintf("show %s", node.Type)
+		if node.Database.Name.String() != "" {
+			buf.Myprintf(" from %s", node.Database.Name.String())
+		}
+		if node.Where != nil {
+			buf.Myprintf("%v", node.Where)
+		}
 	case ShowBinlogEventsStr:
 		buf.Myprintf("show %s", node.Type)
 		if node.From != "" {

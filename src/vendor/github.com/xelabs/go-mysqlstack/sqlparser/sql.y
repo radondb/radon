@@ -101,7 +101,7 @@ func forceEOF(yylex interface{}) {
 %token LEX_ERROR
 %left <bytes> UNION
 %token <bytes> SELECT INSERT UPDATE DELETE FROM WHERE GROUP HAVING ORDER BY LIMIT OFFSET FOR
-%token <bytes> ALL DISTINCT AS EXISTS ASC DESC INTO DUPLICATE KEY DEFAULT SET LOCK
+%token <bytes> ALL DISTINCT AS EXISTS ASC DESC INTO DUPLICATE KEY DEFAULT SET LOCK FULL
 %token <bytes> VALUES LAST_INSERT_ID
 %token <bytes> NEXT VALUE SHARE MODE
 %token <bytes> SQL_NO_CACHE SQL_CACHE
@@ -194,7 +194,7 @@ func forceEOF(yylex interface{}) {
 %type <tableExprs> from_opt table_references
 %type <tableExpr> table_reference table_factor join_table
 %type <str> inner_join outer_join natural_join
-%type <tableName> table_name into_table_name
+%type <tableName> table_name into_table_name database_from_opt
 %type <aliasedTableName> aliased_table_name
 %type <indexHints> index_hint_list
 %type <colIdents> index_list
@@ -1004,9 +1004,13 @@ show_statement:
   {
     $$ = &Show{Type: $2}
   }
-| SHOW TABLES FROM table_name force_eof
+|  SHOW TABLES FROM table_name force_eof
   {
     $$ = &Show{Type: ShowTablesStr, Database: $4}
+  }
+| SHOW FULL TABLES database_from_opt where_expression_opt force_eof
+  {
+    $$ = &Show{Type: ShowFullTablesStr, Database: $4, Where: NewWhere(WhereStr, $5)}
   }
 | SHOW COLUMNS FROM table_name force_eof
   {
@@ -1044,6 +1048,15 @@ binlog_from_opt:
 | FROM GTID STRING
   {
     $$ = string($3)
+  }
+
+database_from_opt:
+  {
+    $$ = TableName{}
+  }
+| FROM table_name
+  {
+    $$ = $2
   }
 
 use_statement:
@@ -2361,6 +2374,7 @@ reserved_keyword:
 | FOR
 | FORCE
 | FROM
+| FULL
 | GROUP
 | HAVING
 | IF

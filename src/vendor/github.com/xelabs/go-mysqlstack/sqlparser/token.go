@@ -155,6 +155,7 @@ var keywords = map[string]int{
 	"force":               FORCE,
 	"foreign":             UNUSED,
 	"from":                FROM,
+	"full":                FULL,
 	"fulltext":            UNUSED,
 	"generated":           UNUSED,
 	"get":                 UNUSED,
