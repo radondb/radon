@@ -35,6 +35,21 @@ func TestShow1(t *testing.T) {
 		},
 
 		{
+			input:  "show full tables",
+			output: "show full tables",
+		},
+
+		{
+			input:  "show full tables from t1",
+			output: "show full tables from t1",
+		},
+
+		{
+			input: "show full tables where Table_type != 'VIEW'",
+			output: "show full tables where Table_type != 'VIEW'",
+		},
+
+		{
 			input:  "show tables from t1",
 			output: "show tables",
 		},
