@@ -124,8 +124,8 @@ func TestProxyQueryComments(t *testing.T) {
 	}
 }
 
-// Proxy with no backup
-func TestProxyQueryStream(t *testing.T) {
+// Proxy with query.
+func TestProxyQuerys(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
@@ -230,29 +230,6 @@ func TestProxyQueryStream(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	{
-		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
-		assert.Nil(t, err)
-		fakedbs.AddQueryErrorPattern("select .*", errors.New("mysql.select.from.information_schema.error"))
-		query1 := "select * from information_schema.SCHEMATA"
-		_, err = client.FetchAll(query1, -1)
-		assert.NotNil(t, err)
-		want := "mysql.select.from.information_schema.error (errno 1105) (sqlstate HY000)"
-		got := err.Error()
-		assert.Equal(t, want, got)
-	}
-
-	//select from `subquery` error
-	{
-		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
-		assert.Nil(t, err)
-		query := "select id from (select * from test.t1) as aliaseTable"
-		_, err = client.FetchAll(query, -1)
-		assert.NotNil(t, err)
-		want := "unsupported: subqueries.in.select (errno 1105) (sqlstate HY000)"
-		got := err.Error()
-		assert.Equal(t, want, got)
-	}
 	// select .* from dual  error
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
@@ -276,39 +253,18 @@ func TestProxyQueryStream(t *testing.T) {
 	}
 }
 
-// Proxy with backup stream fetch.
-func TestProxyQueryStreamWithBackup(t *testing.T) {
+// Proxy with system database query.
+// Such as: select * from information_schema.
+func TestProxyQuerySystemDatabase(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
 	address := proxy.Address()
 
-	result11 := &sqltypes.Result{
-		Fields: []*querypb.Field{
-			{
-				Name: "id",
-				Type: querypb.Type_INT32,
-			},
-			{
-				Name: "name",
-				Type: querypb.Type_VARCHAR,
-			},
-		},
-		Rows: make([][]sqltypes.Value, 0, 256)}
-
-	for i := 0; i < 2017; i++ {
-		row := []sqltypes.Value{
-			sqltypes.MakeTrusted(querypb.Type_INT32, []byte("11")),
-			sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("1nice name")),
-		}
-		result11.Rows = append(result11.Rows, row)
-	}
-
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("select .*", result11)
+		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 	}
 
 	// create test table.
@@ -320,86 +276,56 @@ func TestProxyQueryStreamWithBackup(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	// select.
+	// select * from mysql.user
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
-		{
-			query := "select /*backup*/ * from test.t1"
-			qr, err := client.FetchAll(query, -1)
-			assert.Nil(t, err)
-			want := 60510
-			got := int(qr.RowsAffected)
-			assert.Equal(t, want, got)
-		}
-		{ // select * from test.t1 t1 as ...;
-			query := "select * from test.t1 as aliaseTable"
-			qr, err := client.FetchAll(query, -1)
-			assert.Nil(t, err)
-			want := 60510
-			got := int(qr.RowsAffected)
-			assert.Equal(t, want, got)
-		}
-		{ // select id from t1 as ...;
-			query := "select /*backup*/ * from test.t1 as aliaseTable"
-			qr, err := client.FetchAll(query, -1)
-			assert.Nil(t, err)
-			want := 60510
-			got := int(qr.RowsAffected)
-			assert.Equal(t, want, got)
-		}
-		{ // select 1 from dual
-			query := "select 1 from dual"
-			qr, err := client.FetchAll(query, -1)
-			assert.Nil(t, err)
-			want := 2017
-			got := int(qr.RowsAffected)
-			assert.Equal(t, want, got)
-		}
-		{ // select 1
-			query := "select 1"
-			qr, err := client.FetchAll(query, -1)
-			assert.Nil(t, err)
-			want := 2017
-			got := int(qr.RowsAffected)
-			assert.Equal(t, want, got)
-		}
-		{ // select @@version_comment limit 1 [from] [dual]
-			query := "select @@version_comment limit 1"
-			qr, err := client.FetchAll(query, -1)
-			assert.Nil(t, err)
-			want := 2017
-			got := int(qr.RowsAffected)
-			assert.Equal(t, want, got)
-		}
+		query := "select * from mysql.user"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
-	// select .*  from dual error
+	// select * from systemdatabase.table
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
-		fakedbs.AddQueryErrorPattern("select .*", errors.New("mock.mysql.select.from.dual.error"))
-		{ // ERROR 1054 (42S22): Unknown column 'a' in 'field list'
-			query := "select a from dual"
-			_, err := client.FetchAll(query, -1)
-			want := "mock.mysql.select.from.dual.error (errno 1105) (sqlstate HY000)"
-			got := err.Error()
-			assert.Equal(t, want, got)
-		}
-		{
-			query := "select a from dual as aliasTable"
-			_, err := client.FetchAll(query, -1)
-			want := "mock.mysql.select.from.dual.error (errno 1105) (sqlstate HY000)"
-			got := err.Error()
-			assert.Equal(t, want, got)
-		}
-		{
-			query := "select a from test.t1 as aliasTable"
-			_, err := client.FetchAll(query, -1)
-			want := "mock.mysql.select.from.dual.error (errno 1105) (sqlstate HY000)"
-			got := err.Error()
-			assert.Equal(t, want, got)
-		}
+		query := "select * from information_schema.SCHEMATA"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// select * from information_schema.COLUMNS where TABLE_NAME='t1' and TABLE_SCHEMA='test'
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "select * from information_schema.COLUMNS where TABLE_NAME='t1' and TABLE_SCHEMA='test'"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// ClickHouse MySQL Driver:
+	// SELECT COLUMN_NAME AS name, DATA_TYPE AS type, IS_NULLABLE = 'YES' AS is_nullable, COLUMN_TYPE LIKE '%unsigned%' AS is_unsigned, CHARACTER_MAXIMUM_LENGTH AS length FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='test' AND TABLE_NAME='t1' ORDER BY ORDINAL_POSITION
+	// rewrite to:
+	// select COLUMN_NAME as name, DATA_TYPE as type, IS_NULLABLE = 'YES' as is_nullable, COLUMN_TYPE like '%unsigned%' as is_unsigned, CHARACTER_MAXIMUM_LENGTH as length from INFORMATION_SCHEMA.`columns` where TABLE_SCHEMA = 'test' and TABLE_NAME = 't1_0000' order by ORDINAL_POSITION asc
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "SELECT COLUMN_NAME AS name, DATA_TYPE AS type, IS_NULLABLE = 'YES' AS is_nullable, COLUMN_TYPE LIKE '%unsigned%' AS is_unsigned, CHARACTER_MAXIMUM_LENGTH AS length FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='test' AND TABLE_NAME='t1' ORDER BY ORDINAL_POSITION"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// error
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		fakedbs.AddQueryErrorPattern("select .*", errors.New("mysql.select.from.information_schema.error"))
+		query1 := "select * from information_schema.SCHEMATA"
+		_, err = client.FetchAll(query1, -1)
+		assert.NotNil(t, err)
+		want := "mysql.select.from.information_schema.error (errno 1105) (sqlstate HY000)"
+		got := err.Error()
+		assert.Equal(t, want, got)
 	}
 }
 

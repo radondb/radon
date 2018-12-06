@@ -227,11 +227,18 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
 					}
 				} else {
-					if tb.Name.String() == "dual" || spanner.router.IsSystemDB(tb.Qualifier.String()) {
+					if tb.Name.String() == "dual" {
+						// Select 1.
 						if qr, err = spanner.ExecuteSingle(query); err != nil {
 							log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
 						}
+					} else if spanner.router.IsSystemDB(tb.Qualifier.String()) {
+						// System database select.
+						if qr, err = spanner.handleSelectSystem(session, query, node); err != nil {
+							log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
+						}
 					} else {
+						// Normal select.
 						if qr, err = spanner.handleSelect(session, query, node); err != nil {
 							log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
 						}
