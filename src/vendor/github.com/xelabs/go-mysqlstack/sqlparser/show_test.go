@@ -51,7 +51,7 @@ func TestShow1(t *testing.T) {
 
 		{
 			input:  "show tables from t1",
-			output: "show tables",
+			output: "show tables from t1",
 		},
 
 		{
