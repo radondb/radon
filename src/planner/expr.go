@@ -9,8 +9,6 @@
 package planner
 
 import (
-	"fmt"
-
 	"router"
 
 	"github.com/pkg/errors"
@@ -126,35 +124,48 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr) (*selectTuple, error) {
 	funcName := ""
 	distinct := false
 	field = expr.As.String()
-	switch expr.Expr.(type) {
-	case *sqlparser.ColName:
-		col := expr.Expr.(*sqlparser.ColName)
-		colName = col.Name.String()
-		colName1 = colName
-		if !col.Qualifier.IsEmpty() {
-			colName = col.Qualifier.Name.String() + "." + colName
-		}
-	case *sqlparser.FuncExpr:
-		ex := expr.Expr.(*sqlparser.FuncExpr)
-		distinct = ex.Distinct
-		funcName = ex.Name.String()
-		switch ex.Exprs[0].(type) {
-		case *sqlparser.AliasedExpr:
-			exx := ex.Exprs[0].(*sqlparser.AliasedExpr)
-			tuple, err := parserSelectExpr(exx)
-			if err != nil {
-				return nil, err
+	err := sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
+		switch node := node.(type) {
+		case *sqlparser.ColName:
+			if colName != "" {
+				return false, errors.Errorf("unsupported: more.than.one.column.in.a.select.expr")
 			}
-			colName = tuple.column
-		case *sqlparser.StarExpr:
-			colName = "*"
+			colName = node.Name.String()
+			colName1 = colName
+			if !node.Qualifier.IsEmpty() {
+				colName = node.Qualifier.Name.String() + "." + colName
+			}
+		case *sqlparser.FuncExpr:
+			distinct = node.Distinct
+			if node.IsAggregate() {
+				if node != expr.Expr {
+					return false, errors.Errorf("unsupported: expression.in.select.exprs")
+				}
+				funcName = node.Name.String()
+				if len(node.Exprs) != 1 {
+					return false, errors.Errorf("unsupported: invalid.use.of.group.function[%s]", funcName)
+				}
+			}
+			return true, nil
+		case *sqlparser.GroupConcatExpr:
+			return false, errors.Errorf("unsupported: group_concat.in.select.exprs")
+		case *sqlparser.Subquery:
+			return false, errors.Errorf("unsupported: subqueries.in.select.exprs")
 		}
+		return true, nil
+	}, expr.Expr)
+	if err != nil {
+		return nil, err
 	}
+
 	if field == "" {
-		if funcName != "" {
-			field = fmt.Sprintf("%s(%s)", funcName, colName)
-		} else {
+		_, isCol := expr.Expr.(*sqlparser.ColName)
+		if isCol {
 			field = colName1
+		} else {
+			buf := sqlparser.NewTrackedBuffer(nil)
+			expr.Format(buf)
+			field = buf.String()
 		}
 	}
 	return &selectTuple{field, colName, funcName, distinct}, nil
@@ -174,6 +185,8 @@ func parserSelectExprs(exprs sqlparser.SelectExprs) ([]selectTuple, error) {
 		case *sqlparser.StarExpr:
 			tuple := selectTuple{field: "*", column: "*"}
 			tuples = append(tuples, tuple)
+		case sqlparser.Nextval:
+			return nil, errors.Errorf("unsupported: Nextval.in.select.exprs")
 		}
 	}
 	return tuples, nil

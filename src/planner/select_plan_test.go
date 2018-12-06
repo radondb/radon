@@ -288,21 +288,33 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select * from A as A1 where id in (select id from B)",
 		"select distinct(b) from A",
 		"select A.id from A join B on B.id=A.id",
-		"select id, rand(id) from A",
 		"select id from A order by b",
 		"select id from A limit x",
 		"select age,count(*) from A group by age having count(*) >=2",
 		"select * from (A,B)",
+		"select count() from A",
+		"select round(avg(id)) from A",
+		"select id,group_concat(distinct name) from A group by id",
+		"select next value for A",
+		"select concat(str1,str2) from A",
+		"select A.*,(select b.str from b where A.id=B.id) str from A",
+		"select avg(id)*1000 from A",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
 		"unsupported: distinct",
 		"unsupported: more.than.one.shard.tables",
-		"unsupported: function:rand",
 		"unsupported: orderby[b].should.in.select.list",
 		"unsupported: limit.offset.or.counts.must.be.IntVal",
 		"unsupported: expr[count(*)].in.having.clause",
 		"unsupported: ParenTableExpr.in.select",
+		"unsupported: invalid.use.of.group.function[count]",
+		"unsupported: expression.in.select.exprs",
+		"unsupported: group_concat.in.select.exprs",
+		"unsupported: Nextval.in.select.exprs",
+		"unsupported: more.than.one.column.in.a.select.expr",
+		"unsupported: subqueries.in.select",
+		"unsupported: expression.in.select.exprs",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -324,6 +336,36 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 			want := results[i]
 			got := err.Error()
 			assert.Equal(t, want, got)
+
+		}
+	}
+}
+
+func TestSelectSupportedPlan(t *testing.T) {
+	querys := []string{
+		"select id,rand(id) from A",
+		"select now() as time, count(1), avg(id), sum(b) from A",
+		"select avg(id + 1) from A",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig())
+	assert.Nil(t, err)
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+
+		// plan build
+		{
+			err := plan.Build()
+			assert.Nil(t, err)
+
 		}
 	}
 }
@@ -509,7 +551,7 @@ func TestSelectPlanGetOneTableInfo(t *testing.T) {
 	plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
 	{
 		_, err = plan.getOneTableInfo(nil)
-		want := "unsupported: aliasTableExpr cannot be nil"
+		want := "unsupported: aliasTableExpr.cannot.be.nil"
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}
