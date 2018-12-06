@@ -302,7 +302,7 @@ func (p *SelectPlan) Size() int {
 func (p *SelectPlan) getOneTableInfo(aliasTableExpr *sqlparser.AliasedTableExpr) (TableInfo, error) {
 	var tableInfo TableInfo
 	if aliasTableExpr == nil {
-		return tableInfo, errors.New("unsupported: aliasTableExpr cannot be nil")
+		return tableInfo, errors.New("unsupported: aliasTableExpr.cannot.be.nil")
 	}
 
 	switch expr := aliasTableExpr.Expr.(type) {

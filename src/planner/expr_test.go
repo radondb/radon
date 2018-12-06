@@ -47,3 +47,23 @@ func TestGetDMLRouting(t *testing.T) {
 		assert.Equal(t, want[i], len(got))
 	}
 }
+
+func TestParserSelectExprsSubquery(t *testing.T) {
+	query := "select A.*,(select b.str from b where A.id=B.id) str from A"
+	want := "unsupported: subqueries.in.select.exprs"
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+
+	sel := node.(*sqlparser.Select)
+	_, err = parserSelectExprs(sel.SelectExprs)
+	got := err.Error()
+	assert.Equal(t, want, got)
+}

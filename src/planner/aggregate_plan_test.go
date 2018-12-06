@@ -302,14 +302,12 @@ func TestAggregatePlanUnsupported(t *testing.T) {
 	querys := []string{
 		"select sum(a)  from t group by d",
 		"select sum(a),d  from t group by db.t.d",
-		"select rand(a),d  from t group by a",
 		"select count(distinct b) from t",
 		"select age,count(*) from A group by age having count(*) >=2",
 	}
 	results := []string{
 		"unsupported: group.by.field[d].should.be.in.select.list",
 		"unsupported: group.by.field[d].have.table.name[t].please.use.AS.keyword",
-		"unsupported: function:rand",
 		"unsupported: distinct.in.function:count",
 		"unsupported: expr[count(*)].in.having.clause",
 	}
