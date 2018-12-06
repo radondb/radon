@@ -879,7 +879,6 @@ const (
 	ShowCreateDatabaseStr = "create database"
 	ShowTablesStr         = "tables"
 	ShowColumnsStr        = "columns"
-	ShowTablesFromStr     = "tables from"
 	ShowFullTablesStr     = "full tables"
 	ShowCreateTableStr    = "create table"
 	ShowEnginesStr        = "engines"
@@ -901,8 +900,11 @@ func (node *Show) Format(buf *TrackedBuffer) {
 		buf.Myprintf("show %s %v", node.Type, node.Database)
 	case ShowCreateTableStr:
 		buf.Myprintf("show %s %v", node.Type, node.Table)
-	case ShowTablesFromStr:
-		buf.Myprintf("show %s %v", node.Type, node.Database)
+	case ShowTablesStr:
+		buf.Myprintf("show %s", node.Type)
+		if node.Database.Name.String() != "" {
+			buf.Myprintf(" from %s", node.Database.Name.String())
+		}
 	case ShowFullTablesStr:
 		buf.Myprintf("show %s", node.Type)
 		if node.Database.Name.String() != "" {
