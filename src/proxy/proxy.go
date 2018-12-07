@@ -270,3 +270,11 @@ func (p *Proxy) SetThrottle(val int) {
 	p.log.Info("proxy.SetThrottle:[%v->%v]", p.throttle.Limits(), val)
 	p.throttle.Set(val)
 }
+
+// SetStreamBufferSize used to set the streamBufferSize.
+func (p *Proxy) SetStreamBufferSize(streamBufferSize int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.log.Info("proxy.SetStreamBufferSize:[%d->%d]", p.conf.Proxy.StreamBufferSize, streamBufferSize)
+	p.conf.Proxy.StreamBufferSize = streamBufferSize
+}

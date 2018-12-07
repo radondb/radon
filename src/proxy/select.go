@@ -21,7 +21,6 @@ func (spanner *Spanner) handleSelect(session *driver.Session, query string, node
 }
 
 func (spanner *Spanner) handleSelectStream(session *driver.Session, query string, node sqlparser.Statement, callback func(qr *sqltypes.Result) error) error {
-	streamBufferSize := 1024 * 1024 * 16 // 64MB
 	database := session.Schema()
-	return spanner.ExecuteStreamFetch(session, database, query, node, callback, streamBufferSize)
+	return spanner.ExecuteStreamFetch(session, database, query, node, callback)
 }

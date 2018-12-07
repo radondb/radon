@@ -36,23 +36,25 @@ func TestCtlV1RadonConfig(t *testing.T) {
 		handler := api.MakeHandler()
 
 		type radonParams1 struct {
-			MaxConnections int      `json:"max-connections"`
-			DDLTimeout     int      `json:"ddl-timeout"`
-			QueryTimeout   int      `json:"query-timeout"`
-			TwoPCEnable    bool     `json:"twopc-enable"`
-			AllowIP        []string `json:"allowip,omitempty"`
-			AuditMode      string   `json:"audit-mode"`
+			MaxConnections   int      `json:"max-connections"`
+			DDLTimeout       int      `json:"ddl-timeout"`
+			QueryTimeout     int      `json:"query-timeout"`
+			TwoPCEnable      bool     `json:"twopc-enable"`
+			AllowIP          []string `json:"allowip,omitempty"`
+			AuditMode        string   `json:"audit-mode"`
+			StreamBufferSize int      `json:"stream-buffer-size"`
 		}
 
 		// 200.
 		{
 			// client
 			p := &radonParams1{
-				MaxConnections: 1023,
-				QueryTimeout:   33,
-				TwoPCEnable:    true,
-				AllowIP:        []string{"127.0.0.1", "127.0.0.2"},
-				AuditMode:      "A",
+				MaxConnections:   1023,
+				QueryTimeout:     33,
+				TwoPCEnable:      true,
+				AllowIP:          []string{"127.0.0.1", "127.0.0.2"},
+				AuditMode:        "A",
+				StreamBufferSize: 16777216,
 			}
 			recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("PUT", "http://localhost/v1/radon/config", p))
 			recorded.CodeIs(200)
@@ -65,16 +67,18 @@ func TestCtlV1RadonConfig(t *testing.T) {
 			assert.Equal(t, true, radonConf.Proxy.TwopcEnable)
 			assert.Equal(t, []string{"127.0.0.1", "127.0.0.2"}, radonConf.Proxy.IPS)
 			assert.Equal(t, "A", radonConf.Audit.Mode)
+			assert.Equal(t, 16777216, radonConf.Proxy.StreamBufferSize)
 		}
 
 		// Unset AllowIP.
 		{
 			// client
 			p := &radonParams1{
-				MaxConnections: 1023,
-				QueryTimeout:   33,
-				TwoPCEnable:    true,
-				AuditMode:      "A",
+				MaxConnections:   1023,
+				QueryTimeout:     33,
+				TwoPCEnable:      true,
+				AuditMode:        "A",
+				StreamBufferSize: 67108864,
 			}
 			recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("PUT", "http://localhost/v1/radon/config", p))
 			recorded.CodeIs(200)
@@ -87,6 +91,7 @@ func TestCtlV1RadonConfig(t *testing.T) {
 			assert.Equal(t, true, radonConf.Proxy.TwopcEnable)
 			assert.Nil(t, radonConf.Proxy.IPS)
 			assert.Equal(t, "A", radonConf.Audit.Mode)
+			assert.Equal(t, 67108864, radonConf.Proxy.StreamBufferSize)
 		}
 	}
 }
