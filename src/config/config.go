@@ -90,24 +90,14 @@ func (c *AuditConfig) UnmarshalJSON(b []byte) error {
 type BinlogConfig struct {
 	LogDir       string `json:"binlog-dir"`
 	MaxSize      int    `json:"max-size"`
-	RelayWorkers int    `json:"relay-workers"`
-	RelayWaitMs  int    `json:"relay-wait-ms"`
 	EnableBinlog bool   `json:"enable-binlog"`
-	EnableRelay  bool   `json:"enable-relay"`
-	// type=0, turn off the parallel.
-	// type=1, same events type can parallel(default).
-	// type=2, all events type can parallel.
-	ParallelType int `json:"parallel-type"`
 }
 
 // DefaultBinlogConfig returns default binlog config.
 func DefaultBinlogConfig() *BinlogConfig {
 	return &BinlogConfig{
-		LogDir:       "/tmp/binlog",
-		MaxSize:      1024 * 1024 * 128, // 128MB
-		RelayWorkers: 32,
-		RelayWaitMs:  5000,
-		ParallelType: 1,
+		LogDir:  "/tmp/binlog",
+		MaxSize: 1024 * 1024 * 128, // 128MB
 	}
 }
 
