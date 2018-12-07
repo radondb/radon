@@ -339,9 +339,17 @@ var (
 
 // MockNewRouter mocks router.
 func MockNewRouter(log *xlog.Log) (*Router, func()) {
-	return NewRouter(log, mockTmpDir, config.DefaultRouterConfig()), func() {
+	return NewRouter(log, mockTmpDir, MockNewRouterConfig()), func() {
 		if err := os.RemoveAll(mockTmpDir); err != nil {
 			panic(err)
 		}
+	}
+}
+
+// MockNewRouterConfig returns the router config.
+func MockNewRouterConfig() *config.RouterConfig {
+	return &config.RouterConfig{
+		Slots:  4096,
+		Blocks: 128,
 	}
 }
