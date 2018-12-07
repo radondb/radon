@@ -873,7 +873,7 @@ type Show struct {
 	Where    *Where
 }
 
-// The frollowing constants represent SHOW statements.
+// The following constants represent SHOW statements.
 const (
 	ShowDatabasesStr      = "databases"
 	ShowCreateDatabaseStr = "create database"
