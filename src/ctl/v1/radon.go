@@ -18,13 +18,14 @@ import (
 )
 
 type radonParams struct {
-	MaxConnections *int     `json:"max-connections"`
-	MaxResultSize  *int     `json:"max-result-size"`
-	DDLTimeout     *int     `json:"ddl-timeout"`
-	QueryTimeout   *int     `json:"query-timeout"`
-	TwoPCEnable    *bool    `json:"twopc-enable"`
-	AllowIP        []string `json:"allowip,omitempty"`
-	AuditMode      *string  `json:"audit-mode"`
+	MaxConnections   *int     `json:"max-connections"`
+	MaxResultSize    *int     `json:"max-result-size"`
+	DDLTimeout       *int     `json:"ddl-timeout"`
+	QueryTimeout     *int     `json:"query-timeout"`
+	TwoPCEnable      *bool    `json:"twopc-enable"`
+	AllowIP          []string `json:"allowip,omitempty"`
+	AuditMode        *string  `json:"audit-mode"`
+	StreamBufferSize *int     `json:"stream-buffer-size"`
 }
 
 // RadonConfigHandler impl.
@@ -63,6 +64,9 @@ func radonConfigHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter
 	proxy.SetAllowIP(p.AllowIP)
 	if p.AuditMode != nil {
 		proxy.SetAuditMode(*p.AuditMode)
+	}
+	if p.StreamBufferSize != nil {
+		proxy.SetStreamBufferSize(*p.StreamBufferSize)
 	}
 
 	// reset the allow ip table list.

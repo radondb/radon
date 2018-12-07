@@ -138,7 +138,7 @@ func (spanner *Spanner) executeWithTimeout(session *driver.Session, database str
 }
 
 // ExecuteStreamFetch used to execute a stream fetch query.
-func (spanner *Spanner) ExecuteStreamFetch(session *driver.Session, database string, query string, node sqlparser.Statement, callback func(qr *sqltypes.Result) error, streamBufferSize int) error {
+func (spanner *Spanner) ExecuteStreamFetch(session *driver.Session, database string, query string, node sqlparser.Statement, callback func(qr *sqltypes.Result) error) error {
 	log := spanner.log
 	router := spanner.router
 	scatter := spanner.scatter
@@ -169,6 +169,7 @@ func (spanner *Spanner) ExecuteStreamFetch(session *driver.Session, database str
 	reqCtx.Mode = plan.ReqMode
 	reqCtx.Querys = plan.Querys
 	reqCtx.RawQuery = plan.RawQuery
+	streamBufferSize := spanner.conf.Proxy.StreamBufferSize
 	return txn.ExecuteStreamFetch(reqCtx, callback, streamBufferSize)
 }
 
