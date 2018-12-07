@@ -7,8 +7,7 @@
         },
         "binlog": {
                 "binlog-dir": "{RADON-BINLOG-DIR}",
-                "enable-binlog": true,
-                "enable-relay": true
+                "enable-binlog": true
         },
         "audit": {
                 "mode": "N",
