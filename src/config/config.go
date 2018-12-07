@@ -207,7 +207,7 @@ type RouterConfig struct {
 func DefaultRouterConfig() *RouterConfig {
 	return &RouterConfig{
 		Slots:  4096,
-		Blocks: 128,
+		Blocks: 64,
 	}
 }
 

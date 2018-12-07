@@ -69,6 +69,8 @@ func MockProxy(log *xlog.Log) (*fakedb.DB, *Proxy, func()) {
 func MockProxy1(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func()) {
 	tmpDir := fakedb.GetTmpDir("", "radon_mock_", log)
 
+	// set Blocks 128
+	conf.Router.Blocks = 128
 	// Fake backends.
 	fakedbs := fakedb.New(log, 5)
 

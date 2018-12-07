@@ -261,7 +261,7 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 		"expire-hours": 1
 	},
 	"router": {
-		"blocks-readonly": 128
+		"blocks-readonly": 64
 	},
 	"binlog": {
 		"binlog-dir": "/tmp/binlog"
