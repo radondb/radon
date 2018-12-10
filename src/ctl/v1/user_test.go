@@ -29,7 +29,7 @@ func TestCtlV1CreateUser(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQuery("GRANT SELECT ON *.* TO 'mock'@'localhost' IDENTIFIED BY 'pwd'", &sqltypes.Result{})
+		fakedbs.AddQuery("GRANT SELECT ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", &sqltypes.Result{})
 	}
 
 	// server
@@ -57,7 +57,7 @@ func TestCtlV1CreateUserError(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQueryError("GRANT SELECT ON *.* TO 'mock'@'localhost' IDENTIFIED BY 'pwd'", errors.New("mock.create.user.error"))
+		fakedbs.AddQueryError("GRANT SELECT ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", errors.New("mock.create.user.error"))
 	}
 
 	// server
@@ -90,7 +90,7 @@ func TestCtlV1AlterUser(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQuery("ALTER USER 'mock'@'localhost' IDENTIFIED BY 'pwd'", &sqltypes.Result{})
+		fakedbs.AddQuery("ALTER USER 'mock'@'%' IDENTIFIED BY 'pwd'", &sqltypes.Result{})
 	}
 
 	// server
@@ -118,7 +118,7 @@ func TestCtlV1AlterUserError(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQueryError("ALTER USER 'mock'@'localhost' IDENTIFIED BY 'pwd'", errors.New("mock.alter.user.error"))
+		fakedbs.AddQueryError("ALTER USER 'mock'@'%' IDENTIFIED BY 'pwd'", errors.New("mock.alter.user.error"))
 	}
 
 	// server
@@ -153,7 +153,7 @@ func TestCtlV1DropUser(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQueryPattern("DROP USER 'mock'@'localhost'", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("DROP USER 'mock'@'%'", &sqltypes.Result{})
 	}
 
 	// server
@@ -220,11 +220,11 @@ func TestCtlV1Userz(t *testing.T) {
 		Rows: [][]sqltypes.Value{
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test1")),
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("localhost")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("%")),
 			},
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test2")),
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("localhost")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("%")),
 			},
 		},
 	}
@@ -246,7 +246,7 @@ func TestCtlV1Userz(t *testing.T) {
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("GET", "http://localhost/v1/user/userz", nil))
 		recorded.CodeIs(200)
 
-		want := "[{\"User\":\"test1\",\"Host\":\"localhost\"},{\"User\":\"test2\",\"Host\":\"localhost\"}]"
+		want := "[{\"User\":\"test1\",\"Host\":\"%\"},{\"User\":\"test2\",\"Host\":\"%\"}]"
 		got := recorded.Recorder.Body.String()
 		log.Debug(got)
 		assert.Equal(t, want, got)
