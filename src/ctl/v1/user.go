@@ -43,7 +43,7 @@ func createUserHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter,
 	}
 	log.Warning("api.v1.create.user[from:%v].[%v]", r.RemoteAddr, p)
 
-	query := fmt.Sprintf("GRANT SELECT ON *.* TO '%s'@'localhost' IDENTIFIED BY '%s'", p.User, p.Password)
+	query := fmt.Sprintf("GRANT SELECT ON *.* TO '%s'@'%%' IDENTIFIED BY '%s'", p.User, p.Password)
 	if _, err := spanner.ExecuteScatter(query); err != nil {
 		log.Error("api.v1.create.user[%+v].error:%+v", p, err)
 		rest.Error(w, err.Error(), http.StatusServiceUnavailable)
@@ -69,7 +69,7 @@ func alterUserHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, 
 	}
 	log.Warning("api.v1.alter.user[from:%v].[%v]", r.RemoteAddr, p)
 
-	query := fmt.Sprintf("ALTER USER '%s'@'localhost' IDENTIFIED BY '%s'", p.User, p.Password)
+	query := fmt.Sprintf("ALTER USER '%s'@'%%' IDENTIFIED BY '%s'", p.User, p.Password)
 	if _, err := spanner.ExecuteScatter(query); err != nil {
 		log.Error("api.v1.alter.user[%+v].error:%+v", p, err)
 		rest.Error(w, err.Error(), http.StatusServiceUnavailable)
@@ -95,7 +95,7 @@ func dropUserHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r
 	}
 	log.Warning("api.v1.drop.user[from:%v].[%v]", r.RemoteAddr, p)
 
-	query := fmt.Sprintf("DROP USER '%s'@'localhost'", p.User)
+	query := fmt.Sprintf("DROP USER '%s'@'%%'", p.User)
 	if _, err := spanner.ExecuteScatter(query); err != nil {
 		log.Error("api.v1.drop.user[%+v].error:%+v", p.User, err)
 		rest.Error(w, err.Error(), http.StatusServiceUnavailable)
