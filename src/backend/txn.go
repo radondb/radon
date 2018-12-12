@@ -751,63 +751,98 @@ func (txn *Txn) ExecuteStreamFetch(req *xcontext.RequestContext, callback func(*
 	}
 
 	// Send rows.
-	var allByteCount, allBatchCount, allRowCount uint64
-
-	byteCount := 0
 	cursorFinished := 0
-	bitmap := make([]bool, len(cursors))
-	qr := &sqltypes.Result{Fields: fields, Rows: make([][]sqltypes.Value, 0, 256), State: sqltypes.RStateRows}
-	for cursorFinished < len(cursors) {
-		for i, cursor := range cursors {
-			fetchPerLoop := 64
-			name := req.Querys[i].Backend
-			for fetchPerLoop > 0 {
-				if cursor.Next() {
-					allRowCount++
-					row, err := cursor.RowValues()
-					if err != nil {
-						log.Error("txn.stream.cursor[%s].RowValues.error:%+v", name, err)
-						return err
+	rows := make(chan []sqltypes.Value, 65536)
+	stop := make(chan bool)
+	oneFetch := func(name string, cursor driver.Rows) {
+		defer wg.Done()
+		for {
+			if cursor.Next() {
+				row, err := cursor.RowValues()
+				if err != nil {
+					log.Error("txn.stream.cursor[%s].RowValues.error:%+v", name, err)
+					mu.Lock()
+					allErrors = append(allErrors, err)
+					cursorFinished++
+					if cursorFinished == len(cursors) {
+						close(rows)
 					}
-					rowLen := sqltypes.Values(row).Len()
-					byteCount += rowLen
-					allByteCount += uint64(rowLen)
-					qr.Rows = append(qr.Rows, row)
+					mu.Unlock()
+					return
+				}
+				select {
+				case <-stop:
+					return
+				case rows <- row:
+				}
+			} else {
+				mu.Lock()
+				cursorFinished++
+				if cursorFinished == len(cursors) {
+					close(rows)
+				}
+				mu.Unlock()
+				return
+			}
+		}
+	}
 
-				} else {
-					if !bitmap[i] {
-						if x := cursor.LastError(); x != nil {
-							log.Error("txn.stream.cursor[%s].last.error:%+v", name, x)
-							return x
-						}
-						bitmap[i] = true
-						cursorFinished++
+	// producer.
+	for i, cursor := range cursors {
+		name := req.Querys[i].Backend
+		wg.Add(1)
+		go oneFetch(name, cursor)
+	}
+	// consumer.
+	var allRowCount uint64
+	wg.Add(1)
+	go func() {
+		var allByteCount, allBatchCount uint64
+		byteCount := 0
+		qr := &sqltypes.Result{Fields: fields, Rows: make([][]sqltypes.Value, 0, 256), State: sqltypes.RStateRows}
+		defer func() {
+			close(stop)
+			wg.Done()
+		}()
+		for {
+			if row, ok := <-rows; ok {
+				rowLen := sqltypes.Values(row).Len()
+				allRowCount++
+				byteCount += rowLen
+				allByteCount += uint64(rowLen)
+				qr.Rows = append(qr.Rows, row)
+
+				if byteCount >= streamBufferSize {
+					if x := callback(qr); x != nil {
+						log.Error("txn.stream.cursor.send1.error:%+v", x)
+						mu.Lock()
+						allErrors = append(allErrors, x)
+						mu.Unlock()
+						return
+					}
+					qr.Rows = qr.Rows[:0]
+					allBatchCount++
+					byteCount = 0
+				}
+			} else {
+				if len(qr.Rows) > 0 {
+					if x := callback(qr); x != nil {
+						log.Error("txn.stream.cursor.send2.error:%+v", x)
+						mu.Lock()
+						allErrors = append(allErrors, x)
+						mu.Unlock()
+						return
 					}
 				}
-				fetchPerLoop--
+				log.Warning("txn.stream.send.done[allRows:%v, allBytes:%v, allBatches:%v]", allRowCount, allByteCount, allBatchCount)
+				return
 			}
 		}
-
-		if byteCount >= streamBufferSize {
-			if x := callback(qr); x != nil {
-				log.Error("txn.stream.cursor.send1.error:%+v", x)
-				return x
-			}
-			qr.Rows = qr.Rows[:0]
-			byteCount = 0
-			allBatchCount++
-
-			log.Warning("txn.steam.send.[streamBufferSize:%v, hasSentRows:%v, hasSentBytes:%v, hasSentBatchs:%v, cursorFinished:%d/%d]",
-				streamBufferSize, allRowCount, allByteCount, allBatchCount, cursorFinished, len(cursors))
-		}
+	}()
+	wg.Wait()
+	if len(allErrors) > 0 {
+		return allErrors[0]
 	}
-	if len(qr.Rows) > 0 {
-		if x := callback(qr); x != nil {
-			log.Error("txn.stream.cursor.send2.error:%+v", x)
-			return x
-		}
-	}
-	log.Warning("txn.stream.send.done[allRows:%v, allBytes:%v, allBatches:%v]", allRowCount, allByteCount, allBatchCount)
 
 	// Send finished.
 	finishQr := &sqltypes.Result{Fields: fields, RowsAffected: allRowCount, State: sqltypes.RStateFinished}

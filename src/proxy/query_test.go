@@ -172,7 +172,7 @@ func TestProxyQuerys(t *testing.T) {
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
 		{
-			query := "select /*backup*/ * from test.t1"
+			query := "select  * from test.t1"
 			qr, err := client.FetchAll(query, -1)
 			assert.Nil(t, err)
 			want := 60510
@@ -191,7 +191,7 @@ func TestProxyQuerys(t *testing.T) {
 			query := "set @@SESSION.radon_streaming_fetch='ON'"
 			_, err := client.FetchAll(query, -1)
 			assert.Nil(t, err)
-			query = "select /*backup*/ * from test.t1 as aliaseTable"
+			query = "select * from test.t1 as aliaseTable"
 			qr, err := client.FetchAll(query, -1)
 			assert.Nil(t, err)
 			want := 60510

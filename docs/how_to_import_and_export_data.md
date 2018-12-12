@@ -220,7 +220,7 @@ mysql> select count(*) from benchyou1;
 
 ## 4. How to export data
 
-Use `mydumper` to export data from `radon`, this process is stream acquire (select statement with '/*backup*/'hint) and export, basically does not occupy system memory.
+Use `mydumper` to export data from `radon`, this process is stream acquire (with `set @@SESSION.radon_streaming_fetch='ON'`) and export, basically does not occupy system memory.
 
 ```plain
 $./bin/mydumper -h 192.168.0.2 -P 3306 -u radondb -p radondb -db sbtest  -o sbtest.sql

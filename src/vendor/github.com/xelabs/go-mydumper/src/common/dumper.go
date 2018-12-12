@@ -49,7 +49,10 @@ func dumpTable(log *xlog.Log, conn *Connection, args *Args, table string) {
 	var allBytes uint64
 	var allRows uint64
 
-	cursor, err := conn.StreamFetch(fmt.Sprintf("SELECT /*backup*/ * FROM `%s`.`%s`", args.Database, table))
+	_, err := conn.Fetch("set @@SESSION.radon_streaming_fetch='ON'")
+	AssertNil(err)
+
+	cursor, err := conn.StreamFetch(fmt.Sprintf("SELECT * FROM `%s`.`%s`", args.Database, table))
 	AssertNil(err)
 
 	fields := make([]string, 0, 16)

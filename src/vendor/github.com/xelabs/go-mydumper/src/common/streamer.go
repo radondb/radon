@@ -64,7 +64,10 @@ func streamTable(log *xlog.Log, db string, todb string, tbl string, from *Connec
 	var allRows uint64
 	var allBytes uint64
 
-	cursor, err := from.StreamFetch(fmt.Sprintf("SELECT /*backup*/ * FROM `%s`.`%s`", db, tbl))
+	_, err := from.Fetch("set @@SESSION.radon_streaming_fetch='ON'")
+	AssertNil(err)
+
+	cursor, err := from.StreamFetch(fmt.Sprintf("SELECT * FROM `%s`.`%s`", db, tbl))
 	AssertNil(err)
 
 	fields := make([]string, 0, 16)

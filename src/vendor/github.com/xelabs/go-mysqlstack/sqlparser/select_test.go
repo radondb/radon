@@ -29,12 +29,8 @@ func TestSelect1(t *testing.T) {
 			output: "select * from xx",
 		},
 		{
-			input:  "select /*backup*/ * from xx",
-			output: "select /*backup*/ * from xx",
-		},
-		{
-			input:  "select /*backup*/ * from xx where id=1",
-			output: "select /*backup*/ * from xx where id = 1",
+			input:  "select * from xx where id=1",
+			output: "select * from xx where id = 1",
 		},
 	}
 
