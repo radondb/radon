@@ -124,12 +124,12 @@ func checkDatabaseAndTable(database string, table string, router *router.Router)
 // 5. ALTER TABLE .. ADD COLUMN (column definition)
 // 6. ALTER TABLE .. MODIFY COLUMN column definition
 // 7. ALTER TABLE .. DROP COLUMN column
-func (spanner *Spanner) handleDDL(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *sqlparser.DDL) (*sqltypes.Result, error) {
 	log := spanner.log
 	router := spanner.router
 	scatter := spanner.scatter
 
-	ddl := node.(*sqlparser.DDL)
+	ddl := node
 	database := session.Schema()
 	// Database operation.
 	if !ddl.Database.IsEmpty() {

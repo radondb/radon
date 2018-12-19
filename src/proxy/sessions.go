@@ -19,15 +19,6 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
-type session struct {
-	mu          sync.Mutex
-	node        sqlparser.Statement
-	query       string
-	session     *driver.Session
-	timestamp   int64
-	transaction backend.Transaction
-}
-
 // Sessions tuple.
 type Sessions struct {
 	log *xlog.Log

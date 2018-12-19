@@ -219,6 +219,7 @@ var keywords = map[string]int{
 	"mediumblob":          MEDIUMBLOB,
 	"mediumint":           MEDIUMINT,
 	"mediumtext":          MEDIUMTEXT,
+	"names":               NAMES,
 	"middleint":           UNUSED,
 	"minute_microsecond":  UNUSED,
 	"minute_second":       UNUSED,
@@ -413,7 +414,11 @@ func (tkn *Tokenizer) Scan() (int, []byte) {
 				return tkn.scanHex()
 			}
 		}
-		return tkn.scanIdentifier(byte(ch))
+		isDbSystemVariable := false
+		if ch == '@' && tkn.lastChar == '@' {
+			isDbSystemVariable = true
+		}
+		return tkn.scanIdentifier(byte(ch), isDbSystemVariable)
 	case isDigit(ch):
 		return tkn.scanNumber(false)
 	case ch == ':':
@@ -530,10 +535,10 @@ func (tkn *Tokenizer) skipBlank() {
 	}
 }
 
-func (tkn *Tokenizer) scanIdentifier(firstByte byte) (int, []byte) {
+func (tkn *Tokenizer) scanIdentifier(firstByte byte, isDbSystemVariable bool) (int, []byte) {
 	buffer := &bytes2.Buffer{}
 	buffer.WriteByte(firstByte)
-	for isLetter(tkn.lastChar) || isDigit(tkn.lastChar) {
+	for isLetter(tkn.lastChar) || isDigit(tkn.lastChar) || (isDbSystemVariable && isCarat(tkn.lastChar)) {
 		buffer.WriteByte(byte(tkn.lastChar))
 		tkn.next()
 	}
@@ -547,6 +552,10 @@ func (tkn *Tokenizer) scanIdentifier(firstByte byte) (int, []byte) {
 		return ID, lowered
 	}
 	return ID, buffer.Bytes()
+}
+
+func isCarat(ch uint16) bool {
+	return ch == '.' || ch == '\'' || ch == '"' || ch == '`'
 }
 
 func (tkn *Tokenizer) scanHex() (int, []byte) {

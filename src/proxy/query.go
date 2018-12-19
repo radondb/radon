@@ -15,7 +15,6 @@ import (
 	"monitor"
 	"xbase"
 
-	"github.com/xelabs/go-mysqlstack/common"
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -82,7 +81,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 	defer func() {
 		queryStat(node, timeStart, slowQueryTime, err)
 	}()
-	switch node.(type) {
+	switch node := node.(type) {
 	case *sqlparser.Use:
 		if qr, err = spanner.handleUseDB(session, query, node); err != nil {
 			log.Error("proxy.usedb[%s].from.session[%v].error:%+v", query, session.ID(), err)
@@ -99,7 +98,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 		spanner.auditLog(session, W, xbase.DDL, query, qr)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Show:
-		show := node.(*sqlparser.Show)
+		show := node
 		switch show.Type {
 		case sqlparser.ShowDatabasesStr:
 			if qr, err = spanner.handleShowDatabases(session, query, node); err != nil {
@@ -170,8 +169,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 			// Binlog.
 			spanner.logEvent(session, xbase.INSERT, query)
 		}
-		inode := node.(*sqlparser.Insert)
-		switch inode.Action {
+		switch node.Action {
 		case sqlparser.InsertStr:
 			spanner.auditLog(session, W, xbase.INSERT, query, qr)
 		case sqlparser.ReplaceStr:
@@ -197,29 +195,17 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 		spanner.auditLog(session, W, xbase.UPDATE, query, qr)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Select:
-		typ := ""
-		backupType := "/*backup*/"
-
-		snode := node.(*sqlparser.Select)
-		if len(snode.Comments) > 0 {
-			if common.BytesToString(snode.Comments[0]) == backupType {
-				typ = backupType
-			}
-		}
-
-		switch typ {
-		case backupType:
-			log.Warning("proxy.select.for.backup:[%s].prepare", query)
+		txSession := spanner.sessions.getTxnSession(session)
+		if txSession.getStreamingFetchVar() {
 			if err = spanner.handleSelectStream(session, query, node, callback); err != nil {
 				log.Error("proxy.select.for.backup:[%s].error:%+v", xbase.TruncateQuery(query, 256), err)
 				return err
 			}
-			log.Warning("proxy.select.for.backup:[%s].done", query)
 			return nil
-		default:
-			switch snode.From[0].(type) {
+		} else {
+			switch node.From[0].(type) {
 			case *sqlparser.AliasedTableExpr:
-				aliasTableExpr := snode.From[0].(*sqlparser.AliasedTableExpr)
+				aliasTableExpr := node.From[0].(*sqlparser.AliasedTableExpr)
 				tb, ok := aliasTableExpr.Expr.(sqlparser.TableName)
 				if !ok {
 					// Subquery.
@@ -277,11 +263,12 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 		spanner.auditLog(session, R, xbase.TRANSACTION, query, qr)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Set:
-		// Support for JDBC/myloader.
 		log.Warning("proxy.query.set.query:%s", query)
-		qr = &sqltypes.Result{Warnings: 1}
+		if qr, err = spanner.handleSet(session, query, node); err != nil {
+			log.Error("proxy.set[%s].from.session[%v].error:%+v", query, session.ID(), err)
+		}
 		spanner.auditLog(session, R, xbase.SET, query, qr)
-		return returnQuery(qr, callback, nil)
+		return returnQuery(qr, callback, err)
 	default:
 		log.Error("proxy.unsupported[%s].from.session[%v]", query, session.ID())
 		spanner.auditLog(session, R, xbase.UNSUPPORT, query, qr)

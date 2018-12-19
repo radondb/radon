@@ -16,8 +16,8 @@ import (
 
 // handleUseDB used to handle the UseDB command.
 // Here, we will send a fake query 'SELECT 1' to the backend and check the 'USE DB'.
-func (spanner *Spanner) handleUseDB(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
-	usedb := node.(*sqlparser.Use)
+func (spanner *Spanner) handleUseDB(session *driver.Session, query string, node *sqlparser.Use) (*sqltypes.Result, error) {
+	usedb := node
 	db := usedb.DBName.String()
 	router := spanner.router
 	// Check the database ACL.

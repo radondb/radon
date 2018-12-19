@@ -702,3 +702,32 @@ func TestSqlParserTableAs(t *testing.T) {
 		log.Debug(buf.String())
 	}
 }
+
+func TestSqlSet(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+
+	querys := []string{
+		"set @@SESSION.radon_streaming_fetch='ON', @@GLOBAL.xx='OFF'",
+	}
+
+	for _, query := range querys {
+		sel, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		log.Debug("query:%v", query)
+
+		_ = sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
+			log.Debug("node:%T, %+v", node, node)
+			switch setexpr := node.(type) {
+			case *sqlparser.SetExpr:
+				switch expr := setexpr.Expr.(type) {
+				case *sqlparser.SQLVal:
+					switch expr.Type {
+					case sqlparser.StrVal:
+						log.Debug("%s,%s", setexpr.Name, expr.Val)
+					}
+				}
+			}
+			return true, nil
+		}, sel)
+	}
+}
