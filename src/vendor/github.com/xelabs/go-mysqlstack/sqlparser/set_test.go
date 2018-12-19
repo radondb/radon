@@ -25,17 +25,25 @@ func TestSet(t *testing.T) {
 		output string
 	}{
 		{
-			input:  "SET autocommit=0",
-			output: "set",
+			input:  "SET @@session.s1= 'ON', @@session.s2='OFF'",
+			output: "set @@session.s1 = 'ON', @@session.s2 = 'OFF'",
 		},
 
 		{
+			input:  "SET @@session.radon_stream_fetching= 'OFF'",
+			output: "set @@session.radon_stream_fetching = 'OFF'",
+		},
+		{
+			input:  "SET radon_stream_fetching= false",
+			output: "set radon_stream_fetching = false",
+		},
+		{
 			input:  "SET SESSION wait_timeout = 2147483",
-			output: "set",
+			output: "set wait_timeout = 2147483",
 		},
 		{
 			input:  "SET NAMES utf8",
-			output: "set",
+			output: "set names = 'utf8'",
 		},
 	}
 

@@ -26,13 +26,13 @@ func (spanner *Spanner) logEvent(session *driver.Session, typ string, query stri
 	return nil
 }
 
-func (spanner *Spanner) handleShowBinlogEvents(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+func (spanner *Spanner) handleShowBinlogEvents(session *driver.Session, query string, node *sqlparser.Show) (*sqltypes.Result, error) {
 	var ts int64
 	limit := 100
 	binloger := spanner.binlog
 
 	log := spanner.log
-	ast := node.(*sqlparser.Show)
+	ast := node
 	if ast.From != "" {
 		gtid, err := strconv.ParseInt(ast.From, 0, 64)
 		if err != nil {

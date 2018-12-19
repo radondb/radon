@@ -453,12 +453,18 @@ func (node *Delete) WalkSubtree(visit Visit) error {
 // Set represents a SET statement.
 type Set struct {
 	Comments Comments
-	Exprs    UpdateExprs
+	Exprs    SetExprs
 }
+
+// Set.Scope or Show.Scope
+const (
+	SessionStr = "session"
+	GlobalStr  = "global"
+)
 
 // Format formats the node.
 func (node *Set) Format(buf *TrackedBuffer) {
-	buf.Myprintf("set")
+	buf.Myprintf("set %v%v", node.Comments, node.Exprs)
 }
 
 // WalkSubtree walks the nodes of the subtree.
@@ -2474,6 +2480,50 @@ func (node OnDup) Format(buf *TrackedBuffer) {
 // WalkSubtree walks the nodes of the subtree.
 func (node OnDup) WalkSubtree(visit Visit) error {
 	return Walk(visit, UpdateExprs(node))
+}
+
+// SetExprs represents a list of set expressions.
+type SetExprs []*SetExpr
+
+// Format formats the node.
+func (node SetExprs) Format(buf *TrackedBuffer) {
+	var prefix string
+	for _, n := range node {
+		buf.Myprintf("%s%v", prefix, n)
+		prefix = ", "
+	}
+}
+
+func (node SetExprs) WalkSubtree(visit Visit) error {
+	for _, n := range node {
+		if err := Walk(visit, n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SetExpr represents a set expression.
+type SetExpr struct {
+	Name ColIdent
+	Expr Expr
+}
+
+// Format formats the node.
+func (node *SetExpr) Format(buf *TrackedBuffer) {
+	// We don't have to backtick set variable names.
+	buf.Myprintf("%s = %v", node.Name.String(), node.Expr)
+}
+
+func (node *SetExpr) WalkSubtree(visit Visit) error {
+	if node == nil {
+		return nil
+	}
+	return Walk(
+		visit,
+		node.Name,
+		node.Expr,
+	)
 }
 
 // ColIdent is a case insensitive SQL identifier. It will be escaped with

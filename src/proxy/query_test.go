@@ -188,12 +188,18 @@ func TestProxyQuerys(t *testing.T) {
 			assert.Equal(t, want, got)
 		}
 		{ // select id from t1 as ...;
-			query := "select /*backup*/ * from test.t1 as aliaseTable"
+			query := "set @@SESSION.radon_streaming_fetch='ON'"
+			_, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+			query = "select /*backup*/ * from test.t1 as aliaseTable"
 			qr, err := client.FetchAll(query, -1)
 			assert.Nil(t, err)
 			want := 60510
 			got := int(qr.RowsAffected)
 			assert.Equal(t, want, got)
+			query = "set @@SESSION.radon_streaming_fetch='OFF'"
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
 		}
 		{ // select 1 from dual
 			query := "select 1 from dual"
@@ -244,11 +250,19 @@ func TestProxyQuerys(t *testing.T) {
 			assert.Equal(t, want, got)
 		}
 		{
-			query := "select /*backup*/ a from test.dual"
+			query := "set @@SESSION.radon_streaming_fetch='ON'"
 			_, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "select a from test.dual"
+			_, err = client.FetchAll(query, -1)
 			want := "Table 'dual' doesn't exist (errno 1146) (sqlstate 42S02)"
 			got := err.Error()
 			assert.Equal(t, want, got)
+
+			query = "set @@SESSION.radon_streaming_fetch='OFF'"
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
 		}
 	}
 }

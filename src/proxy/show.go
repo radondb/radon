@@ -40,9 +40,9 @@ func (spanner *Spanner) handleShowCreateDatabase(session *driver.Session, query 
 }
 
 // handleShowTables used to handle the 'SHOW TABLES' command.
-func (spanner *Spanner) handleShowTables(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+func (spanner *Spanner) handleShowTables(session *driver.Session, query string, node *sqlparser.Show) (*sqltypes.Result, error) {
 	router := spanner.router
-	ast := node.(*sqlparser.Show)
+	ast := node
 
 	database := session.Schema()
 	if !ast.Database.IsEmpty() {
@@ -78,9 +78,9 @@ func (spanner *Spanner) handleShowTables(session *driver.Session, query string, 
 	return qr, nil
 }
 
-func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query string, node *sqlparser.Show) (*sqltypes.Result, error) {
 	router := spanner.router
-	ast := node.(*sqlparser.Show)
+	ast := node
 
 	table := ast.Table.Name.String()
 	database := session.Schema()
@@ -120,9 +120,9 @@ func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query str
 }
 
 // handleShowColumns used to handle the 'SHOW COLUMNS' command.
-func (spanner *Spanner) handleShowColumns(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+func (spanner *Spanner) handleShowColumns(session *driver.Session, query string, node *sqlparser.Show) (*sqltypes.Result, error) {
 	router := spanner.router
-	ast := node.(*sqlparser.Show)
+	ast := node
 
 	table := ast.Table.Name.String()
 	database := session.Schema()
