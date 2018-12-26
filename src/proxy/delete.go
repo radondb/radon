@@ -17,5 +17,5 @@ import (
 // handleDelete used to handle the delete command.
 func (spanner *Spanner) handleDelete(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	database := session.Schema()
-	return spanner.Execute(session, database, query, node)
+	return spanner.ExecuteDML(session, database, query, node)
 }

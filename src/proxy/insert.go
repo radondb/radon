@@ -17,5 +17,5 @@ import (
 // handleInsert used to handle the insert command.
 func (spanner *Spanner) handleInsert(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	database := session.Schema()
-	return spanner.Execute(session, database, query, node)
+	return spanner.ExecuteDML(session, database, query, node)
 }

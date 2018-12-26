@@ -17,7 +17,7 @@ import (
 // handleSelect used to handle the select command.
 func (spanner *Spanner) handleSelect(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	database := session.Schema()
-	return spanner.Execute(session, database, query, node)
+	return spanner.ExecuteDML(session, database, query, node)
 }
 
 func (spanner *Spanner) handleSelectStream(session *driver.Session, query string, node sqlparser.Statement, callback func(qr *sqltypes.Result) error) error {
