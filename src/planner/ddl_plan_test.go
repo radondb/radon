@@ -86,15 +86,36 @@ func TestDDLPlan1(t *testing.T) {
 	}
 }
 
-func TestDDLAlterOnShardKey(t *testing.T) {
+func TestDDLAlterError(t *testing.T) {
 	results := []string{
 		"unsupported: cannot.modify.the.column.on.shard.key",
 		"unsupported: cannot.drop.the.column.on.shard.key",
+		"The unique/primary constraint should be only defined on the sharding key column[id]",
+		"The unique/primary constraint should be only defined on the sharding key column[id]",
+		"The unique/primary constraint should be only defined on the sharding key column[id]",
+		"The unique/primary constraint should be only defined on the sharding key column[id]",
+		"The unique/primary constraint should be only defined on the sharding key column[id]",
+		"The unique/primary constraint should be only defined on the sharding key column[id]",
+		"The unique/primary constraint should be only defined on the sharding key column[id]",
+		"The unique/primary constraint should be only defined on the sharding key column[id]",
+		"The unique/primary constraint should be only defined on the sharding key column[id]",
 	}
 
+	// For now we doesn`t support unique in add column, e.g.:
+	// "alter table A add column(c12 int, c13 varchar(100), unique key(c10, c11))",
+	// "alter table A add column(c14 int, c15 varchar(100), unique(c12))",
 	querys := []string{
 		"alter table A modify column id int",
 		"alter table A drop column id",
+		"alter table A modify column b varchar(1) key",
+		"alter table A modify column b varchar(1) primary key",
+		"alter table A modify column b varchar(1) unique",
+		"alter table A modify column b varchar(1) unique key",
+		"alter table A add column(c3 int key, c4 varchar(100))",
+		"alter table A add column(c4 int primary key, c5 varchar(100))",
+		"alter table A add column(c6 int unique key, c7 varchar(100))",
+		"alter table A add column(c8 int, c9 varchar(100), primary key(c8, c9))",
+		"alter table A add column(c10 int, c11 varchar(100), primary key(c14))",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -114,9 +135,13 @@ func TestDDLAlterOnShardKey(t *testing.T) {
 		// plan build
 		{
 			err := plan.Build()
-			want := results[i]
-			got := err.Error()
-			assert.Equal(t, want, got)
+			if err != nil {
+				want := results[i]
+				got := err.Error()
+				assert.Equal(t, want, got)
+			} else {
+				log.Panic("planner.test.ddl.alter.test.case.did.not.return.err")
+			}
 		}
 	}
 }

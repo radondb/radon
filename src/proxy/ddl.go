@@ -36,7 +36,7 @@ func CheckCreateTable(ddl *sqlparser.DDL) error {
 		return fmt.Errorf("spanner.ddl.check.create.table[%s].error:not support", table)
 	}
 
-	// shard key and UNIQUE/PRIMARY KEY constraint check.
+	// when shardtype is HASH,check shard key and UNIQUE/PRIMARY KEY constraint.
 	if shardKey != "" {
 		shardKeyOK := false
 		constraintCheckOK := true
@@ -47,7 +47,7 @@ func CheckCreateTable(ddl *sqlparser.DDL) error {
 				shardKeyOK = true
 			} else {
 				switch col.Type.KeyOpt {
-				case sqlparser.ColKeyUnique, sqlparser.ColKeyUniqueKey, sqlparser.ColKeyPrimary:
+				case sqlparser.ColKeyUnique, sqlparser.ColKeyUniqueKey, sqlparser.ColKeyPrimary, sqlparser.ColKey:
 					constraintCheckOK = false
 				}
 			}

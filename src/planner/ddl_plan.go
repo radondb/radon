@@ -71,7 +71,6 @@ func NewDDLPlan(log *xlog.Log, database string, query string, node *sqlparser.DD
 func (p *DDLPlan) Build() error {
 	node := p.node
 
-	// Unsupported rename operation.
 	switch node.Action {
 	case sqlparser.CreateDBStr:
 		p.ReqMode = xcontext.ReqScatter
@@ -88,14 +87,40 @@ func (p *DDLPlan) Build() error {
 		if err != nil {
 			return err
 		}
-		switch node.Action {
-		case sqlparser.AlterDropColumnStr:
-			if shardKey == node.DropColumnName {
-				return errors.New("unsupported: cannot.drop.the.column.on.shard.key")
-			}
-		case sqlparser.AlterModifyColumnStr:
-			if shardKey == node.ModifyColumnDef.Name.String() {
-				return errors.New("unsupported: cannot.modify.the.column.on.shard.key")
+		// Unsupported operations check if shardtype is HASH.
+		if shardKey != "" {
+			switch node.Action {
+			case sqlparser.AlterDropColumnStr:
+				if shardKey == node.DropColumnName {
+					return errors.New("unsupported: cannot.drop.the.column.on.shard.key")
+				}
+			case sqlparser.AlterModifyColumnStr:
+				if shardKey == node.ModifyColumnDef.Name.String() {
+					return errors.New("unsupported: cannot.modify.the.column.on.shard.key")
+				}
+				// constraint check in column definition
+				switch node.ModifyColumnDef.Type.KeyOpt {
+				case sqlparser.ColKeyUnique, sqlparser.ColKeyUniqueKey, sqlparser.ColKeyPrimary, sqlparser.ColKey:
+					err := fmt.Sprintf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
+					return errors.New(err)
+				}
+			case sqlparser.AlterAddColumnStr:
+				//constraint check in column definition
+				for _, col := range node.TableSpec.Columns {
+					switch col.Type.KeyOpt {
+					case sqlparser.ColKeyUnique, sqlparser.ColKeyUniqueKey, sqlparser.ColKeyPrimary, sqlparser.ColKey:
+						err := fmt.Sprintf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
+						return errors.New(err)
+					}
+				}
+				// constraint check in index definition
+				for _, index := range node.TableSpec.Indexes {
+					info := index.Info
+					if info.Unique || info.Primary {
+						err := fmt.Sprintf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
+						return errors.New(err)
+					}
+				}
 			}
 		}
 
