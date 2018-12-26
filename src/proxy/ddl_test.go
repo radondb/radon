@@ -542,26 +542,17 @@ func TestProxyDDLConstraint(t *testing.T) {
 	querys := []string{
 		"CREATE TABLE t0(a int unique,b int ) PARTITION BY HASH(a);",
 		"create table t1(a int key, b int) partition by hash(a)",
-		"create table t2(a int key, b int key) partition by hash(a)",
 		"create table t3(a int unique, b int, c int) PARTITION BY hash(a)",
 		"create table t4(a int unique key, b int)   PARTITION  BY hash(a)  ",
 		"create table t5(a int primary key, b int) partition by hash(a)",
-		"create table t6(a int unique, b int key) PARTITION BY hash(a)",
-		"create table t7(a int unique key, b int key)   PARTITION  BY hash(a)  ",
-		"create table t8(a int primary key, b int key) partition by hash(a)",
 		"create table t9(a int, b int, primary key(a))engine=tokudb PARTITION  BY hash(a)  ",
-		"create table t10(a int key, b int, primary key(a))engine=tokudb PARTITION  BY hash(a)  ",
-		"create table t11(a int key, b int key, primary key(a))engine=tokudb PARTITION  BY hash(a)  ",
 		"create table t12(a int, b int, primary key(a,b)) default charset=utf8  PARTITION  BY hash(a)  ",
-		"create table t13(a int key, b int, primary key(a,b)) default charset=utf8  PARTITION  BY hash(a)  ",
-		"create table t14(a int key, b int key, primary key(a,b)) default charset=utf8  PARTITION  BY hash(a)  ",
 		"create table t15(a int unique, b int, primary key(a,b))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
-		"create table t16(a int unique key, b int key, primary key(a,b))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
-		"create table t17(a int unique, b int key, primary key(a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
-		"create table t18(a int unique, b int key, key `name` (`a`))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
-		"create table t19(a int unique, b int key, index `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
-		"create table t20(a int unique, b int key, unique index `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
-		"create table t21(a int unique, b int key, unique key `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t17(a int unique, b int, primary key(a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t18(a int unique, b int, key `name` (`a`))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t19(a int unique, b int, index `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t20(a int unique, b int, unique index `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t21(a int unique, b int, unique key `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
 	}
 
 	for _, query := range querys {
@@ -599,10 +590,35 @@ func TestProxyDDLConstraintError(t *testing.T) {
 		"create table t12(a int unique, b int, c int, primary key(b, c)) default charset=utf8  PARTITION  BY hash(a)  ",
 		"create table t13(a int unique, b int, c int, unique key `name` (`b`)) default charset=utf8  PARTITION  BY hash(a)  ",
 		"create table t14(a int unique, b int, c int, unique key `name` (`b`, `c`)) default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t15(a int key, b int key) partition by hash(a)",
+		"create table t16(a int unique, b int key) PARTITION BY hash(a)",
+		"create table t17(a int unique key, b int key)   PARTITION  BY hash(a)  ",
+		"create table t18(a int primary key, b int key) partition by hash(a)",
+		"create table t19(a int key, b int key, primary key(a))engine=tokudb PARTITION  BY hash(a)  ",
+		"create table t21(a int key, b int key, primary key(a,b)) default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t22(a int unique key, b int key, primary key(a,b))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t23(a int unique, b int key, primary key(a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t24(a int unique, b int key, key `name` (`a`))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t25(a int unique, b int key, index `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t26(a int unique, b int key, unique index `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t27(a int unique, b int key, unique key `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
 	}
 
 	results := []string{
 		"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use, syntax error at position 35 near 'index' (errno 1149) (sqlstate 42000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
 		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
 		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
 		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
@@ -626,6 +642,8 @@ func TestProxyDDLConstraintError(t *testing.T) {
 			want := results[i]
 			got := err.Error()
 			assert.Equal(t, want, got)
+		} else {
+			log.Panic("proxy.ddl.constraint.test.case.did.not.return.err")
 		}
 	}
 }
