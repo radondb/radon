@@ -17,5 +17,5 @@ import (
 // handleUpdate used to handle the update command.
 func (spanner *Spanner) handleUpdate(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	database := session.Schema()
-	return spanner.Execute(session, database, query, node)
+	return spanner.ExecuteDML(session, database, query, node)
 }
