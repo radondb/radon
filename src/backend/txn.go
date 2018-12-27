@@ -254,7 +254,11 @@ func (txn *Txn) xaStart() error {
 	txn.xaState.Set(int32(txnXAStateStart))
 	defer func() { txn.xaState.Set(int32(txnXAStateStartFinished)) }()
 
-	txn.xid = fmt.Sprintf("RXID-%v-%v", time.Now().Format("20060102150405"), txn.id)
+	if txn.isMultiStmtTxn {
+		txn.xid = fmt.Sprintf("MULTRXID-%v-%v", time.Now().Format("20060102150405"), txn.id)
+	} else {
+		txn.xid = fmt.Sprintf("RXID-%v-%v", time.Now().Format("20060102150405"), txn.id)
+	}
 	start := fmt.Sprintf("XA START '%v'", txn.xid)
 	if err := txn.executeXACommand(start, txnXAStateStart); err != nil {
 		txnCounters.Add(txnCounterXaStartError, 1)

@@ -11,6 +11,7 @@ package backend
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -1026,6 +1027,39 @@ func TestTxnBeginScatter(t *testing.T) {
 	{
 		err := txn.BeginScatter()
 		assert.Nil(t, err)
+	}
+}
+
+func TestTxnCheckXidPrefix(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedb, txnMgr, backends, _, cleanup := MockTxnMgr(log, 2)
+	defer cleanup()
+
+	txn, err := txnMgr.CreateTxn(backends)
+	assert.Nil(t, err)
+	defer txn.Finish()
+
+	// Set 2PC conds.
+	{
+		fakedb.AddQueryPattern("XA .*", result1)
+	}
+
+	// check the prefix of xid in the single statement txn is RXID.
+	{
+		err := txn.BeginScatter()
+		assert.Nil(t, err)
+		ss := strings.Split(txn.xid, "-")
+		assert.EqualValues(t, "RXID", ss[0])
+	}
+
+	// check the prefix of xid in the multiple statement txn is MULTRXID.
+	{
+		txn.SetMultiStmtTxn()
+		err := txn.BeginScatter()
+		assert.Nil(t, err)
+		ss := strings.Split(txn.xid, "-")
+		assert.EqualValues(t, "MULTRXID", ss[0])
 	}
 }
 
