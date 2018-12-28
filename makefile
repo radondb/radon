@@ -32,7 +32,6 @@ test:
 	@$(MAKE) testproxy
 	@$(MAKE) testaudit
 	@$(MAKE) testsyncer
-	@$(MAKE) testbinlog
 	@$(MAKE) testctl
 	@$(MAKE) testmonitor
 	@$(MAKE) testfuzz
@@ -61,8 +60,6 @@ testaudit:
 	go test -v -race audit
 testsyncer:
 	go test -v -race syncer
-testbinlog:
-	go test -v -race binlog
 testctl:
 	go test -v -race ctl/v1
 testcli:
@@ -88,7 +85,6 @@ allpkgs =	xbase\
 			proxy\
 			audit\
 			syncer\
-			binlog\
 			monitor
 coverage:
 	go build -v -o bin/gotestcover \

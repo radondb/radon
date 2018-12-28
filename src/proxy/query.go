@@ -91,9 +91,6 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 	case *sqlparser.DDL:
 		if qr, err = spanner.handleDDL(session, query, node); err != nil {
 			log.Error("proxy.DDL[%s].from.session[%v].error:%+v", query, session.ID(), err)
-		} else {
-			// Binlog.
-			spanner.logEvent(session, xbase.DDL, query)
 		}
 		spanner.auditLog(session, W, xbase.DDL, query, qr)
 		return returnQuery(qr, callback, err)
@@ -152,10 +149,6 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 			if qr, err = spanner.handleJDBCShows(session, query, node); err != nil {
 				log.Error("proxy.JDBC.shows[%s].from.session[%v].error:%+v", query, session.ID(), err)
 			}
-		case sqlparser.ShowBinlogEventsStr:
-			if qr, err = spanner.handleShowBinlogEvents(session, query, node); err != nil {
-				log.Error("proxy.show.binlogevents[%s].error:%+v", query, err)
-			}
 		default:
 			log.Error("proxy.show.unsupported[%s].from.session[%v]", query, session.ID())
 			err = sqldb.NewSQLError(sqldb.ER_UNKNOWN_ERROR, "unsupported.query:%v", query)
@@ -165,9 +158,6 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 	case *sqlparser.Insert:
 		if qr, err = spanner.handleInsert(session, query, node); err != nil {
 			log.Error("proxy.insert[%s].from.session[%v].error:%+v", xbase.TruncateQuery(query, 256), session.ID(), err)
-		} else {
-			// Binlog.
-			spanner.logEvent(session, xbase.INSERT, query)
 		}
 		switch node.Action {
 		case sqlparser.InsertStr:
@@ -179,18 +169,12 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 	case *sqlparser.Delete:
 		if qr, err = spanner.handleDelete(session, query, node); err != nil {
 			log.Error("proxy.delete[%s].from.session[%v].error:%+v", query, session.ID(), err)
-		} else {
-			// Binlog.
-			spanner.logEvent(session, xbase.DELETE, query)
 		}
 		spanner.auditLog(session, W, xbase.DELETE, query, qr)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Update:
 		if qr, err = spanner.handleUpdate(session, query, node); err != nil {
 			log.Error("proxy.update[%s].from.session[%v].error:%+v", xbase.TruncateQuery(query, 256), session.ID(), err)
-		} else {
-			// Binlog.
-			spanner.logEvent(session, xbase.UPDATE, query)
 		}
 		spanner.auditLog(session, W, xbase.UPDATE, query, qr)
 		return returnQuery(qr, callback, err)

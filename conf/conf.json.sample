@@ -5,10 +5,6 @@
                 "twopc-enable": false,
                 "peer-address": "{RADON-HOST:8080}"
         },
-        "binlog": {
-                "binlog-dir": "{RADON-BINLOG-DIR}",
-                "enable-binlog": true
-        },
         "audit": {
                 "mode": "N",
                 "audit-dir": "{AUDIT-LOG-DIR}"

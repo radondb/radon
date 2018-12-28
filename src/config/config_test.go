@@ -32,7 +32,6 @@ func TestWriteConfig(t *testing.T) {
 		Proxy:   MockProxyConfig,
 		Log:     MockLogConfig,
 		Audit:   DefaultAuditConfig(),
-		Binlog:  DefaultBinlogConfig(),
 		Router:  DefaultRouterConfig(),
 		Monitor: DefaultMonitorConfig(),
 		Scatter: DefaultScatterConfig(),
@@ -70,7 +69,6 @@ func TestLoadConfig(t *testing.T) {
 			Proxy:   mockProxyConfig,
 			Audit:   DefaultAuditConfig(),
 			Router:  DefaultRouterConfig(),
-			Binlog:  DefaultBinlogConfig(),
 			Monitor: DefaultMonitorConfig(),
 			Log:     MockLogConfig,
 			Scatter: DefaultScatterConfig(),
@@ -102,7 +100,6 @@ func TestLoadConfig(t *testing.T) {
 				Proxy:   MockProxyConfig,
 				Log:     MockLogConfig,
 				Audit:   DefaultAuditConfig(),
-				Binlog:  DefaultBinlogConfig(),
 				Router:  DefaultRouterConfig(),
 				Monitor: DefaultMonitorConfig(),
 				Scatter: DefaultScatterConfig(),
@@ -119,7 +116,6 @@ func TestLoadConfig(t *testing.T) {
 			Log:     MockLogConfig,
 			Audit:   DefaultAuditConfig(),
 			Router:  DefaultRouterConfig(),
-			Binlog:  DefaultBinlogConfig(),
 			Monitor: DefaultMonitorConfig(),
 			Scatter: DefaultScatterConfig(),
 		}
@@ -155,7 +151,6 @@ func TestWriteLoadConfig(t *testing.T) {
 			Log:     MockLogConfig,
 			Audit:   DefaultAuditConfig(),
 			Router:  DefaultRouterConfig(),
-			Binlog:  DefaultBinlogConfig(),
 			Monitor: DefaultMonitorConfig(),
 			Scatter: DefaultScatterConfig(),
 		}
@@ -239,7 +234,6 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 			Proxy:   DefaultProxyConfig(),
 			Router:  DefaultRouterConfig(),
 			Audit:   DefaultAuditConfig(),
-			Binlog:  DefaultBinlogConfig(),
 			Log:     DefaultLogConfig(),
 			Monitor: DefaultMonitorConfig(),
 			Scatter: DefaultScatterConfig(),
@@ -263,9 +257,6 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 	"router": {
 		"blocks-readonly": 64
 	},
-	"binlog": {
-		"binlog-dir": "/tmp/binlog"
-	},
 	"log": {
 		"level": "ERROR"
 	},
@@ -285,7 +276,6 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 			Proxy:   proxy,
 			Router:  DefaultRouterConfig(),
 			Audit:   DefaultAuditConfig(),
-			Binlog:  DefaultBinlogConfig(),
 			Log:     DefaultLogConfig(),
 			Monitor: DefaultMonitorConfig(),
 			Scatter: DefaultScatterConfig(),

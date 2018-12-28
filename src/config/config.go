@@ -88,32 +88,6 @@ func (c *AuditConfig) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// BinlogConfig tuple.
-type BinlogConfig struct {
-	LogDir       string `json:"binlog-dir"`
-	MaxSize      int    `json:"max-size"`
-	EnableBinlog bool   `json:"enable-binlog"`
-}
-
-// DefaultBinlogConfig returns default binlog config.
-func DefaultBinlogConfig() *BinlogConfig {
-	return &BinlogConfig{
-		LogDir:  "/tmp/binlog",
-		MaxSize: 1024 * 1024 * 128, // 128MB
-	}
-}
-
-// UnmarshalJSON interface on BinlogConfig.
-func (c *BinlogConfig) UnmarshalJSON(b []byte) error {
-	type confAlias *BinlogConfig
-	conf := confAlias(DefaultBinlogConfig())
-	if err := json.Unmarshal(b, conf); err != nil {
-		return err
-	}
-	*c = BinlogConfig(*conf)
-	return nil
-}
-
 // LogConfig tuple.
 type LogConfig struct {
 	Level string `json:"level"`
@@ -252,7 +226,6 @@ type Config struct {
 	Proxy   *ProxyConfig   `json:"proxy"`
 	Audit   *AuditConfig   `json:"audit"`
 	Router  *RouterConfig  `json:"router"`
-	Binlog  *BinlogConfig  `json:"binlog"`
 	Log     *LogConfig     `json:"log"`
 	Monitor *MonitorConfig `json:"monitor"`
 	Scatter *ScatterConfig `json:"scatter"`
@@ -261,10 +234,6 @@ type Config struct {
 func checkConfig(conf *Config) {
 	if conf.Proxy == nil {
 		conf.Proxy = DefaultProxyConfig()
-	}
-
-	if conf.Binlog == nil {
-		conf.Binlog = DefaultBinlogConfig()
 	}
 
 	if conf.Audit == nil {

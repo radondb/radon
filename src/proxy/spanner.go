@@ -11,7 +11,6 @@ package proxy
 import (
 	"audit"
 	"backend"
-	"binlog"
 	"config"
 	"monitor"
 	"router"
@@ -29,7 +28,6 @@ type Spanner struct {
 	conf        *config.Config
 	router      *router.Router
 	scatter     *backend.Scatter
-	binlog      *binlog.Binlog
 	sessions    *Sessions
 	iptable     *IPTable
 	throttle    *xbase.Throttle
@@ -39,7 +37,7 @@ type Spanner struct {
 
 // NewSpanner creates a new spanner.
 func NewSpanner(log *xlog.Log, conf *config.Config,
-	iptable *IPTable, router *router.Router, scatter *backend.Scatter, binlog *binlog.Binlog, sessions *Sessions, audit *audit.Audit, throttle *xbase.Throttle) *Spanner {
+	iptable *IPTable, router *router.Router, scatter *backend.Scatter, sessions *Sessions, audit *audit.Audit, throttle *xbase.Throttle) *Spanner {
 	return &Spanner{
 		log:      log,
 		conf:     conf,
@@ -47,7 +45,6 @@ func NewSpanner(log *xlog.Log, conf *config.Config,
 		iptable:  iptable,
 		router:   router,
 		scatter:  scatter,
-		binlog:   binlog,
 		sessions: sessions,
 		throttle: throttle,
 	}
@@ -58,7 +55,7 @@ func (spanner *Spanner) Init() error {
 	log := spanner.log
 	conf := spanner.conf
 
-	diskChecker := NewDiskCheck(log, conf.Binlog.LogDir)
+	diskChecker := NewDiskCheck(log, conf.Audit.LogDir)
 	if err := diskChecker.Init(); err != nil {
 		return err
 	}
