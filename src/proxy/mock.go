@@ -94,7 +94,6 @@ func MockDefaultConfig() *config.Config {
 		Proxy:   config.DefaultProxyConfig(),
 		Audit:   config.DefaultAuditConfig(),
 		Router:  config.DefaultRouterConfig(),
-		Binlog:  config.DefaultBinlogConfig(),
 		Log:     config.DefaultLogConfig(),
 		Scatter: config.DefaultScatterConfig(),
 	}

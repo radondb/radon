@@ -188,7 +188,6 @@ func TestMonitorStart(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	var conf config.Config
 	conf.Proxy = config.DefaultProxyConfig()
-	conf.Binlog = config.DefaultBinlogConfig()
 	conf.Audit = config.DefaultAuditConfig()
 	conf.Router = config.DefaultRouterConfig()
 	conf.Log = config.DefaultLogConfig()

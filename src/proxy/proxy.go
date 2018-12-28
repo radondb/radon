@@ -13,7 +13,6 @@ import (
 
 	"audit"
 	"backend"
-	"binlog"
 	"config"
 	"router"
 	"syncer"
@@ -33,7 +32,6 @@ type Proxy struct {
 	router   *router.Router
 	scatter  *backend.Scatter
 	syncer   *syncer.Syncer
-	binlog   *binlog.Binlog
 	iptable  *IPTable
 	spanner  *Spanner
 	sessions *Sessions
@@ -47,7 +45,6 @@ func NewProxy(log *xlog.Log, path string, conf *config.Config) *Proxy {
 	router := router.NewRouter(log, conf.Proxy.MetaDir, conf.Router)
 	scatter := backend.NewScatter(log, conf.Proxy.MetaDir)
 	syncer := syncer.NewSyncer(log, conf.Proxy.MetaDir, conf.Proxy.PeerAddress, router, scatter)
-	binlog := binlog.NewBinlog(log, conf.Binlog)
 	return &Proxy{
 		log:      log,
 		conf:     conf,
@@ -56,7 +53,6 @@ func NewProxy(log *xlog.Log, path string, conf *config.Config) *Proxy {
 		router:   router,
 		scatter:  scatter,
 		syncer:   syncer,
-		binlog:   binlog,
 		sessions: NewSessions(log),
 		iptable:  NewIPTable(log, conf.Proxy),
 		throttle: xbase.NewThrottle(0),
@@ -72,7 +68,6 @@ func (p *Proxy) Start() {
 	syncer := p.syncer
 	router := p.router
 	scatter := p.scatter
-	binlog := p.binlog
 	sessions := p.sessions
 	endpoint := conf.Proxy.Endpoint
 	throttle := p.throttle
@@ -86,9 +81,6 @@ func (p *Proxy) Start() {
 	if err := syncer.Init(); err != nil {
 		log.Panic("proxy.syncer.init.panic:%+v", err)
 	}
-	if err := binlog.Init(); err != nil {
-		log.Panic("proxy.binlog.init.panic:%+v", err)
-	}
 	if err := router.LoadConfig(); err != nil {
 		log.Panic("proxy.router.load.panic:%+v", err)
 	}
@@ -100,7 +92,7 @@ func (p *Proxy) Start() {
 		log.Panic("proxy.scatter.init.panic:%+v", err)
 	}
 
-	spanner := NewSpanner(log, conf, iptable, router, scatter, binlog, sessions, audit, throttle)
+	spanner := NewSpanner(log, conf, iptable, router, scatter, sessions, audit, throttle)
 	if err := spanner.Init(); err != nil {
 		log.Panic("proxy.spanner.init.panic:%+v", err)
 	}
@@ -125,7 +117,6 @@ func (p *Proxy) Stop() {
 	p.scatter.Close()
 	p.audit.Close()
 	p.syncer.Close()
-	p.binlog.Close()
 	log.Info("proxy.shutdown.complete...")
 }
 
@@ -167,11 +158,6 @@ func (p *Proxy) Sessions() *Sessions {
 // Spanner returns the spanner.
 func (p *Proxy) Spanner() *Spanner {
 	return p.spanner
-}
-
-// Binlog returns the binlog.
-func (p *Proxy) Binlog() *binlog.Binlog {
-	return p.binlog
 }
 
 // SetMaxConnections used to set the max connections.
