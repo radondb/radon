@@ -366,7 +366,7 @@ ERROR 1105 (HY000): unsupported: cannot.modify.the.column.on.shard.key
 
 RadonDB only supports the `CREATE/DROP INDEX` syntax in order to simplify the index operation.
 
-#### ADD INDEX
+#### CREATE INDEX
 
 `Syntax`
 ```
