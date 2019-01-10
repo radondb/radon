@@ -283,6 +283,7 @@ func TestProxyDDLIndex(t *testing.T) {
 		fakedbs.AddQueryPattern("show create table .*", fakedb.Result1)
 		fakedbs.AddQueryPattern("drop table .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("create index.*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create fulltext index.*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("drop index.*", &sqltypes.Result{})
 	}
 
@@ -349,6 +350,15 @@ func TestProxyDDLIndex(t *testing.T) {
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
 		query := "drop index index1 on t1"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create fulltext index.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create fulltext index fts1 on t1(a)"
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
 	}
