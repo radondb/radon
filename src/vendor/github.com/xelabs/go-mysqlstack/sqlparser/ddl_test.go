@@ -202,6 +202,22 @@ func TestDDL1(t *testing.T) {
 			input:  "drop index idx on test",
 			output: "drop index idx on test",
 		},
+		{
+			input:  "create unique index a on b",
+			output: "create index a on b",
+		},
+		{
+			input:  "create unique index a on b(foo)",
+			output: "create index a on b",
+		},
+		{
+			input:  "create fulltext index a on b(foo)",
+			output: "create index a on b",
+		},
+		{
+			input:  "create spatial index a on b(foo)",
+			output: "create index a on b",
+		},
 
 		// Add column.
 		{

@@ -237,7 +237,7 @@ func forceEOF(yylex interface{}) {
 %type <bytes> for_from
 %type <str> ignore_opt default_opt
 %type <byt> exists_opt not_exists_opt
-%type <empty> non_rename_operation to_opt index_opt
+%type <empty> non_rename_operation to_opt index_opt constraint_opt
 %type <bytes> reserved_keyword non_reserved_keyword
 %type <colIdent> sql_id reserved_sql_id col_alias as_ci_opt
 %type <tableIdent> table_id reserved_table_id table_alias as_opt_id
@@ -435,10 +435,10 @@ create_statement:
     }
     $$ = &DDL{Action: CreateDBStr, IfNotExists:ifnotexists, Database: $4}
   }
-| CREATE INDEX ID ON table_name ddl_force_eof
+| CREATE constraint_opt INDEX ID ON table_name ddl_force_eof
   {
     // Change this to an alter statement
-    $$ = &DDL{Action: CreateIndexStr, IndexName:string($3), Table: $5, NewName:$5}
+    $$ = &DDL{Action: CreateIndexStr, IndexName:string($4), Table: $6, NewName:$6}
   }
 
 create_table_prefix:
@@ -2358,6 +2358,13 @@ index_opt:
   INDEX
   { $$ = struct{}{} }
 | KEY
+  { $$ = struct{}{} }
+
+constraint_opt:
+  { $$ = struct{}{} }
+| UNIQUE
+  { $$ = struct{}{} }
+| sql_id
   { $$ = struct{}{} }
 
 sql_id:
