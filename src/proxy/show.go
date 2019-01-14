@@ -17,6 +17,7 @@ import (
 
 	"build"
 
+	"github.com/xelabs/go-mysqlstack/common"
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -95,27 +96,51 @@ func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query str
 		return nil, err
 	}
 
-	// Get one table from the router.
-	parts, err := router.Lookup(database, table, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	partTable := parts[0].Table
-	backend := parts[0].Backend
-	rewritten := fmt.Sprintf("SHOW CREATE TABLE %s.%s", database, partTable)
-	qr, err := spanner.ExecuteOnThisBackend(backend, rewritten)
+	var qr *sqltypes.Result
+	var err error
+
+	shardKey, err := router.ShardKey(database, table)
 	if err != nil {
 		return nil, err
 	}
 
-	// 'show create table' has two columns.
-	c1 := qr.Rows[0][0]
-	c2 := qr.Rows[0][1]
-	// Replace the partition table to raw table.
-	c1Val := strings.Replace(string(c1.Raw()), partTable, table, 1)
-	c2Val := strings.Replace(string(c2.Raw()), partTable, table, 1)
-	qr.Rows[0][0] = sqltypes.MakeTrusted(c1.Type(), []byte(c1Val))
-	qr.Rows[0][1] = sqltypes.MakeTrusted(c2.Type(), []byte(c2Val))
+	// If shardType is GLOBAL, send raw query; if shardType is HASH, rewrite the query.
+	if shardKey == "" {
+		qr, err = spanner.ExecuteSingle(query)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Get one table from the router.
+		parts, err := router.Lookup(database, table, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		partTable := parts[0].Table
+		backend := parts[0].Backend
+		rewritten := fmt.Sprintf("SHOW CREATE TABLE %s.%s", database, partTable)
+		qr, err = spanner.ExecuteOnThisBackend(backend, rewritten)
+		if err != nil {
+			return nil, err
+		}
+
+		// 'show create table' has two columns.
+		c1 := qr.Rows[0][0]
+		c2 := qr.Rows[0][1]
+
+		// Replace the partition table to raw table.
+		c1Val := strings.Replace(string(c1.Raw()), partTable, table, 1)
+		c2Val := strings.Replace(string(c2.Raw()), partTable, table, 1)
+
+		// Add partition info to the end of c2Val
+		c2Buf := common.NewBuffer(0)
+		c2Buf.WriteString(c2Val)
+		partInfo := fmt.Sprintf("\n/*!50100 PARTITION BY HASH (%s) */", shardKey)
+		c2Buf.WriteString(partInfo)
+
+		qr.Rows[0][0] = sqltypes.MakeTrusted(c1.Type(), []byte(c1Val))
+		qr.Rows[0][1] = sqltypes.MakeTrusted(c2.Type(), c2Buf.Datas())
+	}
 	return qr, nil
 }
 

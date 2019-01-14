@@ -149,7 +149,26 @@ func TestProxyShowCreateTable(t *testing.T) {
 		Rows: [][]sqltypes.Value{
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_0000")),
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("show create table t1_0000")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("create table t1_0000")),
+			},
+		},
+	}
+
+	r2 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "table",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "create table",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("g_t1")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("create table g_t1")),
 			},
 		},
 	}
@@ -163,10 +182,15 @@ func TestProxyShowCreateTable(t *testing.T) {
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("show create .*", r1)
+		fakedbs.AddQuerys("show create table test.t1_0000", r1)
+		fakedbs.AddQuerys("show create table test.t1", r1)
+		fakedbs.AddQuerys("show create table t1", r1)
+		fakedbs.AddQuerys("show create table MYSQL.t1", r1)
+		fakedbs.AddQuerys("show create table xxx.t1", r1)
+		fakedbs.AddQuerys("show create table test.g_t1", r2)
 	}
 
-	// create test table.
+	// create test table with hash.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
@@ -176,7 +200,7 @@ func TestProxyShowCreateTable(t *testing.T) {
 		client.Quit()
 	}
 
-	// show create table.
+	// show create table which shardType is hash.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
@@ -184,7 +208,30 @@ func TestProxyShowCreateTable(t *testing.T) {
 		query := "show create table test.t1"
 		qr, err := client.FetchAll(query, -1)
 		assert.Nil(t, err)
-		want := "[t1 show create table t1]"
+		want := "[t1 create table t1\n/*!50100 PARTITION BY HASH (id) */]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// create test table with global.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create table g_t1(id int, b int)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		client.Quit()
+	}
+
+	// show create table which shardType is global.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show create table test.g_t1"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[g_t1 create table g_t1]"
 		got := fmt.Sprintf("%+v", qr.Rows[0])
 		assert.Equal(t, want, got)
 	}
@@ -235,7 +282,7 @@ func TestProxyShowColumns(t *testing.T) {
 		Rows: [][]sqltypes.Value{
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_0000")),
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("show create table t1_0000")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("create table t1_0000")),
 			},
 		},
 	}
@@ -310,7 +357,7 @@ func TestProxyShowColumns(t *testing.T) {
 		query := "show create table test.t1"
 		qr, err := client.FetchAll(query, -1)
 		assert.Nil(t, err)
-		want := "[t1 show create table t1]"
+		want := "[t1 create table t1\n/*!50100 PARTITION BY HASH (id) */]"
 		got := fmt.Sprintf("%+v", qr.Rows[0])
 		assert.Equal(t, want, got)
 	}
