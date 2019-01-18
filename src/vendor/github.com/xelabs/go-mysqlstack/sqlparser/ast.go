@@ -759,6 +759,75 @@ func (col *ColumnDefinition) WalkSubtree(visit Visit) error {
 	)
 }
 
+type ColumnOpt int
+
+const (
+	ColumnOptionNone ColumnOpt = iota
+
+	// NotNull enum.
+	ColumnOptionNotNull
+
+	// Autoincrement enum.
+	ColumnOptionAutoincrement
+
+	// Default enum.
+	ColumnOptionDefault
+
+	// Comment enum.
+	ColumnOptionComment
+
+	// OnUpdate enum
+	ColumnOptionOnUpdate
+
+	// PrimarykeyOption enum.
+	ColumnOptionKeyPrimaryOpt
+
+	// UniquekeyOption enum.
+	ColumnOptionKeyUniqueOpt
+)
+
+type ColumnOption struct {
+	typ ColumnOpt
+	// Generic field options.
+	NotNull       BoolVal
+	Autoincrement BoolVal
+	Default       *SQLVal
+	Comment       *SQLVal
+	OnUpdate      *SQLVal
+	// Key specification
+	PrimaryKeyOpt ColumnPrimaryKeyOption
+	UniqueKeyOpt  ColumnUniqueKeyOption
+}
+
+func (col ColumnOption) GetOptType() ColumnOpt {
+	return col.typ
+}
+
+type ColumnOptionList []*ColumnOption
+
+type ColumnOptionListOpt struct {
+	ColOptList ColumnOptionList
+}
+
+func (co *ColumnOptionListOpt) GetColumnOption(opt ColumnOpt) *ColumnOption {
+	for _, val := range co.ColOptList {
+		if val.typ == opt {
+			return val
+		}
+	}
+
+	return &ColumnOption{
+		typ:           ColumnOptionNone,
+		NotNull:       false,
+		Autoincrement: false,
+		Default:       nil,
+		Comment:       nil,
+		OnUpdate:      nil,
+		PrimaryKeyOpt: ColKeyPrimaryNone,
+		UniqueKeyOpt:  ColKeyUniqueNone,
+	}
+}
+
 // ColumnType represents a sql type in a CREATE TABLE statement
 // All optional fields are nil if not specified
 type ColumnType struct {
@@ -786,7 +855,8 @@ type ColumnType struct {
 	EnumValues []string
 
 	// Key specification
-	KeyOpt ColumnKeyOption
+	PrimaryKeyOpt ColumnPrimaryKeyOption
+	UniqueKeyOpt  ColumnUniqueKeyOption
 }
 
 // Format returns a canonical string representation of the type and all relevant options
@@ -832,17 +902,11 @@ func (ct *ColumnType) Format(buf *TrackedBuffer) {
 	if ct.Comment != nil {
 		opts = append(opts, keywordStrings[COMMENT_KEYWORD], String(ct.Comment))
 	}
-	if ct.KeyOpt == ColKeyPrimary {
+	if ct.PrimaryKeyOpt == ColKeyPrimary {
 		opts = append(opts, keywordStrings[PRIMARY], keywordStrings[KEY])
 	}
-	if ct.KeyOpt == ColKeyUnique {
-		opts = append(opts, keywordStrings[UNIQUE])
-	}
-	if ct.KeyOpt == ColKeyUniqueKey {
+	if ct.UniqueKeyOpt == ColKeyUniqueKey {
 		opts = append(opts, keywordStrings[UNIQUE], keywordStrings[KEY])
-	}
-	if ct.KeyOpt == ColKey {
-		opts = append(opts, keywordStrings[KEY])
 	}
 
 	if len(opts) != 0 {
@@ -931,25 +995,25 @@ type LengthScaleOption struct {
 	Scale  *SQLVal
 }
 
-// ColumnKeyOption indicates whether or not the given column is defined as an
+// ColumnPrimaryKeyOption and ColumnUniqueKeyOption indicates whether or not the given column is defined as an
 // index element and contains the type of the option
-type ColumnKeyOption int
+type ColumnPrimaryKeyOption int
+type ColumnUniqueKeyOption int
 
 const (
-	// ColKeyNone enum.
-	ColKeyNone ColumnKeyOption = iota
+	// ColKeyPrimaryNone enum.
+	ColKeyPrimaryNone ColumnPrimaryKeyOption = iota
 
 	// ColKeyPrimary enum.
 	ColKeyPrimary
+)
 
-	// ColKeyUnique enum.
-	ColKeyUnique
+const (
+	// ColUniqueKeyNone enum.
+	ColKeyUniqueNone ColumnUniqueKeyOption = iota
 
 	// ColKeyUniqueKey enum.
 	ColKeyUniqueKey
-
-	// ColKey enum.
-	ColKey
 )
 
 // Show represents a show statement.

@@ -173,13 +173,173 @@ func TestDDL1(t *testing.T) {
 				"	`name` varchar(10)\n" +
 				")",
 		},
+		// for issue #190
+		{
+			input: "create table t (\n" +
+				"	`id` int not null,\n" +
+				"	`col2` int not null unique,\n" +
+				"	`col3` int not null unique key,\n" +
+				"	`col4` int not null unique key key,\n" +
+				"	`col5` int not null unique key key comment 'RadonDB',\n" +
+				"	`col6` int not null unique key key comment 'RadonDB' auto_increment,\n" +
+				"	`col7` int not null unique key key comment 'RadonDB' auto_increment primary key\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int not null,\n" +
+				"	`col2` int not null unique key,\n" +
+				"	`col3` int not null unique key,\n" +
+				"	`col4` int not null primary key unique key,\n" +
+				"	`col5` int not null comment 'RadonDB' primary key unique key,\n" +
+				"	`col6` int not null auto_increment comment 'RadonDB' primary key unique key,\n" +
+				"	`col7` int not null auto_increment comment 'RadonDB' primary key unique key\n" +
+				")",
+		},
+
+		{
+			input: "create table t (\n" +
+				"	`id` int auto_increment,\n" +
+				"	`col2` int auto_increment not null,\n" +
+				"	`col3` int auto_increment not null unique,\n" +
+				"	`col4` int auto_increment not null unique key,\n" +
+				"	`col5` int auto_increment not null unique key key,\n" +
+				"	`col6` int auto_increment not null unique key key comment 'RadonDB',\n" +
+				"	`col7` int auto_increment not null unique key key comment 'RadonDB' primary key\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int auto_increment,\n" +
+				"	`col2` int not null auto_increment,\n" +
+				"	`col3` int not null auto_increment unique key,\n" +
+				"	`col4` int not null auto_increment unique key,\n" +
+				"	`col5` int not null auto_increment primary key unique key,\n" +
+				"	`col6` int not null auto_increment comment 'RadonDB' primary key unique key,\n" +
+				"	`col7` int not null auto_increment comment 'RadonDB' primary key unique key\n" +
+				")",
+		},
+
+		{
+			input: "create table t (\n" +
+				"	`id` int comment 'RadonDB',\n" +
+				"	`col2` int comment 'RadonDB' not null,\n" +
+				"	`col3` int comment 'RadonDB' not null unique,\n" +
+				"	`col4` int comment 'RadonDB' not null unique key,\n" +
+				"	`col5` int comment 'RadonDB' not null unique key key,\n" +
+				"	`col6` int comment 'RadonDB' not null unique key key comment 'RadonDB',\n" +
+				"	`col7` int comment 'RadonDB' not null unique key key comment 'RadonDB' auto_increment,\n" +
+				"	`col8` int comment 'RadonDB' not null unique key key comment 'RadonDB' auto_increment primary key\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int comment 'RadonDB',\n" +
+				"	`col2` int not null comment 'RadonDB',\n" +
+				"	`col3` int not null comment 'RadonDB' unique key,\n" +
+				"	`col4` int not null comment 'RadonDB' unique key,\n" +
+				"	`col5` int not null comment 'RadonDB' primary key unique key,\n" +
+				"	`col6` int not null comment 'RadonDB' primary key unique key,\n" +
+				"	`col7` int not null auto_increment comment 'RadonDB' primary key unique key,\n" +
+				"	`col8` int not null auto_increment comment 'RadonDB' primary key unique key\n" +
+				")",
+		},
+
+		{
+			input: "create table t (\n" +
+				"	`id` int key,\n" +
+				"	`col2` int key not null,\n" +
+				"	`col3` int key not null unique,\n" +
+				"	`col4` int key not null unique key,\n" +
+				"	`col5` int key not null unique key comment 'RadonDB',\n" +
+				"	`col6` int key not null unique key comment 'RadonDB' auto_increment,\n" +
+				"	`col7` int key not null unique key comment 'RadonDB' auto_increment primary key\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int primary key,\n" +
+				"	`col2` int not null primary key,\n" +
+				"	`col3` int not null primary key unique key,\n" +
+				"	`col4` int not null primary key unique key,\n" +
+				"	`col5` int not null comment 'RadonDB' primary key unique key,\n" +
+				"	`col6` int not null auto_increment comment 'RadonDB' primary key unique key,\n" +
+				"	`col7` int not null auto_increment comment 'RadonDB' primary key unique key\n" +
+				")",
+		},
+
+		{
+			input: "create table t (\n" +
+				"	`id` int primary key,\n" +
+				"	`col2` int primary key not null,\n" +
+				"	`col3` int primary key not null unique,\n" +
+				"	`col4` int primary key not null unique key,\n" +
+				"	`col5` int primary key not null unique key comment 'RadonDB',\n" +
+				"	`col6` int primary key not null unique key comment 'RadonDB' auto_increment,\n" +
+				"	`col7` int primary key not null unique key comment 'RadonDB' auto_increment key\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int primary key,\n" +
+				"	`col2` int not null primary key,\n" +
+				"	`col3` int not null primary key unique key,\n" +
+				"	`col4` int not null primary key unique key,\n" +
+				"	`col5` int not null comment 'RadonDB' primary key unique key,\n" +
+				"	`col6` int not null auto_increment comment 'RadonDB' primary key unique key,\n" +
+				"	`col7` int not null auto_increment comment 'RadonDB' primary key unique key\n" +
+				")",
+		},
+
+		{
+			input: "create table t (\n" +
+				"	`id` int unique,\n" +
+				"	`col2` int unique not null,\n" +
+				"	`col3` int unique not null unique key,\n" +
+				"	`col4` int unique not null key unique,\n" +
+				"	`col5` int unique not null unique key comment 'RadonDB',\n" +
+				"	`col6` int unique not null unique key comment 'RadonDB' auto_increment,\n" +
+				"	`col7` int unique not null unique key comment 'RadonDB' auto_increment primary key\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int unique key,\n" +
+				"	`col2` int not null unique key,\n" +
+				"	`col3` int not null unique key,\n" +
+				"	`col4` int not null primary key unique key,\n" +
+				"	`col5` int not null comment 'RadonDB' unique key,\n" +
+				"	`col6` int not null auto_increment comment 'RadonDB' unique key,\n" +
+				"	`col7` int not null auto_increment comment 'RadonDB' primary key unique key\n" +
+				")",
+		},
+
+		{
+			input: "create table t (\n" +
+				"	`id` int unique key,\n" +
+				"	`col2` int unique key not null,\n" +
+				"	`col3` int unique key not null unique,\n" +
+				"	`col4` int unique key not null key unique,\n" +
+				"	`col5` int unique key not null key unique comment 'RadonDB',\n" +
+				"	`col6` int unique key not null key unique comment 'RadonDB' auto_increment,\n" +
+				"	`col7` int unique key not null key unique comment 'RadonDB' auto_increment primary key\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int unique key,\n" +
+				"	`col2` int not null unique key,\n" +
+				"	`col3` int not null unique key,\n" +
+				"	`col4` int not null primary key unique key,\n" +
+				"	`col5` int not null comment 'RadonDB' primary key unique key,\n" +
+				"	`col6` int not null auto_increment comment 'RadonDB' primary key unique key,\n" +
+				"	`col7` int not null auto_increment comment 'RadonDB' primary key unique key\n" +
+				")",
+		},
+
+		{
+			input: "create table t (\n" +
+				"	`id` int not null auto_increment primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int not null auto_increment primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
 
 		// current timestamp.
 		{
 			input: "create table t (\n" +
 				"	`id` int primary key,\n" +
 				"	`t1` timestamp default current_timestamp,\n" +
-				"	`t2`  timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp'\n" +
+				"	`t2`  timestamp ON UPDATE CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' ON UPDATE CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n" +
 				") partition by hash(id)",
 			output: "create table t (\n" +
 				"	`id` int primary key,\n" +
@@ -216,6 +376,59 @@ func TestDDL1(t *testing.T) {
 				")",
 		},
 
+		{
+			input: "create table t (\n" +
+				"	`id` int unique key unique primary key comment 'RadonDB' auto_increment not null\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int not null auto_increment comment 'RadonDB' primary key unique key\n" +
+				")",
+		},
+
+		{
+			input: "create table t (\n" +
+				"	`id` int key not null auto_increment primary key primary key key key not null auto_increment,\n" +
+				"	`name` varchar(10)\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int not null auto_increment primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
+
+		{
+			input: "create table t (\n" +
+				"	`id` int key not null auto_increment primary key primary key key unique unique key unique not null auto_increment,\n" +
+				"	`name` varchar(10) comment 'RadonDB'\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int not null auto_increment primary key unique key,\n" +
+				"	`name` varchar(10) comment 'RadonDB'\n" +
+				")",
+		},
+
+		{
+			input: "create table t (\n" +
+				"	`id` int comment 'RadonDB' auto_increment not null primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int not null auto_increment comment 'RadonDB' primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
+
+		// test key field options
+		{
+			input: "create table t (\n" +
+				"	`id` int comment 'RadonDB' auto_increment not null primary key,\n" +
+				"	`name` varchar(10) key\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int not null auto_increment comment 'RadonDB' primary key,\n" +
+				"	`name` varchar(10) primary key\n" +
+				")",
+		},
 		// Index.
 		{
 			input: "create table test.t (\n" +
@@ -331,6 +544,38 @@ func TestDDL1(t *testing.T) {
 				"	`name` varchar(100)\n" +
 				")",
 		},
+		// for issue #190
+		{
+			input: "alter table test add column(id int not null, name varchar(100) auto_increment, col3 int primary key, col4 int comment 'RadonDB', col5 int unique key)",
+			output: "alter table test add column (\n" +
+				"	`id` int not null,\n" +
+				"	`name` varchar(100) auto_increment,\n" +
+				"	`col3` int primary key,\n" +
+				"	`col4` int comment 'RadonDB',\n" +
+				"	`col5` int unique key\n" +
+				")",
+		},
+		{
+			input: "alter table test add column(id int key, name varchar(100) unique)",
+			output: "alter table test add column (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(100) unique key\n" +
+				")",
+		},
+		{
+			input: "alter table test add column(id int not null unique auto_increment unique key primary key key, name varchar(100) not null comment 'RadonDB' )",
+			output: "alter table test add column (\n" +
+				"	`id` int not null auto_increment primary key unique key,\n" +
+				"	`name` varchar(100) not null comment 'RadonDB'\n" +
+				")",
+		},
+		{
+			input: "alter table test add column(id int unique key key unique not null key comment 'RadonDB' auto_increment, name varchar(100) not null key unique comment 'RadonDB')",
+			output: "alter table test add column (\n" +
+				"	`id` int not null auto_increment comment 'RadonDB' primary key unique key,\n" +
+				"	`name` varchar(100) not null comment 'RadonDB' primary key unique key\n" +
+				")",
+		},
 
 		// Modify column.
 		{
@@ -340,6 +585,47 @@ func TestDDL1(t *testing.T) {
 		{
 			input:  "alter table test modify column name varchar(200) not null",
 			output: "alter table test modify column `name` varchar(200) not null",
+		},
+		// for issue #190
+		{
+			input:  "alter table test modify column name varchar(200) not null",
+			output: "alter table test modify column `name` varchar(200) not null",
+		},
+		{
+			input:  "alter table test modify column name varchar(200) auto_increment",
+			output: "alter table test modify column `name` varchar(200) auto_increment",
+		},
+		{
+			input:  "alter table test modify column name varchar(200) comment 'RadonDB'",
+			output: "alter table test modify column `name` varchar(200) comment 'RadonDB'",
+		},
+		{
+			input:  "alter table test modify column name varchar(200) key",
+			output: "alter table test modify column `name` varchar(200) primary key",
+		},
+		{
+			input:  "alter table test modify column name varchar(200) primary key",
+			output: "alter table test modify column `name` varchar(200) primary key",
+		},
+		{
+			input:  "alter table test modify column name varchar(200) unique",
+			output: "alter table test modify column `name` varchar(200) unique key",
+		},
+		{
+			input:  "alter table test modify column name varchar(200) unique key",
+			output: "alter table test modify column `name` varchar(200) unique key",
+		},
+		{
+			input:  "alter table test modify column name varchar(200) primary key not null",
+			output: "alter table test modify column `name` varchar(200) not null primary key",
+		},
+		{
+			input:  "alter table test modify column name varchar(200) auto_increment primary key not null",
+			output: "alter table test modify column `name` varchar(200) not null auto_increment primary key",
+		},
+		{
+			input:  "alter table test modify column name varchar(200) key auto_increment unique not null comment 'RadonDB'",
+			output: "alter table test modify column `name` varchar(200) not null auto_increment comment 'RadonDB' primary key unique key",
 		},
 
 		// Drop column.
@@ -364,6 +650,8 @@ func TestDDL1(t *testing.T) {
 	}
 
 	for _, ddl := range validSQL {
+		// If we want debug, open the comment, default we close it
+		// t.Logf(ddl.input)
 		sql := strings.TrimSpace(ddl.input)
 		tree, err := Parse(sql)
 		if err != nil {
