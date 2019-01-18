@@ -1109,14 +1109,6 @@ func TestCreateTable(t *testing.T) {
 			"	`s3` varchar default null\n" +
 			")",
 
-		// test key field options
-		"create table t (\n" +
-			"	`id` int auto_increment primary key,\n" +
-			"	`username` varchar unique key,\n" +
-			"	`email` varchar unique,\n" +
-			"	`full_name` varchar key\n" +
-			")",
-
 		// test defining indexes separately
 		"create table t (\n" +
 			"	`id` int auto_increment,\n" +

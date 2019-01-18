@@ -577,6 +577,8 @@ func TestProxyDDLColumn(t *testing.T) {
 		"alter table t2 modify column c2 varchar(1)",
 		"alter table t2 drop column id",
 		"alter table t2 modify column id bigint",
+		"alter table t2 add column(c3 bigint not null key primary key unique not null key not null comment 'RadonDB', c4 int)",
+		"alter table t2 add column(c5 timestamp ON UPDATE CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' not null key primary key unique not null key not null comment 'RadonDB', c6 int)",
 	}
 	queryerr := []string{
 		"alter table t1 drop column id",
@@ -804,6 +806,8 @@ func TestProxyDDLConstraint(t *testing.T) {
 		"create table t19(a int unique, b int, index `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
 		"create table t20(a int unique, b int, unique index `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
 		"create table t21(a int unique, b int, unique key `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t22(`a` bigint not null unique default current_timestamp auto_increment unique key key primary key comment 'RadonDB' auto_increment primary key)engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t23(a int unique, b timestamp ON UPDATE CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' ON UPDATE CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
 	}
 
 	for _, query := range querys {

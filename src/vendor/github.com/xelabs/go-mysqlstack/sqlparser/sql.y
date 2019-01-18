@@ -91,7 +91,8 @@ func forceEOF(yylex interface{}) {
   TableSpec  *TableSpec
   TableOptions TableOptions
   columnType    ColumnType
-  colKeyOpt     ColumnKeyOption
+  colPrimaryKeyOpt   ColumnPrimaryKeyOption
+  colUniqueKeyOpt    ColumnUniqueKeyOption
   optVal        *SQLVal
   LengthScaleOption LengthScaleOption
   columnDefinition *ColumnDefinition
@@ -99,14 +100,25 @@ func forceEOF(yylex interface{}) {
   indexInfo     *IndexInfo
   indexColumn   *IndexColumn
   indexColumns  []*IndexColumn
+  columnOptionListOpt ColumnOptionListOpt
+  columnOptionList  ColumnOptionList
+  columnOption      *ColumnOption
 }
 
 %token LEX_ERROR
 %left <bytes> UNION
 %token <bytes> SELECT INSERT UPDATE DELETE FROM WHERE GROUP HAVING ORDER BY LIMIT OFFSET FOR
-%token <bytes> ALL DISTINCT AS EXISTS ASC DESC INTO DUPLICATE KEY DEFAULT SET LOCK FULL CHECKSUM
 // FULLTEXT.
 %token <bytes> FULLTEXT PARSER NGRAM
+
+// Resolve shift/reduce conflict on 'UNIQUE KEY', if we don`t define the precedence, the code
+// doesn`t know which way to shift. Such as it can be parsed like 'UNIQUE' and 'KEY'(primary key),
+// and also can be parsed like just 'UNIQUE KEY'.
+// in mysql sql_yacc.cc, they are: %right UNIQUE_SYM KEY_SYM
+// see: https://github.com/percona/percona-server/blob/8.0/sql/sql_yacc.yy#L1258
+%right <bytes> UNIQUE KEY
+
+%token <bytes> ALL DISTINCT AS EXISTS ASC DESC INTO DUPLICATE DEFAULT SET LOCK FULL CHECKSUM
 %token <bytes> VALUES LAST_INSERT_ID
 %token <bytes> NEXT VALUE SHARE MODE
 %token <bytes> SQL_NO_CACHE SQL_CACHE
@@ -144,7 +156,7 @@ func forceEOF(yylex interface{}) {
 
 // DDL Tokens
 %token <bytes> CREATE ALTER DROP RENAME ANALYZE ADD MODIFY
-%token <bytes> TABLE INDEX VIEW TO IGNORE IF UNIQUE USING PRIMARY COLUMN
+%token <bytes> TABLE INDEX VIEW TO IGNORE IF USING PRIMARY COLUMN
 %token <bytes> SHOW DESCRIBE EXPLAIN DATE ESCAPE REPAIR OPTIMIZE TRUNCATE
 
 // Type Tokens
@@ -260,7 +272,8 @@ func forceEOF(yylex interface{}) {
 %type <boolVal> unsigned_opt zero_fill_opt
 %type <LengthScaleOption> float_length_opt decimal_length_opt
 %type <boolVal> null_opt auto_increment_opt
-%type <colKeyOpt> column_key_opt
+%type <colPrimaryKeyOpt> column_primary_key_opt
+%type <colUniqueKeyOpt>  column_unique_key_opt
 %type <strs> enum_values
 %type <columnDefinition> column_definition
 %type <indexDefinition> index_definition
@@ -270,6 +283,9 @@ func forceEOF(yylex interface{}) {
 %type <indexInfo> index_info
 %type <indexColumn> index_column
 %type <indexColumns> index_column_list
+%type <columnOptionListOpt> column_option_list_opt
+%type <columnOptionList> column_option_list
+%type <columnOption> column_option
 
 %start any_command
 
@@ -540,16 +556,18 @@ table_column_list:
   }
 
 column_definition:
-  ID column_type null_opt column_default_opt on_update_opt auto_increment_opt column_key_opt column_comment_opt
+  ID column_type column_option_list_opt
   {
-    $2.NotNull = $3
-    $2.Default = $4
-    $2.OnUpdate= $5
-    $2.Autoincrement = $6
-    $2.KeyOpt = $7
-    $2.Comment = $8
+    $2.NotNull = $3.GetColumnOption(ColumnOptionNotNull).NotNull
+    $2.Autoincrement = $3.GetColumnOption(ColumnOptionAutoincrement).Autoincrement
+    $2.Default = $3.GetColumnOption(ColumnOptionDefault).Default
+    $2.Comment = $3.GetColumnOption(ColumnOptionComment).Comment
+    $2.OnUpdate= $3.GetColumnOption(ColumnOptionOnUpdate).OnUpdate
+    $2.PrimaryKeyOpt = $3.GetColumnOption(ColumnOptionKeyPrimaryOpt).PrimaryKeyOpt
+    $2.UniqueKeyOpt = $3.GetColumnOption(ColumnOptionKeyUniqueOpt).UniqueKeyOpt
     $$ = &ColumnDefinition{Name: NewColIdent(string($1)), Type: $2}
   }
+
 column_type:
   numeric_type unsigned_opt zero_fill_opt
   {
@@ -559,6 +577,76 @@ column_type:
   }
 | char_type
 | time_type
+
+column_option_list_opt:
+  {
+    $$.ColOptList = []*ColumnOption{}
+  }
+| column_option_list
+  {
+    $$.ColOptList = $1
+  }
+
+column_option_list:
+column_option
+  {
+    $$ = append($$, $1)
+  }
+| column_option_list column_option
+  {
+    $$ = append($1, $2)
+  }
+
+column_option:
+null_opt
+  {
+    $$ = &ColumnOption{
+        typ:           ColumnOptionNotNull,
+        NotNull:       $1,
+    }
+  }
+| column_default_opt
+  {
+    $$ = &ColumnOption{
+        typ:           ColumnOptionDefault,
+        Default:       $1,
+    }
+  }
+| auto_increment_opt
+  {
+    $$ = &ColumnOption{
+        typ:           ColumnOptionAutoincrement,
+        Autoincrement: $1,
+    }
+  }
+| column_primary_key_opt
+  {
+    $$ = &ColumnOption{
+        typ:           ColumnOptionKeyPrimaryOpt,
+        PrimaryKeyOpt:        $1,
+    }
+  }
+| column_unique_key_opt
+  {
+    $$ = &ColumnOption{
+        typ:           ColumnOptionKeyUniqueOpt,
+        UniqueKeyOpt:        $1,
+    }
+  }
+| column_comment_opt
+  {
+    $$ = &ColumnOption{
+        typ:           ColumnOptionComment,
+        Comment:       $1,
+    }
+  }
+| on_update_opt
+  {
+    $$ = &ColumnOption{
+        typ:           ColumnOptionOnUpdate,
+        OnUpdate:      $1,
+    }
+  }
 
 numeric_type:
   int_type length_opt
@@ -783,10 +871,7 @@ zero_fill_opt:
 
 // Null opt returns false to mean NULL (i.e. the default) and true for NOT NULL
 null_opt:
-  {
-    $$ = BoolVal(false)
-  }
-| NULL
+NULL
   {
     $$ = BoolVal(false)
   }
@@ -796,10 +881,7 @@ null_opt:
   }
 
 column_default_opt:
-  {
-    $$ = nil
-  }
-| DEFAULT STRING
+DEFAULT STRING
   {
     $$ = NewStrVal($2)
   }
@@ -821,19 +903,13 @@ column_default_opt:
   }
 
 on_update_opt:
-  {
-    $$ = nil
-  }
-| ON UPDATE CURRENT_TIMESTAMP
+ON UPDATE CURRENT_TIMESTAMP
 {
   $$ = NewValArg($3)
 }
 
 auto_increment_opt:
-  {
-    $$ = BoolVal(false)
-  }
-| AUTO_INCREMENT
+AUTO_INCREMENT
   {
     $$ = BoolVal(true)
   }
@@ -860,32 +936,31 @@ collate_opt:
     $$ = string($2)
   }
 
-column_key_opt:
-  {
-    $$ = ColKeyNone
-  }
-| PRIMARY KEY
+column_primary_key_opt:
+PRIMARY KEY
   {
     $$ = ColKeyPrimary
   }
 | KEY
   {
-    $$ = ColKey
+    // KEY is normally a synonym for INDEX. The key attribute PRIMARY KEY
+    // can also be specified as just KEY when given in a column definition.
+    // See http://dev.mysql.com/doc/refman/5.7/en/create-table.html
+    $$ = ColKeyPrimary
   }
-| UNIQUE KEY
+
+column_unique_key_opt:
+UNIQUE KEY
   {
     $$ = ColKeyUniqueKey
   }
 | UNIQUE
   {
-    $$ = ColKeyUnique
+    $$ = ColKeyUniqueKey
   }
 
 column_comment_opt:
-  {
-    $$ = nil
-  }
-| COMMENT_KEYWORD STRING
+COMMENT_KEYWORD STRING
   {
     $$ = NewStrVal($2)
   }

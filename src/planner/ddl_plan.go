@@ -99,16 +99,16 @@ func (p *DDLPlan) Build() error {
 					return errors.New("unsupported: cannot.modify.the.column.on.shard.key")
 				}
 				// constraint check in column definition
-				switch node.ModifyColumnDef.Type.KeyOpt {
-				case sqlparser.ColKeyUnique, sqlparser.ColKeyUniqueKey, sqlparser.ColKeyPrimary, sqlparser.ColKey:
+				if node.ModifyColumnDef.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
+					node.ModifyColumnDef.Type.UniqueKeyOpt == sqlparser.ColKeyUniqueKey {
 					err := fmt.Sprintf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
 					return errors.New(err)
 				}
 			case sqlparser.AlterAddColumnStr:
 				//constraint check in column definition
 				for _, col := range node.TableSpec.Columns {
-					switch col.Type.KeyOpt {
-					case sqlparser.ColKeyUnique, sqlparser.ColKeyUniqueKey, sqlparser.ColKeyPrimary, sqlparser.ColKey:
+					if col.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
+						col.Type.UniqueKeyOpt == sqlparser.ColKeyUniqueKey {
 						err := fmt.Sprintf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
 						return errors.New(err)
 					}

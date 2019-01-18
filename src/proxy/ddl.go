@@ -61,8 +61,8 @@ func tryGetShardKey(ddl *sqlparser.DDL) (string, error) {
 			if colName == shardKey {
 				shardKeyOK = true
 			} else {
-				switch col.Type.KeyOpt {
-				case sqlparser.ColKeyUnique, sqlparser.ColKeyUniqueKey, sqlparser.ColKeyPrimary, sqlparser.ColKey:
+				if col.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
+					col.Type.UniqueKeyOpt == sqlparser.ColKeyUniqueKey {
 					constraintCheckOK = false
 				}
 			}
@@ -96,8 +96,8 @@ func tryGetShardKey(ddl *sqlparser.DDL) (string, error) {
 	} else {
 		for _, col := range ddl.TableSpec.Columns {
 			colName := col.Name.String()
-			switch col.Type.KeyOpt {
-			case sqlparser.ColKeyUnique, sqlparser.ColKeyUniqueKey, sqlparser.ColKeyPrimary, sqlparser.ColKey:
+			if col.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
+				col.Type.UniqueKeyOpt == sqlparser.ColKeyUniqueKey {
 				return colName, nil
 			}
 		}
