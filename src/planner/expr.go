@@ -204,10 +204,13 @@ func checkInTuple(name string, tuples []selectTuple) bool {
 // decomposeAvg decomposes avg(a) to sum(a) and count(a).
 func decomposeAvg(tuple *selectTuple) []*sqlparser.AliasedExpr {
 	var ret []*sqlparser.AliasedExpr
-	sum := &sqlparser.AliasedExpr{Expr: &sqlparser.FuncExpr{
-		Name:  sqlparser.NewColIdent("sum"),
-		Exprs: []sqlparser.SelectExpr{&sqlparser.AliasedExpr{Expr: sqlparser.NewValArg([]byte(tuple.column))}},
-	}}
+	sum := &sqlparser.AliasedExpr{
+		Expr: &sqlparser.FuncExpr{
+			Name:  sqlparser.NewColIdent("sum"),
+			Exprs: []sqlparser.SelectExpr{&sqlparser.AliasedExpr{Expr: sqlparser.NewValArg([]byte(tuple.column))}},
+		},
+		As: sqlparser.NewColIdent(tuple.field),
+	}
 	count := &sqlparser.AliasedExpr{Expr: &sqlparser.FuncExpr{
 		Name:  sqlparser.NewColIdent("count"),
 		Exprs: []sqlparser.SelectExpr{&sqlparser.AliasedExpr{Expr: sqlparser.NewValArg([]byte(tuple.column))}},

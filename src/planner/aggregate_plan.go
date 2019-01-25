@@ -135,15 +135,15 @@ func (p *AggregatePlan) analyze() error {
 			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeMax})
 		case "avg":
 			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeAvg})
-			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("sum(%s)", tuple.column), Index: k + 1, Type: AggrTypeSum})
-			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("count(%s)", tuple.column), Index: k + 2, Type: AggrTypeCount})
+			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("sum(%s)", tuple.column), Index: k, Type: AggrTypeSum})
+			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("count(%s)", tuple.column), Index: k + 1, Type: AggrTypeCount})
 
 			avgs := decomposeAvg(&tuple)
-			p.rewritten = append(p.rewritten, &sqlparser.AliasedExpr{}, &sqlparser.AliasedExpr{})
-			copy(p.rewritten[(k+1)+2:], p.rewritten[(k+1):])
-			p.rewritten[(k + 1)] = avgs[0]
-			p.rewritten[(k+1)+1] = avgs[1]
-			k += 2
+			p.rewritten = append(p.rewritten, &sqlparser.AliasedExpr{})
+			copy(p.rewritten[(k+2):], p.rewritten[k+1:])
+			p.rewritten[k] = avgs[0]
+			p.rewritten[(k + 1)] = avgs[1]
+			k++
 		default:
 			return errors.Errorf("unsupported: function:%+v", tuple.fn)
 		}
