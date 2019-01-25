@@ -40,52 +40,52 @@ func TestAggregatePlan(t *testing.T) {
 		},
 		{
 			"Field": "sum(a)",
-			"Index": 5,
+			"Index": 4,
 			"Type": "SUM"
 		},
 		{
 			"Field": "count(a)",
-			"Index": 6,
+			"Index": 5,
 			"Type": "COUNT"
 		},
 		{
 			"Field": "sum(a)",
-			"Index": 7,
+			"Index": 6,
 			"Type": "SUM"
 		},
 		{
 			"Field": "count(a)",
-			"Index": 8,
+			"Index": 7,
 			"Type": "COUNT"
 		},
 		{
 			"Field": "avg(b)",
-			"Index": 10,
+			"Index": 9,
 			"Type": "AVG"
 		},
 		{
 			"Field": "sum(b)",
-			"Index": 11,
+			"Index": 9,
 			"Type": "SUM"
 		},
 		{
 			"Field": "count(b)",
-			"Index": 12,
+			"Index": 10,
 			"Type": "COUNT"
 		},
 		{
 			"Field": "avg(c)",
-			"Index": 14,
+			"Index": 12,
 			"Type": "AVG"
 		},
 		{
 			"Field": "sum(c)",
-			"Index": 15,
+			"Index": 12,
 			"Type": "SUM"
 		},
 		{
 			"Field": "count(c)",
-			"Index": 16,
+			"Index": 13,
 			"Type": "COUNT"
 		},
 		{
@@ -95,16 +95,16 @@ func TestAggregatePlan(t *testing.T) {
 		},
 		{
 			"Field": "b1",
-			"Index": 9,
+			"Index": 8,
 			"Type": "GROUP BY"
 		},
 		{
 			"Field": "c",
-			"Index": 13,
+			"Index": 11,
 			"Type": "GROUP BY"
 		}
 	],
-	"ReWritten": "1, a, min(b), max(a), avg(a), sum(a), count(a), sum(a), count(a), b as b1, avg(b), sum(b), count(b), c, avg(c), sum(c), count(c)"
+	"ReWritten": "1, a, min(b), max(a), sum(a) as ` + "`avg(a)`" + `, count(a), sum(a), count(a), b as b1, sum(b) as ` + "`avg(b)`" + `, count(b), c, sum(c) as ` + "`avg(c)`" + `, count(c)"
 }`,
 	}
 
@@ -158,52 +158,52 @@ func TestAggregatePlanUpperCase(t *testing.T) {
 		},
 		{
 			"Field": "sum(a)",
-			"Index": 5,
+			"Index": 4,
 			"Type": "SUM"
 		},
 		{
 			"Field": "count(a)",
-			"Index": 6,
+			"Index": 5,
 			"Type": "COUNT"
 		},
 		{
 			"Field": "SUM(a)",
-			"Index": 7,
+			"Index": 6,
 			"Type": "SUM"
 		},
 		{
 			"Field": "COUNT(a)",
-			"Index": 8,
+			"Index": 7,
 			"Type": "COUNT"
 		},
 		{
 			"Field": "AVG(b)",
-			"Index": 10,
+			"Index": 9,
 			"Type": "AVG"
 		},
 		{
 			"Field": "sum(b)",
-			"Index": 11,
+			"Index": 9,
 			"Type": "SUM"
 		},
 		{
 			"Field": "count(b)",
-			"Index": 12,
+			"Index": 10,
 			"Type": "COUNT"
 		},
 		{
 			"Field": "AVG(c)",
-			"Index": 14,
+			"Index": 12,
 			"Type": "AVG"
 		},
 		{
 			"Field": "sum(c)",
-			"Index": 15,
+			"Index": 12,
 			"Type": "SUM"
 		},
 		{
 			"Field": "count(c)",
-			"Index": 16,
+			"Index": 13,
 			"Type": "COUNT"
 		},
 		{
@@ -213,16 +213,16 @@ func TestAggregatePlanUpperCase(t *testing.T) {
 		},
 		{
 			"Field": "b1",
-			"Index": 9,
+			"Index": 8,
 			"Type": "GROUP BY"
 		},
 		{
 			"Field": "c",
-			"Index": 13,
+			"Index": 11,
 			"Type": "GROUP BY"
 		}
 	],
-	"ReWritten": "1, a, MIN(b), MAX(a), AVG(a), sum(a), count(a), SUM(a), COUNT(a), b as b1, AVG(b), sum(b), count(b), c, AVG(c), sum(c), count(c)"
+	"ReWritten": "1, a, MIN(b), MAX(a), sum(a) as ` + "`AVG(a)`" + `, count(a), SUM(a), COUNT(a), b as b1, sum(b) as ` + "`AVG(b)`" + `, count(b), c, sum(c) as ` + "`AVG(c)`" + `, count(c)"
 }`,
 	}
 

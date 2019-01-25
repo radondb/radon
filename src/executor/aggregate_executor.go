@@ -78,9 +78,9 @@ func (executor *AggregateExecutor) aggregate(result *sqltypes.Result) {
 		for _, aggr := range aggrs {
 			switch aggr.Type {
 			case planner.AggrTypeAvg:
-				v1, v2 := v[aggr.Index+1], v[aggr.Index+2]
+				v1, v2 := v[aggr.Index], v[aggr.Index+1]
 				v[aggr.Index] = sqltypes.Operator(v1, v2, sqltypes.DivFn)
-				deIdxs = append(deIdxs, aggr.Index+1, aggr.Index+2)
+				deIdxs = append(deIdxs, aggr.Index+1)
 			}
 		}
 		result.Rows[i] = v

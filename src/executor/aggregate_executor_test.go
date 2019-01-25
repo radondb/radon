@@ -145,17 +145,12 @@ func TestAggregateAvgExecutor(t *testing.T) {
 				Type: querypb.Type_FLOAT32,
 			},
 			{
-				Name: "sum(score)",
-				Type: querypb.Type_INT32,
-			},
-			{
 				Name: "count(score)",
 				Type: querypb.Type_INT32,
 			},
 		},
 		Rows: [][]sqltypes.Value{
 			{
-				sqltypes.MakeTrusted(querypb.Type_FLOAT32, []byte("0")),
 				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
 				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("1")),
 			},
@@ -169,17 +164,12 @@ func TestAggregateAvgExecutor(t *testing.T) {
 				Type: querypb.Type_FLOAT32,
 			},
 			{
-				Name: "sum(score)",
-				Type: querypb.Type_INT32,
-			},
-			{
 				Name: "count(score)",
 				Type: querypb.Type_INT32,
 			},
 		},
 		Rows: [][]sqltypes.Value{
 			{
-				sqltypes.MakeTrusted(querypb.Type_FLOAT32, []byte("0")),
 				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("13")),
 				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
 			},
@@ -199,10 +189,10 @@ func TestAggregateAvgExecutor(t *testing.T) {
 	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
 	// avg.
-	fakedbs.AddQuery("select avg(score) as score, sum(score), count(score) from sbtest.A0 as A where id > 8", r1)
-	fakedbs.AddQuery("select avg(score) as score, sum(score), count(score) from sbtest.A2 as A where id > 8", r1)
-	fakedbs.AddQuery("select avg(score) as score, sum(score), count(score) from sbtest.A4 as A where id > 8", r1)
-	fakedbs.AddQuery("select avg(score) as score, sum(score), count(score) from sbtest.A8 as A where id > 8", r2)
+	fakedbs.AddQuery("select sum(score) as score, count(score) from sbtest.A0 as A where id > 8", r1)
+	fakedbs.AddQuery("select sum(score) as score, count(score) from sbtest.A2 as A where id > 8", r1)
+	fakedbs.AddQuery("select sum(score) as score, count(score) from sbtest.A4 as A where id > 8", r1)
+	fakedbs.AddQuery("select sum(score) as score, count(score) from sbtest.A8 as A where id > 8", r2)
 
 	querys := []string{
 		"select avg(score) as score from A where id>8",

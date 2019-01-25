@@ -22,35 +22,35 @@ func TestSelectPlan(t *testing.T) {
 	results := []string{
 		`{
 	"RawQuery": "select 1, sum(a),avg(a),a,b from sbtest.A where id\u003e1 group by a,b order by a desc limit 10 offset 100",
-	"Project": "1, sum(a), avg(a), sum(a), count(a), a, b",
+	"Project": "1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b",
 	"Partitions": [
 		{
-			"Query": "select 1, sum(a), avg(a), sum(a), count(a), a, b from sbtest.A1 as A where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A1 as A where id \u003e 1 group by a, b order by a desc limit 110",
 			"Backend": "backend1",
 			"Range": "[0-32)"
 		},
 		{
-			"Query": "select 1, sum(a), avg(a), sum(a), count(a), a, b from sbtest.A2 as A where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A2 as A where id \u003e 1 group by a, b order by a desc limit 110",
 			"Backend": "backend2",
 			"Range": "[32-64)"
 		},
 		{
-			"Query": "select 1, sum(a), avg(a), sum(a), count(a), a, b from sbtest.A3 as A where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A3 as A where id \u003e 1 group by a, b order by a desc limit 110",
 			"Backend": "backend3",
 			"Range": "[64-96)"
 		},
 		{
-			"Query": "select 1, sum(a), avg(a), sum(a), count(a), a, b from sbtest.A4 as A where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A4 as A where id \u003e 1 group by a, b order by a desc limit 110",
 			"Backend": "backend4",
 			"Range": "[96-256)"
 		},
 		{
-			"Query": "select 1, sum(a), avg(a), sum(a), count(a), a, b from sbtest.A5 as A where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A5 as A where id \u003e 1 group by a, b order by a desc limit 110",
 			"Backend": "backend5",
 			"Range": "[256-512)"
 		},
 		{
-			"Query": "select 1, sum(a), avg(a), sum(a), count(a), a, b from sbtest.A6 as A where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A6 as A where id \u003e 1 group by a, b order by a desc limit 110",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
 		}
@@ -155,35 +155,35 @@ func TestSelectPlanDatabaseIsNull(t *testing.T) {
 	results := []string{
 		`{
 	"RawQuery": "select 1, sum(a),avg(a),a,b from sbtest.A where id\u003e1 group by a,b order by a desc limit 10 offset 100",
-	"Project": "1, sum(a), avg(a), sum(a), count(a), a, b",
+	"Project": "1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b",
 	"Partitions": [
 		{
-			"Query": "select 1, sum(a), avg(a), sum(a), count(a), a, b from sbtest.A1 as A where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A1 as A where id \u003e 1 group by a, b order by a desc limit 110",
 			"Backend": "backend1",
 			"Range": "[0-32)"
 		},
 		{
-			"Query": "select 1, sum(a), avg(a), sum(a), count(a), a, b from sbtest.A2 as A where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A2 as A where id \u003e 1 group by a, b order by a desc limit 110",
 			"Backend": "backend2",
 			"Range": "[32-64)"
 		},
 		{
-			"Query": "select 1, sum(a), avg(a), sum(a), count(a), a, b from sbtest.A3 as A where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A3 as A where id \u003e 1 group by a, b order by a desc limit 110",
 			"Backend": "backend3",
 			"Range": "[64-96)"
 		},
 		{
-			"Query": "select 1, sum(a), avg(a), sum(a), count(a), a, b from sbtest.A4 as A where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A4 as A where id \u003e 1 group by a, b order by a desc limit 110",
 			"Backend": "backend4",
 			"Range": "[96-256)"
 		},
 		{
-			"Query": "select 1, sum(a), avg(a), sum(a), count(a), a, b from sbtest.A5 as A where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A5 as A where id \u003e 1 group by a, b order by a desc limit 110",
 			"Backend": "backend5",
 			"Range": "[256-512)"
 		},
 		{
-			"Query": "select 1, sum(a), avg(a), sum(a), count(a), a, b from sbtest.A6 as A where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A6 as A where id \u003e 1 group by a, b order by a desc limit 110",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
 		}
