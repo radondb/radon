@@ -117,10 +117,10 @@ func (p *AggregatePlan) analyze() error {
 	k := 0
 	for _, tuple := range tuples {
 		if tuple.distinct {
-			return errors.Errorf("unsupported: distinct.in.function:%+v", tuple.fn)
+			return errors.Errorf("unsupported: distinct.in.function:%+v", tuple.aggrFuc)
 		}
 
-		aggrType := strings.ToLower(tuple.fn)
+		aggrType := strings.ToLower(tuple.aggrFuc)
 		switch aggrType {
 		case "":
 			// non-func
@@ -135,8 +135,8 @@ func (p *AggregatePlan) analyze() error {
 			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeMax})
 		case "avg":
 			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeAvg})
-			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("sum(%s)", tuple.column), Index: k, Type: AggrTypeSum})
-			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("count(%s)", tuple.column), Index: k + 1, Type: AggrTypeCount})
+			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("sum(%s)", tuple.aggrField), Index: k, Type: AggrTypeSum})
+			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("count(%s)", tuple.aggrField), Index: k + 1, Type: AggrTypeCount})
 
 			avgs := decomposeAvg(&tuple)
 			p.rewritten = append(p.rewritten, &sqlparser.AliasedExpr{})
@@ -145,7 +145,7 @@ func (p *AggregatePlan) analyze() error {
 			p.rewritten[(k + 1)] = avgs[1]
 			k++
 		default:
-			return errors.Errorf("unsupported: function:%+v", tuple.fn)
+			return errors.Errorf("unsupported: function:%+v", tuple.aggrFuc)
 		}
 		k++
 	}

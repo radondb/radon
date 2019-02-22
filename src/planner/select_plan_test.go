@@ -296,7 +296,6 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select round(avg(id)) from A",
 		"select id,group_concat(distinct name) from A group by id",
 		"select next value for A",
-		"select concat(str1,str2) from A",
 		"select A.*,(select b.str from b where A.id=B.id) str from A",
 		"select avg(id)*1000 from A",
 	}
@@ -309,12 +308,11 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: expr[count(*)].in.having.clause",
 		"unsupported: ParenTableExpr.in.select",
 		"unsupported: invalid.use.of.group.function[count]",
-		"unsupported: expression.in.select.exprs",
+		"unsupported: 'round(avg(id))'.contain.aggregate.in.select.exprs",
 		"unsupported: group_concat.in.select.exprs",
-		"unsupported: Nextval.in.select.exprs",
-		"unsupported: more.than.one.column.in.a.select.expr",
+		"unsupported: nextval.in.select.exprs",
 		"unsupported: subqueries.in.select",
-		"unsupported: expression.in.select.exprs",
+		"unsupported: 'avg(id) * 1000'.contain.aggregate.in.select.exprs",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))

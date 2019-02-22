@@ -99,54 +99,70 @@ func checkComparison(expr sqlparser.Expr) error {
 	return nil
 }
 
+// For example: select count(*), count(distinct x.a) as cstar, max(x.a) as mb, t.a as a1, x.b from t,x group by a1,b
+// {field:count(*) referTables:{}   aggrFuc:count  aggrField:*   distinct:false}
+// {field:cstar    referTables:{x}  aggrFuc:count  aggrField:*   distinct:true}
+// {field:mb       referTables:{x}  aggrFuc:max    aggrField:x.a distinct:false}
+// {field:a1       referTables:{t}  aggrFuc:}
+// {field:x.b      referTables:{x}  aggrFuc:}
 type selectTuple struct {
-	field    string
-	column   string
-	fn       string
-	distinct bool
+	//select expression
+	expr sqlparser.SelectExpr
+	//the field name of mysql returns, may include table name
+	field string
+	//the referred tables
+	referTables []string
+	//aggregate function name
+	aggrFuc string
+	//field in the aggregate function
+	aggrField string
+	distinct  bool
 }
 
-// parserSelectExpr parses the AliasedExpr to {as, column, func} tuple.
-// field:  the filed name of mysql returns
-// column: column name
-// func:   function name
-// For example: select count(*), count(*) as cstar, max(a), max(b) as mb, a as a1, x.b from t,x group by a1,b
-// {field:count(*) column:*   fn:count}
-// {field:cstar    column:*   fn:count}
-// {field:max(a)   column:a   fn:max}
-// {field:mb       column:b   fn:max}
-// {field:a1       column:a   fn:}
-// {field:b        column:x.b fn:}
+// parserSelectExpr parses the AliasedExpr to select tuple.
 func parserSelectExpr(expr *sqlparser.AliasedExpr) (*selectTuple, error) {
-	field := ""
-	colName := ""
-	colName1 := ""
 	funcName := ""
+	aggrField := ""
 	distinct := false
-	field = expr.As.String()
+	referTables := make([]string, 0, 4)
+
+	field := expr.As.String()
+	if field == "" {
+		buf := sqlparser.NewTrackedBuffer(nil)
+		expr.Format(buf)
+		field = buf.String()
+	}
+
 	err := sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
 		switch node := node.(type) {
 		case *sqlparser.ColName:
-			if colName != "" {
-				return false, errors.Errorf("unsupported: more.than.one.column.in.a.select.expr")
+			tableName := node.Qualifier.Name.String()
+			if tableName == "" {
+				return true, nil
 			}
-			colName = node.Name.String()
-			colName1 = colName
-			if !node.Qualifier.IsEmpty() {
-				colName = node.Qualifier.Name.String() + "." + colName
+			for _, tb := range referTables {
+				if tb == tableName {
+					return true, nil
+				}
 			}
+			referTables = append(referTables, tableName)
 		case *sqlparser.FuncExpr:
 			distinct = node.Distinct
 			if node.IsAggregate() {
 				if node != expr.Expr {
-					return false, errors.Errorf("unsupported: expression.in.select.exprs")
+					return false, errors.Errorf("unsupported: '%s'.contain.aggregate.in.select.exprs", field)
 				}
 				funcName = node.Name.String()
 				if len(node.Exprs) != 1 {
 					return false, errors.Errorf("unsupported: invalid.use.of.group.function[%s]", funcName)
 				}
+				buf := sqlparser.NewTrackedBuffer(nil)
+				node.Exprs.Format(buf)
+				aggrField = buf.String()
+				if aggrField == "*" && node.Name.String() != "count" {
+					return false, errors.Errorf("unsupported: syntax.error.at.'%s'", field)
+				}
 			}
-			return true, nil
 		case *sqlparser.GroupConcatExpr:
 			return false, errors.Errorf("unsupported: group_concat.in.select.exprs")
 		case *sqlparser.Subquery:
@@ -158,35 +174,29 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr) (*selectTuple, error) {
 		return nil, err
 	}
 
-	if field == "" {
-		_, isCol := expr.Expr.(*sqlparser.ColName)
-		if isCol {
-			field = colName1
-		} else {
-			buf := sqlparser.NewTrackedBuffer(nil)
-			expr.Format(buf)
-			field = buf.String()
-		}
-	}
-	return &selectTuple{field, colName, funcName, distinct}, nil
+	return &selectTuple{expr, field, referTables, funcName, aggrField, distinct}, nil
 }
 
 func parserSelectExprs(exprs sqlparser.SelectExprs) ([]selectTuple, error) {
 	var tuples []selectTuple
+	var err error
 	for _, expr := range exprs {
-		switch expr.(type) {
+		switch exp := expr.(type) {
 		case *sqlparser.AliasedExpr:
-			exp := expr.(*sqlparser.AliasedExpr)
-			tuple, err := parserSelectExpr(exp)
+			var tuple *selectTuple
+			tuple, err = parserSelectExpr(exp)
 			if err != nil {
 				return nil, err
 			}
 			tuples = append(tuples, *tuple)
 		case *sqlparser.StarExpr:
-			tuple := selectTuple{field: "*", column: "*"}
+			tuple := selectTuple{expr: exp, field: "*"}
+			if !exp.TableName.IsEmpty() {
+				tuple.referTables = append(tuple.referTables, exp.TableName.Name.String())
+			}
 			tuples = append(tuples, tuple)
 		case sqlparser.Nextval:
-			return nil, errors.Errorf("unsupported: Nextval.in.select.exprs")
+			return nil, errors.Errorf("unsupported: nextval.in.select.exprs")
 		}
 	}
 	return tuples, nil
@@ -207,13 +217,13 @@ func decomposeAvg(tuple *selectTuple) []*sqlparser.AliasedExpr {
 	sum := &sqlparser.AliasedExpr{
 		Expr: &sqlparser.FuncExpr{
 			Name:  sqlparser.NewColIdent("sum"),
-			Exprs: []sqlparser.SelectExpr{&sqlparser.AliasedExpr{Expr: sqlparser.NewValArg([]byte(tuple.column))}},
+			Exprs: []sqlparser.SelectExpr{&sqlparser.AliasedExpr{Expr: sqlparser.NewValArg([]byte(tuple.aggrField))}},
 		},
 		As: sqlparser.NewColIdent(tuple.field),
 	}
 	count := &sqlparser.AliasedExpr{Expr: &sqlparser.FuncExpr{
 		Name:  sqlparser.NewColIdent("count"),
-		Exprs: []sqlparser.SelectExpr{&sqlparser.AliasedExpr{Expr: sqlparser.NewValArg([]byte(tuple.column))}},
+		Exprs: []sqlparser.SelectExpr{&sqlparser.AliasedExpr{Expr: sqlparser.NewValArg([]byte(tuple.aggrField))}},
 	}}
 	ret = append(ret, sum, count)
 	return ret
