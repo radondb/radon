@@ -568,7 +568,7 @@ func TestSQLSelectRewritten(t *testing.T) {
 
 		k := 0
 		for _, tuple := range tuples {
-			switch tuple.fn {
+			switch tuple.aggrField {
 			case "avg":
 				avgs := decomposeAvg(tuple)
 				rewritten = append(rewritten, &sqlparser.AliasedExpr{}, &sqlparser.AliasedExpr{})

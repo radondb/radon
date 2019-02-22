@@ -330,3 +330,68 @@ func TestAggregatePlanUnsupported(t *testing.T) {
 		}
 	}
 }
+
+func TestAggregatePlans(t *testing.T) {
+	querys := []string{
+		"select avg(a) as b1, avg(c*100)  from t",
+	}
+	results := []string{
+		`{
+	"Aggrs": [
+		{
+			"Field": "b1",
+			"Index": 0,
+			"Type": "AVG"
+		},
+		{
+			"Field": "sum(a)",
+			"Index": 0,
+			"Type": "SUM"
+		},
+		{
+			"Field": "count(a)",
+			"Index": 1,
+			"Type": "COUNT"
+		},
+		{
+			"Field": "avg(c * 100)",
+			"Index": 2,
+			"Type": "AVG"
+		},
+		{
+			"Field": "sum(c * 100)",
+			"Index": 2,
+			"Type": "SUM"
+		},
+		{
+			"Field": "count(c * 100)",
+			"Index": 3,
+			"Type": "COUNT"
+		}
+	],
+	"ReWritten": "sum(a) as b1, count(a), sum(c * 100) as ` + "`avg(c * 100)`" + `, count(c * 100)"
+}`,
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	for i, query := range querys {
+		tree, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		node := tree.(*sqlparser.Select)
+		assert.Nil(t, err)
+		tuples, err := parserSelectExprs(node.SelectExprs)
+		assert.Nil(t, err)
+		plan := NewAggregatePlan(log, node, tuples)
+		// plan build
+		{
+			err := plan.Build()
+			assert.Nil(t, err)
+			want := results[i]
+			got := plan.JSON()
+			log.Debug(got)
+			assert.Equal(t, want, got)
+			assert.True(t, nil == plan.Children())
+			assert.False(t, plan.Empty())
+		}
+	}
+}
