@@ -77,11 +77,11 @@ func lessAscFn(idx int, v1, v2 []Value) bool {
 }
 
 // OrderedByAsc adds a 'order by asc' operator to the result.
-func (result *Result) OrderedByAsc(fields ...string) error {
+func (result *Result) OrderedByAsc(table string, fields ...string) error {
 	for _, field := range fields {
 		idx := -1
 		for k, f := range result.Fields {
-			if f.Name == field {
+			if f.Name == field && (table == "" || table == f.Table) {
 				idx = k
 				break
 			}
@@ -115,11 +115,11 @@ func lessDescFn(idx int, v1, v2 []Value) bool {
 }
 
 // OrderedByDesc adds a 'order by desc' operator to the result.
-func (result *Result) OrderedByDesc(fields ...string) error {
+func (result *Result) OrderedByDesc(table string, fields ...string) error {
 	for _, field := range fields {
 		idx := -1
 		for k, f := range result.Fields {
-			if f.Name == field {
+			if f.Name == field && (table == "" || table == f.Table) {
 				idx = k
 				break
 			}
