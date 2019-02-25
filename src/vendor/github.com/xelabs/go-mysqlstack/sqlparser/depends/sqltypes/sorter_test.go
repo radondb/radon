@@ -55,7 +55,7 @@ func TestSorter(t *testing.T) {
 
 		for i, field := range fields {
 			rs1 := rs.Copy()
-			rs1.OrderedByAsc(field)
+			rs1.OrderedByAsc("", field)
 			rs1.Sort()
 
 			want := wants[i]
@@ -81,7 +81,7 @@ func TestSorter(t *testing.T) {
 
 		for i, field := range fields {
 			rs1 := rs.Copy()
-			rs1.OrderedByDesc(field)
+			rs1.OrderedByDesc("", field)
 			rs1.Sort()
 
 			want := wants[i]
@@ -101,7 +101,7 @@ func TestSorter(t *testing.T) {
 		}
 
 		rs1 := rs.Copy()
-		rs1.OrderedByAsc(fields...)
+		rs1.OrderedByAsc("", fields...)
 		rs1.Sort()
 		want := "[[dmr C 100] [glenda Go 200] [gri Go 100] [gri Smalltalk 80] [ken C 150] [ken Go 200] [r C 150] [r Go 200] [rsc Go 200]]"
 		got := fmt.Sprintf("%+v", rs1.Rows)
@@ -119,7 +119,7 @@ func TestSorter(t *testing.T) {
 		}
 
 		rs1 := rs.Copy()
-		rs1.OrderedByDesc(fields...)
+		rs1.OrderedByDesc("", fields...)
 		rs1.Sort()
 		want := "[[rsc Go 200] [r Go 200] [r C 150] [ken Go 200] [ken C 150] [gri Smalltalk 80] [gri Go 100] [glenda Go 200] [dmr C 100]]"
 		got := fmt.Sprintf("%+v", rs1.Rows)
@@ -163,7 +163,7 @@ func TestSorterType(t *testing.T) {
 
 		for i, field := range fields {
 			rs1 := rs.Copy()
-			rs1.OrderedByAsc(field)
+			rs1.OrderedByAsc("", field)
 			rs1.Sort()
 
 			want := wants[i]
@@ -189,7 +189,7 @@ func TestSorterType(t *testing.T) {
 
 		for i, field := range fields {
 			rs1 := rs.Copy()
-			rs1.OrderedByDesc(field)
+			rs1.OrderedByDesc("", field)
 			rs1.Sort()
 
 			want := wants[i]
@@ -222,7 +222,7 @@ func TestSorterError(t *testing.T) {
 	{
 		{
 			rs1 := rs.Copy()
-			err := rs1.OrderedByAsc("xx")
+			err := rs1.OrderedByAsc("", "xx")
 			want := "can.not.find.the.orderby.field[xx].direction.asc"
 			got := err.Error()
 			if want != got {
@@ -232,7 +232,7 @@ func TestSorterError(t *testing.T) {
 
 		{
 			rs1 := rs.Copy()
-			err := rs1.OrderedByDesc("xx")
+			err := rs1.OrderedByDesc("", "xx")
 			want := "can.not.find.the.orderby.field[xx].direction.desc"
 			got := err.Error()
 			if want != got {

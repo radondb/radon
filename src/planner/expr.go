@@ -104,11 +104,11 @@ func checkComparison(expr sqlparser.Expr) error {
 // {field:cstar    referTables:{x}  aggrFuc:count  aggrField:*   distinct:true}
 // {field:mb       referTables:{x}  aggrFuc:max    aggrField:x.a distinct:false}
 // {field:a1       referTables:{t}  aggrFuc:}
-// {field:x.b      referTables:{x}  aggrFuc:}
+// {field:b      referTables:{x}  aggrFuc:}
 type selectTuple struct {
 	//select expression
 	expr sqlparser.SelectExpr
-	//the field name of mysql returns, may include table name
+	//the field name of mysql returns
 	field string
 	//the referred tables
 	referTables []string
@@ -128,9 +128,13 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr) (*selectTuple, error) {
 
 	field := expr.As.String()
 	if field == "" {
-		buf := sqlparser.NewTrackedBuffer(nil)
-		expr.Format(buf)
-		field = buf.String()
+		if col, ok := expr.Expr.(*sqlparser.ColName); ok {
+			field = col.Name.String()
+		} else {
+			buf := sqlparser.NewTrackedBuffer(nil)
+			expr.Format(buf)
+			field = buf.String()
+		}
 	}
 
 	err := sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
@@ -202,10 +206,15 @@ func parserSelectExprs(exprs sqlparser.SelectExprs) ([]selectTuple, error) {
 	return tuples, nil
 }
 
-func checkInTuple(name string, tuples []selectTuple) bool {
+func checkInTuple(field, table string, tuples []selectTuple) bool {
 	for _, tuple := range tuples {
-		if (tuple.field == "*") || (tuple.field == name) {
-			return true
+		if tuple.field == "*" || tuple.field == field {
+			if table == "" || len(tuple.referTables) == 0 {
+				return true
+			}
+			if len(tuple.referTables) == 1 && tuple.referTables[0] == table {
+				return true
+			}
 		}
 	}
 	return false

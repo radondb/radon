@@ -42,11 +42,11 @@ func (executor *OrderByExecutor) Execute(ctx *xcontext.ResultContext) error {
 	for _, orderby := range plan.OrderBys {
 		switch orderby.Direction {
 		case planner.ASC:
-			if err := rs.OrderedByAsc(orderby.Field); err != nil {
+			if err := rs.OrderedByAsc(orderby.Table, orderby.Field); err != nil {
 				return errors.WithStack(err)
 			}
 		case planner.DESC:
-			if err := rs.OrderedByDesc(orderby.Field); err != nil {
+			if err := rs.OrderedByDesc(orderby.Table, orderby.Field); err != nil {
 				return errors.WithStack(err)
 			}
 		}

@@ -34,6 +34,7 @@ const (
 // OrderBy tuple.
 type OrderBy struct {
 	Field     string
+	Table     string
 	Direction Direction
 }
 
@@ -65,21 +66,22 @@ func NewOrderByPlan(log *xlog.Log, node *sqlparser.Select, tuples []selectTuple)
 func (p *OrderByPlan) analyze() error {
 	order := p.node.OrderBy
 	for _, o := range order {
-		switch o.Expr.(type) {
+		switch e := o.Expr.(type) {
 		case *sqlparser.ColName:
-			order := OrderBy{}
+			orderBy := OrderBy{}
 			switch o.Direction {
 			case "desc":
-				order.Direction = DESC
+				orderBy.Direction = DESC
 			case "asc":
-				order.Direction = ASC
+				orderBy.Direction = ASC
 			}
-			e := o.Expr.(*sqlparser.ColName)
-			order.Field = e.Name.String()
-			if !checkInTuple(order.Field, p.tuples) {
-				return errors.Errorf("unsupported: orderby[%+v].should.in.select.list", order.Field)
+			orderBy.Field = e.Name.String()
+			orderBy.Table = e.Qualifier.Name.String()
+
+			if !checkInTuple(orderBy.Field, orderBy.Table, p.tuples) {
+				return errors.Errorf("unsupported: orderby[%+v].should.in.select.list", orderBy.Field)
 			}
-			p.OrderBys = append(p.OrderBys, order)
+			p.OrderBys = append(p.OrderBys, orderBy)
 		default:
 			return errors.Errorf("unsupported: orderby:%+v", o.Expr)
 		}

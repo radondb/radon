@@ -11,6 +11,7 @@ package planner
 import (
 	"encoding/json"
 	"math/rand"
+	"strings"
 	"time"
 
 	"router"
@@ -261,7 +262,11 @@ func (p *SelectPlan) JSON() string {
 		case PlanTypeOrderby:
 			plan := sub.(*OrderByPlan)
 			for _, order := range plan.OrderBys {
-				gatherMerge = append(gatherMerge, order.Field)
+				field := order.Field
+				if order.Table != "" {
+					field = strings.Join([]string{order.Table, order.Field}, ".")
+				}
+				gatherMerge = append(gatherMerge, field)
 			}
 		case PlanTypeLimit:
 			plan := sub.(*LimitPlan)
