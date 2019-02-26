@@ -67,3 +67,32 @@ func TestParserSelectExprsSubquery(t *testing.T) {
 	got := err.Error()
 	assert.Equal(t, want, got)
 }
+
+func TestParserWhereOrJoinExprs(t *testing.T) {
+	querys := []string{
+		"select * from A where id=1",
+		"select * from A where concat(A.str1,A.str2)='sansi'",
+		"select * from A where 1=A.id",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig())
+	assert.Nil(t, err)
+
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		_, _, err = parserWhereOrJoinExprs(sel.Where.Expr, p.getReferredTables())
+		assert.Nil(t, err)
+	}
+}

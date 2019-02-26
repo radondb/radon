@@ -252,3 +252,105 @@ func decomposeAvg(tuple *selectTuple) []*sqlparser.AliasedExpr {
 	ret = append(ret, sum, count)
 	return ret
 }
+
+// convertToLeftJoin converts a right join into a left join.
+func convertToLeftJoin(joinExpr *sqlparser.JoinTableExpr) {
+	newExpr := joinExpr.LeftExpr
+	// If LeftExpr is a join, we have to parenthesize it.
+	if _, ok := newExpr.(*sqlparser.JoinTableExpr); ok {
+		newExpr = &sqlparser.ParenTableExpr{
+			Exprs: sqlparser.TableExprs{newExpr},
+		}
+	}
+	joinExpr.LeftExpr, joinExpr.RightExpr = joinExpr.RightExpr, newExpr
+	joinExpr.Join = sqlparser.LeftJoinStr
+}
+
+type filterTuple struct {
+	// filter expr.
+	expr sqlparser.Expr
+	// referred tables.
+	referTables []string
+	// colname in the filter expr.
+	col *sqlparser.ColName
+	// val in the filter expr.
+	val sqlparser.Expr
+}
+
+type joinTuple struct {
+	// join expr.
+	expr *sqlparser.ComparisonExpr
+	// referred tables.
+	referTables []string
+}
+
+// parserWhereOrJoinExprs parser exprs in where or join on conditions.
+// eg: 't1.a=t2.a and t1.b=2'.
+// t1.a=t2.a paser in joinTuple.
+// t1.b=2 paser in filterTuple, t1.b col, 2 val.
+func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo) ([]joinTuple, []filterTuple, error) {
+	filters := splitAndExpression(nil, exprs)
+	var joins []joinTuple
+	var wheres []filterTuple
+
+	for _, filter := range filters {
+		var col *sqlparser.ColName
+		var val sqlparser.Expr
+		filter = skipParenthesis(filter)
+		referTables := make([]string, 0, 4)
+		err := sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
+			switch node := node.(type) {
+			case *sqlparser.ColName:
+				tableName := node.Qualifier.Name.String()
+				if tableName == "" {
+					if len(tbInfos) == 1 {
+						tableName, _ = getOneTableInfo(tbInfos)
+					} else {
+						return false, errors.Errorf("unsupported: unknown.column.'%s'.in.clause", node.Name.String())
+					}
+				} else {
+					if _, ok := tbInfos[tableName]; !ok {
+						return false, errors.Errorf("unsupported: unknown.table.'%s'.in.clause", tableName)
+					}
+				}
+
+				for _, tb := range referTables {
+					if tb == tableName {
+						return true, nil
+					}
+				}
+				referTables = append(referTables, tableName)
+			}
+			return true, nil
+		}, filter)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		condition, ok := filter.(*sqlparser.ComparisonExpr)
+		if ok {
+			if condition.Operator == sqlparser.EqualStr {
+				lc, lok := condition.Left.(*sqlparser.ColName)
+				rc, rok := condition.Right.(*sqlparser.ColName)
+				if lok && rok && lc.Qualifier != rc.Qualifier {
+					tuple := joinTuple{condition, referTables}
+					joins = append(joins, tuple)
+					continue
+				}
+
+				if lok {
+					col = lc
+					val = condition.Right
+				}
+				if rok {
+					col = rc
+					val = condition.Left
+				}
+			}
+		}
+		tuple := filterTuple{filter, referTables, col, val}
+		wheres = append(wheres, tuple)
+	}
+
+	return joins, wheres, nil
+}
