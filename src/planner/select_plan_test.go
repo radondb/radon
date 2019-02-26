@@ -115,10 +115,22 @@ func TestSelectPlan(t *testing.T) {
 		"id"
 	]
 }`,
+		`{
+	"RawQuery": "select id,a from sbtest.A where (a\u003e1 and (id=1))",
+	"Project": "id, a",
+	"Partitions": [
+		{
+			"Query": "select id, a from sbtest.A6 as A where (a \u003e 1 and (id = 1))",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
 	}
 	querys := []string{
 		"select 1, sum(a),avg(a),a,b from sbtest.A where id>1 group by a,b order by a desc limit 10 offset 100",
 		"select id, sum(a) as A from A group by id having A>1000",
+		"select id,a from sbtest.A where (a>1 and (id=1))",
 	}
 
 	// Database not null.
