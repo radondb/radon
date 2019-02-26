@@ -20,6 +20,7 @@ func getDMLRouting(database, table, shardkey string, where *sqlparser.Where, rou
 	if shardkey != "" && where != nil {
 		filters := splitAndExpression(nil, where.Expr)
 		for _, filter := range filters {
+			filter = skipParenthesis(filter)
 			comparison, ok := filter.(*sqlparser.ComparisonExpr)
 			if !ok {
 				continue
@@ -75,11 +76,25 @@ func splitAndExpression(filters []sqlparser.Expr, node sqlparser.Expr) []sqlpars
 	if node == nil {
 		return filters
 	}
-	if node, ok := node.(*sqlparser.AndExpr); ok {
+	switch node := node.(type) {
+	case *sqlparser.AndExpr:
 		filters = splitAndExpression(filters, node.Left)
 		return splitAndExpression(filters, node.Right)
+	case *sqlparser.ParenExpr:
+		if node, ok := node.Expr.(*sqlparser.AndExpr); ok {
+			return splitAndExpression(filters, node)
+		}
 	}
 	return append(filters, node)
+}
+
+// skipParenthesis skips the parenthesis (if any) of an expression and
+// returns the innermost unparenthesized expression.
+func skipParenthesis(node sqlparser.Expr) sqlparser.Expr {
+	if node, ok := node.(*sqlparser.ParenExpr); ok {
+		return skipParenthesis(node.Expr)
+	}
+	return node
 }
 
 // checkComparison checks the WHERE or JOIN-ON clause contains non-sqlval comparison(t1.id=t2.id).
