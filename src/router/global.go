@@ -84,3 +84,16 @@ func (g *Global) Lookup(start *sqlparser.SQLVal, end *sqlparser.SQLVal) ([]Segme
 func (g *Global) Type() MethodType {
 	return g.typ
 }
+
+// GetIndex returns index based on sqlval.
+func (g *Global) GetIndex(sqlval *sqlparser.SQLVal) (int, error) {
+	return -1, nil
+}
+
+// GetSegments returns Segments based on index.
+func (g *Global) GetSegments(index int) []Segment {
+	if index < 0 || index > len(g.Segments) {
+		return g.Segments
+	}
+	return g.Segments[index : index+1]
+}

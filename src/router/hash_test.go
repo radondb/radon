@@ -202,7 +202,7 @@ func TestHashLookupError(t *testing.T) {
 	{
 		intVal := sqlparser.NewIntVal([]byte("65536x"))
 		_, err := hash.Lookup(intVal, intVal)
-		want := "hash.lookup.start.key.parser.uint64.error:[strconv.ParseInt: parsing \"65536x\": invalid syntax]"
+		want := "hash.getindex.val.key.parser.uint64.error:[strconv.ParseInt: parsing \"65536x\": invalid syntax]"
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}
@@ -210,7 +210,7 @@ func TestHashLookupError(t *testing.T) {
 	{
 		floatVal := sqlparser.NewFloatVal([]byte("65536.x"))
 		_, err := hash.Lookup(floatVal, floatVal)
-		want := "hash.lookup.start.key.parser.float.error:[strconv.ParseFloat: parsing \"65536.x\": invalid syntax]"
+		want := "hash.getindex.val.key.parser.float.error:[strconv.ParseFloat: parsing \"65536.x\": invalid syntax]"
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}

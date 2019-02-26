@@ -146,28 +146,11 @@ func (h *Hash) Lookup(start *sqlparser.SQLVal, end *sqlparser.SQLVal) ([]Segment
 
 	// Hash just handle the equal
 	if bytes.Equal(start.Val, end.Val) {
-		valStr := common.BytesToString(start.Val)
-		switch start.Type {
-		case sqlparser.IntVal:
-			unsigned, err := strconv.ParseInt(valStr, 0, 64)
-			if err != nil {
-				return nil, errors.Errorf("hash.lookup.start.key.parser.uint64.error:[%v]", err)
-			}
-			idx := int(jump.Hash(uint64(unsigned), int32(h.slots)))
-			return []Segment{h.partitions[idx]}, nil
-		case sqlparser.FloatVal:
-			unsigned, err := strconv.ParseFloat(valStr, 64)
-			if err != nil {
-				return nil, errors.Errorf("hash.lookup.start.key.parser.float.error:[%v]", err)
-			}
-			idx := int(jump.Hash(uint64(unsigned), int32(h.slots)))
-			return []Segment{h.partitions[idx]}, nil
-		case sqlparser.StrVal:
-			idx := int(jump.HashString(valStr, int32(h.slots), jump.CRC64))
-			return []Segment{h.partitions[idx]}, nil
-		default:
-			return nil, errors.Errorf("hash.unsupported.key.type:[%v]", start.Type)
+		idx, err := h.GetIndex(start)
+		if err != nil {
+			return nil, err
 		}
+		return []Segment{h.partitions[idx]}, nil
 	}
 	return h.Segments, nil
 }
@@ -175,4 +158,37 @@ func (h *Hash) Lookup(start *sqlparser.SQLVal, end *sqlparser.SQLVal) ([]Segment
 // Type returns the hash type.
 func (h *Hash) Type() MethodType {
 	return h.typ
+}
+
+// GetIndex returns index based on sqlval.
+func (h *Hash) GetIndex(sqlval *sqlparser.SQLVal) (int, error) {
+	idx := -1
+	valStr := common.BytesToString(sqlval.Val)
+	switch sqlval.Type {
+	case sqlparser.IntVal:
+		unsigned, err := strconv.ParseInt(valStr, 0, 64)
+		if err != nil {
+			return -1, errors.Errorf("hash.getindex.val.key.parser.uint64.error:[%v]", err)
+		}
+		idx = int(jump.Hash(uint64(unsigned), int32(h.slots)))
+	case sqlparser.FloatVal:
+		unsigned, err := strconv.ParseFloat(valStr, 64)
+		if err != nil {
+			return -1, errors.Errorf("hash.getindex.val.key.parser.float.error:[%v]", err)
+		}
+		idx = int(jump.Hash(uint64(unsigned), int32(h.slots)))
+	case sqlparser.StrVal:
+		idx = int(jump.HashString(valStr, int32(h.slots), jump.CRC64))
+	default:
+		return -1, errors.Errorf("hash.unsupported.key.type:[%v]", sqlval.Type)
+	}
+	return idx, nil
+}
+
+// GetSegments returns Segments based on index.
+func (h *Hash) GetSegments(index int) []Segment {
+	if index < 0 || index > h.slots {
+		return h.Segments
+	}
+	return []Segment{h.partitions[index]}
 }
