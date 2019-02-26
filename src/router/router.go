@@ -265,3 +265,28 @@ func (r *Router) JSON() string {
 	}
 	return string(bout)
 }
+
+// GetIndex returns index based on sqlval.
+func (r *Router) GetIndex(database, tableName string, sqlval *sqlparser.SQLVal) (int, error) {
+	table, err := r.getTable(database, tableName)
+	if err != nil {
+		return -1, err
+	}
+
+	index, err := table.Partition.GetIndex(sqlval)
+	if err != nil {
+		r.log.Error("router.partition.getindex.error:%+v", err)
+		return -1, err
+	}
+	return index, nil
+}
+
+// GetSegments returns Segments based on index.
+func (r *Router) GetSegments(database, tableName string, index int) ([]Segment, error) {
+	table, err := r.getTable(database, tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	return table.Partition.GetSegments(index), nil
+}

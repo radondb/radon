@@ -369,3 +369,120 @@ func TestRouterTableConfig(t *testing.T) {
 		assert.NotNil(t, tConf)
 	}
 }
+
+func TestRouterGetIndex(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+	assert.NotNil(t, router)
+	err := router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig())
+	assert.Nil(t, err)
+	// hash.
+	{
+		intVal := sqlparser.NewIntVal([]byte("1"))
+		idx, err := router.GetIndex("sbtest", "A", intVal)
+		assert.Nil(t, err)
+		assert.Equal(t, 2323, idx)
+	}
+	//global.
+	{
+		intVal := sqlparser.NewIntVal([]byte("1"))
+		idx, err := router.GetIndex("sbtest", "G", intVal)
+		assert.Nil(t, err)
+		assert.Equal(t, -1, idx)
+	}
+}
+
+func TestRouterGetIndexError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+	assert.NotNil(t, router)
+	err := router.AddForTest("sbtest", MockTableMConfig())
+	assert.Nil(t, err)
+	// no database.
+	{
+		intVal := sqlparser.NewIntVal([]byte("1"))
+		idx, err := router.GetIndex("", "A", intVal)
+		assert.Equal(t, -1, idx)
+		want := "No database selected (errno 1046) (sqlstate 3D000)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	// table not exists.
+	{
+		intVal := sqlparser.NewIntVal([]byte("1"))
+		idx, err := router.GetIndex("sbtest", "B", intVal)
+		assert.Equal(t, -1, idx)
+		want := "Table 'B' doesn't exist (errno 1146) (sqlstate 42S02)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	// hash unsupport key type.
+	{
+		hexVal := sqlparser.NewHexNum([]byte("3.1415926"))
+		idx, err := router.GetIndex("sbtest", "A", hexVal)
+		assert.Equal(t, -1, idx)
+		want := "hash.unsupported.key.type:[3]"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+}
+
+func TestRouterGetSegments(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+	assert.NotNil(t, router)
+	err := router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig())
+	assert.Nil(t, err)
+	// hash.
+	{
+		segments, err := router.GetSegments("sbtest", "A", 1)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(segments))
+	}
+	// hash overrange.
+	{
+		segments, err := router.GetSegments("sbtest", "A", -1)
+		assert.Nil(t, err)
+		assert.Equal(t, 6, len(segments))
+	}
+	//global.
+	{
+		segments, err := router.GetSegments("sbtest", "G", 1)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(segments))
+	}
+	//global overrange.
+	{
+		segments, err := router.GetSegments("sbtest", "G", 3)
+		assert.Nil(t, err)
+		assert.Equal(t, 2, len(segments))
+	}
+}
+
+func TestRouterGetSegmentsError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+	assert.NotNil(t, router)
+	err := router.AddForTest("sbtest", MockTableMConfig())
+	assert.Nil(t, err)
+	// no database.
+	{
+		segments, err := router.GetSegments("", "A", 1)
+		assert.Nil(t, segments)
+		want := "No database selected (errno 1046) (sqlstate 3D000)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	// table not exists.
+	{
+		segments, err := router.GetSegments("sbtest", "B", 1)
+		assert.Nil(t, segments)
+		want := "Table 'B' doesn't exist (errno 1146) (sqlstate 42S02)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+}
