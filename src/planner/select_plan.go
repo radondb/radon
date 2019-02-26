@@ -56,18 +56,6 @@ type SelectPlan struct {
 	children *PlanTree
 }
 
-// TableInfo represents one table information.
-type TableInfo struct {
-	// database.
-	database string
-	// table's name.
-	tableName string
-	// table's shard key.
-	shardKey string
-	// table expression in select ast 'From'.
-	tableExpr *sqlparser.AliasedTableExpr
-}
-
 // NewSelectPlan used to create SelectPlan.
 func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser.Select, router *router.Router) *SelectPlan {
 	return &SelectPlan{
