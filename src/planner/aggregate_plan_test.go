@@ -116,7 +116,7 @@ func TestAggregatePlan(t *testing.T) {
 		assert.Nil(t, err)
 		tuples, err := parserSelectExprs(node.SelectExprs)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node, tuples)
+		plan := NewAggregatePlan(log, node, tuples, nil)
 		// plan build
 		{
 			err := plan.Build()
@@ -234,7 +234,7 @@ func TestAggregatePlanUpperCase(t *testing.T) {
 		assert.Nil(t, err)
 		tuples, err := parserSelectExprs(node.SelectExprs)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node, tuples)
+		plan := NewAggregatePlan(log, node, tuples, nil)
 		// plan build
 		{
 			err := plan.Build()
@@ -281,7 +281,7 @@ func TestAggregatePlanHaving(t *testing.T) {
 		assert.Nil(t, err)
 		tuples, err := parserSelectExprs(node.SelectExprs)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node, tuples)
+		plan := NewAggregatePlan(log, node, tuples, nil)
 		// plan build
 		{
 			err := plan.Build()
@@ -319,7 +319,7 @@ func TestAggregatePlanUnsupported(t *testing.T) {
 		node := tree.(*sqlparser.Select)
 		tuples, err := parserSelectExprs(node.SelectExprs)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node, tuples)
+		plan := NewAggregatePlan(log, node, tuples, nil)
 		// plan build
 		{
 			err := plan.Build()
@@ -381,7 +381,7 @@ func TestAggregatePlans(t *testing.T) {
 		assert.Nil(t, err)
 		tuples, err := parserSelectExprs(node.SelectExprs)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node, tuples)
+		plan := NewAggregatePlan(log, node, tuples, nil)
 		// plan build
 		{
 			err := plan.Build()

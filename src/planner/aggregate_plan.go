@@ -60,6 +60,7 @@ type AggregatePlan struct {
 	log       *xlog.Log
 	node      *sqlparser.Select
 	tuples    []selectTuple
+	groups    []selectTuple
 	rewritten sqlparser.SelectExprs
 
 	normalAggrs []Aggregator
@@ -70,11 +71,12 @@ type AggregatePlan struct {
 }
 
 // NewAggregatePlan used to create AggregatePlan.
-func NewAggregatePlan(log *xlog.Log, node *sqlparser.Select, tuples []selectTuple) *AggregatePlan {
+func NewAggregatePlan(log *xlog.Log, node *sqlparser.Select, tuples []selectTuple, groups []selectTuple) *AggregatePlan {
 	return &AggregatePlan{
 		log:       log,
 		node:      node,
 		tuples:    tuples,
+		groups:    groups,
 		rewritten: node.SelectExprs,
 		typ:       PlanTypeAggregate,
 	}
@@ -150,7 +152,7 @@ func (p *AggregatePlan) analyze() error {
 		k++
 	}
 
-	// Groupbys.
+	// Groupbys. groupbys will replace by 'p.groups' soon.
 	groupbys := node.GroupBy
 	for _, by := range groupbys {
 		by1 := by.(*sqlparser.ColName)

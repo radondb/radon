@@ -156,3 +156,19 @@ func (m *MergeNode) spliceWhere() error {
 	}
 	return nil
 }
+
+// pushSelectExprs used to push the select fileds.
+func (m *MergeNode) pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error {
+	m.sel.SelectExprs = sel.SelectExprs
+	m.sel.GroupBy = sel.GroupBy
+	m.sel.Distinct = sel.Distinct
+	if hasAggregates || len(groups) > 0 {
+		aggrPlan := NewAggregatePlan(m.log, sel, fileds, groups)
+		if err := aggrPlan.Build(); err != nil {
+			return err
+		}
+		m.children.Add(aggrPlan)
+		m.sel.SelectExprs = aggrPlan.ReWritten()
+	}
+	return nil
+}
