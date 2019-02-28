@@ -96,3 +96,91 @@ func TestParserWhereOrJoinExprs(t *testing.T) {
 		assert.Nil(t, err)
 	}
 }
+
+func TestWhereFilters(t *testing.T) {
+	querys := []string{
+		"select * from G, A where G.id=A.id and A.id=1",
+		"select * from G, A, A as B where A.a=B.a and A.id=B.id and A.b=B.b",
+		"select * from A, A as B where A.a>B.a and A.a=B.a and A.id=1 and B.id=1 and 1=1",
+		"select * from G, A join A as B on A.a=B.a where A.b=B.b and A.id=1 and B.id=1",
+		"select * from (A join A as B on A.a>B.a and 1=1),G where A.id=B.id",
+		"select * from G,A,B where 1=1 and A.id=1",
+		"select * from A left join A as B on A.a = B.a where A.b = B.b and A.id=B.id",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		joins, filters, err := parserWhereOrJoinExprs(sel.Where.Expr, p.getReferredTables())
+		assert.Nil(t, err)
+
+		err = p.pushFilter(filters)
+		assert.Nil(t, err)
+
+		p, err = p.pushJoinInWhere(joins)
+		assert.Nil(t, err)
+
+		p, err = p.calcRoute()
+		assert.Nil(t, err)
+
+		err = p.spliceWhere()
+		assert.Nil(t, err)
+	}
+}
+
+func TestWhereFiltersError(t *testing.T) {
+	querys := []string{
+		"select * from G,A,B where A.id=B.id and A.a > B.a",
+		"select * from A join B on A.id=B.id join G on G.id=A.id where A.a>B.a",
+	}
+	wants := []string{
+		"unsupported: where.clause.in.cross-shard.join",
+		"unsupported: where.clause.in.cross-shard.join",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		joins, filters, err := parserWhereOrJoinExprs(sel.Where.Expr, p.getReferredTables())
+		assert.Nil(t, err)
+
+		err = p.pushFilter(filters)
+		assert.Nil(t, err)
+
+		p, err = p.pushJoinInWhere(joins)
+		assert.Nil(t, err)
+
+		p, err = p.calcRoute()
+		assert.Nil(t, err)
+
+		err = p.spliceWhere()
+		got := err.Error()
+		assert.Equal(t, wants[i], got)
+	}
+}

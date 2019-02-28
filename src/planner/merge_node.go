@@ -9,7 +9,9 @@
 package planner
 
 import (
+	"math/rand"
 	"router"
+	"time"
 	"xcontext"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -72,15 +74,13 @@ func (m *MergeNode) pushFilter(filters []filterTuple) error {
 	var err error
 	for _, filter := range filters {
 		m.sel.AddWhere(filter.expr)
-		for _, tb := range filter.referTables {
-			tbInfo, _ := m.referredTables[tb]
-			if len(filter.referTables) == 1 {
-				if tbInfo.shardType != "GLOBAL" && tbInfo.parent.index == -1 && filter.col != nil {
-					if nameMatch(filter.col, filter.referTables[0], tbInfo.shardKey) {
-						if sqlval, ok := filter.val.(*sqlparser.SQLVal); ok {
-							if tbInfo.parent.index, err = m.router.GetIndex(tbInfo.database, tbInfo.tableName, sqlval); err != nil {
-								return err
-							}
+		if len(filter.referTables) == 1 {
+			tbInfo, _ := m.referredTables[filter.referTables[0]]
+			if tbInfo.shardType != "GLOBAL" && tbInfo.parent.index == -1 && filter.col != nil {
+				if nameMatch(filter.col, filter.referTables[0], tbInfo.shardKey) {
+					if sqlval, ok := filter.val.(*sqlparser.SQLVal); ok {
+						if tbInfo.parent.index, err = m.router.GetIndex(tbInfo.database, tbInfo.tableName, sqlval); err != nil {
+							return err
 						}
 					}
 				}
@@ -98,4 +98,61 @@ func (m *MergeNode) setParent(p PlanNode) {
 // setWhereFilter used to push the where filters.
 func (m *MergeNode) setWhereFilter(filter sqlparser.Expr) {
 	m.sel.AddWhere(filter)
+}
+
+// setNoTableFilter used to push the no table filters.
+func (m *MergeNode) setNoTableFilter(exprs []sqlparser.Expr) {
+	for _, expr := range exprs {
+		m.sel.AddWhere(expr)
+	}
+}
+
+// pushJoinInWhere used to push the 'join' type filters.
+func (m *MergeNode) pushJoinInWhere(joins []joinTuple) (PlanNode, error) {
+	for _, joinFilter := range joins {
+		m.sel.AddWhere(joinFilter.expr)
+	}
+	return m, nil
+}
+
+// calcRoute used to calc the route.
+func (m *MergeNode) calcRoute() (PlanNode, error) {
+	var err error
+	for _, tbInfo := range m.referredTables {
+		if m.shardCount == 0 {
+			segments, err := m.router.Lookup(tbInfo.database, tbInfo.tableName, nil, nil)
+			if err != nil {
+				return nil, err
+			}
+			rand := rand.New(rand.NewSource(time.Now().UnixNano()))
+			m.index = rand.Intn(len(segments))
+			m.backend = segments[m.index].Backend
+			m.routeLen = 1
+			break
+		}
+		if tbInfo.shardType == "GLOBAL" {
+			continue
+		}
+		tbInfo.Segments, err = m.router.GetSegments(tbInfo.database, tbInfo.tableName, m.index)
+		if err != nil {
+			return m, err
+		}
+		if m.backend == "" && len(tbInfo.Segments) == 1 {
+			m.backend = tbInfo.Segments[0].Backend
+		}
+		if m.routeLen == 0 {
+			m.routeLen = len(tbInfo.Segments)
+		}
+	}
+	return m, nil
+}
+
+// spliceWhere used to splice where clause.
+func (m *MergeNode) spliceWhere() error {
+	for _, tbInfo := range m.referredTables {
+		for _, filter := range tbInfo.whereFilter {
+			m.sel.AddWhere(filter)
+		}
+	}
+	return nil
 }
