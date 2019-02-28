@@ -257,3 +257,45 @@ func (j *JoinNode) spliceWhere() error {
 	}
 	return nil
 }
+
+// pushSelectExprs used to push the select fileds.
+// TODO: need record original selectexprs order.
+func (j *JoinNode) pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error {
+	if hasAggregates {
+		return errors.New("unsupported: cross-shard.query.with.aggregates")
+	}
+	if len(groups) > 0 {
+		aggrPlan := NewAggregatePlan(j.log, sel, fileds, groups)
+		if err := aggrPlan.Build(); err != nil {
+			return err
+		}
+		j.children.Add(aggrPlan)
+	}
+	for _, tuple := range fileds {
+		if len(tuple.referTables) == 0 {
+			_, tbInfo := getOneTableInfo(j.referredTables)
+			tbInfo.parent.sel.SelectExprs = append(tbInfo.parent.sel.SelectExprs, tuple.expr)
+		} else if len(tuple.referTables) == 1 {
+			tbInfo, _ := j.referredTables[tuple.referTables[0]]
+			tbInfo.parent.sel.SelectExprs = append(tbInfo.parent.sel.SelectExprs, tuple.expr)
+		} else {
+			var parent PlanNode
+			for _, tb := range tuple.referTables {
+				tbInfo, _ := j.referredTables[tb]
+				if parent == nil {
+					parent = tbInfo.parent
+					continue
+				}
+				if parent != tbInfo.parent {
+					parent = findLCA(j, parent, tbInfo.parent)
+				}
+			}
+			if mn, ok := parent.(*MergeNode); ok {
+				mn.sel.SelectExprs = append(mn.sel.SelectExprs, tuple.expr)
+			} else {
+				return errors.New("unsupported: select.expr.in.cross-shard.join")
+			}
+		}
+	}
+	return nil
+}

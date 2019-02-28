@@ -23,6 +23,7 @@ type PlanNode interface {
 	pushJoinInWhere(joins []joinTuple) (PlanNode, error)
 	calcRoute() (PlanNode, error)
 	spliceWhere() error
+	pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error
 }
 
 // findLCA get the two plannode's lowest common ancestors node.

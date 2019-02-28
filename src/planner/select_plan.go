@@ -159,7 +159,7 @@ func (p *SelectPlan) Build() error {
 		children.Add(joinPlan)
 
 		// Aggregate SubPlan.
-		aggrPlan := NewAggregatePlan(log, node, tuples)
+		aggrPlan := NewAggregatePlan(log, node, tuples, nil)
 		if err := aggrPlan.Build(); err != nil {
 			return err
 		}

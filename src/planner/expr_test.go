@@ -184,3 +184,246 @@ func TestWhereFiltersError(t *testing.T) {
 		assert.Equal(t, wants[i], got)
 	}
 }
+
+func TestCheckGroupBy(t *testing.T) {
+	querys := []string{
+		"select a,b from A group by a",
+		"select a,b from A group by a,b",
+		"select a,b,A.id from A group by id,a",
+		"select A.id as a from A group by a",
+	}
+	wants := []int{
+		1,
+		2,
+		0,
+		1,
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		fields, err := parserSelectExprs(sel.SelectExprs)
+		assert.Nil(t, err)
+
+		groups, err := checkGroupBy(sel.GroupBy, fields, route, database, p.getReferredTables())
+		assert.Nil(t, err)
+		assert.Equal(t, wants[i], len(groups))
+	}
+}
+
+func TestCheckGroupByError(t *testing.T) {
+	querys := []string{
+		"select a,b from A group by B.a",
+		"select a,b from A group by 1",
+		"select a,b from A group by a,id",
+	}
+	wants := []string{
+		"unsupported: unknow.table.in.group.by.field[B.a]",
+		"unsupported: group.by.field.have.expression",
+		"unsupported: group.by.field[id].should.be.in.select.list",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		fields, err := parserSelectExprs(sel.SelectExprs)
+		assert.Nil(t, err)
+
+		_, err = checkGroupBy(sel.GroupBy, fields, route, database, p.getReferredTables())
+		got := err.Error()
+		assert.Equal(t, wants[i], got)
+	}
+}
+
+func TestCheckDistinct(t *testing.T) {
+	querys := []string{
+		"select distinct A.a,A.b as c from A",
+		"select distinct A.id from A",
+		"select distinct A.a,A.b,A.c from A group by a",
+	}
+	wants := []int{
+		2,
+		0,
+		1,
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		fields, err := parserSelectExprs(sel.SelectExprs)
+		assert.Nil(t, err)
+
+		_, err = checkDistinct(sel, nil, fields, route, database, p.getReferredTables())
+		assert.Nil(t, err)
+		assert.Equal(t, wants[i], len(sel.GroupBy))
+	}
+}
+
+func TestCheckDistinctError(t *testing.T) {
+	querys := []string{
+		"select distinct * from A",
+		"select distinct A.a+1 as a, A.b*10 from A",
+	}
+	wants := []string{
+		"unsupported: distinct",
+		"unsupported: distinct",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		fields, err := parserSelectExprs(sel.SelectExprs)
+		assert.Nil(t, err)
+
+		_, err = checkDistinct(sel, nil, fields, route, database, p.getReferredTables())
+		got := err.Error()
+		assert.Equal(t, wants[i], got)
+	}
+}
+
+func TestSelectExprs(t *testing.T) {
+	querys := []string{
+		"select A.id,G.a as a, concat(B.str,G.str), 1 from A,B,G group by a",
+		"select A.id, G.a as a from A,G group by a",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		fields, err := parserSelectExprs(sel.SelectExprs)
+		assert.Nil(t, err)
+
+		groups, err := checkGroupBy(sel.GroupBy, fields, route, database, p.getReferredTables())
+		assert.Nil(t, err)
+
+		err = p.pushSelectExprs(fields, groups, sel, false)
+		assert.Nil(t, err)
+	}
+}
+
+func TestSelectExprsError(t *testing.T) {
+	querys := []string{
+		"select sum(A.id) as s, G.a as a from A,G group by s",
+		"select A.id,G.a as a, concat(B.str,G.str), 1 from A,B, A as G group by a",
+	}
+	wants := []string{
+		"unsupported: group.by.field[s].should.be.in.select.list",
+		"unsupported: select.expr.in.cross-shard.join",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		fields, err := parserSelectExprs(sel.SelectExprs)
+		assert.Nil(t, err)
+
+		groups, err := checkGroupBy(sel.GroupBy, fields, route, database, p.getReferredTables())
+		assert.Nil(t, err)
+
+		err = p.pushSelectExprs(fields, groups, sel, false)
+		got := err.Error()
+		assert.Equal(t, wants[i], got)
+	}
+	{
+		query := "select sum(A.id) from A join B on A.id=B.id"
+		want := "unsupported: cross-shard.query.with.aggregates"
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		fields, err := parserSelectExprs(sel.SelectExprs)
+		assert.Nil(t, err)
+
+		groups, err := checkGroupBy(sel.GroupBy, fields, route, database, p.getReferredTables())
+		assert.Nil(t, err)
+
+		err = p.pushSelectExprs(fields, groups, sel, true)
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+}
