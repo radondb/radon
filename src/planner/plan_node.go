@@ -19,6 +19,10 @@ type PlanNode interface {
 	pushFilter(filters []filterTuple) error
 	setParent(p PlanNode)
 	setWhereFilter(filter sqlparser.Expr)
+	setNoTableFilter(exprs []sqlparser.Expr)
+	pushJoinInWhere(joins []joinTuple) (PlanNode, error)
+	calcRoute() (PlanNode, error)
+	spliceWhere() error
 }
 
 // findLCA get the two plannode's lowest common ancestors node.
