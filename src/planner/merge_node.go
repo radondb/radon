@@ -172,3 +172,11 @@ func (m *MergeNode) pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser
 	}
 	return nil
 }
+
+// pushHaving used to push having exprs.
+func (m *MergeNode) pushHaving(havings []filterTuple) error {
+	for _, filter := range havings {
+		m.sel.AddHaving(filter.expr)
+	}
+	return nil
+}

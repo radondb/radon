@@ -299,3 +299,34 @@ func (j *JoinNode) pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser.
 	}
 	return nil
 }
+
+// pushHaving used to push having exprs.
+func (j *JoinNode) pushHaving(havings []filterTuple) error {
+	for _, filter := range havings {
+		if len(filter.referTables) == 0 {
+			j.Left.pushHaving([]filterTuple{filter})
+			j.Right.pushHaving([]filterTuple{filter})
+		} else if len(filter.referTables) == 1 {
+			tbInfo, _ := j.referredTables[filter.referTables[0]]
+			tbInfo.parent.sel.AddHaving(filter.expr)
+		} else {
+			var parent PlanNode
+			for _, tb := range filter.referTables {
+				tbInfo, _ := j.referredTables[tb]
+				if parent == nil {
+					parent = tbInfo.parent
+					continue
+				}
+				if parent != tbInfo.parent {
+					parent = findLCA(j, parent, tbInfo.parent)
+				}
+			}
+			if mn, ok := parent.(*MergeNode); ok {
+				mn.sel.AddHaving(filter.expr)
+			} else {
+				return errors.New("unsupported: havings.in.cross-shard.join")
+			}
+		}
+	}
+	return nil
+}

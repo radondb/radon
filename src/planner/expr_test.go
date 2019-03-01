@@ -427,3 +427,77 @@ func TestSelectExprsError(t *testing.T) {
 		assert.Equal(t, want, got)
 	}
 }
+
+func TestParserHaving(t *testing.T) {
+	querys := []string{
+		"select * from A where A.id=1 having concat(str1,str2) = 'sansi'",
+		"select * from G, A where G.id=A.id having A.id=1",
+		"select * from A, B where A.id=B.id having A.a=1 and 1=1",
+		"select * from A,G,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		havings, err := parserHaving(sel.Having.Expr, p.getReferredTables())
+		assert.Nil(t, err)
+
+		err = p.pushHaving(havings)
+		assert.Nil(t, err)
+	}
+}
+
+func TestParserHavingError(t *testing.T) {
+	querys := []string{
+		"select * from G,A,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
+		"select * from A,B where A.id=1 having sum(B.id)>10",
+		"select * from A,B where A.id=1 having a>1",
+		"select * from A,B where A.id=1 having C.a>1",
+	}
+	wants := []string{
+		"unsupported: havings.in.cross-shard.join",
+		"unsupported: expr[sum(B.id)].in.having.clause",
+		"unsupported: unknown.column.'a'.in.having.clause",
+		"unsupported: unknown.table.'C'.in.having.clause",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		havings, err := parserHaving(sel.Having.Expr, p.getReferredTables())
+		if err != nil {
+			got := err.Error()
+			assert.Equal(t, wants[i], got)
+		} else {
+			err = p.pushHaving(havings)
+			got := err.Error()
+			assert.Equal(t, wants[i], got)
+		}
+	}
+}
