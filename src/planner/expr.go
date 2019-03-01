@@ -464,3 +464,52 @@ func checkShard(table, database, col string, tbInfos map[string]*TableInfo, rout
 	}
 	return false, nil
 }
+
+// parserHaving used to check the having exprs and parser into tuples.
+func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*TableInfo) ([]filterTuple, error) {
+	filters := splitAndExpression(nil, exprs)
+	var tuples []filterTuple
+
+	for _, filter := range filters {
+		filter = skipParenthesis(filter)
+		referTables := make([]string, 0, 4)
+		err := sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
+			switch node := node.(type) {
+			case *sqlparser.ColName:
+				tableName := node.Qualifier.Name.String()
+				if tableName == "" {
+					if len(tbInfos) == 1 {
+						tableName, _ = getOneTableInfo(tbInfos)
+					} else {
+						return false, errors.Errorf("unsupported: unknown.column.'%s'.in.having.clause", node.Name.String())
+					}
+				} else {
+					if _, ok := tbInfos[tableName]; !ok {
+						return false, errors.Errorf("unsupported: unknown.table.'%s'.in.having.clause", tableName)
+					}
+				}
+				for _, tb := range referTables {
+					if tb == tableName {
+						return true, nil
+					}
+				}
+				referTables = append(referTables, tableName)
+			case *sqlparser.FuncExpr:
+				if node.IsAggregate() {
+					buf := sqlparser.NewTrackedBuffer(nil)
+					node.Format(buf)
+					return false, errors.Errorf("unsupported: expr[%s].in.having.clause", buf.String())
+				}
+			}
+			return true, nil
+		}, filter)
+		if err != nil {
+			return nil, err
+		}
+
+		tuple := filterTuple{filter, referTables, nil, nil}
+		tuples = append(tuples, tuple)
+	}
+
+	return tuples, nil
+}
