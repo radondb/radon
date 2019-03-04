@@ -227,3 +227,39 @@ func (m *MergeNode) pushMisc(sel *sqlparser.Select) {
 func (m *MergeNode) Children() *PlanTree {
 	return m.children
 }
+
+// buildQuery used to build the QueryTuple.
+func (m *MergeNode) buildQuery() {
+	var Range string
+	for i := 0; i < m.routeLen; i++ {
+		// Rewrite the shard table's name.
+		backend := m.backend
+		for _, tbInfo := range m.referredTables {
+			if tbInfo.shardType == "GLOBAL" {
+				continue
+			}
+			if backend == "" {
+				backend = tbInfo.Segments[i].Backend
+				Range = tbInfo.Segments[i].Range.String()
+			}
+			expr, _ := tbInfo.tableExpr.Expr.(sqlparser.TableName)
+			expr.Name = sqlparser.NewTableIdent(tbInfo.Segments[i].Table)
+			tbInfo.tableExpr.Expr = expr
+		}
+		buf := sqlparser.NewTrackedBuffer(nil)
+		m.sel.Format(buf)
+		rewritten := buf.String()
+
+		tuple := xcontext.QueryTuple{
+			Query:   rewritten,
+			Backend: backend,
+			Range:   Range,
+		}
+		m.Querys = append(m.Querys, tuple)
+	}
+}
+
+// GetQuery used to get the Querys.
+func (m *MergeNode) GetQuery() []xcontext.QueryTuple {
+	return m.Querys
+}

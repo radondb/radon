@@ -9,31 +9,35 @@
 package executor
 
 import (
+	"backend"
 	"planner"
 	"xcontext"
 
+	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
 var (
-	_ Executor = &JoinExecutor{}
+	_ PlanExecutor = &JoinExecutor{}
 )
 
-// JoinExecutor tuple.
+// JoinExecutor represents join executor.
 type JoinExecutor struct {
 	log  *xlog.Log
-	plan planner.Plan
+	node *planner.JoinNode
+	txn  backend.Transaction
 }
 
-// NewJoinExecutor creates new join executor.
-func NewJoinExecutor(log *xlog.Log, plan planner.Plan) *JoinExecutor {
+// NewJoinExecutor creates the new join executor.
+func NewJoinExecutor(log *xlog.Log, node *planner.JoinNode, txn backend.Transaction) *JoinExecutor {
 	return &JoinExecutor{
 		log:  log,
-		plan: plan,
+		node: node,
+		txn:  txn,
 	}
 }
 
-// Execute used to execute the executor.
-func (executor *JoinExecutor) Execute(ctx *xcontext.ResultContext) error {
-	return nil
+// execute used to execute the executor.
+func (m *JoinExecutor) execute(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext) error {
+	return errors.New("unsupported: join")
 }
