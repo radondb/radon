@@ -318,6 +318,8 @@ func TestScanTableExprsError(t *testing.T) {
 		"select * from A join B on A.id=B.id and A.id=0x12",
 		"select * from A,C",
 		"select * from A join C on A.id=C.id",
+		"select * from G join A on G.id=A.id join B on A.a=G.a",
+		"select * from G join (A,B) on G.id=A.id and A.a=B.a",
 	}
 	wants := []string{
 		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
@@ -330,6 +332,8 @@ func TestScanTableExprsError(t *testing.T) {
 		"hash.unsupported.key.type:[3]",
 		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
 		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
+		"unsupported: join.on.condition.should.cross.left-right.tables",
+		"unsupported: join.on.condition.should.cross.left-right.tables",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
