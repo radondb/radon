@@ -25,7 +25,7 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
-func TestSelectExecutor(t *testing.T) {
+func TestMergeExecutor(t *testing.T) {
 	r1 := &sqltypes.Result{
 		Fields: []*querypb.Field{
 			{
@@ -122,6 +122,49 @@ func TestSelectExecutor(t *testing.T) {
 			got := fmt.Sprintf("%v", ctx.Results.Rows)
 			assert.Equal(t, want, got)
 			log.Debug("%+v", ctx.Results)
+		}
+	}
+}
+
+func TestJoinExecutor(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	// Create scatter and query handler.
+	scatter, _, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	// desc
+	querys := []string{
+		"select A.id, A.name from A join B on A.id=B.id where A.id > 5 group by A.id",
+	}
+	wants := []string{
+		"unsupported: join",
+	}
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+
+		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		err = plan.Build()
+		assert.Nil(t, err)
+		log.Debug("plan:%+v", plan.JSON())
+
+		txn, err := scatter.CreateTransaction()
+		assert.Nil(t, err)
+		defer txn.Finish()
+		executor := NewSelectExecutor(log, plan, txn)
+		{
+			ctx := xcontext.NewResultContext()
+			err := executor.Execute(ctx)
+			got := err.Error()
+			assert.Equal(t, wants[i], got)
 		}
 	}
 }

@@ -194,14 +194,20 @@ func TestProxyExecuteSelectError(t *testing.T) {
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
 		querys := []string{
-			"select * from test.t1 join test.t2",
-			"select * from test.t1, test.t2",
+			"select t1.a from test.t1 join test.t2",
+			"select t1.a,t2.b from test.t1, test.t2",
 		}
 		wants := []string{
-			"unsupported: more.than.one.shard.tables (errno 1105) (sqlstate HY000)",
-			"unsupported: more.than.one.shard.tables (errno 1105) (sqlstate HY000)",
+			"unsupported: join (errno 1105) (sqlstate HY000)",
+			"ExecuteStreamFetch.unsupport.cross-shard.join (errno 1105) (sqlstate HY000)",
 		}
 		for i, query := range querys {
+			if i == 1 {
+				sql := "set @@SESSION.radon_streaming_fetch='ON'"
+				_, err := client.FetchAll(sql, -1)
+				assert.Nil(t, err)
+			}
+
 			fakedbs.AddQuery(query, fakedb.Result3)
 			_, err = client.FetchAll(query, -1)
 

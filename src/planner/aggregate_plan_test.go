@@ -9,6 +9,7 @@
 package planner
 
 import (
+	"router"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +19,7 @@ import (
 
 func TestAggregatePlan(t *testing.T) {
 	querys := []string{
-		"select 1, a, min(b), max(a), avg(a), sum(a), count(a), b as b1, avg(b), c, avg(c)  from t group by a, b1, c",
+		"select 1, a, min(b), max(a), avg(a), sum(a), count(a), b as b1, avg(b), c, avg(c)  from A group by a, b1, c",
 	}
 	results := []string{
 		`{
@@ -109,14 +110,23 @@ func TestAggregatePlan(t *testing.T) {
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+	err := route.AddForTest("sbtest", router.MockTableMConfig())
+	assert.Nil(t, err)
 	for i, query := range querys {
 		tree, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		node := tree.(*sqlparser.Select)
 		assert.Nil(t, err)
-		tuples, err := parserSelectExprs(node.SelectExprs)
+		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node, tuples, nil)
+		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
+		assert.Nil(t, err)
+		assert.True(t, hasAgg)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables())
+		assert.Nil(t, err)
+		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 		// plan build
 		{
 			err := plan.Build()
@@ -136,7 +146,7 @@ func TestAggregatePlan(t *testing.T) {
 // TestAggregatePlanUpperCase test Aggregate func in uppercase
 func TestAggregatePlanUpperCase(t *testing.T) {
 	querys := []string{
-		"select 1, a, MIN(b), MAX(a), AVG(a), SUM(a), COUNT(a), b as b1, AVG(b), c, AVG(c)  from t group by a, b1, c",
+		"select 1, a, MIN(b), MAX(a), AVG(a), SUM(a), COUNT(a), b as b1, AVG(b), c, AVG(c)  from A group by a, b1, c",
 	}
 	results := []string{
 		`{
@@ -227,14 +237,23 @@ func TestAggregatePlanUpperCase(t *testing.T) {
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+	err := route.AddForTest("sbtest", router.MockTableMConfig())
+	assert.Nil(t, err)
 	for i, query := range querys {
 		tree, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		node := tree.(*sqlparser.Select)
 		assert.Nil(t, err)
-		tuples, err := parserSelectExprs(node.SelectExprs)
+		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node, tuples, nil)
+		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
+		assert.Nil(t, err)
+		assert.True(t, hasAgg)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables())
+		assert.Nil(t, err)
+		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 		// plan build
 		{
 			err := plan.Build()
@@ -274,14 +293,23 @@ func TestAggregatePlanHaving(t *testing.T) {
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+	err := route.AddForTest("sbtest", router.MockTableMConfig())
+	assert.Nil(t, err)
 	for i, query := range querys {
 		tree, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		node := tree.(*sqlparser.Select)
 		assert.Nil(t, err)
-		tuples, err := parserSelectExprs(node.SelectExprs)
+		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node, tuples, nil)
+		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
+		assert.Nil(t, err)
+		assert.True(t, hasAgg)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables())
+		assert.Nil(t, err)
+		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 		// plan build
 		{
 			err := plan.Build()
@@ -300,40 +328,46 @@ func TestAggregatePlanHaving(t *testing.T) {
 
 func TestAggregatePlanUnsupported(t *testing.T) {
 	querys := []string{
-		"select sum(a)  from t group by d",
-		"select sum(a),d  from t group by db.t.d",
-		"select count(distinct b) from t",
-		"select age,count(*) from A group by age having count(*) >=2",
+		"select sum(a)  from A group by d",
+		"select sum(a),d  from A group by db.t.d",
+		"select count(distinct b) from A",
 	}
 	results := []string{
 		"unsupported: group.by.field[d].should.be.in.select.list",
-		"unsupported: group.by.field[d].have.table.name[t].please.use.AS.keyword",
+		"unsupported: unknow.table.in.group.by.field[t.d]",
 		"unsupported: distinct.in.function:count",
-		"unsupported: expr[count(*)].in.having.clause",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+	err := route.AddForTest("sbtest", router.MockTableMConfig())
+	assert.Nil(t, err)
 	for i, query := range querys {
 		tree, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		node := tree.(*sqlparser.Select)
-		tuples, err := parserSelectExprs(node.SelectExprs)
+		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node, tuples, nil)
-		// plan build
-		{
+		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
+		assert.Nil(t, err)
+		assert.True(t, hasAgg)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables())
+		if err == nil {
+			plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 			err := plan.Build()
-
-			want := results[i]
 			got := err.Error()
-			assert.Equal(t, want, got)
+			assert.Equal(t, results[i], got)
+		} else {
+			got := err.Error()
+			assert.Equal(t, results[i], got)
 		}
 	}
 }
 
 func TestAggregatePlans(t *testing.T) {
 	querys := []string{
-		"select avg(a) as b1, avg(c*100)  from t",
+		"select avg(a) as b1, avg(c*100)  from A",
 	}
 	results := []string{
 		`{
@@ -374,14 +408,23 @@ func TestAggregatePlans(t *testing.T) {
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+	err := route.AddForTest("sbtest", router.MockTableMConfig())
+	assert.Nil(t, err)
 	for i, query := range querys {
 		tree, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		node := tree.(*sqlparser.Select)
 		assert.Nil(t, err)
-		tuples, err := parserSelectExprs(node.SelectExprs)
+		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node, tuples, nil)
+		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
+		assert.Nil(t, err)
+		assert.True(t, hasAgg)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables())
+		assert.Nil(t, err)
+		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 		// plan build
 		{
 			err := plan.Build()

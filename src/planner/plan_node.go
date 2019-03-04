@@ -22,7 +22,7 @@ type PlanNode interface {
 	setParent(p PlanNode)
 	setWhereFilter(filter sqlparser.Expr)
 	setNoTableFilter(exprs []sqlparser.Expr)
-	pushJoinInWhere(joins []joinTuple) (PlanNode, error)
+	pushJoinInWhere(joins []joinTuple) PlanNode
 	calcRoute() (PlanNode, error)
 	spliceWhere() error
 	pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error

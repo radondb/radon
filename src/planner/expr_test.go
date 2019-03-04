@@ -63,7 +63,9 @@ func TestParserSelectExprsSubquery(t *testing.T) {
 	assert.Nil(t, err)
 
 	sel := node.(*sqlparser.Select)
-	_, err = parserSelectExprs(sel.SelectExprs)
+	p, err := scanTableExprs(log, route, database, sel.From)
+	assert.Nil(t, err)
+	_, _, err = parserSelectExprs(sel.SelectExprs, p)
 	got := err.Error()
 	assert.Equal(t, want, got)
 }
@@ -130,8 +132,7 @@ func TestWhereFilters(t *testing.T) {
 		err = p.pushFilter(filters)
 		assert.Nil(t, err)
 
-		p, err = p.pushJoinInWhere(joins)
-		assert.Nil(t, err)
+		p = p.pushJoinInWhere(joins)
 
 		p, err = p.calcRoute()
 		assert.Nil(t, err)
@@ -173,8 +174,7 @@ func TestWhereFiltersError(t *testing.T) {
 		err = p.pushFilter(filters)
 		assert.Nil(t, err)
 
-		p, err = p.pushJoinInWhere(joins)
-		assert.Nil(t, err)
+		p = p.pushJoinInWhere(joins)
 
 		p, err = p.calcRoute()
 		assert.Nil(t, err)
@@ -191,11 +191,13 @@ func TestCheckGroupBy(t *testing.T) {
 		"select a,b from A group by a,b",
 		"select a,b,A.id from A group by id,a",
 		"select A.id as a from A group by a",
+		"select A.id+G.id as id from A,G group by id",
 	}
 	wants := []int{
 		1,
 		2,
 		0,
+		1,
 		1,
 	}
 
@@ -216,10 +218,10 @@ func TestCheckGroupBy(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, err := parserSelectExprs(sel.SelectExprs)
+		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
-		groups, err := checkGroupBy(sel.GroupBy, fields, route, database, p.getReferredTables())
+		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferredTables())
 		assert.Nil(t, err)
 		assert.Equal(t, wants[i], len(groups))
 	}
@@ -254,10 +256,10 @@ func TestCheckGroupByError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, err := parserSelectExprs(sel.SelectExprs)
+		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
-		_, err = checkGroupBy(sel.GroupBy, fields, route, database, p.getReferredTables())
+		_, err = checkGroupBy(sel.GroupBy, fields, route, p.getReferredTables())
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}
@@ -292,10 +294,10 @@ func TestCheckDistinct(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, err := parserSelectExprs(sel.SelectExprs)
+		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
-		_, err = checkDistinct(sel, nil, fields, route, database, p.getReferredTables())
+		_, err = checkDistinct(sel, nil, fields, route, p.getReferredTables())
 		assert.Nil(t, err)
 		assert.Equal(t, wants[i], len(sel.GroupBy))
 	}
@@ -328,10 +330,10 @@ func TestCheckDistinctError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, err := parserSelectExprs(sel.SelectExprs)
+		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
-		_, err = checkDistinct(sel, nil, fields, route, database, p.getReferredTables())
+		_, err = checkDistinct(sel, nil, fields, route, p.getReferredTables())
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}
@@ -359,10 +361,10 @@ func TestSelectExprs(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, err := parserSelectExprs(sel.SelectExprs)
+		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
-		groups, err := checkGroupBy(sel.GroupBy, fields, route, database, p.getReferredTables())
+		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferredTables())
 		assert.Nil(t, err)
 
 		err = p.pushSelectExprs(fields, groups, sel, false)
@@ -379,7 +381,7 @@ func TestSelectExprsError(t *testing.T) {
 		"select A.id,G.a as a, concat(B.str,G.str), 1 from A,B, A as G group by a",
 	}
 	wants := []string{
-		"unsupported: group.by.field[s].should.be.in.select.list",
+		"unsupported: group.by.field[s].should.be.in.noaggregate.select.list",
 		"unsupported: select.expr.in.cross-shard.join",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -399,10 +401,10 @@ func TestSelectExprsError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, err := parserSelectExprs(sel.SelectExprs)
+		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
-		groups, err := checkGroupBy(sel.GroupBy, fields, route, database, p.getReferredTables())
+		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferredTables())
 		assert.Nil(t, err)
 
 		err = p.pushSelectExprs(fields, groups, sel, false)
@@ -419,10 +421,10 @@ func TestSelectExprsError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, err := parserSelectExprs(sel.SelectExprs)
+		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
-		groups, err := checkGroupBy(sel.GroupBy, fields, route, database, p.getReferredTables())
+		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferredTables())
 		assert.Nil(t, err)
 
 		err = p.pushSelectExprs(fields, groups, sel, true)
@@ -529,7 +531,7 @@ func TestPushOrderBy(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, err := parserSelectExprs(sel.SelectExprs)
+		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
 		err = p.pushOrderBy(sel, fields)
@@ -546,7 +548,7 @@ func TestPushOrderByError(t *testing.T) {
 	wants := []string{
 		"unsupported: orderby[b].should.in.select.list",
 		"unsupported: orderby[b].should.in.select.list",
-		"unsupported: orderby[a].should.in.select.list",
+		"unsupported: unknow.table.in.order.by.field[C.a]",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
@@ -565,7 +567,7 @@ func TestPushOrderByError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, err := parserSelectExprs(sel.SelectExprs)
+		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
 		err = p.pushOrderBy(sel, fields)
@@ -635,7 +637,6 @@ func TestPushLimitError(t *testing.T) {
 		assert.Equal(t, wants[i], got)
 	}
 }
-
 func TestPushMisc(t *testing.T) {
 	querys := []string{
 		"select /* comments */ *  from A for update",

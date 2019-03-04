@@ -136,7 +136,7 @@ func (j *JoinNode) setNoTableFilter(exprs []sqlparser.Expr) {
 // pushJoinInWhere used to push the 'join' type filters.
 // eg: 'select * from t1, t2 where t1.a=t2.a and t1.b=2'.
 // 't1.a=t2.a' is the 'join' type filters.
-func (j *JoinNode) pushJoinInWhere(joins []joinTuple) (PlanNode, error) {
+func (j *JoinNode) pushJoinInWhere(joins []joinTuple) PlanNode {
 	for i, joinFilter := range joins {
 		var parent PlanNode
 		ltb, _ := j.referredTables[joinFilter.referTables[0]]
@@ -195,7 +195,7 @@ func (j *JoinNode) pushJoinInWhere(joins []joinTuple) (PlanNode, error) {
 			}
 		}
 	}
-	return j, nil
+	return j
 }
 
 // calcRoute used to calc the route.
@@ -265,7 +265,7 @@ func (j *JoinNode) pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser.
 		return errors.New("unsupported: cross-shard.query.with.aggregates")
 	}
 	if len(groups) > 0 {
-		aggrPlan := NewAggregatePlan(j.log, sel, fileds, groups)
+		aggrPlan := NewAggregatePlan(j.log, sel.SelectExprs, fileds, groups)
 		if err := aggrPlan.Build(); err != nil {
 			return err
 		}
@@ -343,7 +343,7 @@ func (j *JoinNode) pushOrderBy(sel *sqlparser.Select, fileds []selectTuple) erro
 	}
 
 	if len(sel.OrderBy) > 0 {
-		orderPlan := NewOrderByPlan(j.log, sel, fileds)
+		orderPlan := NewOrderByPlan(j.log, sel, fileds, j.referredTables)
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}

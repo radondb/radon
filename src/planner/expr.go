@@ -135,10 +135,11 @@ type selectTuple struct {
 }
 
 // parserSelectExpr parses the AliasedExpr to select tuple.
-func parserSelectExpr(expr *sqlparser.AliasedExpr) (*selectTuple, error) {
+func parserSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*TableInfo) (*selectTuple, bool, error) {
 	funcName := ""
 	aggrField := ""
 	distinct := false
+	hasAggregates := false
 	referTables := make([]string, 0, 4)
 
 	field := expr.As.String()
@@ -157,7 +158,15 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr) (*selectTuple, error) {
 		case *sqlparser.ColName:
 			tableName := node.Qualifier.Name.String()
 			if tableName == "" {
-				return true, nil
+				if len(tbInfos) == 1 {
+					tableName, _ = getOneTableInfo(tbInfos)
+				} else {
+					return false, errors.Errorf("unsupported: unknown.column.'%s'.in.select.exprs", node.Name.String())
+				}
+			} else {
+				if _, ok := tbInfos[tableName]; !ok {
+					return false, errors.Errorf("unsupported: unknown.column.'%s'.in.field.list", field)
+				}
 			}
 			for _, tb := range referTables {
 				if tb == tableName {
@@ -168,6 +177,7 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr) (*selectTuple, error) {
 		case *sqlparser.FuncExpr:
 			distinct = node.Distinct
 			if node.IsAggregate() {
+				hasAggregates = true
 				if node != expr.Expr {
 					return false, errors.Errorf("unsupported: '%s'.contain.aggregate.in.select.exprs", field)
 				}
@@ -190,35 +200,46 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr) (*selectTuple, error) {
 		return true, nil
 	}, expr.Expr)
 	if err != nil {
-		return nil, err
+		return nil, hasAggregates, err
 	}
 
-	return &selectTuple{expr, field, referTables, funcName, aggrField, distinct}, nil
+	return &selectTuple{expr, field, referTables, funcName, aggrField, distinct}, hasAggregates, nil
 }
 
-func parserSelectExprs(exprs sqlparser.SelectExprs) ([]selectTuple, error) {
+func parserSelectExprs(exprs sqlparser.SelectExprs, root PlanNode) ([]selectTuple, bool, error) {
 	var tuples []selectTuple
-	var err error
+	hasAggregates := false
+	tbInfos := root.getReferredTables()
 	for _, expr := range exprs {
 		switch exp := expr.(type) {
 		case *sqlparser.AliasedExpr:
-			var tuple *selectTuple
-			tuple, err = parserSelectExpr(exp)
+			tuple, hasAggregate, err := parserSelectExpr(exp, tbInfos)
 			if err != nil {
-				return nil, err
+				return nil, false, err
+			}
+			if hasAggregate {
+				hasAggregates = true
 			}
 			tuples = append(tuples, *tuple)
 		case *sqlparser.StarExpr:
+			if _, ok := root.(*MergeNode); !ok {
+				return nil, false, errors.New("unsupported: '*'.expression.in.cross-shard.query")
+			}
 			tuple := selectTuple{expr: exp, field: "*"}
 			if !exp.TableName.IsEmpty() {
-				tuple.referTables = append(tuple.referTables, exp.TableName.Name.String())
+				tbName := exp.TableName.Name.String()
+				if _, ok := tbInfos[tbName]; !ok {
+					return nil, false, errors.Errorf("unsupported:  unknown.table.'%s'.in.field.list", tbName)
+				}
+				tuple.referTables = append(tuple.referTables, tbName)
 			}
+
 			tuples = append(tuples, tuple)
 		case sqlparser.Nextval:
-			return nil, errors.Errorf("unsupported: nextval.in.select.exprs")
+			return nil, false, errors.Errorf("unsupported: nextval.in.select.exprs")
 		}
 	}
-	return tuples, nil
+	return tuples, hasAggregates, nil
 }
 
 func checkInTuple(field, table string, tuples []selectTuple) bool {
@@ -375,7 +396,7 @@ func checkJoinOn(lpn, rpn PlanNode, join joinTuple) (joinTuple, error) {
 }
 
 // checkGroupBy used to check groupby.
-func checkGroupBy(exprs sqlparser.GroupBy, fileds []selectTuple, router *router.Router, database string, tbInfos map[string]*TableInfo) ([]selectTuple, error) {
+func checkGroupBy(exprs sqlparser.GroupBy, fileds []selectTuple, router *router.Router, tbInfos map[string]*TableInfo) ([]selectTuple, error) {
 	var groupTuples []selectTuple
 	for _, expr := range exprs {
 		var group *selectTuple
@@ -410,7 +431,7 @@ func checkGroupBy(exprs sqlparser.GroupBy, fileds []selectTuple, router *router.
 		// shardkey is a unique constraints key. if fileds contains shardkey,
 		// that mains each row of data is unique. neednot process groupby again.
 		// unsupport alias.
-		ok, err := checkShard(table, database, col.Name.String(), tbInfos, router)
+		ok, err := checkShard(table, col.Name.String(), tbInfos, router)
 		if err != nil {
 			return nil, err
 		}
@@ -423,7 +444,7 @@ func checkGroupBy(exprs sqlparser.GroupBy, fileds []selectTuple, router *router.
 }
 
 // checkDistinct used to check the distinct, and convert distinct to groupby.
-func checkDistinct(node *sqlparser.Select, groups, fileds []selectTuple, router *router.Router, database string, tbInfos map[string]*TableInfo) ([]selectTuple, error) {
+func checkDistinct(node *sqlparser.Select, groups, fileds []selectTuple, router *router.Router, tbInfos map[string]*TableInfo) ([]selectTuple, error) {
 	// field in grouby must be contained in the select exprs, that mains groups is a subset of fields.
 	// if has groupby, neednot process distinct again.
 	if node.Distinct == "" || len(node.GroupBy) > 0 {
@@ -435,7 +456,7 @@ func checkDistinct(node *sqlparser.Select, groups, fileds []selectTuple, router 
 	for _, tuple := range fileds {
 		if expr, ok := tuple.expr.(*sqlparser.AliasedExpr); ok {
 			if exp, ok := expr.Expr.(*sqlparser.ColName); ok {
-				ok, err := checkShard(tuple.referTables[0], database, exp.Name.String(), tbInfos, router)
+				ok, err := checkShard(tuple.referTables[0], exp.Name.String(), tbInfos, router)
 				if err != nil {
 					return nil, err
 				}
@@ -468,13 +489,13 @@ func checkDistinct(node *sqlparser.Select, groups, fileds []selectTuple, router 
 }
 
 // checkShard used to check whether the col is shardkey.
-func checkShard(table, database, col string, tbInfos map[string]*TableInfo, router *router.Router) (bool, error) {
+func checkShard(table, col string, tbInfos map[string]*TableInfo, router *router.Router) (bool, error) {
 	tbInfo, ok := tbInfos[table]
 	if !ok {
 		return false, errors.Errorf("unsupported: unknown.column.'%s.%s'.in.field.list", table, col)
 	}
 
-	shardkey, err := router.ShardKey(database, tbInfo.tableName)
+	shardkey, err := router.ShardKey(tbInfo.database, tbInfo.tableName)
 	if err != nil {
 		return false, err
 	}

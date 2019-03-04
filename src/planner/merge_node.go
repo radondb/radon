@@ -108,11 +108,11 @@ func (m *MergeNode) setNoTableFilter(exprs []sqlparser.Expr) {
 }
 
 // pushJoinInWhere used to push the 'join' type filters.
-func (m *MergeNode) pushJoinInWhere(joins []joinTuple) (PlanNode, error) {
+func (m *MergeNode) pushJoinInWhere(joins []joinTuple) PlanNode {
 	for _, joinFilter := range joins {
 		m.sel.AddWhere(joinFilter.expr)
 	}
-	return m, nil
+	return m
 }
 
 // calcRoute used to calc the route.
@@ -163,7 +163,7 @@ func (m *MergeNode) pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser
 	m.sel.GroupBy = sel.GroupBy
 	m.sel.Distinct = sel.Distinct
 	if hasAggregates || len(groups) > 0 {
-		aggrPlan := NewAggregatePlan(m.log, sel, fileds, groups)
+		aggrPlan := NewAggregatePlan(m.log, m.sel.SelectExprs, fileds, groups)
 		if err := aggrPlan.Build(); err != nil {
 			return err
 		}
@@ -196,7 +196,7 @@ func (m *MergeNode) pushOrderBy(sel *sqlparser.Select, fileds []selectTuple) err
 	}
 
 	if len(m.sel.OrderBy) > 0 {
-		orderPlan := NewOrderByPlan(m.log, m.sel, fileds)
+		orderPlan := NewOrderByPlan(m.log, m.sel, fileds, m.referredTables)
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}
@@ -240,8 +240,8 @@ func (m *MergeNode) buildQuery() {
 			}
 			if backend == "" {
 				backend = tbInfo.Segments[i].Backend
-				Range = tbInfo.Segments[i].Range.String()
 			}
+			Range = tbInfo.Segments[i].Range.String()
 			expr, _ := tbInfo.tableExpr.Expr.(sqlparser.TableName)
 			expr.Name = sqlparser.NewTableIdent(tbInfo.Segments[i].Table)
 			tbInfo.tableExpr.Expr = expr

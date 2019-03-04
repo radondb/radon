@@ -10,9 +10,7 @@ package planner
 
 import (
 	"encoding/json"
-	"math/rand"
 	"strings"
-	"time"
 
 	"router"
 	"xcontext"
@@ -49,11 +47,10 @@ type SelectPlan struct {
 	// mode
 	ReqMode xcontext.RequestMode
 
-	// query and backend tuple
-	Querys []xcontext.QueryTuple
-
 	// children plans in select(such as: orderby, limit or join).
 	children *PlanTree
+
+	Root PlanNode
 }
 
 // NewSelectPlan used to create SelectPlan.
@@ -65,7 +62,6 @@ func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser
 		database: database,
 		RawQuery: query,
 		typ:      PlanTypeSelect,
-		Querys:   make([]xcontext.QueryTuple, 0, 16),
 		children: NewPlanTree(),
 	}
 }
@@ -73,135 +69,96 @@ func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser
 // analyze used to check the 'select' is at the support level, and get the db, table, etc..
 // Unsupports:
 // 1. subquery.
-func (p *SelectPlan) analyze() ([]TableInfo, error) {
-	var err error
-	tableInfos := make([]TableInfo, 0, 4)
-	node := p.node
-
+func (p *SelectPlan) analyze() error {
 	// Check subquery.
-	if hasSubquery(node) {
-		return nil, errors.New("unsupported: subqueries.in.select")
+	if hasSubquery(p.node) {
+		return errors.New("unsupported: subqueries.in.select")
 	}
-
-	// Get table info in the node.From.
-	// Only support AliasedTableExpr, JoinTableExpr select.
-	for _, from := range node.From {
-		switch expr := from.(type) {
-		case *sqlparser.AliasedTableExpr:
-			tableInfo, err := p.getOneTableInfo(expr)
-			if err != nil {
-				return nil, err
-			}
-			tableInfos = append(tableInfos, tableInfo)
-		case *sqlparser.JoinTableExpr:
-			tableInfos, err = p.getJoinTableInfos(expr, tableInfos)
-		default:
-			err = errors.New("unsupported: ParenTableExpr.in.select")
-		}
-	}
-
-	return tableInfos, err
+	return nil
 }
 
 // Build used to build distributed querys.
 // For now, we don't support subquery in select.
 func (p *SelectPlan) Build() error {
+	var err error
 	log := p.log
 	node := p.node
 
-	tableInfos, err := p.analyze()
-	if err != nil {
+	// Check subquery.
+	if err = p.analyze(); err != nil {
 		return err
 	}
-	t := tableInfos[0]
-	// Support only one shard tables.
-	var num int
-	for _, tableInfo := range tableInfos {
-		if tableInfo.shardKey != "" {
-			t = tableInfo
-			num++
-		}
-		if num > 1 {
-			return errors.New("unsupported: more.than.one.shard.tables")
-		}
-	}
-
-	segments, err := getDMLRouting(t.database, t.tableName, t.shardKey, node.Where, p.router)
-	if err != nil {
+	if p.Root, err = scanTableExprs(log, p.router, p.database, node.From); err != nil {
 		return err
 	}
-	// The tables are global tables, send to the random backend
-	if num == 0 {
-		rand := rand.New(rand.NewSource(time.Now().UnixNano()))
-		index := rand.Intn(len(segments))
-		segments = segments[index : index+1]
-	}
 
-	// Add sub-plans.
-	children := p.children
-	if len(segments) > 1 {
-		tuples, err := parserSelectExprs(node.SelectExprs)
+	tbInfos := p.Root.getReferredTables()
+	if node.Where != nil {
+		joins, filters, err := parserWhereOrJoinExprs(node.Where.Expr, tbInfos)
 		if err != nil {
 			return err
 		}
-		// Distinct SubPlan.
-		distinctPlan := NewDistinctPlan(log, node)
-		if err := distinctPlan.Build(); err != nil {
+		if err = p.Root.pushFilter(filters); err != nil {
 			return err
 		}
-		children.Add(distinctPlan)
+		p.Root = p.Root.pushJoinInWhere(joins)
+	}
+	if p.Root, err = p.Root.calcRoute(); err != nil {
+		return err
+	}
 
-		// Join SubPlan.
-		joinPlan := NewJoinPlan(log, node)
-		if err := joinPlan.Build(); err != nil {
+	if err = p.Root.spliceWhere(); err != nil {
+		return err
+	}
+
+	mn, ok := p.Root.(*MergeNode)
+	if ok && mn.routeLen == 1 {
+		node.From = mn.sel.From
+		node.Where = mn.sel.Where
+		mn.sel = node
+		mn.buildQuery()
+		return nil
+	}
+
+	var groups []selectTuple
+	fileds, hasAggregates, err := parserSelectExprs(node.SelectExprs, p.Root)
+	if err != nil {
+		return err
+	}
+
+	if groups, err = checkGroupBy(node.GroupBy, fileds, p.router, tbInfos); err != nil {
+		return err
+	}
+
+	if groups, err = checkDistinct(node, groups, fileds, p.router, tbInfos); err != nil {
+		return err
+	}
+
+	if err = p.Root.pushSelectExprs(fileds, groups, node, hasAggregates); err != nil {
+		return err
+	}
+
+	if node.Having != nil {
+		havings, err := parserHaving(node.Having.Expr, tbInfos)
+		if err != nil {
 			return err
 		}
-		children.Add(joinPlan)
-
-		// Aggregate SubPlan.
-		aggrPlan := NewAggregatePlan(log, node, tuples, nil)
-		if err := aggrPlan.Build(); err != nil {
+		if err = p.Root.pushHaving(havings); err != nil {
 			return err
-		}
-		children.Add(aggrPlan)
-		node.SelectExprs = aggrPlan.ReWritten()
-
-		// Orderby SubPlan.
-		orderPlan := NewOrderByPlan(log, node, tuples)
-		if err := orderPlan.Build(); err != nil {
-			return err
-		}
-		children.Add(orderPlan)
-
-		// Limit SubPlan.
-		if node.Limit != nil {
-			limitPlan := NewLimitPlan(log, node)
-			if err := limitPlan.Build(); err != nil {
-				return err
-			}
-			children.Add(limitPlan)
-			// Rewrite the limit clause.
-			node.Limit = limitPlan.ReWritten()
 		}
 	}
 
-	expr, _ := t.tableExpr.Expr.(sqlparser.TableName)
-	// Rewritten the query.
-	for _, segment := range segments {
-		// Rewrite the shard table's name.
-		expr.Name = sqlparser.NewTableIdent(segment.Table)
-		t.tableExpr.Expr = expr
-		buf := sqlparser.NewTrackedBuffer(nil)
-		node.Format(buf)
-		rewritten := buf.String()
-
-		tuple := xcontext.QueryTuple{
-			Query:   rewritten,
-			Backend: segment.Backend,
-			Range:   segment.Range.String(),
-		}
-		p.Querys = append(p.Querys, tuple)
+	if err = p.Root.pushOrderBy(node, fileds); err != nil {
+		return err
 	}
+	// Limit SubPlan.
+	if node.Limit != nil {
+		if err = p.Root.pushLimit(node); err != nil {
+			return err
+		}
+	}
+	p.Root.pushMisc(node)
+	p.Root.buildQuery()
 	return nil
 }
 
@@ -228,8 +185,12 @@ func (p *SelectPlan) JSON() string {
 	}
 
 	// Project.
+	exprs := p.node.SelectExprs
+	if m, ok := p.Root.(*MergeNode); ok {
+		exprs = m.sel.SelectExprs
+	}
 	buf := sqlparser.NewTrackedBuffer(nil)
-	buf.Myprintf("%v", p.node.SelectExprs)
+	buf.Myprintf("%v", exprs)
 	project := buf.String()
 
 	// Aggregate.
@@ -237,7 +198,7 @@ func (p *SelectPlan) JSON() string {
 	var hashGroup []string
 	var gatherMerge []string
 	var lim *limit
-	for _, sub := range p.children.Plans() {
+	for _, sub := range p.Root.Children().Plans() {
 		switch sub.Type() {
 		case PlanTypeAggregate:
 			plan := sub.(*AggregatePlan)
@@ -264,7 +225,7 @@ func (p *SelectPlan) JSON() string {
 
 	exp := &explain{Project: project,
 		RawQuery:    p.RawQuery,
-		Partitions:  p.Querys,
+		Partitions:  p.Root.GetQuery(),
 		Aggregate:   aggregate,
 		GatherMerge: gatherMerge,
 		HashGroupBy: hashGroup,
@@ -285,65 +246,5 @@ func (p *SelectPlan) Children() *PlanTree {
 // Size returns the memory size.
 func (p *SelectPlan) Size() int {
 	size := len(p.RawQuery)
-	for _, q := range p.Querys {
-		size += len(q.Query)
-	}
 	return size
-}
-
-// getOneTableInfo returns one table info.
-func (p *SelectPlan) getOneTableInfo(aliasTableExpr *sqlparser.AliasedTableExpr) (TableInfo, error) {
-	var tableInfo TableInfo
-	if aliasTableExpr == nil {
-		return tableInfo, errors.New("unsupported: aliasTableExpr.cannot.be.nil")
-	}
-
-	switch expr := aliasTableExpr.Expr.(type) {
-	case sqlparser.TableName:
-		if expr.Qualifier.IsEmpty() {
-			expr.Qualifier = sqlparser.NewTableIdent(p.database)
-		}
-		aliasTableExpr.Expr = expr
-		tableInfo.database = expr.Qualifier.String()
-		tableInfo.tableName = expr.Name.String()
-		shardkey, err := p.router.ShardKey(tableInfo.database, tableInfo.tableName)
-		if err != nil {
-			return tableInfo, err
-		}
-		tableInfo.shardKey = shardkey
-		tableInfo.tableExpr = aliasTableExpr
-	default:
-		return tableInfo, errors.New("unsupported: subqueries.in.select")
-	}
-
-	if tableInfo.shardKey != "" && aliasTableExpr.As.String() == "" {
-		aliasTableExpr.As = sqlparser.NewTableIdent(tableInfo.tableName)
-	}
-	return tableInfo, nil
-}
-
-// getJoinTableInfos used to get the tables' info for join type.
-func (p *SelectPlan) getJoinTableInfos(joinTableExpr *sqlparser.JoinTableExpr, tableInfos []TableInfo) ([]TableInfo, error) {
-	rightExpr, OK := (joinTableExpr.RightExpr).(*sqlparser.AliasedTableExpr)
-	if !OK {
-		return nil, errors.New("unsupported: JOIN.expression")
-	}
-	tableInfo, err := p.getOneTableInfo(rightExpr)
-	if err != nil {
-		return nil, err
-	}
-	tableInfos = append(tableInfos, tableInfo)
-	switch joinTableExpr.LeftExpr.(type) {
-	case *sqlparser.AliasedTableExpr:
-		tableInfo, err = p.getOneTableInfo(joinTableExpr.LeftExpr.(*sqlparser.AliasedTableExpr))
-		if err != nil {
-			return nil, err
-		}
-		tableInfos = append(tableInfos, tableInfo)
-	case *sqlparser.JoinTableExpr:
-		return p.getJoinTableInfos(joinTableExpr.LeftExpr.(*sqlparser.JoinTableExpr), tableInfos)
-	default:
-		return nil, errors.New("unsupported: ParenTableExpr.in.select")
-	}
-	return tableInfos, nil
 }
