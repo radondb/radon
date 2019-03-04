@@ -90,15 +90,17 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 	mn := newMergeNode(log, database, r)
 	switch expr := tableExpr.Expr.(type) {
 	case sqlparser.TableName:
+		if expr.Qualifier.IsEmpty() {
+			expr.Qualifier = sqlparser.NewTableIdent(database)
+		}
 		tn := &TableInfo{
-			database: database,
+			database: expr.Qualifier.String(),
 			Segments: make([]router.Segment, 0, 16),
 		}
 		if expr.Qualifier.IsEmpty() {
 			expr.Qualifier = sqlparser.NewTableIdent(database)
 		}
 		tableExpr.Expr = expr
-		tn.database = expr.Qualifier.String()
 		tn.tableName = expr.Name.String()
 		tn.tableConfig, err = r.TableConfig(tn.database, tn.tableName)
 		if err != nil {

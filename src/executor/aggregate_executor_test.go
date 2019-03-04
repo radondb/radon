@@ -230,7 +230,7 @@ func TestAggregateGroup(t *testing.T) {
 	r1 := &sqltypes.Result{
 		Fields: []*querypb.Field{
 			{
-				Name: "id",
+				Name: "a",
 				Type: querypb.Type_INT32,
 			},
 			{
@@ -249,7 +249,7 @@ func TestAggregateGroup(t *testing.T) {
 	r2 := &sqltypes.Result{
 		Fields: []*querypb.Field{
 			{
-				Name: "id",
+				Name: "a",
 				Type: querypb.Type_INT32,
 			},
 			{
@@ -278,13 +278,13 @@ func TestAggregateGroup(t *testing.T) {
 	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
 	// avg.
-	fakedbs.AddQuery("select id, sum(score) from sbtest.A0 as A where id > 8 group by id", r1)
-	fakedbs.AddQuery("select id, sum(score) from sbtest.A2 as A where id > 8 group by id", r1)
-	fakedbs.AddQuery("select id, sum(score) from sbtest.A4 as A where id > 8 group by id", r2)
-	fakedbs.AddQuery("select id, sum(score) from sbtest.A8 as A where id > 8 group by id", r2)
+	fakedbs.AddQuery("select a, sum(score) from sbtest.A0 as A where id > 8 group by a order by a asc", r1)
+	fakedbs.AddQuery("select a, sum(score) from sbtest.A2 as A where id > 8 group by a order by a asc", r1)
+	fakedbs.AddQuery("select a, sum(score) from sbtest.A4 as A where id > 8 group by a order by a asc", r2)
+	fakedbs.AddQuery("select a, sum(score) from sbtest.A8 as A where id > 8 group by a order by a asc", r2)
 
 	querys := []string{
-		"select id, sum(score) from A where id>8 group by id",
+		"select a, sum(score) from A where id>8 group by a",
 	}
 	results := []string{
 		"[[1 22] [2 44]]",

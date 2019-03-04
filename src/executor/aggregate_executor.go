@@ -87,12 +87,6 @@ func (executor *AggregateExecutor) aggregate(result *sqltypes.Result) {
 		i++
 	}
 
-	// sort by the first field. The code will remove soon.
-	if len(groups) > 0 {
-		result.OrderedByAsc(result.Fields[0].Table, result.Fields[0].Name)
-		result.Sort()
-	}
-
 	// Remove avg decompose columns.
 	result.RemoveColumns(deIdxs...)
 }

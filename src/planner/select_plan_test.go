@@ -78,32 +78,32 @@ func TestSelectPlan(t *testing.T) {
 	"Project": "id, sum(a) as A",
 	"Partitions": [
 		{
-			"Query": "select id, sum(a) as A from sbtest.A1 as A group by id having A \u003e 1000",
+			"Query": "select id, sum(a) as A from sbtest.A1 as A group by id having A \u003e 1000 order by id asc",
 			"Backend": "backend1",
 			"Range": "[0-32)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A2 as A group by id having A \u003e 1000",
+			"Query": "select id, sum(a) as A from sbtest.A2 as A group by id having A \u003e 1000 order by id asc",
 			"Backend": "backend2",
 			"Range": "[32-64)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A3 as A group by id having A \u003e 1000",
+			"Query": "select id, sum(a) as A from sbtest.A3 as A group by id having A \u003e 1000 order by id asc",
 			"Backend": "backend3",
 			"Range": "[64-96)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A4 as A group by id having A \u003e 1000",
+			"Query": "select id, sum(a) as A from sbtest.A4 as A group by id having A \u003e 1000 order by id asc",
 			"Backend": "backend4",
 			"Range": "[96-256)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A5 as A group by id having A \u003e 1000",
+			"Query": "select id, sum(a) as A from sbtest.A5 as A group by id having A \u003e 1000 order by id asc",
 			"Backend": "backend5",
 			"Range": "[256-512)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A6 as A group by id having A \u003e 1000",
+			"Query": "select id, sum(a) as A from sbtest.A6 as A group by id having A \u003e 1000 order by id asc",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
 		}
@@ -111,7 +111,7 @@ func TestSelectPlan(t *testing.T) {
 	"Aggregate": [
 		"A"
 	],
-	"HashGroupBy": [
+	"GatherMerge": [
 		"id"
 	]
 }`,
@@ -120,8 +120,29 @@ func TestSelectPlan(t *testing.T) {
 	"Project": "id, a",
 	"Partitions": [
 		{
-			"Query": "select id, a from sbtest.A6 as A where (a \u003e 1 and (id = 1))",
+			"Query": "select id, a from sbtest.A6 as A where a \u003e 1 and id = 1",
 			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+		`{
+	"RawQuery": "select A.id,B.id from A join B on A.id=B.id where A.id=1",
+	"Project": "A.id, B.id",
+	"Partitions": [
+		{
+			"Query": "select A.id from sbtest.A6 as A where A.id = 1",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		},
+		{
+			"Query": "select B.id from sbtest.B0 as B",
+			"Backend": "backend1",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "select B.id from sbtest.B1 as B",
+			"Backend": "backend2",
 			"Range": "[512-4096)"
 		}
 	]
@@ -131,6 +152,7 @@ func TestSelectPlan(t *testing.T) {
 		"select 1, sum(a),avg(a),a,b from sbtest.A where id>1 group by a,b order by a desc limit 10 offset 100",
 		"select id, sum(a) as A from A group by id having A>1000",
 		"select id,a from sbtest.A where (a>1 and (id=1))",
+		"select A.id,B.id from A join B on A.id=B.id where A.id=1",
 	}
 
 	// Database not null.
@@ -223,32 +245,32 @@ func TestSelectPlanDatabaseIsNull(t *testing.T) {
 	"Project": "id, sum(a) as A",
 	"Partitions": [
 		{
-			"Query": "select id, sum(a) as A from sbtest.A1 as A group by id having A \u003e 1000",
+			"Query": "select id, sum(a) as A from sbtest.A1 as A group by id having A \u003e 1000 order by id asc",
 			"Backend": "backend1",
 			"Range": "[0-32)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A2 as A group by id having A \u003e 1000",
+			"Query": "select id, sum(a) as A from sbtest.A2 as A group by id having A \u003e 1000 order by id asc",
 			"Backend": "backend2",
 			"Range": "[32-64)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A3 as A group by id having A \u003e 1000",
+			"Query": "select id, sum(a) as A from sbtest.A3 as A group by id having A \u003e 1000 order by id asc",
 			"Backend": "backend3",
 			"Range": "[64-96)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A4 as A group by id having A \u003e 1000",
+			"Query": "select id, sum(a) as A from sbtest.A4 as A group by id having A \u003e 1000 order by id asc",
 			"Backend": "backend4",
 			"Range": "[96-256)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A5 as A group by id having A \u003e 1000",
+			"Query": "select id, sum(a) as A from sbtest.A5 as A group by id having A \u003e 1000 order by id asc",
 			"Backend": "backend5",
 			"Range": "[256-512)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A6 as A group by id having A \u003e 1000",
+			"Query": "select id, sum(a) as A from sbtest.A6 as A group by id having A \u003e 1000 order by id asc",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
 		}
@@ -256,7 +278,7 @@ func TestSelectPlanDatabaseIsNull(t *testing.T) {
 	"Aggregate": [
 		"A"
 	],
-	"HashGroupBy": [
+	"GatherMerge": [
 		"id"
 	]
 }`,
@@ -299,32 +321,46 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 	querys := []string{
 		"select * from A as A1 where id in (select id from B)",
 		"select distinct(b) from A",
-		"select A.id from A join B on B.id=A.id",
+		"select * from A join B on B.id=A.id",
 		"select id from A order by b",
 		"select id from A limit x",
 		"select age,count(*) from A group by age having count(*) >=2",
-		"select * from (A,B)",
+		"select * from A where B.a >1",
 		"select count() from A",
 		"select round(avg(id)) from A",
 		"select id,group_concat(distinct name) from A group by id",
 		"select next value for A",
 		"select A.*,(select b.str from b where A.id=B.id) str from A",
 		"select avg(id)*1000 from A",
+		"select avg(*) from A",
+		"select B.* from A",
+		"select * from A where a>1 having count(a) >3",
+		"select * from A join B on A.id=B.id join G on G.id=A.id where A.a>B.a",
+		"select a,b from A group by B.a",
+		"select A.id,G.a as a, concat(B.str,G.str), 1 from A,B, A as G group by a",
+		"select *,avg(a) from A",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
 		"unsupported: distinct",
-		"unsupported: more.than.one.shard.tables",
+		"unsupported: '*'.expression.in.cross-shard.query",
 		"unsupported: orderby[b].should.in.select.list",
 		"unsupported: limit.offset.or.counts.must.be.IntVal",
 		"unsupported: expr[count(*)].in.having.clause",
-		"unsupported: ParenTableExpr.in.select",
+		"unsupported: unknown.table.'B'.in.clause",
 		"unsupported: invalid.use.of.group.function[count]",
 		"unsupported: 'round(avg(id))'.contain.aggregate.in.select.exprs",
 		"unsupported: group_concat.in.select.exprs",
 		"unsupported: nextval.in.select.exprs",
 		"unsupported: subqueries.in.select",
 		"unsupported: 'avg(id) * 1000'.contain.aggregate.in.select.exprs",
+		"unsupported: syntax.error.at.'avg(*)'",
+		"unsupported:  unknown.table.'B'.in.field.list",
+		"unsupported: expr[count(a)].in.having.clause",
+		"unsupported: where.clause.in.cross-shard.join",
+		"unsupported: unknow.table.in.group.by.field[B.a]",
+		"unsupported: select.expr.in.cross-shard.join",
+		"unsupported: exists.aggregate.and.'*'.select.exprs",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -333,7 +369,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
@@ -356,6 +392,7 @@ func TestSelectSupportedPlan(t *testing.T) {
 		"select id,rand(id) from A",
 		"select now() as time, count(1), avg(id), sum(b) from A",
 		"select avg(id + 1) from A",
+		"select concat(str1,str2) from A",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -526,86 +563,6 @@ func TestSelectPlanDatabaseNotFound(t *testing.T) {
 	}
 }
 
-func TestSelectPlanGetOneTableInfo(t *testing.T) {
-	querys := []string{
-		"select * from  C where C.id=1",
-		"select * from (select * from C) as D",
-	}
-	wants := []string{
-		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
-		"unsupported: subqueries.in.select",
-	}
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	database := "sbtest"
-
-	route, cleanup := router.MockNewRouter(log)
-	defer cleanup()
-
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
-	assert.Nil(t, err)
-
-	for i, query := range querys {
-		node, err := sqlparser.Parse(query)
-		assert.Nil(t, err)
-		plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
-		{
-			_, err = plan.getOneTableInfo(plan.node.From[0].(*sqlparser.AliasedTableExpr))
-			got := err.Error()
-			assert.Equal(t, wants[i], got)
-		}
-	}
-
-	query := "select * from A as a1 where a1.id=1"
-	node, err := sqlparser.Parse(query)
-	assert.Nil(t, err)
-	plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
-	{
-		_, err = plan.getOneTableInfo(nil)
-		want := "unsupported: aliasTableExpr.cannot.be.nil"
-		got := err.Error()
-		assert.Equal(t, want, got)
-	}
-	{
-		_, err = plan.getOneTableInfo(plan.node.From[0].(*sqlparser.AliasedTableExpr))
-		assert.Nil(t, err)
-	}
-}
-
-func TestSelectPlanGetJoinTableInfo(t *testing.T) {
-	querys := []string{
-		"select * from A join (E, F) on (E.a = A.a and F.a = A.a)",
-		"select * from (select * from C) as D join B on B.a = D.a join A on D.a = A.a",
-		"select * from (E, F) join A on (E.a = A.a and F.a = A.a)",
-		"select * from B join (select * from A) as D on B.a = D.a",
-	}
-
-	wants := []string{
-		"unsupported: JOIN.expression",
-		"unsupported: subqueries.in.select",
-		"unsupported: ParenTableExpr.in.select",
-		"unsupported: subqueries.in.select",
-	}
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	database := "sbtest"
-
-	route, cleanup := router.MockNewRouter(log)
-	defer cleanup()
-
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
-	assert.Nil(t, err)
-	for i, query := range querys {
-		node, err := sqlparser.Parse(query)
-		assert.Nil(t, err)
-		plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
-		{
-			tableInfos := make([]TableInfo, 0, 4)
-			_, err = plan.getJoinTableInfos(plan.node.From[0].(*sqlparser.JoinTableExpr), tableInfos)
-			got := err.Error()
-			assert.Equal(t, wants[i], got)
-		}
-	}
-}
-
 func TestSelectPlanGlobal(t *testing.T) {
 	querys := []string{
 		"select 1, sum(a),avg(a),a,b from sbtest.G where id>1 group by a,b order by a desc limit 10 offset 100",
@@ -633,7 +590,7 @@ func TestSelectPlanGlobal(t *testing.T) {
 				err := plan.Build()
 				assert.Nil(t, err)
 				want := 1
-				assert.Equal(t, want, len(plan.Querys))
+				assert.Equal(t, want, len(plan.Root.GetQuery()))
 				assert.Equal(t, PlanTypeSelect, plan.Type())
 				assert.NotNil(t, plan.Children())
 			}
@@ -734,9 +691,6 @@ func TestSelectPlanJoin(t *testing.T) {
 
 func TestSelectPlanJoinErr(t *testing.T) {
 	querys := []string{
-		"select G.a, G.b from sbtest.G join sbtest.B on G.id = B.id join sbtest.A on B.id = A.id where A.id=1",
-		"select K.a, K.b from sbtest.B join sbtest.A on B.id = A.id where A.id=1",
-		"select G.a, G.b from sbtest.G join (B,A) on (B.id = G.id and A.id = G.id)",
 		"select C.a, C.b from sbtest.C join sbtest.G on G.id = C.id where C.id=1",
 		"select G1.a, G1.b from sbtest.G1 join sbtest.B on G1.id = B.id where B.id=1",
 		"select G1.a, G1.b from sbtest.G1 join sbtest.C on G1.id = C.id where C.id=1",
@@ -744,14 +698,11 @@ func TestSelectPlanJoinErr(t *testing.T) {
 		"select * from B, A where A.id=1 and B.a=A.a",
 	}
 	results := []string{
-		"unsupported: more.than.one.shard.tables",
-		"unsupported: more.than.one.shard.tables",
-		"unsupported: JOIN.expression",
 		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
 		"Table 'G1' doesn't exist (errno 1146) (sqlstate 42S02)",
-		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
-		"unsupported: ParenTableExpr.in.select",
-		"unsupported: more.than.one.shard.tables",
+		"Table 'G1' doesn't exist (errno 1146) (sqlstate 42S02)",
+		"unsupported: '*'.expression.in.cross-shard.query",
+		"unsupported: '*'.expression.in.cross-shard.query",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))

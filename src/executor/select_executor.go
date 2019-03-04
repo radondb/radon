@@ -13,7 +13,6 @@ import (
 	"planner"
 	"xcontext"
 
-	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -39,43 +38,23 @@ func NewSelectExecutor(log *xlog.Log, plan planner.Plan, txn backend.Transaction
 
 // Execute used to execute the executor.
 func (executor *SelectExecutor) Execute(ctx *xcontext.ResultContext) error {
-	var err error
+	log := executor.log
 	plan := executor.plan.(*planner.SelectPlan)
-	subPlanTree := plan.Children()
 	reqCtx := xcontext.NewRequestContext()
 	reqCtx.Mode = plan.ReqMode
 	reqCtx.TxnMode = xcontext.TxnRead
-	reqCtx.Querys = plan.Querys
 	reqCtx.RawQuery = plan.RawQuery
 
-	// Execute the parent plan.
-	if ctx.Results, err = executor.txn.Execute(reqCtx); err != nil {
-		return err
-	}
-
-	// Execute all the children plan.
-	if subPlanTree != nil {
-		for _, subPlan := range subPlanTree.Plans() {
-			switch subPlan.Type() {
-			case planner.PlanTypeAggregate:
-				aggrExecutor := NewAggregateExecutor(executor.log, subPlan)
-				if err := aggrExecutor.Execute(ctx); err != nil {
-					return err
-				}
-			case planner.PlanTypeOrderby:
-				orderByExecutor := NewOrderByExecutor(executor.log, subPlan)
-				if err := orderByExecutor.Execute(ctx); err != nil {
-					return err
-				}
-			case planner.PlanTypeLimit:
-				limitExecutor := NewLimitExecutor(executor.log, subPlan)
-				if err := limitExecutor.Execute(ctx); err != nil {
-					return err
-				}
-			case planner.PlanTypeDistinct:
-			default:
-				return errors.Errorf("unsupported.execute.type:%v", plan.Type())
-			}
+	switch node := plan.Root.(type) {
+	case *planner.MergeNode:
+		mergeExecutor := NewMergeExecutor(log, node, executor.txn)
+		if err := mergeExecutor.execute(reqCtx, ctx); err != nil {
+			return err
+		}
+	case *planner.JoinNode:
+		joinExecutor := NewJoinExecutor(log, node, executor.txn)
+		if err := joinExecutor.execute(reqCtx, ctx); err != nil {
+			return err
 		}
 	}
 	return nil

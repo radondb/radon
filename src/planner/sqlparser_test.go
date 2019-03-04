@@ -11,6 +11,7 @@ package planner
 import (
 	"fmt"
 	"reflect"
+	"router"
 	"strconv"
 	"testing"
 
@@ -509,9 +510,12 @@ func TestSQLSelectLimit(t *testing.T) {
 func TestSQLSelectAggregator(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	querys := []string{
-		"select 1, count(*), count(*) as cstar, avg(a), sum(a), count(a), max(a), max(b) as mb, a as a1, x.b from t,x group by a1,b, d.name",
+		"select 1, count(*), count(*) as cstar, avg(a), sum(a), count(a), max(a), max(b) as mb, a as a1, x.b from A,B group by a1,b, d.name",
 	}
-
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+	err := route.AddForTest("sbtest", router.MockTableMConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
 	for _, query := range querys {
 		log.Debug("query:%s", query)
 		sel, err := sqlparser.Parse(query)
@@ -519,12 +523,14 @@ func TestSQLSelectAggregator(t *testing.T) {
 		node := sel.(*sqlparser.Select)
 		selexprs := node.SelectExprs
 		var tuples []*selectTuple
+		p, err := scanTableExprs(log, route, "sbtest", node.From)
+		assert.Nil(t, err)
 		if selexprs != nil {
 			for _, exp := range selexprs {
 				switch exp.(type) {
 				case *sqlparser.AliasedExpr:
 					expr := exp.(*sqlparser.AliasedExpr)
-					tuple, _ := parserSelectExpr(expr)
+					tuple, _, _ := parserSelectExpr(expr, p.getReferredTables())
 					tuples = append(tuples, tuple)
 				}
 			}
@@ -546,9 +552,12 @@ func TestSQLSelectAggregator(t *testing.T) {
 func TestSQLSelectRewritten(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	querys := []string{
-		"select avg(a), sum(a), count(a) from t",
+		"select avg(a), sum(a), count(a) from A",
 	}
-
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+	err := route.AddForTest("sbtest", router.MockTableMConfig())
+	assert.Nil(t, err)
 	for _, query := range querys {
 		log.Debug("query:%s", query)
 		sel, err := sqlparser.Parse(query)
@@ -557,11 +566,13 @@ func TestSQLSelectRewritten(t *testing.T) {
 		selexprs := node.SelectExprs
 		rewritten := node.SelectExprs
 		var tuples []*selectTuple
+		p, err := scanTableExprs(log, route, "sbtest", node.From)
+		assert.Nil(t, err)
 		for _, exp := range selexprs {
 			switch exp.(type) {
 			case *sqlparser.AliasedExpr:
 				expr := exp.(*sqlparser.AliasedExpr)
-				tuple, _ := parserSelectExpr(expr)
+				tuple, _, _ := parserSelectExpr(expr, p.getReferredTables())
 				tuples = append(tuples, tuple)
 			}
 		}

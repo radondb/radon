@@ -43,17 +43,19 @@ type OrderByPlan struct {
 	log      *xlog.Log
 	node     *sqlparser.Select
 	tuples   []selectTuple
+	tbInfos  map[string]*TableInfo
 	OrderBys []OrderBy `json:"OrderBy(s)"`
 	typ      PlanType
 }
 
 // NewOrderByPlan used to create OrderByPlan.
-func NewOrderByPlan(log *xlog.Log, node *sqlparser.Select, tuples []selectTuple) *OrderByPlan {
+func NewOrderByPlan(log *xlog.Log, node *sqlparser.Select, tuples []selectTuple, tbInfos map[string]*TableInfo) *OrderByPlan {
 	return &OrderByPlan{
-		log:    log,
-		node:   node,
-		tuples: tuples,
-		typ:    PlanTypeOrderby,
+		log:     log,
+		node:    node,
+		tuples:  tuples,
+		tbInfos: tbInfos,
+		typ:     PlanTypeOrderby,
 	}
 }
 
@@ -77,6 +79,11 @@ func (p *OrderByPlan) analyze() error {
 			}
 			orderBy.Field = e.Name.String()
 			orderBy.Table = e.Qualifier.Name.String()
+			if orderBy.Table != "" {
+				if _, ok := p.tbInfos[orderBy.Table]; !ok {
+					return errors.Errorf("unsupported: unknow.table.in.order.by.field[%s.%s]", orderBy.Table, orderBy.Field)
+				}
+			}
 
 			if !checkInTuple(orderBy.Field, orderBy.Table, p.tuples) {
 				return errors.Errorf("unsupported: orderby[%+v].should.in.select.list", orderBy.Field)

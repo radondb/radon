@@ -13,7 +13,6 @@ import (
 	"planner"
 	"xcontext"
 
-	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -65,8 +64,6 @@ func (m *MergeExecutor) execute(reqCtx *xcontext.RequestContext, ctx *xcontext.R
 				if err := limitExecutor.Execute(ctx); err != nil {
 					return err
 				}
-			default:
-				return errors.Errorf("unsupported.execute.type:%v", subPlan.Type())
 			}
 		}
 	}

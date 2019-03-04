@@ -58,7 +58,6 @@ type Aggregator struct {
 // AggregatePlan represents order-by plan.
 type AggregatePlan struct {
 	log       *xlog.Log
-	node      *sqlparser.Select
 	tuples    []selectTuple
 	groups    []selectTuple
 	rewritten sqlparser.SelectExprs
@@ -71,13 +70,12 @@ type AggregatePlan struct {
 }
 
 // NewAggregatePlan used to create AggregatePlan.
-func NewAggregatePlan(log *xlog.Log, node *sqlparser.Select, tuples []selectTuple, groups []selectTuple) *AggregatePlan {
+func NewAggregatePlan(log *xlog.Log, exprs []sqlparser.SelectExpr, tuples, groups []selectTuple) *AggregatePlan {
 	return &AggregatePlan{
 		log:       log,
-		node:      node,
 		tuples:    tuples,
 		groups:    groups,
-		rewritten: node.SelectExprs,
+		rewritten: exprs,
 		typ:       PlanTypeAggregate,
 	}
 }
@@ -91,29 +89,7 @@ func NewAggregatePlan(log *xlog.Log, node *sqlparser.Select, tuples []selectTupl
 // select count(a) from t group by a    --[ER]
 func (p *AggregatePlan) analyze() error {
 	var nullAggrs []Aggregator
-	node := p.node
 	tuples := p.tuples
-
-	// Check the having has expr value.
-	exprInHaving := false
-	exprInHavingStr := ""
-	if node.Having != nil {
-		_ = sqlparser.Walk(func(n sqlparser.SQLNode) (kontinue bool, err error) {
-			switch n.(type) {
-			case *sqlparser.FuncExpr:
-				exprInHaving = true
-				buf := sqlparser.NewTrackedBuffer(nil)
-				n.Format(buf)
-				exprInHavingStr = buf.String()
-				return false, nil
-			}
-			return true, nil
-		}, node.Having)
-	}
-
-	if exprInHaving {
-		return errors.Errorf("unsupported: expr[%s].in.having.clause", exprInHavingStr)
-	}
 
 	// aggregators.
 	k := 0
@@ -126,6 +102,9 @@ func (p *AggregatePlan) analyze() error {
 		switch aggrType {
 		case "":
 			// non-func
+			if tuple.field == "*" {
+				return errors.Errorf("unsupported: exists.aggregate.and.'*'.select.exprs")
+			}
 			nullAggrs = append(nullAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeNull})
 		case "sum":
 			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeSum})
@@ -152,27 +131,20 @@ func (p *AggregatePlan) analyze() error {
 		k++
 	}
 
-	// Groupbys. groupbys will replace by 'p.groups' soon.
-	groupbys := node.GroupBy
-	for _, by := range groupbys {
-		by1 := by.(*sqlparser.ColName)
-		// check: select ... from t groupby t.a
-		if !by1.Qualifier.IsEmpty() {
-			return errors.Errorf("unsupported: group.by.field[%s].have.table.name[%s].please.use.AS.keyword", by1.Name, by1.Qualifier.Name)
-		}
-		field := by1.Name.String()
+	// Groupbys.
+	for _, by := range p.groups {
 		// check: groupby field in select list
 		idx := -1
 		for _, null := range nullAggrs {
-			if null.Field == field {
+			if null.Field == by.field {
 				idx = null.Index
 				break
 			}
 		}
 		if idx == -1 {
-			return errors.Errorf("unsupported: group.by.field[%s].should.be.in.select.list", field)
+			return errors.Errorf("unsupported: group.by.field[%s].should.be.in.noaggregate.select.list", by.field)
 		}
-		p.groupAggrs = append(p.groupAggrs, Aggregator{Field: field, Index: idx, Type: AggrTypeGroupBy})
+		p.groupAggrs = append(p.groupAggrs, Aggregator{Field: by.field, Index: idx, Type: AggrTypeGroupBy})
 	}
 	return nil
 }
