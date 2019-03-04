@@ -329,3 +329,25 @@ func (j *JoinNode) pushHaving(havings []filterTuple) error {
 	}
 	return nil
 }
+
+// pushOrderBy used to push the order by exprs.
+func (j *JoinNode) pushOrderBy(sel *sqlparser.Select, fileds []selectTuple) error {
+	if len(sel.OrderBy) == 0 {
+		for _, by := range sel.GroupBy {
+			sel.OrderBy = append(sel.OrderBy, &sqlparser.Order{
+				Expr:      by,
+				Direction: sqlparser.AscScr,
+			})
+		}
+	}
+
+	if len(sel.OrderBy) > 0 {
+		orderPlan := NewOrderByPlan(j.log, sel, fileds)
+		if err := orderPlan.Build(); err != nil {
+			return err
+		}
+		j.children.Add(orderPlan)
+	}
+
+	return nil
+}

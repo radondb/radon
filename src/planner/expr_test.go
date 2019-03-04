@@ -367,6 +367,9 @@ func TestSelectExprs(t *testing.T) {
 
 		err = p.pushSelectExprs(fields, groups, sel, false)
 		assert.Nil(t, err)
+
+		err = p.pushOrderBy(sel, fields)
+		assert.Nil(t, err)
 	}
 }
 
@@ -499,5 +502,74 @@ func TestParserHavingError(t *testing.T) {
 			got := err.Error()
 			assert.Equal(t, wants[i], got)
 		}
+	}
+}
+
+func TestPushOrderBy(t *testing.T) {
+	querys := []string{
+		"select * from A order by a",
+		"select A.a,B.b from A join B on A.id=B.id order by A.a",
+		"select A.a,B.b from A join B on A.id=B.id group by A.a",
+		"select A.a from A order by a",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		fields, err := parserSelectExprs(sel.SelectExprs)
+		assert.Nil(t, err)
+
+		err = p.pushOrderBy(sel, fields)
+		assert.Nil(t, err)
+	}
+}
+
+func TestPushOrderByError(t *testing.T) {
+	querys := []string{
+		"select a from A order by b",
+		"select A.a from A join B on A.id=B.id order by B.b",
+		"select A.a from A join B on A.id=B.id order by C.a",
+	}
+	wants := []string{
+		"unsupported: orderby[b].should.in.select.list",
+		"unsupported: orderby[b].should.in.select.list",
+		"unsupported: orderby[a].should.in.select.list",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		fields, err := parserSelectExprs(sel.SelectExprs)
+		assert.Nil(t, err)
+
+		err = p.pushOrderBy(sel, fields)
+		got := err.Error()
+		assert.Equal(t, wants[i], got)
 	}
 }

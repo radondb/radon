@@ -180,3 +180,27 @@ func (m *MergeNode) pushHaving(havings []filterTuple) error {
 	}
 	return nil
 }
+
+// pushOrderBy used to push the order by exprs.
+func (m *MergeNode) pushOrderBy(sel *sqlparser.Select, fileds []selectTuple) error {
+	if len(sel.OrderBy) > 0 {
+		m.sel.OrderBy = sel.OrderBy
+	} else {
+		// group by implicitly contains order by.
+		for _, by := range m.sel.GroupBy {
+			m.sel.OrderBy = append(m.sel.OrderBy, &sqlparser.Order{
+				Expr:      by,
+				Direction: sqlparser.AscScr,
+			})
+		}
+	}
+
+	if len(m.sel.OrderBy) > 0 {
+		orderPlan := NewOrderByPlan(m.log, m.sel, fileds)
+		if err := orderPlan.Build(); err != nil {
+			return err
+		}
+		m.children.Add(orderPlan)
+	}
+	return nil
+}
