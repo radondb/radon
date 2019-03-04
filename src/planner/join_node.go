@@ -351,3 +351,24 @@ func (j *JoinNode) pushOrderBy(sel *sqlparser.Select, fileds []selectTuple) erro
 
 	return nil
 }
+
+// pushLimit used to push limit.
+func (j *JoinNode) pushLimit(sel *sqlparser.Select) error {
+	limitPlan := NewLimitPlan(j.log, sel)
+	if err := limitPlan.Build(); err != nil {
+		return err
+	}
+	j.children.Add(limitPlan)
+	return nil
+}
+
+// pushMisc used tp push miscelleaneous constructs.
+func (j *JoinNode) pushMisc(sel *sqlparser.Select) {
+	j.Left.pushMisc(sel)
+	j.Right.pushMisc(sel)
+}
+
+// Children returns the children of the plan.
+func (j *JoinNode) Children() *PlanTree {
+	return j.children
+}
