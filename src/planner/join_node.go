@@ -10,6 +10,7 @@ package planner
 
 import (
 	"router"
+	"xcontext"
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -371,4 +372,17 @@ func (j *JoinNode) pushMisc(sel *sqlparser.Select) {
 // Children returns the children of the plan.
 func (j *JoinNode) Children() *PlanTree {
 	return j.children
+}
+
+// buildQuery used to build the QueryTuple.
+func (j *JoinNode) buildQuery() {
+	j.Left.buildQuery()
+	j.Right.buildQuery()
+}
+
+// GetQuery used to get the Querys.
+func (j *JoinNode) GetQuery() []xcontext.QueryTuple {
+	querys := j.Left.GetQuery()
+	querys = append(querys, j.Right.GetQuery()...)
+	return querys
 }

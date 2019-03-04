@@ -9,6 +9,8 @@
 package planner
 
 import (
+	"xcontext"
+
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 )
 
@@ -29,6 +31,8 @@ type PlanNode interface {
 	pushLimit(sel *sqlparser.Select) error
 	pushMisc(sel *sqlparser.Select)
 	Children() *PlanTree
+	buildQuery()
+	GetQuery() []xcontext.QueryTuple
 }
 
 // findLCA get the two plannode's lowest common ancestors node.

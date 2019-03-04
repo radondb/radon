@@ -40,7 +40,6 @@ func NewSelectExecutor(log *xlog.Log, plan planner.Plan, txn backend.Transaction
 // Execute used to execute the executor.
 func (executor *SelectExecutor) Execute(ctx *xcontext.ResultContext) error {
 	var err error
-	log := executor.log
 	plan := executor.plan.(*planner.SelectPlan)
 	subPlanTree := plan.Children()
 	reqCtx := xcontext.NewRequestContext()
@@ -58,11 +57,6 @@ func (executor *SelectExecutor) Execute(ctx *xcontext.ResultContext) error {
 	if subPlanTree != nil {
 		for _, subPlan := range subPlanTree.Plans() {
 			switch subPlan.Type() {
-			case planner.PlanTypeJoin:
-				joinExecutor := NewJoinExecutor(log, subPlan)
-				if err := joinExecutor.Execute(ctx); err != nil {
-					return err
-				}
 			case planner.PlanTypeAggregate:
 				aggrExecutor := NewAggregateExecutor(executor.log, subPlan)
 				if err := aggrExecutor.Execute(ctx); err != nil {
