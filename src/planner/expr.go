@@ -282,6 +282,7 @@ type joinTuple struct {
 	expr *sqlparser.ComparisonExpr
 	// referred tables.
 	referTables []string
+	left, right *sqlparser.ColName
 }
 
 // parserWhereOrJoinExprs parser exprs in where or join on conditions.
@@ -333,7 +334,7 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 				lc, lok := condition.Left.(*sqlparser.ColName)
 				rc, rok := condition.Right.(*sqlparser.ColName)
 				if lok && rok && lc.Qualifier != rc.Qualifier {
-					tuple := joinTuple{condition, referTables}
+					tuple := joinTuple{condition, referTables, lc, rc}
 					joins = append(joins, tuple)
 					continue
 				}
@@ -353,6 +354,24 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 	}
 
 	return joins, wheres, nil
+}
+
+// checkJoinOn use to check the join on conditions, according to lpn|rpn to  determine join.left|right.
+// eg: select * from t1 join t2 on t1.a=t2.a join t3 on t2.b=t1.b. 't2.b=t1.b' is forbidden.
+func checkJoinOn(lpn, rpn PlanNode, join joinTuple) (joinTuple, error) {
+	lt := join.left.Qualifier.Name.String()
+	rt := join.right.Qualifier.Name.String()
+	if _, ok := lpn.getReferredTables()[lt]; ok {
+		if _, ok := rpn.getReferredTables()[rt]; !ok {
+			return join, errors.New("unsupported: join.on.condition.should.cross.left-right.tables")
+		}
+	} else {
+		if _, ok := lpn.getReferredTables()[rt]; !ok {
+			return join, errors.New("unsupported: join.on.condition.should.cross.left-right.tables")
+		}
+		join.left, join.right = join.right, join.left
+	}
+	return join, nil
 }
 
 // checkGroupBy used to check groupby.

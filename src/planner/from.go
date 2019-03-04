@@ -170,6 +170,13 @@ func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, r
 		if joinOn, otherJoinOn, err = parserWhereOrJoinExprs(joinExpr.On, referredTables); err != nil {
 			return nil, err
 		}
+		for i, jt := range joinOn {
+			if jt, err = checkJoinOn(lpn, rpn, jt); err != nil {
+				return nil, err
+			}
+			joinOn[i] = jt
+		}
+
 		// inner join's other join on would add to where.
 		if joinExpr.Join != sqlparser.LeftJoinStr && len(otherJoinOn) > 0 {
 			if len(joinOn) == 0 {
@@ -197,9 +204,7 @@ func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, r
 			}
 			// if join on condition's cols are both shardkey, and the tables have same shards.
 			for _, jt := range joinOn {
-				left := jt.expr.Left.(*sqlparser.ColName)
-				right := jt.expr.Right.(*sqlparser.ColName)
-				if isSameShard(lmn.referredTables, rmn.referredTables, left, right) {
+				if isSameShard(lmn.referredTables, rmn.referredTables, jt.left, jt.right) {
 					return mergeRoutes(lmn, rmn, joinExpr, otherJoinOn)
 				}
 			}
@@ -246,40 +251,18 @@ func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJo
 	return lmn, err
 }
 
-// isShardKey used to judge whether the col contains shardkey.
-func isShardKey(col *sqlparser.ColName, tbInfos map[string]*TableInfo) (bool, []*config.PartitionConfig) {
-	tbInfo, ok := tbInfos[col.Qualifier.Name.String()]
-	if ok {
-		if tbInfo.shardKey == col.Name.String() {
-			return true, tbInfo.tableConfig.Partitions
-		}
-	}
-	return false, nil
-}
-
 // isSameShard used to judge lcn|rcn contain shardkey and have same shards.
 func isSameShard(ltb, rtb map[string]*TableInfo, lcn, rcn *sqlparser.ColName) bool {
-	var ltp, rtp []*config.PartitionConfig
-	lt, ok := ltb[lcn.Qualifier.Name.String()]
-	if !ok {
-		ok, ltp = isShardKey(rcn, ltb)
-		if !ok {
-			return false
-		}
-		ok, rtp = isShardKey(lcn, rtb)
-		if !ok {
-			return false
-		}
-	} else {
-		if lt.shardKey != lcn.Name.String() {
-			return false
-		}
-		ltp = lt.tableConfig.Partitions
-		ok, rtp = isShardKey(rcn, rtb)
-		if !ok {
-			return false
-		}
+	lt, _ := ltb[lcn.Qualifier.Name.String()]
+	if lt.shardKey != lcn.Name.String() {
+		return false
 	}
+	ltp := lt.tableConfig.Partitions
+	rt, _ := rtb[rcn.Qualifier.Name.String()]
+	if rt.shardKey != rcn.Name.String() {
+		return false
+	}
+	rtp := rt.tableConfig.Partitions
 
 	if len(ltp) != len(rtp) {
 		return false

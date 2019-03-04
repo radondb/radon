@@ -146,11 +146,10 @@ func (j *JoinNode) pushJoinInWhere(joins []joinTuple) (PlanNode, error) {
 		case *MergeNode:
 			node.setWhereFilter(joinFilter.expr)
 		case *JoinNode:
+			join, _ := checkJoinOn(node.Left, node.Right, joinFilter)
 			if lmn, ok := node.Left.(*MergeNode); ok {
 				if rmn, ok := node.Right.(*MergeNode); ok {
-					Left := joinFilter.expr.Left.(*sqlparser.ColName)
-					Right := joinFilter.expr.Right.(*sqlparser.ColName)
-					if isSameShard(lmn.referredTables, rmn.referredTables, Left, Right) {
+					if isSameShard(lmn.referredTables, rmn.referredTables, join.left, join.right) {
 						mn, _ := mergeRoutes(lmn, rmn, node.joinExpr, nil)
 						mn.setParent(node.parent)
 						mn.setParenthese(node.hasParen)
@@ -167,7 +166,7 @@ func (j *JoinNode) pushJoinInWhere(joins []joinTuple) (PlanNode, error) {
 								mn.setWhereFilter(joins.expr)
 							}
 						}
-						mn.setWhereFilter(joinFilter.expr)
+						mn.setWhereFilter(join.expr)
 						if node.parent == nil {
 							return mn.pushJoinInWhere(joins[i+1:])
 						}
@@ -183,13 +182,13 @@ func (j *JoinNode) pushJoinInWhere(joins []joinTuple) (PlanNode, error) {
 				}
 			}
 			if node.isLeftJoin {
-				node.setWhereFilter(joinFilter.expr)
+				node.setWhereFilter(join.expr)
 			} else {
-				node.joinOn = append(node.joinOn, joinFilter)
+				node.joinOn = append(node.joinOn, join)
 				if node.joinExpr != nil {
 					node.joinExpr.On = &sqlparser.AndExpr{
 						Left:  node.joinExpr.On,
-						Right: joinFilter.expr,
+						Right: join.expr,
 					}
 				}
 			}
