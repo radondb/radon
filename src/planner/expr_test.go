@@ -573,3 +573,90 @@ func TestPushOrderByError(t *testing.T) {
 		assert.Equal(t, wants[i], got)
 	}
 }
+
+func TestPushLimit(t *testing.T) {
+	querys := []string{
+		"select * from A limit 2",
+		"select * from A limit 2,2",
+		"select A.a,B.b from A join B on A.id=B.id order by A.a limit 2",
+		"select A.a,B.b from A join B on A.id=B.id group by A.a limit 2,2",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		err = p.pushLimit(sel)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(p.Children().children))
+	}
+}
+
+func TestPushLimitError(t *testing.T) {
+	querys := []string{
+		"select * from A limit 1.3",
+		"select A.a,B.b from A join B on A.id=B.id order by A.a limit 's'",
+	}
+	wants := []string{
+		"unsupported: limit.offset.or.counts.must.be.IntVal",
+		"unsupported: limit.offset.or.counts.must.be.IntVal",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+
+		err = p.pushLimit(sel)
+		got := err.Error()
+		assert.Equal(t, wants[i], got)
+	}
+}
+
+func TestPushMisc(t *testing.T) {
+	querys := []string{
+		"select /* comments */ *  from A for update",
+		"select /* comments */ *  from A,B where A.id=B.id and A.id>1 for update",
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+
+		p, err := scanTableExprs(log, route, database, sel.From)
+		assert.Nil(t, err)
+		p.pushMisc(sel)
+	}
+}

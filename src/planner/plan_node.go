@@ -26,6 +26,9 @@ type PlanNode interface {
 	pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error
 	pushHaving(havings []filterTuple) error
 	pushOrderBy(sel *sqlparser.Select, fileds []selectTuple) error
+	pushLimit(sel *sqlparser.Select) error
+	pushMisc(sel *sqlparser.Select)
+	Children() *PlanTree
 }
 
 // findLCA get the two plannode's lowest common ancestors node.

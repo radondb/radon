@@ -204,3 +204,26 @@ func (m *MergeNode) pushOrderBy(sel *sqlparser.Select, fileds []selectTuple) err
 	}
 	return nil
 }
+
+// pushLimit used to push limit.
+func (m *MergeNode) pushLimit(sel *sqlparser.Select) error {
+	limitPlan := NewLimitPlan(m.log, sel)
+	if err := limitPlan.Build(); err != nil {
+		return err
+	}
+	m.children.Add(limitPlan)
+	// Rewrite the limit clause.
+	m.sel.Limit = limitPlan.ReWritten()
+	return nil
+}
+
+// pushMisc used tp push miscelleaneous constructs.
+func (m *MergeNode) pushMisc(sel *sqlparser.Select) {
+	m.sel.Comments = sel.Comments
+	m.sel.Lock = sel.Lock
+}
+
+// Children returns the children of the plan.
+func (m *MergeNode) Children() *PlanTree {
+	return m.children
+}
