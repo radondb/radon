@@ -30,6 +30,7 @@ Contents
       * [SHOW ENGINES](#show-engines)
       * [SHOW DATABASES](#show-databases)
       * [SHOW TABLES](#show-tables)
+      * [SHOW TABLE STATUS](#show-table-status)
       * [SHOW COLUMNS](#show-columns)
       * [SHOW CREATE TABLE](#show-create-table)
       * [SHOW PROCESSLIST](#show-processlist)
@@ -667,6 +668,29 @@ mysql> SHOW TABLES;
 | t2                 |
 +--------------------+
 2 rows in set (0.01 sec)
+```
+
+### SHOW TABLE STATUS
+
+`Syntax`
+```
+SHOW TABLE STATUS
+[FROM db_name]
+```
+
+`Instructions`
+* If db_name is not specified, the table under the current DB is returned
+
+`Example: `
+```
+mysql> show table status;
++--------+--------+---------+------------+------+----------------+-------------+-----------------+--------------+-----------+----------------+---------------------+---------------------+------------+-----------------+----------+----------------+---------+
+| Name   | Engine | Version | Row_format | Rows | Avg_row_length | Data_length | Max_data_length | Index_length | Data_free | Auto_increment | Create_time         | Update_time         | Check_time | Collation       | Checksum | Create_options | Comment |
++--------+--------+---------+------------+------+----------------+-------------+-----------------+--------------+-----------+----------------+---------------------+---------------------+------------+-----------------+----------+----------------+---------+
+| b      | InnoDB |      10 | Dynamic    |    6 |          16384 |       16384 |               0 |            0 |         0 |           NULL | 2018-12-24 08:26:24 | 2019-01-22 08:31:47 | NULL       | utf8_general_ci |     NULL |                |         |
+| g      | InnoDB |      10 | Dynamic    |    1 |          16384 |       16384 |               0 |            0 |         0 |           NULL | 2018-12-24 08:26:24 | 2019-02-28 03:20:46 | NULL       | utf8_general_ci |     NULL |                          |         |
++--------+--------+---------+------------+------+----------------+-------------+-----------------+--------------+-----------+----------------+---------------------+---------------------+------------+-----------------+----------+----------------+---------+
+2 rows in set (0.08 sec)
 ```
 
 ### SHOW COLUMNS
