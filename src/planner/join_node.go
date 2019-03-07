@@ -89,7 +89,7 @@ func (j *JoinNode) pushFilter(filters []filterTuple) error {
 		if len(filter.referTables) == 0 {
 			j.noTableFilter = append(j.noTableFilter, filter.expr)
 		} else if len(filter.referTables) == 1 {
-			tbInfo, _ := j.referredTables[filter.referTables[0]]
+			tbInfo := j.referredTables[filter.referTables[0]]
 			tbInfo.whereFilter = append(tbInfo.whereFilter, filter.expr)
 			if tbInfo.parent.index == -1 && filter.col != nil && tbInfo.shardKey != "" {
 				if nameMatch(filter.col, filter.referTables[0], tbInfo.shardKey) {
@@ -103,7 +103,7 @@ func (j *JoinNode) pushFilter(filters []filterTuple) error {
 		} else {
 			var parent PlanNode
 			for _, tb := range filter.referTables {
-				tbInfo, _ := j.referredTables[tb]
+				tbInfo := j.referredTables[tb]
 				if parent == nil {
 					parent = tbInfo.parent
 					continue
@@ -139,8 +139,8 @@ func (j *JoinNode) setNoTableFilter(exprs []sqlparser.Expr) {
 func (j *JoinNode) pushJoinInWhere(joins []joinTuple) PlanNode {
 	for i, joinFilter := range joins {
 		var parent PlanNode
-		ltb, _ := j.referredTables[joinFilter.referTables[0]]
-		rtb, _ := j.referredTables[joinFilter.referTables[1]]
+		ltb := j.referredTables[joinFilter.referTables[0]]
+		rtb := j.referredTables[joinFilter.referTables[1]]
 		parent = findLCA(j, ltb.parent, rtb.parent)
 
 		switch node := parent.(type) {
@@ -276,12 +276,12 @@ func (j *JoinNode) pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser.
 			_, tbInfo := getOneTableInfo(j.referredTables)
 			tbInfo.parent.sel.SelectExprs = append(tbInfo.parent.sel.SelectExprs, tuple.expr)
 		} else if len(tuple.referTables) == 1 {
-			tbInfo, _ := j.referredTables[tuple.referTables[0]]
+			tbInfo := j.referredTables[tuple.referTables[0]]
 			tbInfo.parent.sel.SelectExprs = append(tbInfo.parent.sel.SelectExprs, tuple.expr)
 		} else {
 			var parent PlanNode
 			for _, tb := range tuple.referTables {
-				tbInfo, _ := j.referredTables[tb]
+				tbInfo := j.referredTables[tb]
 				if parent == nil {
 					parent = tbInfo.parent
 					continue
@@ -307,12 +307,12 @@ func (j *JoinNode) pushHaving(havings []filterTuple) error {
 			j.Left.pushHaving([]filterTuple{filter})
 			j.Right.pushHaving([]filterTuple{filter})
 		} else if len(filter.referTables) == 1 {
-			tbInfo, _ := j.referredTables[filter.referTables[0]]
+			tbInfo := j.referredTables[filter.referTables[0]]
 			tbInfo.parent.sel.AddHaving(filter.expr)
 		} else {
 			var parent PlanNode
 			for _, tb := range filter.referTables {
-				tbInfo, _ := j.referredTables[tb]
+				tbInfo := j.referredTables[tb]
 				if parent == nil {
 					parent = tbInfo.parent
 					continue

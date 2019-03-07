@@ -50,7 +50,7 @@ func (s *Session) writeErrFromError(err error) error {
 	if se, ok := err.(*sqldb.SQLError); ok {
 		return s.packets.WriteERR(se.Num, se.State, "%v", se.Message)
 	}
-	unknow := sqldb.NewSQLError(sqldb.ER_UNKNOWN_ERROR, "%v", err)
+	unknow := sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "%v", err)
 	return s.packets.WriteERR(unknow.Num, unknow.State, unknow.Message)
 }
 

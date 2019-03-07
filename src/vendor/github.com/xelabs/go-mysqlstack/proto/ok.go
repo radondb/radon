@@ -37,30 +37,30 @@ func UnPackOK(data []byte) (*OK, error) {
 
 	// header
 	if o.Header, err = buf.ReadU8(); err != nil {
-		return nil, sqldb.NewSQLError(sqldb.ER_MALFORMED_PACKET, "invalid ok packet header: %v", data)
+		return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "invalid ok packet header: %v", data)
 	}
 	if o.Header != OK_PACKET {
-		return nil, sqldb.NewSQLError(sqldb.ER_MALFORMED_PACKET, "invalid ok packet header: %v", o.Header)
+		return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "invalid ok packet header: %v", o.Header)
 	}
 
 	// AffectedRows
 	if o.AffectedRows, err = buf.ReadLenEncode(); err != nil {
-		return nil, sqldb.NewSQLError(sqldb.ER_MALFORMED_PACKET, "invalid ok packet affectedrows: %v", data)
+		return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "invalid ok packet affectedrows: %v", data)
 	}
 
 	// LastInsertID
 	if o.LastInsertID, err = buf.ReadLenEncode(); err != nil {
-		return nil, sqldb.NewSQLError(sqldb.ER_MALFORMED_PACKET, "invalid ok packet lastinsertid: %v", data)
+		return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "invalid ok packet lastinsertid: %v", data)
 	}
 
 	// Status
 	if o.StatusFlags, err = buf.ReadU16(); err != nil {
-		return nil, sqldb.NewSQLError(sqldb.ER_MALFORMED_PACKET, "invalid ok packet statusflags: %v", data)
+		return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "invalid ok packet statusflags: %v", data)
 	}
 
 	// Warnings
 	if o.Warnings, err = buf.ReadU16(); err != nil {
-		return nil, sqldb.NewSQLError(sqldb.ER_MALFORMED_PACKET, "invalid ok packet warnings: %v", data)
+		return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "invalid ok packet warnings: %v", data)
 	}
 	return o, nil
 }

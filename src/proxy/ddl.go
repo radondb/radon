@@ -99,7 +99,7 @@ func checkDatabaseAndTable(database string, table string, router *router.Router)
 	tblList := router.Tables()
 	tables, ok := tblList[database]
 	if !ok {
-		return sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, "", database)
+		return sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, database)
 	}
 	found := false
 	for _, t := range tables {
@@ -109,7 +109,7 @@ func checkDatabaseAndTable(database string, table string, router *router.Router)
 		}
 	}
 	if !found {
-		return sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, "", table)
+		return sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, table)
 	}
 	return nil
 }
@@ -216,6 +216,6 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		return r, err
 	default:
 		log.Error("spanner.ddl[%v, %+v].access.denied", query, node)
-		return nil, sqldb.NewSQLError(sqldb.ER_SPECIFIC_ACCESS_DENIED_ERROR, "Access denied; you don't have the privilege for %v operation", ddl.Action)
+		return nil, sqldb.NewSQLErrorf(sqldb.ER_SPECIFIC_ACCESS_DENIED_ERROR, "Access denied; you don't have the privilege for %v operation", ddl.Action)
 	}
 }

@@ -75,7 +75,7 @@ func (m *MergeNode) pushFilter(filters []filterTuple) error {
 	for _, filter := range filters {
 		m.sel.AddWhere(filter.expr)
 		if len(filter.referTables) == 1 {
-			tbInfo, _ := m.referredTables[filter.referTables[0]]
+			tbInfo := m.referredTables[filter.referTables[0]]
 			if tbInfo.shardType != "GLOBAL" && tbInfo.parent.index == -1 && filter.col != nil {
 				if nameMatch(filter.col, filter.referTables[0], tbInfo.shardKey) {
 					if sqlval, ok := filter.val.(*sqlparser.SQLVal); ok {

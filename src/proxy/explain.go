@@ -57,7 +57,7 @@ func (spanner *Spanner) handleExplain(session *driver.Session, query string, nod
 	case *sqlparser.Insert:
 	case *sqlparser.Update:
 	default:
-		return nil, sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, "", "explain only supports SELECT/DELETE/INSERT/UPDATE")
+		return nil, sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, "explain only supports SELECT/DELETE/INSERT/UPDATE")
 	}
 
 	simOptimizer := optimizer.NewSimpleOptimizer(log, database, cutQuery, subNode, router)

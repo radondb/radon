@@ -73,7 +73,7 @@ func processOnExpr(log *xlog.Log, on sqlparser.Expr) {
 	switch on.(type) {
 	case *sqlparser.ComparisonExpr:
 		on := on.(*sqlparser.ComparisonExpr)
-		log.Debug("on.compareison... %+v,%+v,%+v", on.Left, on.Right)
+		log.Debug("on.compareison... %+v,%+v", on.Left, on.Right)
 		left := on.Left
 		switch left.(type) {
 		case *sqlparser.ColName:

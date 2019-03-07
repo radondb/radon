@@ -219,7 +219,7 @@ func (l *Listener) handle(conn net.Conn, ID uint32) {
 		default:
 			cmd := sqldb.CommandString(data[0])
 			log.Error("session.command:%s.not.implemented", cmd)
-			sqlErr := sqldb.NewSQLError(sqldb.ER_UNKNOWN_ERROR, "command handling not implemented yet: %s", cmd)
+			sqlErr := sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "command handling not implemented yet: %s", cmd)
 			if err := session.writeErrFromError(sqlErr); err != nil {
 				return
 			}
