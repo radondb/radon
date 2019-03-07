@@ -123,6 +123,20 @@ func TestDDL1(t *testing.T) {
 				"	`name` varchar(10)\n" +
 				") engine=tokudb default charset=utf8",
 		},
+		// current timestamp.
+		{
+			input: "create table t (\n" +
+				"	`id` int primary key,\n" +
+				"	`t1` timestamp default current_timestamp,\n" +
+				"	`t2`  timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp'\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int primary key,\n" +
+				"	`t1` timestamp default current_timestamp,\n" +
+				"	`t2` timestamp not null default current_timestamp on update current_timestamp comment 'currenttimestamp'\n" +
+				")",
+		},
+
 		// Index.
 		{
 			input: "create table test.t (\n" +
