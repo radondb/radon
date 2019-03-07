@@ -694,6 +694,7 @@ type ColumnType struct {
 	NotNull       BoolVal
 	Autoincrement BoolVal
 	Default       *SQLVal
+	OnUpdate      *SQLVal
 	Comment       *SQLVal
 
 	// Numeric field options
@@ -746,6 +747,9 @@ func (ct *ColumnType) Format(buf *TrackedBuffer) {
 	}
 	if ct.Default != nil {
 		opts = append(opts, keywordStrings[DEFAULT], String(ct.Default))
+	}
+	if ct.OnUpdate != nil {
+		opts = append(opts, keywordStrings[ON], keywordStrings[UPDATE], String(ct.OnUpdate))
 	}
 	if ct.Autoincrement {
 		opts = append(opts, keywordStrings[AUTO_INCREMENT])
