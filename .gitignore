@@ -17,3 +17,6 @@ src/honnef.co
 
 # IntelliJ project files
 .idea
+
+# visual studio code files
+.vscode
