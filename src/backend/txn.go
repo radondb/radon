@@ -473,7 +473,7 @@ func (txn *Txn) Execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 			defer txn.mgr.CommitRUnlock()
 		case xcontext.TxnWrite:
 			// write-txn xa starts to the single statement.
-			if txn.isMultiStmtTxn != true {
+			if !txn.isMultiStmtTxn {
 				if err := txn.xaStart(); err != nil {
 					return nil, err
 				}

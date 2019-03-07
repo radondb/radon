@@ -143,7 +143,7 @@ func (r *Router) clear() {
 func (r *Router) DatabaseACL(database string) error {
 	if ok := r.dbACL.Allow(database); !ok {
 		r.log.Warning("router.database.acl.check.fail[db:%s]", database)
-		return sqldb.NewSQLError(sqldb.ER_SPECIFIC_ACCESS_DENIED_ERROR, "Access denied; lacking privileges for database %s", database)
+		return sqldb.NewSQLErrorf(sqldb.ER_SPECIFIC_ACCESS_DENIED_ERROR, "Access denied; lacking privileges for database %s", database)
 	}
 	return nil
 }
@@ -163,22 +163,22 @@ func (r *Router) getTable(database string, tableName string) (*Table, error) {
 	defer r.mu.RUnlock()
 
 	if database == "" {
-		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR, "")
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)
 	}
 	if tableName == "" {
-		return nil, sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, "", tableName)
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, tableName)
 	}
 
 	// schema
 	if schema, ok = r.Schemas[database]; !ok {
 		r.log.Error("router.can.not.find.db[%v]", database)
-		return nil, sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, "", database+"."+tableName)
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, database+"."+tableName)
 	}
 
 	// table
 	if table, ok = schema.Tables[tableName]; !ok {
 		r.log.Error("router.can.not.find.table[%v]", tableName)
-		return nil, sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, "", tableName)
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, tableName)
 	}
 	return table, nil
 }
@@ -213,22 +213,22 @@ func (r *Router) Lookup(database string, tableName string, startKey *sqlparser.S
 	defer r.mu.RUnlock()
 
 	if database == "" {
-		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR, "")
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)
 	}
 	if tableName == "" {
-		return nil, sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, "", tableName)
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, tableName)
 	}
 
 	// schema
 	if schema, ok = r.Schemas[database]; !ok {
 		r.log.Error("router.can.not.find.db[%v]", database)
-		return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, "", database)
+		return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, database)
 	}
 
 	// table
 	if table, ok = schema.Tables[tableName]; !ok {
 		r.log.Error("router.can.not.find.table[%v]", tableName)
-		return nil, sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, "", tableName)
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, tableName)
 	}
 
 	// router info

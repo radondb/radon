@@ -53,7 +53,7 @@ func (spanner *Spanner) handleShowTableStatus(session *driver.Session, query str
 	}
 
 	if database == "" {
-		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR, "")
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)
 	}
 	// Check the database ACL.
 	if err := router.DatabaseACL(database); err != nil {
@@ -161,7 +161,7 @@ func (spanner *Spanner) handleShowTables(session *driver.Session, query string, 
 		database = ast.Database.Name.String()
 	}
 	if database == "" {
-		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR, "")
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)
 	}
 	// Check the database ACL.
 	if err := router.DatabaseACL(database); err != nil {
@@ -200,7 +200,7 @@ func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query str
 		database = ast.Table.Qualifier.String()
 	}
 	if database == "" {
-		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR, "")
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)
 	}
 	// Check the database ACL.
 	if err := router.DatabaseACL(database); err != nil {
@@ -266,7 +266,7 @@ func (spanner *Spanner) handleShowColumns(session *driver.Session, query string,
 		database = ast.Table.Qualifier.String()
 	}
 	if database == "" {
-		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR, "")
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)
 	}
 	// Check the database ACL.
 	if err := router.DatabaseACL(database); err != nil {

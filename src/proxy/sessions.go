@@ -213,7 +213,7 @@ func (ss *Sessions) MultiStmtTxnUnBinding(s *driver.Session, isEnd bool) {
 	session.node = nil
 	session.query = ""
 	// If multiple-statement transaction is end or some errors happen, set transaction to be nil
-	if isEnd == true {
+	if isEnd {
 		session.transaction = nil
 	}
 	session.timestamp = time.Now().Unix()

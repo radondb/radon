@@ -158,7 +158,7 @@ func (th *TestHandler) SessionCheck(s *Session) error {
 func (th *TestHandler) AuthCheck(s *Session) error {
 	user := s.User()
 	if user != "mock" {
-		return sqldb.NewSQLError(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'", user)
+		return sqldb.NewSQLErrorf(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'", user)
 	}
 	return nil
 }

@@ -48,21 +48,6 @@ var (
 		},
 	}
 
-	autocommitResult0 = &sqltypes.Result{
-		RowsAffected: 5,
-		Fields: []*querypb.Field{
-			{
-				Name: "@@autocommit",
-				Type: querypb.Type_INT64,
-			},
-		},
-		Rows: [][]sqltypes.Value{
-			{
-				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("0")),
-			},
-		},
-	}
-
 	autocommitResult1 = &sqltypes.Result{
 		RowsAffected: 5,
 		Fields: []*querypb.Field{

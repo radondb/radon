@@ -41,14 +41,14 @@ func (spanner *Spanner) SessionCheck(s *driver.Session) error {
 	// Max connection check.
 	max := spanner.conf.Proxy.MaxConnections
 	if spanner.sessions.Reaches(max) {
-		return sqldb.NewSQLError(sqldb.ER_CON_COUNT_ERROR, "Too many connections(max: %v)", max)
+		return sqldb.NewSQLErrorf(sqldb.ER_CON_COUNT_ERROR, "Too many connections(max: %v)", max)
 	}
 
 	log := spanner.log
 	host, _, err := net.SplitHostPort(s.Addr())
 	if err != nil {
 		log.Error("proxy.spanner.split.address.error:%+v", s.Addr())
-		return sqldb.NewSQLError(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user from host '%v'", s.Addr())
+		return sqldb.NewSQLErrorf(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user from host '%v'", s.Addr())
 	}
 
 	// Local login bypass.
@@ -59,7 +59,7 @@ func (spanner *Spanner) SessionCheck(s *driver.Session) error {
 	// Ip check.
 	if !spanner.iptable.Check(host) {
 		log.Warning("proxy.spanner.host[%s].denied", host)
-		return sqldb.NewSQLError(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user from host '%v'", host)
+		return sqldb.NewSQLErrorf(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user from host '%v'", host)
 	}
 	return nil
 }
@@ -85,13 +85,13 @@ func (spanner *Spanner) AuthCheck(s *driver.Session) error {
 	// Query error.
 	if err != nil {
 		log.Error("proxy: auth.error:%+v", err)
-		return sqldb.NewSQLError(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'", user)
+		return sqldb.NewSQLErrorf(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'", user)
 	}
 
 	// User not exists.
 	if len(qr.Rows) == 0 {
 		log.Error("proxy: auth.can't.find.the.user:%s", user)
-		return sqldb.NewSQLError(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'", user)
+		return sqldb.NewSQLErrorf(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'", user)
 	}
 
 	// mysql.user.authentication_string is ['*' + HEX(SHA1(SHA1(password)))]
@@ -99,7 +99,7 @@ func (spanner *Spanner) AuthCheck(s *driver.Session) error {
 	wantStage2, err := hex.DecodeString(authStr)
 	if err != nil {
 		log.Error("proxy: auth.user[%s].decode[%s].error:%+v", user, authStr, err)
-		return sqldb.NewSQLError(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'", user)
+		return sqldb.NewSQLErrorf(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'", user)
 	}
 
 	// last= SHA1(salt <concat> SHA1(SHA1(password)))
@@ -129,7 +129,7 @@ func (spanner *Spanner) AuthCheck(s *driver.Session) error {
 	if !bytes.Equal(want, got) {
 		log.Warning("spanner.auth\nwant:\n\tstage2:%+v\n\tlast:%+v\ngot\n\tstage2:%+v\n\tlast:%+v\n\n\tsalt:%+v", wantStage2, want, gotStage2, got, salt)
 		log.Error("proxy: auth.user[%s].failed(password.invalid):want[%+v]!=got[%+v]", user, want, got)
-		return sqldb.NewSQLError(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'", user)
+		return sqldb.NewSQLErrorf(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'", user)
 	}
 	return nil
 }

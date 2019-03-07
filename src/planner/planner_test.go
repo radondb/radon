@@ -43,7 +43,7 @@ func TestPlanner(t *testing.T) {
 		err := planTree.Build()
 		assert.Nil(t, err)
 		planSize := planTree.Size()
-		log.Info("planSize: %s", planSize)
+		log.Info("planSize: %v", planSize)
 	}
 }
 

@@ -48,7 +48,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 
 	// Disk usage check.
 	if diskChecker.HighWater() {
-		return sqldb.NewSQLError(sqldb.ER_UNKNOWN_ERROR, "%s", "no space left on device")
+		return sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "%s", "no space left on device")
 	}
 
 	// Support for JDBC driver.
@@ -63,18 +63,18 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 	node, err := sqlparser.Parse(query)
 	if err != nil {
 		log.Error("query[%v].parser.error: %v", query, err)
-		return sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, "", err.Error())
+		return sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, err.Error())
 	}
 
 	// Readonly check.
 	if spanner.ReadOnly() {
 		// DML Write denied.
 		if spanner.IsDMLWrite(node) {
-			return sqldb.NewSQLError(sqldb.ER_OPTION_PREVENTS_STATEMENT, "", "--read-only")
+			return sqldb.NewSQLError(sqldb.ER_OPTION_PREVENTS_STATEMENT, "--read-only")
 		}
 		// DDL denied.
 		if spanner.IsDDL(node) {
-			return sqldb.NewSQLError(sqldb.ER_OPTION_PREVENTS_STATEMENT, "", "--read-only")
+			return sqldb.NewSQLError(sqldb.ER_OPTION_PREVENTS_STATEMENT, "--read-only")
 		}
 	}
 
@@ -156,7 +156,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 			}
 		default:
 			log.Error("proxy.show.unsupported[%s].from.session[%v]", query, session.ID())
-			err = sqldb.NewSQLError(sqldb.ER_UNKNOWN_ERROR, "unsupported.query:%v", query)
+			err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query:%v", query)
 		}
 		spanner.auditLog(session, R, xbase.SHOW, query, qr)
 		return returnQuery(qr, callback, err)
@@ -260,7 +260,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 	default:
 		log.Error("proxy.unsupported[%s].from.session[%v]", query, session.ID())
 		spanner.auditLog(session, R, xbase.UNSUPPORT, query, qr)
-		err = sqldb.NewSQLError(sqldb.ER_UNKNOWN_ERROR, "unsupported.query:%v", query)
+		err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query:%v", query)
 		return err
 	}
 }

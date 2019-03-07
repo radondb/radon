@@ -94,7 +94,7 @@ func UnpackColumn(payload []byte) (*querypb.Field, error) {
 
 	// Convert MySQL type
 	if field.Type, err = sqltypes.MySQLToType(int64(t), int64(field.Flags)); err != nil {
-		return nil, sqldb.NewSQLError(sqldb.ER_MALFORMED_PACKET, "MySQLToType(%v,%v) failed: %v", t, field.Flags, err)
+		return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "MySQLToType(%v,%v) failed: %v", t, field.Flags, err)
 	}
 
 	// 1 Decimals

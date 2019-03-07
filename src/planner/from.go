@@ -255,12 +255,12 @@ func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJo
 
 // isSameShard used to judge lcn|rcn contain shardkey and have same shards.
 func isSameShard(ltb, rtb map[string]*TableInfo, lcn, rcn *sqlparser.ColName) bool {
-	lt, _ := ltb[lcn.Qualifier.Name.String()]
+	lt := ltb[lcn.Qualifier.Name.String()]
 	if lt.shardKey != lcn.Name.String() {
 		return false
 	}
 	ltp := lt.tableConfig.Partitions
-	rt, _ := rtb[rcn.Qualifier.Name.String()]
+	rt := rtb[rcn.Qualifier.Name.String()]
 	if rt.shardKey != rcn.Name.String() {
 		return false
 	}
