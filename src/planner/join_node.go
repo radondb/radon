@@ -91,7 +91,7 @@ func (j *JoinNode) pushFilter(filters []filterTuple) error {
 		} else if len(filter.referTables) == 1 {
 			tbInfo := j.referredTables[filter.referTables[0]]
 			tbInfo.whereFilter = append(tbInfo.whereFilter, filter.expr)
-			if tbInfo.parent.index == -1 && filter.col != nil && tbInfo.shardKey != "" {
+			if tbInfo.parent.index == -1 && filter.val != nil && tbInfo.shardKey != "" {
 				if nameMatch(filter.col, filter.referTables[0], tbInfo.shardKey) {
 					if sqlval, ok := filter.val.(*sqlparser.SQLVal); ok {
 						if tbInfo.parent.index, err = j.router.GetIndex(tbInfo.database, tbInfo.tableName, sqlval); err != nil {
@@ -258,20 +258,20 @@ func (j *JoinNode) spliceWhere() error {
 	return nil
 }
 
-// pushSelectExprs used to push the select fileds.
+// pushSelectExprs used to push the select fields.
 // TODO: need record original selectexprs order.
-func (j *JoinNode) pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error {
+func (j *JoinNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error {
 	if hasAggregates {
 		return errors.New("unsupported: cross-shard.query.with.aggregates")
 	}
 	if len(groups) > 0 {
-		aggrPlan := NewAggregatePlan(j.log, sel.SelectExprs, fileds, groups)
+		aggrPlan := NewAggregatePlan(j.log, sel.SelectExprs, fields, groups)
 		if err := aggrPlan.Build(); err != nil {
 			return err
 		}
 		j.children.Add(aggrPlan)
 	}
-	for _, tuple := range fileds {
+	for _, tuple := range fields {
 		if len(tuple.referTables) == 0 {
 			_, tbInfo := getOneTableInfo(j.referredTables)
 			tbInfo.parent.sel.SelectExprs = append(tbInfo.parent.sel.SelectExprs, tuple.expr)
@@ -332,7 +332,7 @@ func (j *JoinNode) pushHaving(havings []filterTuple) error {
 }
 
 // pushOrderBy used to push the order by exprs.
-func (j *JoinNode) pushOrderBy(sel *sqlparser.Select, fileds []selectTuple) error {
+func (j *JoinNode) pushOrderBy(sel *sqlparser.Select, fields []selectTuple) error {
 	if len(sel.OrderBy) == 0 {
 		for _, by := range sel.GroupBy {
 			sel.OrderBy = append(sel.OrderBy, &sqlparser.Order{
@@ -343,7 +343,7 @@ func (j *JoinNode) pushOrderBy(sel *sqlparser.Select, fileds []selectTuple) erro
 	}
 
 	if len(sel.OrderBy) > 0 {
-		orderPlan := NewOrderByPlan(j.log, sel, fileds, j.referredTables)
+		orderPlan := NewOrderByPlan(j.log, sel, fields, j.referredTables)
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}

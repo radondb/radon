@@ -168,30 +168,34 @@ func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, r
 	for k, v := range rpn.getReferredTables() {
 		referredTables[k] = v
 	}
-	if joinExpr != nil && joinExpr.On != nil {
-		if joinOn, otherJoinOn, err = parserWhereOrJoinExprs(joinExpr.On, referredTables); err != nil {
-			return nil, err
-		}
-		for i, jt := range joinOn {
-			if jt, err = checkJoinOn(lpn, rpn, jt); err != nil {
+	if joinExpr != nil {
+		if joinExpr.On == nil {
+			joinExpr = nil
+		} else {
+			if joinOn, otherJoinOn, err = parserWhereOrJoinExprs(joinExpr.On, referredTables); err != nil {
 				return nil, err
 			}
-			joinOn[i] = jt
-		}
-
-		// inner join's other join on would add to where.
-		if joinExpr.Join != sqlparser.LeftJoinStr && len(otherJoinOn) > 0 {
-			if len(joinOn) == 0 {
-				joinExpr = nil
-			}
-			for idx, join := range joinOn {
-				if idx == 0 {
-					joinExpr.On = join.expr
-					continue
+			for i, jt := range joinOn {
+				if jt, err = checkJoinOn(lpn, rpn, jt); err != nil {
+					return nil, err
 				}
-				joinExpr.On = &sqlparser.AndExpr{
-					Left:  joinExpr.On,
-					Right: join.expr,
+				joinOn[i] = jt
+			}
+
+			// inner join's other join on would add to where.
+			if joinExpr.Join != sqlparser.LeftJoinStr && len(otherJoinOn) > 0 {
+				if len(joinOn) == 0 {
+					joinExpr = nil
+				}
+				for idx, join := range joinOn {
+					if idx == 0 {
+						joinExpr.On = join.expr
+						continue
+					}
+					joinExpr.On = &sqlparser.AndExpr{
+						Left:  joinExpr.On,
+						Right: join.expr,
+					}
 				}
 			}
 		}

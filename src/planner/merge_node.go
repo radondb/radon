@@ -76,7 +76,7 @@ func (m *MergeNode) pushFilter(filters []filterTuple) error {
 		m.sel.AddWhere(filter.expr)
 		if len(filter.referTables) == 1 {
 			tbInfo := m.referredTables[filter.referTables[0]]
-			if tbInfo.shardType != "GLOBAL" && tbInfo.parent.index == -1 && filter.col != nil {
+			if tbInfo.shardType != "GLOBAL" && tbInfo.parent.index == -1 && filter.val != nil {
 				if nameMatch(filter.col, filter.referTables[0], tbInfo.shardKey) {
 					if sqlval, ok := filter.val.(*sqlparser.SQLVal); ok {
 						if tbInfo.parent.index, err = m.router.GetIndex(tbInfo.database, tbInfo.tableName, sqlval); err != nil {
@@ -157,13 +157,13 @@ func (m *MergeNode) spliceWhere() error {
 	return nil
 }
 
-// pushSelectExprs used to push the select fileds.
-func (m *MergeNode) pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error {
+// pushSelectExprs used to push the select fields.
+func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error {
 	m.sel.SelectExprs = sel.SelectExprs
 	m.sel.GroupBy = sel.GroupBy
 	m.sel.Distinct = sel.Distinct
 	if hasAggregates || len(groups) > 0 {
-		aggrPlan := NewAggregatePlan(m.log, m.sel.SelectExprs, fileds, groups)
+		aggrPlan := NewAggregatePlan(m.log, m.sel.SelectExprs, fields, groups)
 		if err := aggrPlan.Build(); err != nil {
 			return err
 		}
@@ -182,7 +182,7 @@ func (m *MergeNode) pushHaving(havings []filterTuple) error {
 }
 
 // pushOrderBy used to push the order by exprs.
-func (m *MergeNode) pushOrderBy(sel *sqlparser.Select, fileds []selectTuple) error {
+func (m *MergeNode) pushOrderBy(sel *sqlparser.Select, fields []selectTuple) error {
 	if len(sel.OrderBy) > 0 {
 		m.sel.OrderBy = sel.OrderBy
 	} else {
@@ -196,7 +196,7 @@ func (m *MergeNode) pushOrderBy(sel *sqlparser.Select, fileds []selectTuple) err
 	}
 
 	if len(m.sel.OrderBy) > 0 {
-		orderPlan := NewOrderByPlan(m.log, m.sel, fileds, m.referredTables)
+		orderPlan := NewOrderByPlan(m.log, m.sel, fields, m.referredTables)
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}

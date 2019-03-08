@@ -318,11 +318,14 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 	for _, filter := range filters {
 		var col *sqlparser.ColName
 		var val sqlparser.Expr
+		count := 0
 		filter = skipParenthesis(filter)
 		referTables := make([]string, 0, 4)
 		err := sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
 			switch node := node.(type) {
 			case *sqlparser.ColName:
+				count++
+				col = node
 				tableName := node.Qualifier.Name.String()
 				if tableName == "" {
 					if len(tbInfos) == 1 {
@@ -349,6 +352,9 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 			return nil, nil, err
 		}
 
+		if count != 1 {
+			col = nil
+		}
 		condition, ok := filter.(*sqlparser.ComparisonExpr)
 		if ok {
 			if condition.Operator == sqlparser.EqualStr {
@@ -361,11 +367,9 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 				}
 
 				if lok {
-					col = lc
 					val = condition.Right
 				}
 				if rok {
-					col = rc
 					val = condition.Left
 				}
 			}
@@ -396,7 +400,7 @@ func checkJoinOn(lpn, rpn PlanNode, join joinTuple) (joinTuple, error) {
 }
 
 // checkGroupBy used to check groupby.
-func checkGroupBy(exprs sqlparser.GroupBy, fileds []selectTuple, router *router.Router, tbInfos map[string]*TableInfo) ([]selectTuple, error) {
+func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.Router, tbInfos map[string]*TableInfo) ([]selectTuple, error) {
 	var groupTuples []selectTuple
 	for _, expr := range exprs {
 		var group *selectTuple
@@ -413,7 +417,7 @@ func checkGroupBy(exprs sqlparser.GroupBy, fileds []selectTuple, router *router.
 			}
 		}
 
-		for _, tuple := range fileds {
+		for _, tuple := range fields {
 			if tuple.field == field && (table == "" || len(tuple.referTables) == 1 && tuple.referTables[0] == table) {
 				group = &tuple
 				groupTuples = append(groupTuples, *group)
@@ -428,7 +432,7 @@ func checkGroupBy(exprs sqlparser.GroupBy, fileds []selectTuple, router *router.
 		}
 		table = group.referTables[0]
 
-		// shardkey is a unique constraints key. if fileds contains shardkey,
+		// shardkey is a unique constraints key. if fields contains shardkey,
 		// that mains each row of data is unique. neednot process groupby again.
 		// unsupport alias.
 		ok, err := checkShard(table, col.Name.String(), tbInfos, router)
@@ -444,16 +448,16 @@ func checkGroupBy(exprs sqlparser.GroupBy, fileds []selectTuple, router *router.
 }
 
 // checkDistinct used to check the distinct, and convert distinct to groupby.
-func checkDistinct(node *sqlparser.Select, groups, fileds []selectTuple, router *router.Router, tbInfos map[string]*TableInfo) ([]selectTuple, error) {
+func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router *router.Router, tbInfos map[string]*TableInfo) ([]selectTuple, error) {
 	// field in grouby must be contained in the select exprs, that mains groups is a subset of fields.
 	// if has groupby, neednot process distinct again.
 	if node.Distinct == "" || len(node.GroupBy) > 0 {
 		return groups, nil
 	}
 
-	// shardkey is a unique constraints key. if fileds contains shardkey,
+	// shardkey is a unique constraints key. if fields contains shardkey,
 	// that mains each row of data is unique. neednot process distinct again.
-	for _, tuple := range fileds {
+	for _, tuple := range fields {
 		if expr, ok := tuple.expr.(*sqlparser.AliasedExpr); ok {
 			if exp, ok := expr.Expr.(*sqlparser.ColName); ok {
 				ok, err := checkShard(tuple.referTables[0], exp.Name.String(), tbInfos, router)
@@ -468,7 +472,7 @@ func checkDistinct(node *sqlparser.Select, groups, fileds []selectTuple, router 
 	}
 
 	// distinct convert to groupby.
-	for _, tuple := range fileds {
+	for _, tuple := range fields {
 		expr, ok := tuple.expr.(*sqlparser.AliasedExpr)
 		if !ok {
 			return nil, errors.New("unsupported: distinct")
@@ -485,7 +489,7 @@ func checkDistinct(node *sqlparser.Select, groups, fileds []selectTuple, router 
 		}
 	}
 	node.Distinct = ""
-	return fileds, nil
+	return fields, nil
 }
 
 // checkShard used to check whether the col is shardkey.
