@@ -25,9 +25,9 @@ type PlanNode interface {
 	pushJoinInWhere(joins []joinTuple) PlanNode
 	calcRoute() (PlanNode, error)
 	spliceWhere() error
-	pushSelectExprs(fileds, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error
+	pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error
 	pushHaving(havings []filterTuple) error
-	pushOrderBy(sel *sqlparser.Select, fileds []selectTuple) error
+	pushOrderBy(sel *sqlparser.Select, fields []selectTuple) error
 	pushLimit(sel *sqlparser.Select) error
 	pushMisc(sel *sqlparser.Select)
 	Children() *PlanTree

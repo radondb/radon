@@ -652,12 +652,29 @@ func TestSelectPlanJoin(t *testing.T) {
 		"B.a"
 	]
 }`,
+		`{
+	"RawQuery": "select * from B join B as A where A.a=B.a and A.id=B.id",
+	"Project": "*",
+	"Partitions": [
+		{
+			"Query": "select * from sbtest.B0 as B, sbtest.B0 as A where A.a = B.a and A.id = B.id",
+			"Backend": "backend1",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "select * from sbtest.B1 as B, sbtest.B1 as A where A.a = B.a and A.id = B.id",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
 	}
 	querys := []string{
 		"select G.a, G.b from G join B on G.a = B.a where B.id=1",
 		"select G.a, G.b from G join B on G.a = B.a join G1 on G1.a = B.a where B.id=1",
 		"select G.a, G.b from G, B where B.id=1",
 		"select G.a, B.a from G join B on G.a = B.a order by B.a",
+		"select * from B join B as A where A.a=B.a and A.id=B.id",
 	}
 
 	{

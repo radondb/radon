@@ -121,20 +121,20 @@ func (p *SelectPlan) Build() error {
 	}
 
 	var groups []selectTuple
-	fileds, hasAggregates, err := parserSelectExprs(node.SelectExprs, p.Root)
+	fields, hasAggregates, err := parserSelectExprs(node.SelectExprs, p.Root)
 	if err != nil {
 		return err
 	}
 
-	if groups, err = checkGroupBy(node.GroupBy, fileds, p.router, tbInfos); err != nil {
+	if groups, err = checkGroupBy(node.GroupBy, fields, p.router, tbInfos); err != nil {
 		return err
 	}
 
-	if groups, err = checkDistinct(node, groups, fileds, p.router, tbInfos); err != nil {
+	if groups, err = checkDistinct(node, groups, fields, p.router, tbInfos); err != nil {
 		return err
 	}
 
-	if err = p.Root.pushSelectExprs(fileds, groups, node, hasAggregates); err != nil {
+	if err = p.Root.pushSelectExprs(fields, groups, node, hasAggregates); err != nil {
 		return err
 	}
 
@@ -148,7 +148,7 @@ func (p *SelectPlan) Build() error {
 		}
 	}
 
-	if err = p.Root.pushOrderBy(node, fileds); err != nil {
+	if err = p.Root.pushOrderBy(node, fields); err != nil {
 		return err
 	}
 	// Limit SubPlan.
