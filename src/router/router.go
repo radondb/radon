@@ -20,6 +20,11 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
+// Extra -- router extra params.
+type Extra struct {
+	AutoIncrement *config.AutoIncrement
+}
+
 // Table tuple.
 type Table struct {
 	// Table name

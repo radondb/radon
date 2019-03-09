@@ -157,12 +157,18 @@ type PartitionConfig struct {
 	Backend string `json:"backend"`
 }
 
+// AutoIncrement tuple.
+type AutoIncrement struct {
+	Column string `json:"column"`
+}
+
 // TableConfig tuple.
 type TableConfig struct {
-	Name       string             `json:"name"`
-	ShardType  string             `json:"shardtype"`
-	ShardKey   string             `json:"shardkey"`
-	Partitions []*PartitionConfig `json:"partitions"`
+	Name          string             `json:"name"`
+	ShardType     string             `json:"shardtype"`
+	ShardKey      string             `json:"shardkey"`
+	Partitions    []*PartitionConfig `json:"partitions"`
+	AutoIncrement *AutoIncrement     `json:"auto-increment,omitempty"`
 }
 
 // SchemaConfig tuple.
