@@ -50,7 +50,7 @@ func mockSyncer(log *xlog.Log, n int) ([]*Syncer, func()) {
 		router := router.NewRouter(log, metadir, config.DefaultRouterConfig())
 		db := fmt.Sprintf("sbtest%d", i)
 		tbl := fmt.Sprintf("t%d", i)
-		if err := router.CreateTable(db, tbl, "id", []string{peerAddr}); err != nil {
+		if err := router.CreateTable(db, tbl, "id", []string{peerAddr}, nil); err != nil {
 			log.Panicf("mock.syncer.error:%+v", err)
 		}
 

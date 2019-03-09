@@ -18,9 +18,10 @@ var (
 	// MockTablesConfig config.
 	MockTablesConfig = []*TableConfig{
 		&TableConfig{
-			Name:       "A",
-			ShardKey:   "id",
-			Partitions: MockPartitionAConfig,
+			Name:          "A",
+			ShardKey:      "id",
+			Partitions:    MockPartitionAConfig,
+			AutoIncrement: MockAutoIncrment,
 		},
 		&TableConfig{
 			Name:       "B",
@@ -70,6 +71,11 @@ var (
 			Segment: "8-16",
 			Backend: "backend2",
 		},
+	}
+
+	// MockAutoIncrment.
+	MockAutoIncrment = &AutoIncrement{
+		Column: "autoincrement",
 	}
 
 	// MockBackends config.

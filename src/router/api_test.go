@@ -333,7 +333,7 @@ func TestApiReLoad(t *testing.T) {
 	// add router of sbtest.A.
 	{
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("sbtest", "t1", "id", backends)
+		err := router.CreateTable("sbtest", "t1", "id", backends, nil)
 		assert.Nil(t, err)
 	}
 

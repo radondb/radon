@@ -34,6 +34,7 @@ test:
 	@$(MAKE) testsyncer
 	@$(MAKE) testctl
 	@$(MAKE) testmonitor
+	@$(MAKE) testplugins
 	@$(MAKE) testfuzz
 
 testxbase:
@@ -69,6 +70,9 @@ testpoc:
 testmonitor:
 	go test -v monitor
 
+testplugins:
+	go test -v plugins
+
 testfuzz:
 	go test -v -race fuzz/sqlparser
 
@@ -85,7 +89,8 @@ allpkgs =	xbase\
 			proxy\
 			audit\
 			syncer\
-			monitor
+			monitor\
+			plugins
 coverage:
 	go build -v -o bin/gotestcover \
 	src/vendor/github.com/pierrre/gotestcover/*.go;

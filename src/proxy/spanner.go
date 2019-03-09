@@ -13,6 +13,7 @@ import (
 	"backend"
 	"config"
 	"monitor"
+	"plugins"
 	"router"
 	"xbase"
 	"xbase/sync2"
@@ -31,13 +32,14 @@ type Spanner struct {
 	sessions    *Sessions
 	iptable     *IPTable
 	throttle    *xbase.Throttle
+	plugins     *plugins.Plugin
 	diskChecker *DiskCheck
 	readonly    sync2.AtomicBool
 }
 
 // NewSpanner creates a new spanner.
 func NewSpanner(log *xlog.Log, conf *config.Config,
-	iptable *IPTable, router *router.Router, scatter *backend.Scatter, sessions *Sessions, audit *audit.Audit, throttle *xbase.Throttle) *Spanner {
+	iptable *IPTable, router *router.Router, scatter *backend.Scatter, sessions *Sessions, audit *audit.Audit, throttle *xbase.Throttle, plugins *plugins.Plugin) *Spanner {
 	return &Spanner{
 		log:      log,
 		conf:     conf,
@@ -47,6 +49,7 @@ func NewSpanner(log *xlog.Log, conf *config.Config,
 		scatter:  scatter,
 		sessions: sessions,
 		throttle: throttle,
+		plugins:  plugins,
 	}
 }
 

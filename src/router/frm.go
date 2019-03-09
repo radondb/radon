@@ -122,7 +122,7 @@ func (r *Router) DropDatabase(db string) error {
 
 // CreateTable used to add a table to router and flush the schema to disk.
 // Lock.
-func (r *Router) CreateTable(db, table, shardKey string, backends []string) error {
+func (r *Router) CreateTable(db, table, shardKey string, backends []string, extra *Extra) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -139,6 +139,12 @@ func (r *Router) CreateTable(db, table, shardKey string, backends []string) erro
 		log.Error("frm.create.table[%s.%s].compute.error:%v", db, table, err)
 		return err
 	}
+
+	// Set extra.
+	if extra != nil {
+		tableConf.AutoIncrement = extra.AutoIncrement
+	}
+
 	// add config to router.
 	if err = r.add(db, tableConf); err != nil {
 		log.Error("frm.create.add.route.error:%v", err)

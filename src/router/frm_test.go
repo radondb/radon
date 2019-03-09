@@ -45,7 +45,7 @@ func TestFrmTable(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", backends)
+		err := router.CreateTable("test", "t1", "id", backends, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
@@ -54,7 +54,7 @@ func TestFrmTable(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t2", "id", backends)
+		err := router.CreateTable("test", "t2", "id", backends, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
@@ -62,14 +62,14 @@ func TestFrmTable(t *testing.T) {
 	// Add 2.
 	{
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t2", "id", backends)
+		err := router.CreateTable("test", "t2", "id", backends, nil)
 		assert.NotNil(t, err)
 	}
 
 	// Add global table.
 	{
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t3", "", backends)
+		err := router.CreateTable("test", "t3", "", backends, nil)
 		assert.Nil(t, err)
 	}
 
@@ -108,14 +108,14 @@ func TestFrmTableError(t *testing.T) {
 	// Add 1.
 	{
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("", "t1", "id", backends)
+		err := router.CreateTable("", "t1", "id", backends, nil)
 		assert.NotNil(t, err)
 	}
 
 	// Add 2.
 	{
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "", "id", backends)
+		err := router.CreateTable("test", "", "id", backends, nil)
 		assert.NotNil(t, err)
 	}
 
@@ -129,7 +129,7 @@ func TestFrmTableError(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", backends)
+		err := router.CreateTable("test", "t1", "id", backends, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
@@ -151,7 +151,7 @@ func TestFrmDropDatabase(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", backends)
+		err := router.CreateTable("test", "t1", "id", backends, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
@@ -160,7 +160,7 @@ func TestFrmDropDatabase(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t2", "id", backends)
+		err := router.CreateTable("test", "t2", "id", backends, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
@@ -183,7 +183,7 @@ func TestFrmLoad(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", backends)
+		err := router.CreateTable("test", "t1", "id", backends, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
@@ -192,7 +192,7 @@ func TestFrmLoad(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t2", "id", backends)
+		err := router.CreateTable("test", "t2", "id", backends, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
@@ -244,7 +244,7 @@ func TestFrmReadFileBroken(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", backends)
+		err := router.CreateTable("test", "t1", "id", backends, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 		// Make file broken.

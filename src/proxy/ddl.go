@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"strings"
 
+	"plugins"
 	"router"
 
 	"github.com/xelabs/go-mysqlstack/driver"
@@ -126,7 +127,7 @@ func checkDatabaseAndTable(database string, table string, router *router.Router)
 // 7. ALTER TABLE .. DROP COLUMN column
 func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *sqlparser.DDL) (*sqltypes.Result, error) {
 	log := spanner.log
-	router := spanner.router
+	route := spanner.router
 	scatter := spanner.scatter
 
 	ddl := node
@@ -142,7 +143,7 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 	}
 
 	// Check the database ACL.
-	if err := router.DatabaseACL(database); err != nil {
+	if err := route.DatabaseACL(database); err != nil {
 		return nil, err
 	}
 	switch ddl.Action {
@@ -155,7 +156,7 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 			return nil, err
 		}
 		// Drop database from router.
-		if err := router.DropDatabase(database); err != nil {
+		if err := route.DropDatabase(database); err != nil {
 			return nil, err
 		}
 		return qr, nil
@@ -171,20 +172,23 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		}
 
 		// Create table.
-		if err := router.CreateTable(database, table, shardKey, backends); err != nil {
+		extra := &router.Extra{
+			AutoIncrement: plugins.GetAutoIncrement(node),
+		}
+		if err := route.CreateTable(database, table, shardKey, backends, extra); err != nil {
 			return nil, err
 		}
 		r, err := spanner.ExecuteDDL(session, database, sqlparser.String(ddl), node)
 		if err != nil {
 			// Try to drop table.
-			router.DropTable(database, table)
+			route.DropTable(database, table)
 			return nil, err
 		}
 		return r, nil
 	case sqlparser.DropTableStr:
 		// Check the database and table is exists.
 		table := ddl.Table.Name.String()
-		if err := checkDatabaseAndTable(database, table, router); err != nil {
+		if err := checkDatabaseAndTable(database, table, route); err != nil {
 			return nil, err
 		}
 
@@ -193,7 +197,7 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		if err != nil {
 			log.Error("spanner.ddl.execute[%v].error[%+v]", query, err)
 		}
-		if err := router.DropTable(database, table); err != nil {
+		if err := route.DropTable(database, table); err != nil {
 			log.Error("spanner.ddl.router.drop.table[%s].error[%+v]", table, err)
 		}
 		return r, err
@@ -204,7 +208,7 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 
 		// Check the database and table is exists.
 		table := ddl.Table.Name.String()
-		if err := checkDatabaseAndTable(database, table, router); err != nil {
+		if err := checkDatabaseAndTable(database, table, route); err != nil {
 			return nil, err
 		}
 

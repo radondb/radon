@@ -14,6 +14,7 @@ import (
 	"audit"
 	"backend"
 	"config"
+	"plugins"
 	"router"
 	"syncer"
 	"xbase"
@@ -32,6 +33,7 @@ type Proxy struct {
 	router   *router.Router
 	scatter  *backend.Scatter
 	syncer   *syncer.Syncer
+	plugins  *plugins.Plugin
 	iptable  *IPTable
 	spanner  *Spanner
 	sessions *Sessions
@@ -45,6 +47,7 @@ func NewProxy(log *xlog.Log, path string, conf *config.Config) *Proxy {
 	router := router.NewRouter(log, conf.Proxy.MetaDir, conf.Router)
 	scatter := backend.NewScatter(log, conf.Proxy.MetaDir)
 	syncer := syncer.NewSyncer(log, conf.Proxy.MetaDir, conf.Proxy.PeerAddress, router, scatter)
+	plugins := plugins.NewPlugin(log, conf, router, scatter)
 	return &Proxy{
 		log:      log,
 		conf:     conf,
@@ -53,6 +56,7 @@ func NewProxy(log *xlog.Log, path string, conf *config.Config) *Proxy {
 		router:   router,
 		scatter:  scatter,
 		syncer:   syncer,
+		plugins:  plugins,
 		sessions: NewSessions(log),
 		iptable:  NewIPTable(log, conf.Proxy),
 		throttle: xbase.NewThrottle(0),
@@ -68,6 +72,7 @@ func (p *Proxy) Start() {
 	syncer := p.syncer
 	router := p.router
 	scatter := p.scatter
+	plugins := p.plugins
 	sessions := p.sessions
 	endpoint := conf.Proxy.Endpoint
 	throttle := p.throttle
@@ -92,7 +97,11 @@ func (p *Proxy) Start() {
 		log.Panic("proxy.scatter.init.panic:%+v", err)
 	}
 
-	spanner := NewSpanner(log, conf, iptable, router, scatter, sessions, audit, throttle)
+	if err := plugins.Init(); err != nil {
+		log.Panic("proxy.plugins.init.panic:%+v", err)
+	}
+
+	spanner := NewSpanner(log, conf, iptable, router, scatter, sessions, audit, throttle, plugins)
 	if err := spanner.Init(); err != nil {
 		log.Panic("proxy.spanner.init.panic:%+v", err)
 	}
@@ -117,6 +126,7 @@ func (p *Proxy) Stop() {
 	p.scatter.Close()
 	p.audit.Close()
 	p.syncer.Close()
+	p.plugins.Close()
 	log.Info("proxy.shutdown.complete...")
 }
 

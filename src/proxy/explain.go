@@ -55,6 +55,10 @@ func (spanner *Spanner) handleExplain(session *driver.Session, query string, nod
 	case *sqlparser.Select:
 	case *sqlparser.Delete:
 	case *sqlparser.Insert:
+		autoincPlug := spanner.plugins.PlugAutoIncrement()
+		if err := autoincPlug.Process(database, subNode.(*sqlparser.Insert)); err != nil {
+			return nil, err
+		}
 	case *sqlparser.Update:
 	default:
 		return nil, sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, "explain only supports SELECT/DELETE/INSERT/UPDATE")

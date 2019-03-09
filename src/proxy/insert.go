@@ -17,5 +17,11 @@ import (
 // handleInsert used to handle the insert command.
 func (spanner *Spanner) handleInsert(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	database := session.Schema()
+	autoincPlug := spanner.plugins.PlugAutoIncrement()
+
+	// AutoIncrement plugin process.
+	if err := autoincPlug.Process(database, node.(*sqlparser.Insert)); err != nil {
+		return nil, err
+	}
 	return spanner.ExecuteDML(session, database, query, node)
 }

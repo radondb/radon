@@ -164,7 +164,7 @@ func TestReadBackendsConfig(t *testing.T) {
        "backends": [
                {
                        "name": "backend1",
-            "address": "127.0.0.1:3304",
+                       "address": "127.0.0.1:3304",
                        "user": "root",
                        "password": "",
                        "max-connections": 1024
@@ -205,7 +205,10 @@ func TestReadTableConfig(t *testing.T) {
 			"segment": "8-16",
 			"backend": "backend2"
 		}
-	]
+	],
+	"auto-increment":{
+		"column":"autoincrement"
+	}
 }`
 
 	table, err := ReadTableConfig(data)
