@@ -28,9 +28,18 @@ func TestProxySessionWaitForShutdown(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select * .*", &sqltypes.Result{})
 		fakedbs.AddQueryDelay("select * from test.t1_0002", &sqltypes.Result{}, 30000)
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -70,11 +79,20 @@ func TestProxySessionTxnBeginCommit(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select * .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("insert * .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("begin", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("XA .*", result1)
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.

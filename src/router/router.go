@@ -69,8 +69,8 @@ func NewRouter(log *xlog.Log, metadir string, conf *config.RouterConfig) *Router
 	return route
 }
 
-// add used to add a table router to schema map
-func (r *Router) add(db string, tbl *config.TableConfig) error {
+// addTable -- used to add a table router to schema map.
+func (r *Router) addTable(db string, tbl *config.TableConfig) error {
 	var ok bool
 	var schema *Schema
 	var table *Table
@@ -117,12 +117,11 @@ func (r *Router) add(db string, tbl *config.TableConfig) error {
 	default:
 		return errors.Errorf("router.unsupport.shardtype:[%v]", tbl.ShardType)
 	}
-
 	return nil
 }
 
-// Remove used to remvoe a table router from schema map
-func (r *Router) remove(db string, table string) error {
+// removeTable -- used to remvoe a table router from schema map.
+func (r *Router) removeTable(db string, table string) error {
 	var ok bool
 	var schema *Schema
 
@@ -136,6 +135,23 @@ func (r *Router) remove(db string, table string) error {
 	}
 	// remove
 	delete(schema.Tables, table)
+	return nil
+}
+
+func (r *Router) addDatabase(db string) error {
+	if schema, ok := r.Schemas[db]; !ok {
+		schema = &Schema{DB: db, Tables: make(map[string]*Table)}
+		r.Schemas[db] = schema
+		return nil
+	}
+	return errors.Errorf("router.database.exists")
+}
+
+func (r *Router) dropDatabase(db string) error {
+	if _, ok := r.Schemas[db]; !ok {
+		return errors.Errorf("router.can.not.find.db[%v]", db)
+	}
+	delete(r.Schemas, db)
 	return nil
 }
 

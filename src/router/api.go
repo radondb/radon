@@ -129,7 +129,7 @@ func (r *Router) changeTheRuleBackend(fromBackend string, toBackend string, data
 	}
 
 	// 3. Flush table config to disk.
-	if err := r.writeFrmData(database, table, tableConfig); err != nil {
+	if err := r.writeTableFrmData(database, table, tableConfig); err != nil {
 		// Memory config reset.
 		if tableConfig.ShardType == "GLOBAL" {
 			tableConfig.Partitions = append(tableConfig.Partitions[:(len(tableConfig.Partitions) - 1)])

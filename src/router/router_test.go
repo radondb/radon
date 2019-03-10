@@ -23,7 +23,7 @@ func TestRouter(t *testing.T) {
 	assert.NotNil(t, router)
 }
 
-func TestRouteradd(t *testing.T) {
+func TestRouterAdd(t *testing.T) {
 	results := []string{`{
 	"Schemas": {
 		"sbtest": {
@@ -80,7 +80,7 @@ func TestRouteradd(t *testing.T) {
 
 	// router
 	{
-		err := router.add("sbtest", MockTableAConfig())
+		err := router.addTable("sbtest", MockTableAConfig())
 		assert.Nil(t, err)
 		want := results[0]
 		got := router.JSON()
@@ -90,7 +90,7 @@ func TestRouteradd(t *testing.T) {
 
 	// add same routers
 	{
-		err := router.add("sbtest", MockTableAConfig())
+		err := router.addTable("sbtest", MockTableAConfig())
 		want := "router.add.db[sbtest].table[A].exists"
 		got := err.Error()
 		assert.Equal(t, want, got)
@@ -98,7 +98,7 @@ func TestRouteradd(t *testing.T) {
 
 	// unsupport shardtype
 	{
-		err := router.add("sbtest", MockTableE1Config())
+		err := router.addTable("sbtest", MockTableE1Config())
 		want := "router.unsupport.shardtype:[Range]"
 		got := err.Error()
 		assert.Equal(t, want, got)
@@ -139,7 +139,7 @@ func TestRouteraddGlobal(t *testing.T) {
 
 	// router
 	{
-		err := router.add("sbtest", MockTableGConfig())
+		err := router.addTable("sbtest", MockTableGConfig())
 		assert.Nil(t, err)
 		want := results[0]
 		got := router.JSON()
@@ -148,7 +148,7 @@ func TestRouteraddGlobal(t *testing.T) {
 	}
 }
 
-func TestRouterremove(t *testing.T) {
+func TestRouterRemove(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
@@ -156,7 +156,7 @@ func TestRouterremove(t *testing.T) {
 
 	// router
 	{
-		err := router.remove("sbtest", MockTableBConfig().Name)
+		err := router.removeTable("sbtest", MockTableBConfig().Name)
 		want := "router.can.not.find.db[sbtest]"
 		got := err.Error()
 		assert.Equal(t, want, got)
@@ -164,7 +164,7 @@ func TestRouterremove(t *testing.T) {
 
 	// add router of sbtest.A
 	{
-		err := router.add("sbtest", MockTableMConfig())
+		err := router.addTable("sbtest", MockTableMConfig())
 		assert.Nil(t, err)
 
 		strVal := sqlparser.NewStrVal([]byte("shardkey"))
@@ -174,7 +174,7 @@ func TestRouterremove(t *testing.T) {
 
 	// remove router of xx.A
 	{
-		err := router.remove("xx", MockTableAConfig().Name)
+		err := router.removeTable("xx", MockTableAConfig().Name)
 		want := "router.can.not.find.db[xx]"
 		got := err.Error()
 		assert.Equal(t, want, got)
@@ -182,7 +182,7 @@ func TestRouterremove(t *testing.T) {
 
 	// remove router of sbtest.E1(invalid router)
 	{
-		err := router.remove("sbtest", MockTableE1Config().Name)
+		err := router.removeTable("sbtest", MockTableE1Config().Name)
 		want := "router.can.not.find.table[E1]"
 		got := err.Error()
 		assert.Equal(t, want, got)
@@ -190,7 +190,7 @@ func TestRouterremove(t *testing.T) {
 
 	// remove router of sbtest.A
 	{
-		err := router.remove("sbtest", MockTableAConfig().Name)
+		err := router.removeTable("sbtest", MockTableAConfig().Name)
 		assert.Nil(t, err)
 
 		strVal := sqlparser.NewStrVal([]byte("shardkey"))
@@ -209,7 +209,7 @@ func TestRouterLookup(t *testing.T) {
 
 	// add router of sbtest.A
 	{
-		err := router.add("sbtest", MockTableAConfig())
+		err := router.addTable("sbtest", MockTableAConfig())
 		assert.Nil(t, err)
 
 		strVal := sqlparser.NewStrVal([]byte("shardkey"))
@@ -226,7 +226,7 @@ func TestRouterLookupError(t *testing.T) {
 
 	// add router of sbtest.A
 	{
-		err := router.add("sbtest", MockTableAConfig())
+		err := router.addTable("sbtest", MockTableAConfig())
 		assert.Nil(t, err)
 
 		// database error
@@ -257,7 +257,7 @@ func TestRouterShardKey(t *testing.T) {
 
 	// add router of sbtest.A
 	{
-		err := router.add("sbtest", MockTableAConfig())
+		err := router.addTable("sbtest", MockTableAConfig())
 		assert.Nil(t, err)
 
 		shardKey, err := router.ShardKey("sbtest", "A")
@@ -274,7 +274,7 @@ func TestRouterShardKeyError(t *testing.T) {
 
 	// add router of sbtest.A
 	{
-		err := router.add("sbtest", MockTableAConfig())
+		err := router.addTable("sbtest", MockTableAConfig())
 		assert.Nil(t, err)
 
 		// database error
@@ -361,7 +361,7 @@ func TestRouterTableConfig(t *testing.T) {
 
 	// add router of sbtest.A
 	{
-		err := router.add("sbtest", MockTableAConfig())
+		err := router.addTable("sbtest", MockTableAConfig())
 		assert.Nil(t, err)
 
 		tConf, err := router.TableConfig("sbtest", "A")
@@ -485,4 +485,23 @@ func TestRouterGetSegmentsError(t *testing.T) {
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}
+}
+
+func TestRouterTables(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+
+	// sbtest with tables.
+	err := router.AddForTest("sbtest", MockTableMConfig())
+	assert.Nil(t, err)
+
+	// tables is empty.
+	router.CreateDatabase("nulldatabase")
+
+	want := make(map[string][]string)
+	want["sbtest"] = []string{"A"}
+	want["nulldatabase"] = []string{}
+	got := router.Tables()
+	assert.Equal(t, want, got)
 }

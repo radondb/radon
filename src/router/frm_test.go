@@ -41,6 +41,8 @@ func TestFrmTable(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 
+	router.CreateDatabase("test")
+
 	// Add 1.
 	{
 		tmpRouter := router
@@ -105,6 +107,8 @@ func TestFrmTableError(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 
+	router.CreateDatabase("test")
+
 	// Add 1.
 	{
 		backends := []string{"backend1", "backend2", "backend3"}
@@ -147,6 +151,8 @@ func TestFrmDropDatabase(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 
+	router.CreateDatabase("test")
+
 	// Add 1.
 	{
 		tmpRouter := router
@@ -178,6 +184,8 @@ func TestFrmLoad(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
+
+	router.CreateDatabase("test")
 
 	// Add 1.
 	{
@@ -219,7 +227,7 @@ func TestFrmReadFrmError(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	{
-		_, err := router.readFrmData("/u10000/xx.xx")
+		_, err := router.readTableFrmData("/u10000/xx.xx")
 		assert.NotNil(t, err)
 	}
 }
@@ -230,7 +238,7 @@ func TestFrmWriteFrmError(t *testing.T) {
 	defer cleanup()
 	{
 		router.metadir = "/u100000/xx"
-		err := router.writeFrmData("test", "t1", nil)
+		err := router.writeTableFrmData("test", "t1", nil)
 		assert.NotNil(t, err)
 	}
 }
@@ -239,6 +247,8 @@ func TestFrmReadFileBroken(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
+
+	router.CreateDatabase("test")
 
 	// Add 1.
 	{
@@ -271,5 +281,39 @@ func TestFrmAddTableForTest(t *testing.T) {
 	defer cleanup()
 
 	err := router.AddForTest("test", nil)
+	assert.NotNil(t, err)
+}
+
+func TestFrmDatabaseNoTables(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+
+	// Tables with database test1.
+	router.CreateDatabase("test1")
+	{
+		tmpRouter := router
+		backends := []string{"backend1", "backend2", "backend3"}
+		err := router.CreateTable("test1", "t1", "id", backends, nil)
+		assert.Nil(t, err)
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test1", "t1"))
+	}
+
+	// Database test2 without tables.
+	router.CreateDatabase("test2")
+
+	// Check.
+	{
+		router1, cleanup1 := MockNewRouter(log)
+		defer cleanup1()
+		assert.NotNil(t, router1)
+
+		// load.
+		err := router1.LoadConfig()
+		assert.Nil(t, err)
+		assert.Equal(t, router, router1)
+	}
+
+	err := router.CreateDatabase("test2")
 	assert.NotNil(t, err)
 }

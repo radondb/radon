@@ -89,6 +89,15 @@ func TestProxyDDLTable(t *testing.T) {
 		assert.Equal(t, want, got)
 	}
 
+	// create database;
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
 	// create global table.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
@@ -147,6 +156,15 @@ func TestProxyDDLTable(t *testing.T) {
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
 		query := "create table t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create sbtest database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database sbtest"
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
 	}
@@ -279,12 +297,18 @@ func TestProxyDDLIndex(t *testing.T) {
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("show tables from .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("show create table .*", fakedb.Result1)
-		fakedbs.AddQueryPattern("drop table .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create index.*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create fulltext index.*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("drop index.*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("drop .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -393,8 +417,17 @@ func TestProxyDDLColumn(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("alter table .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table, t1 hash t2 global.
@@ -456,7 +489,16 @@ func TestProxyDDLCreateTable(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	querys := []string{
@@ -485,7 +527,16 @@ func TestProxyDDLCreateTableError(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	querys := []string{
@@ -516,9 +567,18 @@ func TestProxyMyLoaderImport(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("show create database .*", &sqltypes.Result{})
 		fakedbs.AddQuery("/*show create database sbtest*/", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	querys := []string{
@@ -546,7 +606,16 @@ func TestProxyDDLConstraint(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	querys := []string{
@@ -582,7 +651,16 @@ func TestProxyDDLConstraintError(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	querys := []string{
@@ -667,7 +745,16 @@ func TestProxyDDLShardKeyCheck(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	querys := []string{
@@ -706,6 +793,15 @@ func TestProxyDDLAlterCharset(t *testing.T) {
 		fakedbs.AddQueryPattern("alter table .*", &sqltypes.Result{})
 	}
 
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
 	// create test table.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
@@ -723,4 +819,32 @@ func TestProxyDDLAlterCharset(t *testing.T) {
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
 	}
+}
+
+func TestProxyDDLUnknowDatabase236(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("drop table .*", &sqltypes.Result{})
+	}
+
+	client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+	assert.Nil(t, err)
+	query := "create database db1"
+	_, err = client.FetchAll(query, -1)
+	assert.Nil(t, err)
+
+	query = "use db1"
+	_, err = client.FetchAll(query, -1)
+	assert.Nil(t, err)
+
+	query = "DROP TABLE IF EXISTS `t1`"
+	_, err = client.FetchAll(query, -1)
+	assert.Nil(t, err)
 }
