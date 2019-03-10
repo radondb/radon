@@ -344,10 +344,19 @@ func TestProxyHandleMStmtTxnBeginUpdatesCommitFailed(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("XA .*", result1)
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
 		fakedbs.AddQueryErrorPattern("XA END .*", errors.New("mock.xa.end.error"))
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -393,10 +402,19 @@ func TestProxyHandleMStmtTxnBeginUpdatesRollbackFailed(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("XA .*", result1)
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
 		fakedbs.AddQueryErrorPattern("XA END .*", errors.New("mock.xa.end.error"))
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -442,10 +460,19 @@ func TestProxyHandleMStmtTxnBeginUpdateRollbackFailed(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("XA .*", result1)
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
 		fakedbs.AddQueryErrorPattern("XA END .*", errors.New("mock.xa.end.error"))
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -492,10 +519,19 @@ func TestProxyHandleMStmtTxnUseDB(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("XA .*", result1)
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -554,9 +590,18 @@ func TestProxyHandleMStmtTxnNOUseDB(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("XA .*", result1)
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -598,43 +643,3 @@ func TestProxyHandleMStmtTxnNOUseDB(t *testing.T) {
 
 	client1.Close()
 }
-
-/*
-	autoCommit := "select @@autocommit"
-	results, err := spanner.ExecuteScatter(autoCommit)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, row := range results.Rows {
-		value := row[0].ToNative()
-		if value.(int64) == 0 {
-			log.Error("spanner.execute.multistate.begin.autocommit0.unsupported.")
-			return nil, errors.New("ExecuteMultiStatBegin.autocommit0.unsupported")
-		}
-	}
-
-func TestProxyHandleMultiStateAutoCommit0(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedbs, proxy, cleanup := MockProxy(log)
-	defer cleanup() // if the session is not closed, cost 1s
-	address := proxy.Address()
-	proxy.SetTwoPC(true)
-
-	{
-		fakedbs.AddQueryPattern("XA .*", result1)
-		fakedbs.AddQueryPattern("select @@autocommit", autocommitResult0)
-	}
-
-	client, err := driver.NewConn("mock", "mock", address, "", "utf8")
-	assert.Nil(t, err)
-
-	{
-		query := "begin;"
-		fakedbs.AddQuery(query, fakedb.Result3)
-		_, err = client.FetchAll(query, -1)
-		assert.NotNil(t, err)
-	}
-}
-
-*/

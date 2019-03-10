@@ -343,6 +343,14 @@ func TestProxyShowTableStatus(t *testing.T) {
 		fakedbs.AddQueryPattern("show table status .*", showTableStatusResult1)
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 	}
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
 
 	// show tables.
 	{
@@ -432,6 +440,15 @@ func TestProxyShowCreateTable(t *testing.T) {
 		fakedbs.AddQuerys("show create table MYSQL.t1", r1)
 		fakedbs.AddQuerys("show create table xxx.t1", r1)
 		fakedbs.AddQuerys("show create table test.g_t1", r2)
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table with hash.
@@ -583,6 +600,15 @@ func TestProxyShowColumns(t *testing.T) {
 		fakedbs.AddQueryPattern("show columns .*", r2)
 	}
 
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
 	// create test table.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
@@ -659,10 +685,19 @@ func TestProxyShowProcesslist(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select * .*", &sqltypes.Result{})
 		fakedbs.AddQueryDelay("select * from test.t1_0002", &sqltypes.Result{}, 3000)
 		fakedbs.AddQueryDelay("select * from test.t1_0004", &sqltypes.Result{}, 3000)
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -736,8 +771,17 @@ func TestProxyShowStatus(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select * .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.

@@ -22,7 +22,7 @@ func TestApiRules(t *testing.T) {
 
 	// add router of sbtest.A
 	{
-		err := router.add("sbtest", MockTableAConfig())
+		err := router.addTable("sbtest", MockTableAConfig())
 		assert.Nil(t, err)
 
 		tConf, err := router.TableConfig("sbtest", "A")
@@ -40,9 +40,11 @@ func TestApiPartitionRuleShift(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 
+	router.CreateDatabase("sbtest")
+
 	// add router of sbtest.A
 	{
-		err := router.add("sbtest", MockTableAConfig())
+		err := router.addTable("sbtest", MockTableAConfig())
 		assert.Nil(t, err)
 
 		tConf, err := router.TableConfig("sbtest", "A")
@@ -122,9 +124,11 @@ func TestApiPartitionRuleShiftGlobal(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
+	router.CreateDatabase("sbtest")
+
 	// add router of sbtest.G
 	{
-		err := router.add("sbtest", MockTableGConfig())
+		err := router.addTable("sbtest", MockTableGConfig())
 		assert.Nil(t, err)
 
 		tConf, err := router.TableConfig("sbtest", "G")
@@ -237,7 +241,7 @@ func TestApiPartitionRuleShiftErrors(t *testing.T) {
 
 	// add router of sbtest.A
 	{
-		err := router.add("sbtest", MockTableAConfig())
+		err := router.addTable("sbtest", MockTableAConfig())
 		assert.Nil(t, err)
 
 		tConf, err := router.TableConfig("sbtest", "A")
@@ -283,7 +287,7 @@ func TestApiPartitionRuleShiftErrors(t *testing.T) {
 
 	// add router of sbtest.G.
 	{
-		err := router.add("sbtest", MockTableGConfig())
+		err := router.addTable("sbtest", MockTableGConfig())
 		assert.Nil(t, err)
 
 		tConf, err := router.TableConfig("sbtest", "G")
@@ -329,6 +333,8 @@ func TestApiReLoad(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
+
+	router.CreateDatabase("sbtest")
 
 	// add router of sbtest.A.
 	{

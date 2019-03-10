@@ -30,8 +30,18 @@ func TestCtlV1Schemaz(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
 	// create test table.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")

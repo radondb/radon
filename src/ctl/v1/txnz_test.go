@@ -33,9 +33,18 @@ func TestCtlV1Txnz(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 		fakedbs.AddQueryDelay("select * from test.t1_0000 as t1", &sqltypes.Result{}, 1000)
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.

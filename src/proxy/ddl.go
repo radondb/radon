@@ -148,6 +148,9 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 	}
 	switch ddl.Action {
 	case sqlparser.CreateDBStr:
+		if err := route.CreateDatabase(database); err != nil {
+			return nil, err
+		}
 		return spanner.ExecuteScatter(query)
 	case sqlparser.DropDBStr:
 		// Execute the ddl.
@@ -188,7 +191,11 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 	case sqlparser.DropTableStr:
 		// Check the database and table is exists.
 		table := ddl.Table.Name.String()
+
 		if err := checkDatabaseAndTable(database, table, route); err != nil {
+			if node.IfExists {
+				return &sqltypes.Result{}, nil
+			}
 			return nil, err
 		}
 

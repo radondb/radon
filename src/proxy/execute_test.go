@@ -29,10 +29,19 @@ func TestProxyExecute(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("xa .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -85,9 +94,18 @@ func TestProxyExecute2PCError(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("xa .*", &sqltypes.Result{})
 		fakedbs.AddQueryError("insert into test.t1_0008(id, b) values (1, 2)", errors.New("xx"))
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -119,13 +137,22 @@ func TestProxyExecute2PCCommitError(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("xa start .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("xa end .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("xa rollback .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("xa commit .*", &sqltypes.Result{})
 		fakedbs.AddQueryErrorPattern("xa prepare.*", errors.New("mock.xa.prepare.error"))
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -172,7 +199,16 @@ func TestProxyExecuteSelectError(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -230,6 +266,15 @@ func TestProxyExecuteReadonly(t *testing.T) {
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 	}
 
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
 	// create test table.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
@@ -285,8 +330,17 @@ func TestProxyExecuteStreamFetch(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	// create test table.
@@ -317,11 +371,20 @@ func TestProxyExecuteMultiStmtTxnDDLError(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("begin", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("rollback", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("xa .*", &sqltypes.Result{})
 		fakedbs.AddQueryError("insert into test.t1_0008(id, b) values (1, 2)", errors.New("xx"))
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	//begin && create test table.
@@ -351,10 +414,19 @@ func TestProxyExecuteMultiStmtTxnDMLError(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQueryPattern("create table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("begin", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("commit", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("xa .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	//begin && create test table.
