@@ -689,6 +689,7 @@ func TestProxyShowProcesslist(t *testing.T) {
 		fakedbs.AddQueryPattern("select * .*", &sqltypes.Result{})
 		fakedbs.AddQueryDelay("select * from test.t1_0002", &sqltypes.Result{}, 3000)
 		fakedbs.AddQueryDelay("select * from test.t1_0004", &sqltypes.Result{}, 3000)
+		fakedbs.AddQueryPattern("XA * .*", &sqltypes.Result{})
 	}
 
 	// create database.
@@ -740,6 +741,27 @@ func TestProxyShowProcesslist(t *testing.T) {
 		assert.Nil(t, err)
 		_, err = show.FetchAll("show processlist", -1)
 		assert.Nil(t, err)
+	}
+
+	// show processlist about the process in transaction.
+	{
+		proxy.SetTwoPC(true)
+		clientTxn, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		_, err = clientTxn.FetchAll("begin", -1)
+		assert.Nil(t, err)
+		clients = append(clients, clientTxn)
+
+		show, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		info, err := show.FetchAll("show processlist", -1)
+		assert.Nil(t, err)
+		assert.Equal(t, len(clients)+2, int(info.RowsAffected))
+		log.Debug("%+v", info.Rows)
+
+		_, err = clientTxn.FetchAll("commit", -1)
+		assert.Nil(t, err)
+		proxy.SetTwoPC(false)
 	}
 
 	// show queryz.

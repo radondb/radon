@@ -299,6 +299,12 @@ func (ss *Sessions) Snapshot() []SessionInfo {
 			info.Command = "Query"
 			info.Info = v.query
 		}
+
+		if v.transaction != nil {
+			// https://dev.mysql.com/doc/refman/5.7/en/general-thread-states.html about state.
+			info.State = "In transaction"
+		}
+
 		infos = append(infos, info)
 	}
 	ss.mu.Unlock()
