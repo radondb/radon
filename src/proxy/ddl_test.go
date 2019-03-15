@@ -41,6 +41,24 @@ func TestProxyDDLDB(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
+	// create database again.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database if not exists test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// drop database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "drop database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
 	// drop database.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
@@ -84,7 +102,7 @@ func TestProxyDDLTable(t *testing.T) {
 		assert.Nil(t, err)
 		query := "create table t1(a int, b int)"
 		_, err = client.FetchAll(query, -1)
-		want := "db.can't.be.null (errno 1105) (sqlstate HY000)"
+		want := "Unknown database '' (errno 1049) (sqlstate 42000)"
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}
@@ -107,6 +125,24 @@ func TestProxyDDLTable(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
+	// create global table again.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create table if not exists t2(a int, b int)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create global table database error.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create table if not exists ttt.t2(a int, b int)"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
 	// check test.tables.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
@@ -124,6 +160,15 @@ func TestProxyDDLTable(t *testing.T) {
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
 		query := "drop table t2"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// drop global table again.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "drop table if exists t2"
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
 	}

@@ -96,23 +96,24 @@ func CheckCreateTable(ddl *sqlparser.DDL) error {
 	return nil
 }
 
-func checkDatabaseAndTable(database string, table string, router *router.Router) error {
+func checkDatabaseExists(database string, router *router.Router) bool {
+	tblList := router.Tables()
+	_, ok := tblList[database]
+	return ok
+}
+
+func checkTableExists(database string, table string, router *router.Router) bool {
 	tblList := router.Tables()
 	tables, ok := tblList[database]
 	if !ok {
-		return sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, database)
+		return false
 	}
-	found := false
 	for _, t := range tables {
 		if t == table {
-			found = true
-			break
+			return true
 		}
 	}
-	if !found {
-		return sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, table)
-	}
-	return nil
+	return false
 }
 
 // handleDDL used to handle the DDL command.
@@ -148,11 +149,17 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 	}
 	switch ddl.Action {
 	case sqlparser.CreateDBStr:
+		if node.IfNotExists && checkDatabaseExists(database, route) {
+			return &sqltypes.Result{}, nil
+		}
 		if err := route.CreateDatabase(database); err != nil {
 			return nil, err
 		}
 		return spanner.ExecuteScatter(query)
 	case sqlparser.DropDBStr:
+		if node.IfExists && !checkDatabaseExists(database, route) {
+			return &sqltypes.Result{}, nil
+		}
 		// Execute the ddl.
 		qr, err := spanner.ExecuteScatter(query)
 		if err != nil {
@@ -167,6 +174,15 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		table := ddl.Table.Name.String()
 		backends := scatter.Backends()
 		shardKey := ddl.PartitionName
+
+		if !checkDatabaseExists(database, route) {
+			return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, database)
+		}
+
+		// Check table exists.
+		if node.IfNotExists && checkTableExists(database, table, route) {
+			return &sqltypes.Result{}, nil
+		}
 
 		// Check the table and change the engine.
 		if err := CheckCreateTable(ddl); err != nil {
@@ -192,11 +208,13 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		// Check the database and table is exists.
 		table := ddl.Table.Name.String()
 
-		if err := checkDatabaseAndTable(database, table, route); err != nil {
-			if node.IfExists {
-				return &sqltypes.Result{}, nil
-			}
-			return nil, err
+		if !checkDatabaseExists(database, route) {
+			return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, database)
+		}
+
+		// Check table exists.
+		if node.IfExists && !checkTableExists(database, table, route) {
+			return &sqltypes.Result{}, nil
 		}
 
 		// Execute.
@@ -214,11 +232,14 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		sqlparser.TruncateTableStr:
 
 		// Check the database and table is exists.
-		table := ddl.Table.Name.String()
-		if err := checkDatabaseAndTable(database, table, route); err != nil {
-			return nil, err
+		if !checkDatabaseExists(database, route) {
+			return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, database)
 		}
 
+		table := ddl.Table.Name.String()
+		if !checkTableExists(database, table, route) {
+			return nil, sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, table)
+		}
 		// Execute.
 		r, err := spanner.ExecuteDDL(session, database, query, node)
 		if err != nil {
