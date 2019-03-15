@@ -182,8 +182,12 @@ func (p *Packets) ReadEOF() error {
 }
 
 // AppendEOF appends EOF packet to the stream buffer.
-func (p *Packets) AppendEOF() error {
-	return p.Append([]byte{proto.EOF_PACKET})
+func (p *Packets) AppendEOF(flags uint16, warnings uint16) error {
+	eof := &proto.EOF{
+		StatusFlags: flags,
+		Warnings:    warnings,
+	}
+	return p.Append(proto.PackEOF(eof))
 }
 
 // AppendOKWithEOFHeader appends OK packet to the stream buffer with EOF header.

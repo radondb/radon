@@ -333,7 +333,7 @@ func TestPacketsEOF(t *testing.T) {
 	rPackets := NewPackets(conn)
 	// EOF
 	{
-		err := wPackets.AppendEOF()
+		err := wPackets.AppendEOF(1, 1)
 		assert.Nil(t, err)
 		wPackets.Flush()
 
