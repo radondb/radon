@@ -25,41 +25,43 @@ import (
 
 // Proxy tuple.
 type Proxy struct {
-	mu       sync.RWMutex
-	log      *xlog.Log
-	conf     *config.Config
-	confPath string
-	audit    *audit.Audit
-	router   *router.Router
-	scatter  *backend.Scatter
-	syncer   *syncer.Syncer
-	plugins  *plugins.Plugin
-	iptable  *IPTable
-	spanner  *Spanner
-	sessions *Sessions
-	listener *driver.Listener
-	throttle *xbase.Throttle
+	mu            sync.RWMutex
+	log           *xlog.Log
+	conf          *config.Config
+	confPath      string
+	audit         *audit.Audit
+	router        *router.Router
+	scatter       *backend.Scatter
+	syncer        *syncer.Syncer
+	plugins       *plugins.Plugin
+	iptable       *IPTable
+	spanner       *Spanner
+	sessions      *Sessions
+	listener      *driver.Listener
+	throttle      *xbase.Throttle
+	serverVersion string
 }
 
 // NewProxy creates new proxy.
-func NewProxy(log *xlog.Log, path string, conf *config.Config) *Proxy {
+func NewProxy(log *xlog.Log, path string, serverVersion string, conf *config.Config) *Proxy {
 	audit := audit.NewAudit(log, conf.Audit)
 	router := router.NewRouter(log, conf.Proxy.MetaDir, conf.Router)
 	scatter := backend.NewScatter(log, conf.Proxy.MetaDir)
 	syncer := syncer.NewSyncer(log, conf.Proxy.MetaDir, conf.Proxy.PeerAddress, router, scatter)
 	plugins := plugins.NewPlugin(log, conf, router, scatter)
 	return &Proxy{
-		log:      log,
-		conf:     conf,
-		confPath: path,
-		audit:    audit,
-		router:   router,
-		scatter:  scatter,
-		syncer:   syncer,
-		plugins:  plugins,
-		sessions: NewSessions(log),
-		iptable:  NewIPTable(log, conf.Proxy),
-		throttle: xbase.NewThrottle(0),
+		log:           log,
+		conf:          conf,
+		confPath:      path,
+		audit:         audit,
+		router:        router,
+		scatter:       scatter,
+		syncer:        syncer,
+		plugins:       plugins,
+		sessions:      NewSessions(log),
+		iptable:       NewIPTable(log, conf.Proxy),
+		throttle:      xbase.NewThrottle(0),
+		serverVersion: serverVersion,
 	}
 }
 
@@ -76,6 +78,7 @@ func (p *Proxy) Start() {
 	sessions := p.sessions
 	endpoint := conf.Proxy.Endpoint
 	throttle := p.throttle
+	serverVersion := p.serverVersion
 
 	log.Info("proxy.config[%+v]...", conf.Proxy)
 	log.Info("log.config[%+v]...", conf.Log)
@@ -101,7 +104,7 @@ func (p *Proxy) Start() {
 		log.Panic("proxy.plugins.init.panic:%+v", err)
 	}
 
-	spanner := NewSpanner(log, conf, iptable, router, scatter, sessions, audit, throttle, plugins)
+	spanner := NewSpanner(log, conf, iptable, router, scatter, sessions, audit, throttle, plugins, serverVersion)
 	if err := spanner.Init(); err != nil {
 		log.Panic("proxy.spanner.init.panic:%+v", err)
 	}

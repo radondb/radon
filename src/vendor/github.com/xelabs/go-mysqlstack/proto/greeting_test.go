@@ -18,8 +18,8 @@ import (
 )
 
 func TestGreetingUnPack(t *testing.T) {
-	want := NewGreeting(4)
-	got := NewGreeting(4)
+	want := NewGreeting(4, "")
+	got := NewGreeting(4, "")
 
 	// normal
 	{
@@ -134,14 +134,14 @@ func TestGreetingUnPackError(t *testing.T) {
 	buff := common.NewBuffer(32)
 	fs := []func(buff *common.Buffer){f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12}
 	for i := 0; i < len(fs); i++ {
-		greeting := NewGreeting(0)
+		greeting := NewGreeting(0, "")
 		err := greeting.UnPack(buff.Datas())
 		assert.NotNil(t, err)
 		fs[i](buff)
 	}
 
 	{
-		greeting := NewGreeting(0)
+		greeting := NewGreeting(0, "")
 		err := greeting.UnPack(buff.Datas())
 		assert.NotNil(t, err)
 	}

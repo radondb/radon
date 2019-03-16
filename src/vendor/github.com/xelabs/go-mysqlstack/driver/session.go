@@ -35,13 +35,13 @@ type Session struct {
 	greeting *proto.Greeting
 }
 
-func newSession(log *xlog.Log, ID uint32, conn net.Conn) *Session {
+func newSession(log *xlog.Log, ID uint32, serverVersion string, conn net.Conn) *Session {
 	return &Session{
 		id:       ID,
 		log:      log,
 		conn:     conn,
 		auth:     proto.NewAuth(),
-		greeting: proto.NewGreeting(ID),
+		greeting: proto.NewGreeting(ID, serverVersion),
 		packets:  packet.NewPackets(conn),
 	}
 }

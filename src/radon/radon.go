@@ -63,7 +63,7 @@ func main() {
 	monitor.Start(log, conf)
 
 	// Proxy.
-	proxy := proxy.NewProxy(log, flagConf, conf)
+	proxy := proxy.NewProxy(log, flagConf, build.Tag, conf)
 	proxy.Start()
 
 	// Admin portal.

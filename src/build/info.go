@@ -33,7 +33,7 @@ type Info struct {
 func GetInfo() Info {
 	return Info{
 		GoVersion: runtime.Version(),
-		Tag:       tag,
+		Tag:       "RadonDB-" + tag,
 		Time:      time,
 		Git:       git,
 		Platform:  platform,

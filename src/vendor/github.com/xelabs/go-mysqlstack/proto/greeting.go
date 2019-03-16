@@ -39,10 +39,10 @@ type Greeting struct {
 }
 
 // NewGreeting creates a new Greeting.
-func NewGreeting(connectionID uint32) *Greeting {
+func NewGreeting(connectionID uint32, serverVersion string) *Greeting {
 	greeting := &Greeting{
 		protocolVersion: 10,
-		serverVersion:   "5.7-Radon-1.0",
+		serverVersion:   serverVersion,
 		ConnectionID:    connectionID,
 		Capability:      DefaultServerCapability,
 		Charset:         sqldb.CharacterSetUtf8,
