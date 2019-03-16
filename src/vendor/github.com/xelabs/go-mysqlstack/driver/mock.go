@@ -163,6 +163,11 @@ func (th *TestHandler) AuthCheck(s *Session) error {
 	return nil
 }
 
+// ServerVersion implements the interface.
+func (th *TestHandler) ServerVersion() string {
+	return "FakeDB"
+}
+
 // NewSession implements the interface.
 func (th *TestHandler) NewSession(s *Session) {
 	th.mu.Lock()

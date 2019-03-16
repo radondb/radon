@@ -158,7 +158,7 @@ func NewConn(username, password, address, database, charset string) (Conn, error
 	defer c.netConn.SetReadDeadline(time.Time{})
 
 	c.auth = proto.NewAuth()
-	c.greeting = proto.NewGreeting(0)
+	c.greeting = proto.NewGreeting(0, "")
 	c.packets = packet.NewPackets(c.netConn)
 	if err = c.handShake(username, password, database, charset); err != nil {
 		return nil, err

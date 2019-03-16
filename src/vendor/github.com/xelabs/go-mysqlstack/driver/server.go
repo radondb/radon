@@ -46,6 +46,8 @@ type Handler interface {
 
 	// Handle the queries.
 	ComQuery(session *Session, query string, callback func(*sqltypes.Result) error) error
+
+	ServerVersion() string
 }
 
 // Listener is a connection handler.
@@ -63,6 +65,8 @@ type Listener struct {
 
 	// Incrementing ID for connection id.
 	connectionID uint32
+
+	serverVersion string
 }
 
 // NewListener creates a new Listener.
@@ -73,11 +77,12 @@ func NewListener(log *xlog.Log, address string, handler Handler) (*Listener, err
 	}
 
 	return &Listener{
-		log:          log,
-		address:      address,
-		handler:      handler,
-		listener:     listener,
-		connectionID: 1,
+		log:           log,
+		address:       address,
+		handler:       handler,
+		listener:      listener,
+		connectionID:  1,
+		serverVersion: handler.ServerVersion(),
 	}, nil
 }
 
@@ -92,7 +97,7 @@ func (l *Listener) Accept() {
 		}
 		ID := l.connectionID
 		l.connectionID++
-		go l.handle(conn, ID)
+		go l.handle(conn, ID, l.serverVersion)
 	}
 }
 
@@ -111,7 +116,7 @@ func (l *Listener) parserComQuery(data []byte) string {
 }
 
 // handle is called in a go routine for each client connection.
-func (l *Listener) handle(conn net.Conn, ID uint32) {
+func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 	var err error
 	var data []byte
 	var authPkt []byte
@@ -125,7 +130,7 @@ func (l *Listener) handle(conn net.Conn, ID uint32) {
 			log.Error("server.handle.panic:\n%v\n%s", x, debug.Stack())
 		}
 	}()
-	session := newSession(log, ID, conn)
+	session := newSession(log, ID, l.serverVersion, conn)
 	// Session check.
 	if err = l.handler.SessionCheck(session); err != nil {
 		log.Warning("session[%v].check.failed.error:%+v", ID, err)

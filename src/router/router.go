@@ -139,8 +139,8 @@ func (r *Router) removeTable(db string, table string) error {
 }
 
 func (r *Router) addDatabase(db string) error {
-	if schema, ok := r.Schemas[db]; !ok {
-		schema = &Schema{DB: db, Tables: make(map[string]*Table)}
+	if _, ok := r.Schemas[db]; !ok {
+		schema := &Schema{DB: db, Tables: make(map[string]*Table)}
 		r.Schemas[db] = schema
 		return nil
 	}

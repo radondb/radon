@@ -24,32 +24,34 @@ import (
 
 // Spanner tuple.
 type Spanner struct {
-	log         *xlog.Log
-	audit       *audit.Audit
-	conf        *config.Config
-	router      *router.Router
-	scatter     *backend.Scatter
-	sessions    *Sessions
-	iptable     *IPTable
-	throttle    *xbase.Throttle
-	plugins     *plugins.Plugin
-	diskChecker *DiskCheck
-	readonly    sync2.AtomicBool
+	log           *xlog.Log
+	audit         *audit.Audit
+	conf          *config.Config
+	router        *router.Router
+	scatter       *backend.Scatter
+	sessions      *Sessions
+	iptable       *IPTable
+	throttle      *xbase.Throttle
+	plugins       *plugins.Plugin
+	diskChecker   *DiskCheck
+	readonly      sync2.AtomicBool
+	serverVersion string
 }
 
 // NewSpanner creates a new spanner.
 func NewSpanner(log *xlog.Log, conf *config.Config,
-	iptable *IPTable, router *router.Router, scatter *backend.Scatter, sessions *Sessions, audit *audit.Audit, throttle *xbase.Throttle, plugins *plugins.Plugin) *Spanner {
+	iptable *IPTable, router *router.Router, scatter *backend.Scatter, sessions *Sessions, audit *audit.Audit, throttle *xbase.Throttle, plugins *plugins.Plugin, serverVersion string) *Spanner {
 	return &Spanner{
-		log:      log,
-		conf:     conf,
-		audit:    audit,
-		iptable:  iptable,
-		router:   router,
-		scatter:  scatter,
-		sessions: sessions,
-		throttle: throttle,
-		plugins:  plugins,
+		log:           log,
+		conf:          conf,
+		audit:         audit,
+		iptable:       iptable,
+		router:        router,
+		scatter:       scatter,
+		sessions:      sessions,
+		throttle:      throttle,
+		plugins:       plugins,
+		serverVersion: serverVersion,
 	}
 }
 
@@ -101,6 +103,14 @@ func (spanner *Spanner) SessionDec(s *driver.Session) {
 // SessionClosed impl.
 func (spanner *Spanner) SessionClosed(s *driver.Session) {
 	spanner.sessions.Remove(s)
+}
+
+// ServerVersion impl -- returns server version of Radon when greeting.
+func (spanner *Spanner) ServerVersion() string {
+	if spanner.serverVersion == "" {
+		spanner.serverVersion = "RadonDB"
+	}
+	return spanner.serverVersion
 }
 
 func (spanner *Spanner) isTwoPC() bool {

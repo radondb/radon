@@ -138,7 +138,7 @@ func MockProxy1(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func())
 
 	// Proxy.
 	mockJSON := tmpDir + "/radon_mock.json"
-	proxy := NewProxy(log, mockJSON, conf)
+	proxy := NewProxy(log, mockJSON, "", conf)
 	proxy.Start()
 	return fakedbs, proxy, func() {
 		proxy.Stop()
