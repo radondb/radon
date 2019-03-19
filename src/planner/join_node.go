@@ -17,6 +17,16 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
+// JoinKey is the column info in the on conditions.
+type JoinKey struct {
+	// field name.
+	Field string
+	// table name.
+	Table string
+	// index in the fields.
+	Index int
+}
+
 // JoinNode cannot be pushed down.
 type JoinNode struct {
 	log *xlog.Log
@@ -31,17 +41,28 @@ type JoinNode struct {
 	// whether has parenthese in FROM clause.
 	hasParen bool
 	// whether is left join.
-	isLeftJoin bool
+	IsLeftJoin bool
 	// parent node in the plan tree.
 	parent PlanNode
 	// children plans in select(such as: orderby, limit..).
 	children *PlanTree
+	// Cols defines which columns from left or right results used to build the return result.
+	// For results coming from left, the values go as -1, -2, etc. For right, they're 1, 2, etc.
+	// If Cols is {-1, -2, 1, 2}, it means the returned result is {Left0, Left1, Right0, Right1}.
+	Cols []int `json:",omitempty"`
+	// the returned result fields.
+	fields []selectTuple
 	// join on condition tuples.
-	joinOn []joinTuple
+	JoinOn []joinTuple
+	// eg: from t1 join t2 on t1.a=t2.b, 't1.a' put in LeftKeys, 't2.a' in RightKeys.
+	LeftKeys, RightKeys []JoinKey
+	// if Left is MergeNode and LeftKeys contain unique keys, LeftUnique will be true.
+	// used in sort merge join.
+	LeftUnique, RightUnique bool
 	/*
 	 * eg: 't1 left join t2 on t1.a=t2.a and t1.b=2' where t1.c=t2.c and 1=1 and t2.b>2.
 	 * 't1.b=2' will parser into otherJoinOn, only leftjoin exists otherJoinOn.
-	 * isLeftJoin is true, 't1.c=t2.c' parser into whereFilter, else into joinOn.
+	 * IsLeftJoin is true, 't1.c=t2.c' parser into whereFilter, else into joinOn.
 	 * '1=1' parser into noTableFilter.
 	 */
 	otherJoinOn   []filterTuple
@@ -62,12 +83,12 @@ func newJoinNode(log *xlog.Log, Left, Right PlanNode, router *router.Router, joi
 		Right:          Right,
 		router:         router,
 		joinExpr:       joinExpr,
-		joinOn:         joinOn,
+		JoinOn:         joinOn,
 		otherJoinOn:    make([]filterTuple, 0, 4),
 		whereFilter:    make([]sqlparser.Expr, 0, 4),
 		noTableFilter:  make([]sqlparser.Expr, 0, 4),
 		referredTables: referredTables,
-		isLeftJoin:     isLeftJoin,
+		IsLeftJoin:     isLeftJoin,
 		children:       NewPlanTree(),
 	}
 }
@@ -75,6 +96,11 @@ func newJoinNode(log *xlog.Log, Left, Right PlanNode, router *router.Router, joi
 // getReferredTables get the referredTables.
 func (j *JoinNode) getReferredTables() map[string]*TableInfo {
 	return j.referredTables
+}
+
+// getFields get the fields.
+func (j *JoinNode) getFields() []selectTuple {
+	return j.fields
 }
 
 // setParenthese set hasParen.
@@ -93,10 +119,8 @@ func (j *JoinNode) pushFilter(filters []filterTuple) error {
 			tbInfo.whereFilter = append(tbInfo.whereFilter, filter.expr)
 			if tbInfo.parent.index == -1 && filter.val != nil && tbInfo.shardKey != "" {
 				if nameMatch(filter.col, filter.referTables[0], tbInfo.shardKey) {
-					if sqlval, ok := filter.val.(*sqlparser.SQLVal); ok {
-						if tbInfo.parent.index, err = j.router.GetIndex(tbInfo.database, tbInfo.tableName, sqlval); err != nil {
-							return err
-						}
+					if tbInfo.parent.index, err = j.router.GetIndex(tbInfo.database, tbInfo.tableName, filter.val); err != nil {
+						return err
 					}
 				}
 			}
@@ -163,7 +187,7 @@ func (j *JoinNode) pushJoinInWhere(joins []joinTuple) PlanNode {
 						}
 
 						if node.joinExpr == nil {
-							for _, joins := range node.joinOn {
+							for _, joins := range node.JoinOn {
 								mn.setWhereFilter(joins.expr)
 							}
 						}
@@ -182,10 +206,10 @@ func (j *JoinNode) pushJoinInWhere(joins []joinTuple) PlanNode {
 					}
 				}
 			}
-			if node.isLeftJoin {
+			if node.IsLeftJoin {
 				node.setWhereFilter(join.expr)
 			} else {
-				node.joinOn = append(node.joinOn, join)
+				node.JoinOn = append(node.JoinOn, join)
 				if node.joinExpr != nil {
 					node.joinExpr.On = &sqlparser.AndExpr{
 						Left:  node.joinExpr.On,
@@ -230,8 +254,8 @@ func (j *JoinNode) calcRoute() (PlanNode, error) {
 					mn.setWhereFilter(exprs)
 				}
 
-				if j.joinExpr == nil && len(j.joinOn) > 0 {
-					for _, joins := range j.joinOn {
+				if j.joinExpr == nil && len(j.JoinOn) > 0 {
+					for _, joins := range j.JoinOn {
 						mn.setWhereFilter(joins.expr)
 					}
 				}
@@ -259,7 +283,6 @@ func (j *JoinNode) spliceWhere() error {
 }
 
 // pushSelectExprs used to push the select fields.
-// TODO: need record original selectexprs order.
 func (j *JoinNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error {
 	if hasAggregates {
 		return errors.New("unsupported: cross-shard.query.with.aggregates")
@@ -272,32 +295,88 @@ func (j *JoinNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.
 		j.children.Add(aggrPlan)
 	}
 	for _, tuple := range fields {
-		if len(tuple.referTables) == 0 {
-			_, tbInfo := getOneTableInfo(j.referredTables)
-			tbInfo.parent.sel.SelectExprs = append(tbInfo.parent.sel.SelectExprs, tuple.expr)
-		} else if len(tuple.referTables) == 1 {
-			tbInfo := j.referredTables[tuple.referTables[0]]
-			tbInfo.parent.sel.SelectExprs = append(tbInfo.parent.sel.SelectExprs, tuple.expr)
-		} else {
-			var parent PlanNode
-			for _, tb := range tuple.referTables {
-				tbInfo := j.referredTables[tb]
-				if parent == nil {
-					parent = tbInfo.parent
-					continue
-				}
-				if parent != tbInfo.parent {
-					parent = findLCA(j, parent, tbInfo.parent)
-				}
-			}
-			if mn, ok := parent.(*MergeNode); ok {
-				mn.sel.SelectExprs = append(mn.sel.SelectExprs, tuple.expr)
-			} else {
-				return errors.New("unsupported: select.expr.in.cross-shard.join")
-			}
+		if _, err := j.pushSelectExpr(tuple); err != nil {
+			return err
 		}
 	}
+	j.processJoinOn()
+
 	return nil
+}
+
+// pushSelectExpr used to push the select field.
+func (j *JoinNode) pushSelectExpr(field selectTuple) (int, error) {
+	if checkSelectExpr(field, j.Left.getReferredTables()) {
+		index, err := j.Left.pushSelectExpr(field)
+		if err != nil {
+			return -1, err
+		}
+		j.Cols = append(j.Cols, -index-1)
+	} else if checkSelectExpr(field, j.Right.getReferredTables()) {
+		index, err := j.Right.pushSelectExpr(field)
+		if err != nil {
+			return -1, err
+		}
+		j.Cols = append(j.Cols, index+1)
+	} else {
+		return -1, errors.New("unsupported: select.expr.in.cross-shard.join")
+	}
+	j.fields = append(j.fields, field)
+	return len(j.fields) - 1, nil
+}
+
+// processJoinOn used to build order by based on On conditions.
+func (j *JoinNode) processJoinOn() {
+	// eg: select t1.a,t2.a from t1 join t2 on t1.a=t2.a;
+	// push: select t1.a from t1 order by t1.a asc;
+	//       select t2.a from t2 order by t2.a asc;
+	_, lok := j.Left.(*MergeNode)
+	_, rok := j.Right.(*MergeNode)
+	for _, join := range j.JoinOn {
+		leftKey := j.buildOrderBy(join.left, j.Left)
+		if lok && !j.LeftUnique {
+			j.LeftUnique = (leftKey.Field == j.referredTables[leftKey.Table].shardKey)
+		}
+		j.LeftKeys = append(j.LeftKeys, leftKey)
+		rightKey := j.buildOrderBy(join.right, j.Right)
+		if rok && !j.RightUnique {
+			j.RightUnique = (rightKey.Field == j.referredTables[rightKey.Table].shardKey)
+		}
+		j.RightKeys = append(j.RightKeys, rightKey)
+	}
+}
+
+func (j *JoinNode) buildOrderBy(col *sqlparser.ColName, node PlanNode) JoinKey {
+	field := col.Name.String()
+	table := col.Qualifier.Name.String()
+	tuples := node.getFields()
+	index := -1
+	for i, tuple := range tuples {
+		if table == tuple.referTables[0] && field == tuple.field {
+			index = i
+			break
+		}
+	}
+	// key not in the select fields.
+	if index == -1 {
+		tuple := selectTuple{
+			expr:        &sqlparser.AliasedExpr{Expr: col},
+			field:       field,
+			referTables: []string{table},
+		}
+		index, _ = node.pushSelectExpr(tuple)
+	}
+
+	if m, ok := node.(*MergeNode); ok {
+		m.sel.OrderBy = append(m.sel.OrderBy, &sqlparser.Order{
+			Expr:      col,
+			Direction: sqlparser.AscScr,
+		})
+	} else {
+		node.(*JoinNode).processJoinOn()
+	}
+
+	return JoinKey{field, table, index}
 }
 
 // pushHaving used to push having exprs.

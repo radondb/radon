@@ -242,6 +242,19 @@ func parserSelectExprs(exprs sqlparser.SelectExprs, root PlanNode) ([]selectTupl
 	return tuples, hasAggregates, nil
 }
 
+// checkSelectExpr used to check whether the field in the tbInfos.
+func checkSelectExpr(field selectTuple, tbInfos map[string]*TableInfo) bool {
+	if len(field.referTables) == 0 {
+		return true
+	}
+	for _, tb := range field.referTables {
+		if _, ok := tbInfos[tb]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func checkInTuple(field, table string, tuples []selectTuple) bool {
 	for _, tuple := range tuples {
 		if tuple.field == "*" || tuple.field == field {
@@ -295,7 +308,7 @@ type filterTuple struct {
 	// colname in the filter expr.
 	col *sqlparser.ColName
 	// val in the filter expr.
-	val sqlparser.Expr
+	val *sqlparser.SQLVal
 }
 
 type joinTuple struct {
@@ -317,7 +330,7 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 
 	for _, filter := range filters {
 		var col *sqlparser.ColName
-		var val sqlparser.Expr
+		var val *sqlparser.SQLVal
 		count := 0
 		filter = skipParenthesis(filter)
 		referTables := make([]string, 0, 4)
@@ -367,10 +380,14 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 				}
 
 				if lok {
-					val = condition.Right
+					if sqlVal, ok := condition.Right.(*sqlparser.SQLVal); ok {
+						val = sqlVal
+					}
 				}
 				if rok {
-					val = condition.Left
+					if sqlVal, ok := condition.Left.(*sqlparser.SQLVal); ok {
+						val = sqlVal
+					}
 				}
 			}
 		}

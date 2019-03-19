@@ -219,7 +219,7 @@ func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, r
 	jn := newJoinNode(log, lpn, rpn, router, joinExpr, joinOn, referredTables)
 	lpn.setParent(jn)
 	rpn.setParent(jn)
-	if jn.isLeftJoin {
+	if jn.IsLeftJoin {
 		jn.otherJoinOn = otherJoinOn
 	} else {
 		err = jn.pushFilter(otherJoinOn)

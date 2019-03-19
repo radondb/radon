@@ -58,8 +58,8 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 1, len(j.joinOn))
-		assert.False(t, j.isLeftJoin)
+		assert.Equal(t, 1, len(j.JoinOn))
+		assert.False(t, j.IsLeftJoin)
 
 		tbMaps := j.getReferredTables()
 		tbInfo := tbMaps["A"]
@@ -85,8 +85,8 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 1, len(j.joinOn))
-		assert.True(t, j.isLeftJoin)
+		assert.Equal(t, 1, len(j.JoinOn))
+		assert.True(t, j.IsLeftJoin)
 		assert.Equal(t, 1, len(j.otherJoinOn))
 
 		tbMaps := j.getReferredTables()
@@ -113,8 +113,8 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 1, len(j.joinOn))
-		assert.True(t, j.isLeftJoin)
+		assert.Equal(t, 1, len(j.JoinOn))
+		assert.True(t, j.IsLeftJoin)
 		assert.Equal(t, 1, len(j.otherJoinOn))
 
 		tbMaps := j.getReferredTables()
@@ -208,8 +208,8 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 2, len(j.joinOn))
-		assert.False(t, j.isLeftJoin)
+		assert.Equal(t, 2, len(j.JoinOn))
+		assert.False(t, j.IsLeftJoin)
 		assert.Equal(t, 1, len(j.noTableFilter))
 
 		tbMaps := j.getReferredTables()
@@ -292,7 +292,7 @@ func TestScanTableExprs(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 		assert.Equal(t, 1, len(j.whereFilter))
-		assert.Equal(t, 1, len(j.joinOn))
+		assert.Equal(t, 1, len(j.JoinOn))
 		tbMaps := j.getReferredTables()
 		assert.Equal(t, 3, len(tbMaps))
 		tbInfo := tbMaps["B"]
@@ -301,7 +301,7 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 2, len(j2.joinOn))
+		assert.Equal(t, 2, len(j2.JoinOn))
 		assert.Equal(t, j2.Right, tbInfo.parent)
 	}
 }

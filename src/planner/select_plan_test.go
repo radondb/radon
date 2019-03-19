@@ -131,17 +131,38 @@ func TestSelectPlan(t *testing.T) {
 	"Project": "A.id, B.id",
 	"Partitions": [
 		{
+			"Query": "select A.id from sbtest.A6 as A where A.id = 1 order by A.id asc",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		},
+		{
+			"Query": "select B.id from sbtest.B0 as B order by B.id asc",
+			"Backend": "backend1",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "select B.id from sbtest.B1 as B order by B.id asc",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+		`{
+	"RawQuery": "select A.id from A join B where A.id=1",
+	"Project": "A.id",
+	"Partitions": [
+		{
 			"Query": "select A.id from sbtest.A6 as A where A.id = 1",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
 		},
 		{
-			"Query": "select B.id from sbtest.B0 as B",
+			"Query": "select 1 from sbtest.B0 as B",
 			"Backend": "backend1",
 			"Range": "[0-512)"
 		},
 		{
-			"Query": "select B.id from sbtest.B1 as B",
+			"Query": "select 1 from sbtest.B1 as B",
 			"Backend": "backend2",
 			"Range": "[512-4096)"
 		}
@@ -153,6 +174,7 @@ func TestSelectPlan(t *testing.T) {
 		"select id, sum(a) as A from A group by id having A>1000",
 		"select id,a from sbtest.A where (a>1 and (id=1))",
 		"select A.id,B.id from A join B on A.id=B.id where A.id=1",
+		"select A.id from A join B where A.id=1",
 	}
 
 	// Database not null.
