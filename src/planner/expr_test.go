@@ -343,6 +343,8 @@ func TestSelectExprs(t *testing.T) {
 	querys := []string{
 		"select A.id,G.a as a, concat(B.str,G.str), 1 from A,B,G group by a",
 		"select A.id, G.a as a from A,G group by a",
+		"select A.id, B.name from A join B on A.id=B.id",
+		"select A.id, B.name from A join B on A.id=B.id join G on G.a=A.a",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
@@ -379,9 +381,11 @@ func TestSelectExprsError(t *testing.T) {
 	querys := []string{
 		"select sum(A.id) as s, G.a as a from A,G group by s",
 		"select A.id,G.a as a, concat(B.str,G.str), 1 from A,B, A as G group by a",
+		"select A.id,G.a as a, concat(A.str,B.str) from A join B on A.id=B.id join G on A.a=G.a",
 	}
 	wants := []string{
 		"unsupported: group.by.field[s].should.be.in.noaggregate.select.list",
+		"unsupported: select.expr.in.cross-shard.join",
 		"unsupported: select.expr.in.cross-shard.join",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))

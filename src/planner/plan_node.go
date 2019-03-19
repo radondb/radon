@@ -17,6 +17,7 @@ import (
 // PlanNode interface.
 type PlanNode interface {
 	getReferredTables() map[string]*TableInfo
+	getFields() []selectTuple
 	setParenthese(hasParen bool)
 	pushFilter(filters []filterTuple) error
 	setParent(p PlanNode)
@@ -26,6 +27,7 @@ type PlanNode interface {
 	calcRoute() (PlanNode, error)
 	spliceWhere() error
 	pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error
+	pushSelectExpr(field selectTuple) (int, error)
 	pushHaving(havings []filterTuple) error
 	pushOrderBy(sel *sqlparser.Select, fields []selectTuple) error
 	pushLimit(sel *sqlparser.Select) error
