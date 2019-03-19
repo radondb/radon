@@ -184,7 +184,72 @@ func TestSorterType(t *testing.T) {
 		wants := []string{
 			"[[7 3.1415926 ] [3 3.1415926 ] [2 3.1415927 ]]",
 			"[[2 3.1415927 ] [3 3.1415926 ] [7 3.1415926 ]]",
-			"[[3 3.1415926 ] [7 3.1415926 ] [2 3.1415927 ]]",
+			"[[2 3.1415927 ] [7 3.1415926 ] [3 3.1415926 ]]",
+		}
+
+		for i, field := range fields {
+			rs1 := rs.Copy()
+			rs1.OrderedByDesc("", field)
+			rs1.Sort()
+
+			want := wants[i]
+			got := fmt.Sprintf("%+v", rs1.Rows)
+			if want != got {
+				t.Errorf("want:%s\n, got:%s", want, got)
+			}
+		}
+	}
+}
+
+func TestSorterNull(t *testing.T) {
+	rs := &Result{
+		Fields: []*querypb.Field{{
+			Name: "ID",
+			Type: Uint24,
+		}, {
+			Name: "NAME",
+			Type: Char,
+		}},
+		Rows: [][]Value{
+			{testVal(Uint24, "3"), testVal(Char, "a")},
+			{testVal(Uint24, "7"), NULL},
+			{testVal(Uint24, "2"), testVal(Char, "b")},
+		},
+	}
+
+	// asc
+	{
+		fields := []string{
+			"ID",
+			"NAME",
+		}
+		wants := []string{
+			"[[2 b] [3 a] [7 ]]",
+			"[[7 ] [3 a] [2 b]]",
+		}
+
+		for i, field := range fields {
+			rs1 := rs.Copy()
+			rs1.OrderedByAsc("", field)
+			rs1.Sort()
+
+			want := wants[i]
+			got := fmt.Sprintf("%+v", rs1.Rows)
+			if want != got {
+				t.Errorf("want:%s\n, got:%s", want, got)
+			}
+		}
+	}
+
+	// desc
+	{
+		fields := []string{
+			"ID",
+			"NAME",
+		}
+		wants := []string{
+			"[[7 ] [3 a] [2 b]]",
+			"[[2 b] [3 a] [7 ]]",
 		}
 
 		for i, field := range fields {

@@ -58,6 +58,9 @@ type sorter struct {
 }
 
 func lessAscFn(idx int, v1, v2 []Value) bool {
+	if v2[idx].IsNull() {
+		return false
+	}
 	vn1 := v1[idx].ToNative()
 	vn2 := v2[idx].ToNative()
 	switch vn1.(type) {
@@ -70,7 +73,7 @@ func lessAscFn(idx int, v1, v2 []Value) bool {
 	case []byte:
 		return bytes.Compare(vn1.([]byte), vn2.([]byte)) < 0
 	case nil:
-		return false
+		return true
 	default:
 		panic(fmt.Sprintf("unsupported.orderby.type:%T", vn1))
 	}
@@ -96,6 +99,9 @@ func (result *Result) OrderedByAsc(table string, fields ...string) error {
 }
 
 func lessDescFn(idx int, v1, v2 []Value) bool {
+	if v2[idx].IsNull() {
+		return true
+	}
 	vn1 := v1[idx].ToNative()
 	vn2 := v2[idx].ToNative()
 	switch vn1.(type) {
