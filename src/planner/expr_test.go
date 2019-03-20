@@ -108,6 +108,7 @@ func TestWhereFilters(t *testing.T) {
 		"select * from (A join A as B on A.a>B.a and 1=1),G where A.id=B.id",
 		"select * from G,A,B where 1=1 and A.id=1",
 		"select * from A left join A as B on A.a = B.a where A.b = B.b and A.id=B.id",
+		"select * from A join B on A.id=B.id where concat(A.str1,A.str2)='sansi'",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
@@ -137,7 +138,6 @@ func TestWhereFilters(t *testing.T) {
 		p, err = p.calcRoute()
 		assert.Nil(t, err)
 
-		err = p.spliceWhere()
 		assert.Nil(t, err)
 	}
 }
@@ -177,9 +177,6 @@ func TestWhereFiltersError(t *testing.T) {
 		p = p.pushJoinInWhere(joins)
 
 		p, err = p.calcRoute()
-		assert.Nil(t, err)
-
-		err = p.spliceWhere()
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}

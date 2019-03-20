@@ -60,10 +60,10 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.JoinOn))
 		assert.False(t, j.IsLeftJoin)
+		assert.Equal(t, 1, len(j.tableFilter))
 
 		tbMaps := j.getReferredTables()
 		tbInfo := tbMaps["A"]
-		assert.Equal(t, 1, len(tbInfo.whereFilter))
 
 		m, ok := j.Left.(*MergeNode)
 		if !ok {
@@ -74,7 +74,7 @@ func TestScanTableExprs(t *testing.T) {
 	}
 	// left join.
 	{
-		query := "select * from A left join B on A.id=B.id and A.id=1"
+		query := "select * from A left join B on A.id=B.id and A.id=1 and 1=1 and B.a=1 and A.b>B.b"
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
@@ -87,11 +87,10 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.JoinOn))
 		assert.True(t, j.IsLeftJoin)
-		assert.Equal(t, 1, len(j.otherJoinOn))
+		assert.Equal(t, 0, len(j.tableFilter))
 
 		tbMaps := j.getReferredTables()
 		tbInfo := tbMaps["A"]
-		assert.Equal(t, 0, len(tbInfo.whereFilter))
 
 		m, ok := j.Left.(*MergeNode)
 		if !ok {
@@ -99,10 +98,14 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, m, tbInfo.parent)
 		assert.Equal(t, -1, m.index)
+		assert.NotNil(t, j.otherJoinOn)
+		err = j.pushOtherJoin()
+		got := err.Error()
+		assert.Equal(t, "unsupported: on.clause.in.cross-shard.join", got)
 	}
-	// right join.
+	// right join1.
 	{
-		query := "select * from A join G on A.id=G.id right join B on A.id=B.id and A.id=1"
+		query := "select * from A join B on A.id=B.id right join G on G.id=A.id and A.id=1 and 1=1 and G.a=1"
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
@@ -115,11 +118,30 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.JoinOn))
 		assert.True(t, j.IsLeftJoin)
-		assert.Equal(t, 1, len(j.otherJoinOn))
+		assert.Equal(t, 0, len(j.tableFilter))
+		assert.NotNil(t, j.otherJoinOn)
+		err = j.pushOtherJoin()
+		assert.Nil(t, err)
+	}
+	// right join2.
+	{
+		query := "select * from A join G on A.id=G.id right join B on A.id=B.id and A.id=1 and 1=1"
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+
+		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		assert.Nil(t, err)
+
+		j, ok := planNode.(*JoinNode)
+		if !ok {
+			t.Errorf("scanTableExprs returned plannode error")
+		}
+		assert.Equal(t, 1, len(j.JoinOn))
+		assert.True(t, j.IsLeftJoin)
+		assert.Equal(t, 0, len(j.tableFilter))
 
 		tbMaps := j.getReferredTables()
 		tbInfo := tbMaps["A"]
-		assert.Equal(t, 0, len(tbInfo.whereFilter))
 
 		m, ok := j.Right.(*MergeNode)
 		if !ok {
@@ -129,6 +151,9 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, 2, len(m.getReferredTables()))
 		assert.Equal(t, -1, m.index)
 		assert.True(t, m.hasParen)
+		assert.NotNil(t, j.otherJoinOn)
+		err = j.pushOtherJoin()
+		assert.Nil(t, err)
 	}
 	// can merge shard tables.
 	{
@@ -146,7 +171,6 @@ func TestScanTableExprs(t *testing.T) {
 		tbMaps := m.getReferredTables()
 		assert.Equal(t, 2, len(tbMaps))
 		tbInfo := tbMaps["A"]
-		assert.Equal(t, 0, len(tbInfo.whereFilter))
 		assert.Equal(t, m, tbInfo.parent)
 		assert.Equal(t, 2323, m.index)
 		assert.NotNil(t, m.sel.Where)
@@ -190,7 +214,6 @@ func TestScanTableExprs(t *testing.T) {
 		tbMaps := m.getReferredTables()
 		assert.Equal(t, 3, len(tbMaps))
 		tbInfo := tbMaps["B"]
-		assert.Equal(t, 0, len(tbInfo.whereFilter))
 		assert.Equal(t, m, tbInfo.parent)
 		assert.Equal(t, 2323, m.index)
 		assert.NotNil(t, m.sel.Where)
@@ -211,10 +234,9 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, 2, len(j.JoinOn))
 		assert.False(t, j.IsLeftJoin)
 		assert.Equal(t, 1, len(j.noTableFilter))
-
+		assert.Equal(t, 1, len(j.tableFilter))
 		tbMaps := j.getReferredTables()
 		tbInfo := tbMaps["A"]
-		assert.Equal(t, 1, len(tbInfo.whereFilter))
 
 		m, ok := j.Left.(*MergeNode)
 		if !ok {
@@ -291,7 +313,7 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 1, len(j.whereFilter))
+		assert.Equal(t, 1, len(j.otherFilter))
 		assert.Equal(t, 1, len(j.JoinOn))
 		tbMaps := j.getReferredTables()
 		assert.Equal(t, 3, len(tbMaps))

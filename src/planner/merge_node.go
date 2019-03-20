@@ -47,6 +47,10 @@ type MergeNode struct {
 	Querys []xcontext.QueryTuple
 	// the returned result fields, used in the Multiple Plan Tree.
 	fields []selectTuple
+	// filters record the filter, map struct for remove duplicate.
+	// eg: from t1 join t2 on t1.a=t2.a join t3 on t3.a=t2.a and t2.a=1.
+	// need avoid the duplicate filter `t2.a=1`.
+	filters map[sqlparser.Expr]int
 }
 
 // newMergeNode used to create MergeNode.
@@ -56,6 +60,7 @@ func newMergeNode(log *xlog.Log, database string, router *router.Router) *MergeN
 		database:       database,
 		router:         router,
 		referredTables: make(map[string]*TableInfo),
+		filters:        make(map[sqlparser.Expr]int),
 		index:          -1,
 		children:       NewPlanTree(),
 	}
@@ -152,16 +157,6 @@ func (m *MergeNode) calcRoute() (PlanNode, error) {
 	return m, nil
 }
 
-// spliceWhere used to splice where clause.
-func (m *MergeNode) spliceWhere() error {
-	for _, tbInfo := range m.referredTables {
-		for _, filter := range tbInfo.whereFilter {
-			m.sel.AddWhere(filter)
-		}
-	}
-	return nil
-}
-
 // pushSelectExprs used to push the select fields.
 func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error {
 	m.sel.SelectExprs = sel.SelectExprs
@@ -243,6 +238,9 @@ func (m *MergeNode) Children() *PlanTree {
 // buildQuery used to build the QueryTuple.
 func (m *MergeNode) buildQuery() {
 	var Range string
+	for expr := range m.filters {
+		m.sel.AddWhere(expr)
+	}
 	if len(m.sel.SelectExprs) == 0 {
 		m.sel.SelectExprs = append(m.sel.SelectExprs, &sqlparser.AliasedExpr{
 			Expr: sqlparser.NewIntVal([]byte("1"))})
