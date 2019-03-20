@@ -3,7 +3,7 @@ Contents
 
 * [Radon SQL support](#radon-sql-support)
    * [Background](#background)
-   * [DDL](#ddl)
+   * [Data Definition Statements](#data-definition-statements)
       * [DATABASE](#database)
          * [CREATE DATABASE](#create-database)
          * [DROP DATABASE](#drop-database)
@@ -11,7 +11,7 @@ Contents
          * [CREATE TABLE](#create-table)
          * [DROP TABLE](#drop-table)
          * [Change Table Engine](#change-table-engine)
-         * [Change the table character set](#change-the-table-character-set)
+         * [Change The Table Character Set](#change-the-table-character-set)
          * [TRUNCATE TABLE](#truncate-table)
       * [COLUMN OPERATION](#column-operation)
          * [Add  Column](#add--column)
@@ -20,28 +20,33 @@ Contents
       * [INDEX](#index)
          * [ADD INDEX](#add-index)
          * [DROP INDEX](#drop-index)
-   * [DML](#dml)
+   * [Data Manipulation Statements](#data-manipulation-statements)
       * [SELECT](#select)
       * [INSERT](#insert)
       * [DELETE](#delete)
       * [UPDATE](#update)
       * [REPLACE](#replace)
-   * [SHOW](#show)
-      * [SHOW ENGINES](#show-engines)
-      * [SHOW DATABASES](#show-databases)
-      * [SHOW TABLES](#show-tables)
-      * [SHOW TABLE STATUS](#show-table-status)
-      * [SHOW COLUMNS](#show-columns)
-      * [SHOW CREATE TABLE](#show-create-table)
-      * [SHOW PROCESSLIST](#show-processlist)
-      * [SHOW VARIABLES](#show-variables)
-   * [USE](#use)
-      * [USE DATABASE](#use-database)
-   * [KILL](#kill)
-      * [KILL processlist_id](#kill-processlist_id)
-   * [CHECKSUM](#checksum)
-      * [CHECKSUM TABLE](#checksum-table)
-   * [SET](#set)
+   * [Transactional and Locking Statements](#transactional-and-locking-statements)
+      * [TRANSACTION](#transaction)
+   * [Database Administration Statements](#database-administration-statements)
+      * [SHOW](#show)
+         * [SHOW ENGINES](#show-engines)
+         * [SHOW DATABASES](#show-databases)
+         * [SHOW TABLES](#show-tables)
+         * [SHOW TABLE STATUS](#show-table-status)
+         * [SHOW COLUMNS](#show-columns)
+         * [SHOW CREATE TABLE](#show-create-table)
+          * [SHOW PROCESSLIST](#show-processlist)
+          * [SHOW VARIABLES](#show-variables)
+      * [USE](#use)
+         * [USE DATABASE](#use-database)
+      * [KILL](#kill)
+         * [KILL processlist_id](#kill-processlist_id)
+      * [CHECKSUM](#checksum)
+         * [CHECKSUM TABLE](#checksum-table)
+      * [SET](#set)
+    * [Others](#others)
+           * [Using AUTO INCREMENT](#using-auto-increment)
 
 # Radon SQL support
 
@@ -51,7 +56,9 @@ On SQL syntax level, RadonDB Fully compatible with MySQL.
 
 In most scenarios, the SQL implementation of RadonDB is a subset of MySQL, for better use and standardization.
 
-## DDL
+RadonDB runs SQL statements in parallel, multiple processes work together simultaneously to run a single SQL statement. 
+
+## Data Definition Statements
 
 ### DATABASE
 
@@ -198,7 +205,7 @@ Create Table: CREATE TABLE `t1` (
 1 row in set (0.00 sec)
 ```
 
-#### Change the table character set
+#### Change The Table Character Set
 
 In RadonDB, the default character set is `UTF-8`.
 
@@ -403,7 +410,7 @@ mysql> DROP INDEX idx_id_age ON t1;
 Query OK, 0 rows affected (0.09 sec)
 ```
 
-## DML
+## Data Manipulation Statements
 ### SELECT
 
 `Syntax`
@@ -563,7 +570,7 @@ UPDATE table_reference
  * Supports distributed transactions to ensure atomicity across partitions
  * *Does not support WHERE-less condition updates*
  * *Does not support updating partition key*
- *  *Does not support clauses*
+ * *Does not support clauses*
 
 `Example: `
 ```
@@ -589,10 +596,71 @@ REPLACE INTO tbl_name
 mysql> REPLACE INTO t2 (id, age) VALUES(3,34),(5, 55);
 Query OK, 2 rows affected (0.01 sec)
 ```
+## Transactional and Locking Statements
+### Transaction
+`Syntax`
+```
+BEGIN
+COMMIT
+ROLLBACK
+```
 
-## SHOW
+``Instructions``
+ * Multi-Statement Transaction
+ * RadonDB twopc-enable must be enabled
+ * RadonDB supports autocommit transaction for Single-Statement (twopc-enable ON)
 
-### SHOW ENGINES
+`Example: `
+```
+mysql> create table txntbl(a int);
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> begin;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> insert into txntbl(a) values(1),(2);
+Query OK, 4 rows affected (0.00 sec)
+
+mysql> select * from txntbl;
++------+
+| a    |
++------+
+|    1 |
+|    2 |
++------+
+2 rows in set (0.01 sec)
+
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> select * from txntbl;
+Empty set (0.00 sec)
+
+mysql> begin;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> insert into txntbl(a) values(1),(2);
+Query OK, 4 rows affected (0.00 sec)
+
+mysql> commit;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> select * from txntbl;
++------+
+| a    |
++------+
+|    1 |
+|    2 |
++------+
+2 rows in set (0.00 sec)
+
+```
+
+
+## Database Administration Statements
+### SHOW
+
+#### SHOW ENGINES
 
 `Syntax`
 ```
@@ -623,7 +691,7 @@ mysql> SHOW ENGINES;
 10 rows in set (0.00 sec)
 ```
 
-### SHOW DATABASES
+#### SHOW DATABASES
 
 `Syntax`
 ```
@@ -649,7 +717,7 @@ mysql> SHOW DATABASES;
 6 rows in set (0.01 sec)
 ```
 
-### SHOW TABLES
+#### SHOW TABLES
 
 `Syntax`
 ```
@@ -672,7 +740,7 @@ mysql> SHOW TABLES;
 2 rows in set (0.01 sec)
 ```
 
-### SHOW TABLE STATUS
+#### SHOW TABLE STATUS
 
 `Syntax`
 ```
@@ -695,7 +763,7 @@ mysql> show table status;
 2 rows in set (0.08 sec)
 ```
 
-### SHOW COLUMNS
+#### SHOW COLUMNS
 
 `Syntax`
 
@@ -723,7 +791,7 @@ mysql> SHOW COLUMNS FROM T1;
 
 ```
 
-### SHOW CREATE TABLE
+#### SHOW CREATE TABLE
 
 `Syntax`
 ```
@@ -747,7 +815,7 @@ Create Table: CREATE TABLE `t1` (
 1 row in set (0.01 sec)
 ```
 
-### SHOW PROCESSLIST
+#### SHOW PROCESSLIST
 
 `Syntax`
 ```
@@ -768,7 +836,7 @@ mysql> SHOW PROCESSLIST;
 1 row in set (0.00 sec)
 ```
 
-### SHOW VARIABLES
+#### SHOW VARIABLES
 
 `Syntax`
 ```
@@ -780,9 +848,9 @@ SHOW VARIABLES
 * For compatibility JDBC/mydumper
 * The SHOW VARIABLES command is sent to the backend partition MySQL (random partition) to get and return
 
-## USE
+### USE
 
-### USE DATABASE
+#### USE DATABASE
 
 `Syntax`
 ```
@@ -801,9 +869,9 @@ You can turn off this feature to get a quicker startup with -A
 Database changed
 ```
 
-## KILL
+### KILL
 
-### KILL processlist_id
+#### KILL processlist_id
 
 `Syntax`
 ```
@@ -841,9 +909,9 @@ Current database: db_test1
 1 row in set (0.00 sec)
 
 ```
-## CHECKSUM
+### CHECKSUM
 
-### CHECKSUM TABLE
+#### CHECKSUM TABLE
 
 `Syntax`
 ```
@@ -866,9 +934,45 @@ mysql> checksum table test.t1;
 1 row in set (0.00 sec)
 ```
 
-## SET
+### SET
 
 `Instructions`
 * For compatibility JDBC/mydumper
 * SET is an empty operation, *all operations will not take effect*, do not use it directly。
 
+
+## Others
+###  Using AUTO INCREMENT
+
+`Instructions`
+* RadonDB employs its own unique identity by golang's UnixNano().
+* AUTO_INCREMENT field must be BIGINT.
+
+`Example: `
+
+```
+mysql> CREATE TABLE animals (
+    ->      id BIGINT NOT NULL AUTO_INCREMENT,
+    ->      name CHAR(30) NOT NULL,
+    ->      PRIMARY KEY (id)
+    -> ) PARTITION BY HASH(id);
+Query OK, 0 rows affected (0.14 sec)
+
+mysql> INSERT INTO animals (name) VALUES
+    ->     ('dog'),('cat'),('penguin'),
+    ->     ('lax'),('whale'),('ostrich');
+Query OK, 6 rows affected (0.01 sec)
+
+mysql> SELECT * FROM animals;
++---------------------+---------+
+| id                  | name    |
++---------------------+---------+
+| 1553090617754346084 | lax     |
+| 1553090617754346082 | cat     |
+| 1553090617754346085 | whale   |
+| 1553090617754346081 | dog     |
+| 1553090617754346083 | penguin |
+| 1553090617754346086 | ostrich |
++---------------------+---------+
+6 rows in set (0.02 sec)
+```
