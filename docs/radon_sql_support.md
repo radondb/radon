@@ -18,7 +18,7 @@ Contents
          * [Drop Column](#drop-column)
          * [Modify Column](#modify-column)
       * [INDEX](#index)
-         * [ADD INDEX](#add-index)
+         * [CREATE INDEX](#create-index)
          * [DROP INDEX](#drop-index)
    * [Data Manipulation Statements](#data-manipulation-statements)
       * [SELECT](#select)
@@ -36,8 +36,8 @@ Contents
          * [SHOW TABLE STATUS](#show-table-status)
          * [SHOW COLUMNS](#show-columns)
          * [SHOW CREATE TABLE](#show-create-table)
-          * [SHOW PROCESSLIST](#show-processlist)
-          * [SHOW VARIABLES](#show-variables)
+         * [SHOW PROCESSLIST](#show-processlist)
+         * [SHOW VARIABLES](#show-variables)
       * [USE](#use)
          * [USE DATABASE](#use-database)
       * [KILL](#kill)
@@ -46,7 +46,7 @@ Contents
          * [CHECKSUM TABLE](#checksum-table)
       * [SET](#set)
     * [Others](#others)
-           * [Using AUTO INCREMENT](#using-auto-increment)
+      * [Using AUTO_INCREMENT](#using-auto-increment)
 
 # Radon SQL support
 
