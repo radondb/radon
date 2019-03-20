@@ -136,12 +136,7 @@ func TestSelectPlan(t *testing.T) {
 			"Range": "[512-4096)"
 		},
 		{
-			"Query": "select B.id from sbtest.B0 as B order by B.id asc",
-			"Backend": "backend1",
-			"Range": "[0-512)"
-		},
-		{
-			"Query": "select B.id from sbtest.B1 as B order by B.id asc",
+			"Query": "select B.id from sbtest.B1 as B where B.id = 1 order by B.id asc",
 			"Backend": "backend2",
 			"Range": "[512-4096)"
 		}
@@ -357,10 +352,12 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select avg(*) from A",
 		"select B.* from A",
 		"select * from A where a>1 having count(a) >3",
-		"select * from A join B on A.id=B.id join G on G.id=A.id where A.a>B.a",
+		"select A.a from A join B on A.id=B.id join G on G.id=A.id where A.a>B.a",
 		"select a,b from A group by B.a",
 		"select A.id,G.a as a, concat(B.str,G.str), 1 from A,B, A as G group by a",
 		"select *,avg(a) from A",
+		"select A.id from A join B on A.id=B.id right join G on G.id=A.id and A.a>B.a",
+		"select A.id from (A,B) left join G on A.id =G.id and A.a>B.a",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
@@ -383,6 +380,8 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: unknow.table.in.group.by.field[B.a]",
 		"unsupported: select.expr.in.cross-shard.join",
 		"unsupported: exists.aggregate.and.'*'.select.exprs",
+		"unsupported: on.clause.in.cross-shard.join",
+		"unsupported: select.expr.in.cross-shard.join",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -415,6 +414,10 @@ func TestSelectSupportedPlan(t *testing.T) {
 		"select now() as time, count(1), avg(id), sum(b) from A",
 		"select avg(id + 1) from A",
 		"select concat(str1,str2) from A",
+		"select * from A join B on A.id=B.id where A.id=0",
+		"select A.id from A,B,B as C where B.id = 0 and A.id=C.id and A.id=0",
+		"select A.id from A,A as B where A.id=B.id and A.a=1",
+		"select A.id from A join B on A.id = B.id join G on G.id=A.id and A.id>1 and G.id=3",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -423,7 +426,7 @@ func TestSelectSupportedPlan(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig())
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 	for _, query := range querys {
 		node, err := sqlparser.Parse(query)

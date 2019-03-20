@@ -255,6 +255,16 @@ func checkSelectExpr(field selectTuple, tbInfos map[string]*TableInfo) bool {
 	return true
 }
 
+// checkFilterInNode used to check whether the filter's referTables in the tbInfos.
+func checkFilterInNode(filter filterTuple, tbInfos map[string]*TableInfo) bool {
+	for _, tb := range filter.referTables {
+		if _, ok := tbInfos[tb]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func checkInTuple(field, table string, tuples []selectTuple) bool {
 	for _, tuple := range tuples {
 		if tuple.field == "*" || tuple.field == field {

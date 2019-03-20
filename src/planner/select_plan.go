@@ -107,10 +107,6 @@ func (p *SelectPlan) Build() error {
 		return err
 	}
 
-	if err = p.Root.spliceWhere(); err != nil {
-		return err
-	}
-
 	mn, ok := p.Root.(*MergeNode)
 	if ok && mn.routeLen == 1 {
 		node.From = mn.sel.From

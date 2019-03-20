@@ -25,7 +25,6 @@ type PlanNode interface {
 	setNoTableFilter(exprs []sqlparser.Expr)
 	pushJoinInWhere(joins []joinTuple) PlanNode
 	calcRoute() (PlanNode, error)
-	spliceWhere() error
 	pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error
 	pushSelectExpr(field selectTuple) (int, error)
 	pushHaving(havings []filterTuple) error

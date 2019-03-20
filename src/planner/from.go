@@ -35,8 +35,6 @@ type TableInfo struct {
 	tableExpr *sqlparser.AliasedTableExpr
 	// table's route.
 	Segments []router.Segment `json:",omitempty"`
-	// referred table's where clause.
-	whereFilter []sqlparser.Expr
 	// table's parent node, the type always a MergeNode.
 	parent *MergeNode
 }
@@ -220,7 +218,7 @@ func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, r
 	lpn.setParent(jn)
 	rpn.setParent(jn)
 	if jn.IsLeftJoin {
-		jn.otherJoinOn = otherJoinOn
+		jn.setOtherJoin(otherJoinOn)
 	} else {
 		err = jn.pushFilter(otherJoinOn)
 	}
