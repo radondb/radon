@@ -28,13 +28,13 @@ var (
 			},
 			{
 				Name: "Checksum",
-				Type: querypb.Type_UINT64,
+				Type: querypb.Type_INT64,
 			},
 		},
 		Rows: [][]sqltypes.Value{
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("a_0000")),
-				sqltypes.MakeTrusted(querypb.Type_UINT64, []byte("16384")),
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("16384")),
 			},
 		},
 	}
