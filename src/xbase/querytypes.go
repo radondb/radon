@@ -39,4 +39,7 @@ const (
 
 	// TRANSACTION type.
 	TRANSACTION = "TRANSACTION"
+
+	// CHECKSUM type.
+	CHECKSUM = "CHECKSUM"
 )

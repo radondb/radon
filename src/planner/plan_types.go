@@ -41,4 +41,7 @@ const (
 
 	// PlanTypeDistinct enum.
 	PlanTypeDistinct PlanType = "PlanTypeDistinct"
+
+	// PlanTypeOthers enum.
+	PlanTypeOthers PlanType = "PlanTypeOthers"
 )

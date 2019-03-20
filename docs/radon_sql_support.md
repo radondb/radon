@@ -39,6 +39,8 @@ Contents
       * [USE DATABASE](#use-database)
    * [KILL](#kill)
       * [KILL processlist_id](#kill-processlist_id)
+   * [CHECKSUM](#checksum)
+      * [CHECKSUM TABLE](#checksum-table)
    * [SET](#set)
 
 # Radon SQL support
@@ -838,6 +840,30 @@ Current database: db_test1
 +------+------+-----------------+----------+---------+------+-------+------+-----------+---------------+
 1 row in set (0.00 sec)
 
+```
+## CHECKSUM
+
+### CHECKSUM TABLE
+
+`Syntax`
+```
+CHECKSUM TABLE  [database_name.]table_name
+```
+
+`Instructions`
+* Reports a checksum for the contents of a table
+* RadonDB gives same result as MySQL
+
+`Example: `
+
+```
+mysql> checksum table test.t1;
++----------+------------+
+| Table    | Checksum   |
++----------+------------+
+| test.t1  | 2464930879 |
++----------+------------+
+1 row in set (0.00 sec)
 ```
 
 ## SET
