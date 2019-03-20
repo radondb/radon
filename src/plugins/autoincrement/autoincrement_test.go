@@ -6,7 +6,7 @@
  *
  */
 
-package plugins
+package autoincrement
 
 import (
 	"testing"

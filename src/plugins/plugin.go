@@ -13,6 +13,8 @@ import (
 	"config"
 	"router"
 
+	"plugins/autoincrement"
+
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -22,7 +24,7 @@ type Plugin struct {
 	conf         *config.Config
 	router       *router.Router
 	scatter      *backend.Scatter
-	autoincement *AutoIncrement
+	autoincement *autoincrement.AutoIncrement
 }
 
 // NewPlugin -- creates new Plugin.
@@ -41,7 +43,7 @@ func (plugin *Plugin) Init() error {
 	router := plugin.router
 
 	// Regeister AutoIncrement plug.
-	autoincPlug := NewAutoIncrement(log, router)
+	autoincPlug := autoincrement.NewAutoIncrement(log, router)
 	if err := autoincPlug.Init(); err != nil {
 		return err
 	}
@@ -54,6 +56,6 @@ func (plugin *Plugin) Close() {
 }
 
 // PlugAutoIncrement -- return AutoIncrement plug.
-func (plugin *Plugin) PlugAutoIncrement() *AutoIncrement {
+func (plugin *Plugin) PlugAutoIncrement() *autoincrement.AutoIncrement {
 	return plugin.autoincement
 }
