@@ -28,9 +28,9 @@ func (spanner *Spanner) handleChecksumTable(session *driver.Session, query strin
 	}
 
 	// Merge checksum.
-	var crc uint64
+	var crc int64
 	for _, row := range qr.Rows {
-		crc += row[1].ToNative().(uint64)
+		crc += row[1].ToNative().(int64)
 	}
 
 	newqr := &sqltypes.Result{}
@@ -41,7 +41,7 @@ func (spanner *Spanner) handleChecksumTable(session *driver.Session, query strin
 	}
 	row := []sqltypes.Value{
 		sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte(table)),
-		sqltypes.MakeTrusted(querypb.Type_UINT64, []byte(fmt.Sprintf("%v", crc))),
+		sqltypes.MakeTrusted(querypb.Type_INT64, []byte(fmt.Sprintf("%v", crc))),
 	}
 	newqr.Rows = append(newqr.Rows, row)
 	return newqr, nil
