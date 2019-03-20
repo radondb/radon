@@ -103,7 +103,7 @@ func forceEOF(yylex interface{}) {
 %token LEX_ERROR
 %left <bytes> UNION
 %token <bytes> SELECT INSERT UPDATE DELETE FROM WHERE GROUP HAVING ORDER BY LIMIT OFFSET FOR
-%token <bytes> ALL DISTINCT AS EXISTS ASC DESC INTO DUPLICATE KEY DEFAULT SET LOCK FULL
+%token <bytes> ALL DISTINCT AS EXISTS ASC DESC INTO DUPLICATE KEY DEFAULT SET LOCK FULL CHECKSUM
 %token <bytes> VALUES LAST_INSERT_ID
 %token <bytes> NEXT VALUE SHARE MODE
 %token <bytes> SQL_NO_CACHE SQL_CACHE
@@ -186,7 +186,7 @@ func forceEOF(yylex interface{}) {
 %type <statement> insert_statement update_statement delete_statement set_statement
 %type <statement> create_statement alter_statement drop_statement
 %type <ddl> create_table_prefix
-%type <statement> analyze_statement show_statement use_statement other_statement
+%type <statement> analyze_statement show_statement use_statement other_statement checksum_statement
 %type <bytes2> comment_opt comment_list
 %type <str> union_op insert_or_replace
 %type <str> distinct_opt straight_join_opt cache_opt match_option separator_opt binlog_from_opt
@@ -294,6 +294,7 @@ command:
 | truncate_statement
 | analyze_statement
 | show_statement
+| checksum_statement
 | use_statement
 | xa_statement
 | explain_statement
@@ -1098,6 +1099,12 @@ database_from_opt:
 | FROM table_name
   {
     $$ = $2
+  }
+
+checksum_statement:
+  CHECKSUM TABLE table_name force_eof
+  {
+    $$ = &Checksum{ Table: $3}
   }
 
 use_statement:
@@ -2440,6 +2447,7 @@ reserved_keyword:
 | CHARACTER
 | CHARSET
 | COLLATE
+| COLUMNS
 | CONVERT
 | CREATE
 | CROSS
@@ -2509,7 +2517,6 @@ reserved_keyword:
 | STRAIGHT_JOIN
 | TABLE
 | TABLES
-| COLUMNS 
 | THEN
 | TO
 | TRUE

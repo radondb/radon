@@ -92,6 +92,7 @@ var keywords = map[string]int{
 	"character":           CHARACTER,
 	"charset":             CHARSET,
 	"check":               UNUSED,
+	"checksum":            CHECKSUM,
 	"collate":             COLLATE,
 	"column":              COLUMN,
 	"columns":             COLUMNS,

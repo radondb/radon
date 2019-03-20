@@ -116,6 +116,7 @@ func (*Delete) iStatement()     {}
 func (*Set) iStatement()        {}
 func (*DDL) iStatement()        {}
 func (*Show) iStatement()       {}
+func (*Checksum) iStatement()   {}
 func (*Use) iStatement()        {}
 func (*OtherRead) iStatement()  {}
 func (*OtherAdmin) iStatement() {}
@@ -477,6 +478,21 @@ func (node *Set) WalkSubtree(visit Visit) error {
 		node.Comments,
 		node.Exprs,
 	)
+}
+
+// Checksum represents a CHECKSUM statement.
+type Checksum struct {
+	Table TableName
+}
+
+// Format formats the node.
+func (node *Checksum) Format(buf *TrackedBuffer) {
+	buf.Myprintf("checksum table %v", node.Table)
+}
+
+// WalkSubtree walks the nodes of the subtree.
+func (node *Checksum) WalkSubtree(visit Visit) error {
+	return nil
 }
 
 // DDL represents a CREATE, ALTER, DROP or RENAME statement.

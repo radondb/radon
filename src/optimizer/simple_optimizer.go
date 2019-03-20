@@ -67,6 +67,9 @@ func (so *SimpleOptimizer) BuildPlanTree() (*planner.PlanTree, error) {
 		nod := node.(*sqlparser.Select)
 		selectNode := planner.NewSelectPlan(log, database, query, nod, router)
 		plans.Add(selectNode)
+	case *sqlparser.Checksum:
+		node := planner.NewOthersPlan(log, database, query, node, router)
+		plans.Add(node)
 	default:
 		return nil, errors.Errorf("optimizer.unsupported.query.type[%+v]", node)
 	}

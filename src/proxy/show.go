@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"build"
 
@@ -24,7 +25,6 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
-	"time"
 )
 
 // handleShowDatabases used to handle the 'SHOW DATABASES' command.

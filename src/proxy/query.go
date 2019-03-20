@@ -257,6 +257,13 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 		}
 		spanner.auditLog(session, R, xbase.SET, query, qr)
 		return returnQuery(qr, callback, err)
+	case *sqlparser.Checksum:
+		log.Warning("proxy.query.checksum.query:%s", query)
+		if qr, err = spanner.handleChecksumTable(session, query, node); err != nil {
+			log.Error("proxy.checksum[%s].from.session[%v].error:%+v", query, session.ID(), err)
+		}
+		spanner.auditLog(session, R, xbase.CHECKSUM, query, qr)
+		return returnQuery(qr, callback, err)
 	default:
 		log.Error("proxy.unsupported[%s].from.session[%v]", query, session.ID())
 		spanner.auditLog(session, R, xbase.UNSUPPORT, query, qr)

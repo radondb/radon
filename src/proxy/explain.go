@@ -60,6 +60,7 @@ func (spanner *Spanner) handleExplain(session *driver.Session, query string, nod
 			return nil, err
 		}
 	case *sqlparser.Update:
+	case *sqlparser.Checksum:
 	default:
 		return nil, sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, "explain only supports SELECT/DELETE/INSERT/UPDATE")
 	}
