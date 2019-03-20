@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"strings"
 
-	"plugins"
+	"plugins/autoincrement"
 	"router"
 
 	"github.com/xelabs/go-mysqlstack/driver"
@@ -192,7 +192,7 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 
 		// Create table.
 		extra := &router.Extra{
-			AutoIncrement: plugins.GetAutoIncrement(node),
+			AutoIncrement: autoincrement.GetAutoIncrement(node),
 		}
 		if err := route.CreateTable(database, table, shardKey, backends, extra); err != nil {
 			return nil, err

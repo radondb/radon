@@ -72,6 +72,7 @@ testmonitor:
 
 testplugins:
 	go test -v plugins
+	go test -v plugins/autoincrement
 
 testfuzz:
 	go test -v -race fuzz/sqlparser
