@@ -115,6 +115,7 @@ func fetchSameKeyRows(rows [][]sqltypes.Value, joins []planner.JoinKey, index in
 	if isUnique {
 		return rows[index : index+1], index + 1, ""
 	}
+
 	if str == "" {
 		keySlice := []byte{0x01}
 		for _, join := range joins {
@@ -122,12 +123,9 @@ func fetchSameKeyRows(rows [][]sqltypes.Value, joins []planner.JoinKey, index in
 			keySlice = append(keySlice, 0x02)
 		}
 		str = hack.String(keySlice)
-		chunk = append(chunk, rows[index])
-		index++
-	} else {
-		chunk = append(chunk, rows[index])
-		index++
 	}
+	chunk = append(chunk, rows[index])
+	index++
 
 	for index < len(rows) {
 		keySlice := []byte{0x01}
