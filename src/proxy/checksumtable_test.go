@@ -34,7 +34,7 @@ var (
 		Rows: [][]sqltypes.Value{
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("a_0000")),
-				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("16384")),
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("2000038982")),
 			},
 		},
 	}
@@ -89,8 +89,13 @@ func TestProxyChecksumTable(t *testing.T) {
 		query := "checksum table t1"
 		qr, err := client.FetchAll(query, -1)
 		assert.Nil(t, err)
-		want := int64(30 * 16384) // 30 is the partition tables number
-		got := qr.Rows[0][1].ToNative().(int64)
+
+		var want uint32
+		// 30 is the partition tables number
+		for i := 0; i < 30; i++ {
+			want += 2000038982
+		}
+		got := uint32(qr.Rows[0][1].ToNative().(int64))
 		assert.Equal(t, want, got)
 	}
 }
