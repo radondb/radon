@@ -163,6 +163,22 @@ func TestSelectPlan(t *testing.T) {
 		}
 	]
 }`,
+		`{
+	"RawQuery": "select A.id from A left join B on A.id=B.id and A.a=1 and B.b=2 and 1=1 where B.id=1",
+	"Project": "A.id",
+	"Partitions": [
+		{
+			"Query": "select A.a = 1 as tmpc_0, A.id from sbtest.A6 as A where A.id = 1 order by A.id asc",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		},
+		{
+			"Query": "select B.id from sbtest.B1 as B where 1 = 1 and B.b = 2 and B.id = 1 order by B.id asc",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
 	}
 	querys := []string{
 		"select 1, sum(a),avg(a),a,b from sbtest.A where id>1 group by a,b order by a desc limit 10 offset 100",
@@ -170,6 +186,7 @@ func TestSelectPlan(t *testing.T) {
 		"select id,a from sbtest.A where (a>1 and (id=1))",
 		"select A.id,B.id from A join B on A.id=B.id where A.id=1",
 		"select A.id from A join B where A.id=1",
+		"select A.id from A left join B on A.id=B.id and A.a=1 and B.b=2 and 1=1 where B.id=1",
 	}
 
 	// Database not null.
@@ -358,6 +375,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select *,avg(a) from A",
 		"select A.id from A join B on A.id=B.id right join G on G.id=A.id and A.a>B.a",
 		"select A.id from (A,B) left join G on A.id =G.id and A.a>B.a",
+		"select A.id from A left join B on A.id=B.id where B.str is null",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
@@ -382,6 +400,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: exists.aggregate.and.'*'.select.exprs",
 		"unsupported: on.clause.in.cross-shard.join",
 		"unsupported: select.expr.in.cross-shard.join",
+		"unsupported: where.clause.in.cross-shard.join",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))

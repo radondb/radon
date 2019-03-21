@@ -43,6 +43,8 @@ type JoinNode struct {
 	hasParen bool
 	// whether is left join.
 	IsLeftJoin bool
+	// whether the right node has filters in left join.
+	HasRightFilter bool
 	// parent node in the plan tree.
 	parent PlanNode
 	// children plans in select(such as: orderby, limit..).
@@ -121,17 +123,27 @@ func (j *JoinNode) pushFilter(filters []filterTuple) error {
 	for _, filter := range filters {
 		if len(filter.referTables) == 0 {
 			j.noTableFilter = append(j.noTableFilter, filter.expr)
-		} else if len(filter.referTables) == 1 {
-			tbInfo := j.referredTables[filter.referTables[0]]
+			continue
+		}
+		if len(filter.referTables) == 1 {
+			tb := filter.referTables[0]
+			tbInfo := j.referredTables[tb]
 			if filter.col == nil {
 				tbInfo.parent.setWhereFilter(filter.expr)
-				continue
-			}
-			j.tableFilter = append(j.tableFilter, filter)
-			if tbInfo.parent.index == -1 && filter.val != nil && tbInfo.shardKey != "" {
-				if nameMatch(filter.col, filter.referTables[0], tbInfo.shardKey) {
-					if tbInfo.parent.index, err = j.router.GetIndex(tbInfo.database, tbInfo.tableName, filter.val); err != nil {
-						return err
+			} else {
+				// if left join's right node's is null condition will not be pushed down.
+				if j.IsLeftJoin && checkIsWithNull(filter.expr) {
+					if _, ok := j.Right.getReferredTables()[tb]; ok {
+						j.setWhereFilter(filter.expr)
+						continue
+					}
+				}
+				j.tableFilter = append(j.tableFilter, filter)
+				if tbInfo.parent.index == -1 && filter.val != nil && tbInfo.shardKey != "" {
+					if nameMatch(filter.col, tb, tbInfo.shardKey) {
+						if tbInfo.parent.index, err = j.router.GetIndex(tbInfo.database, tbInfo.tableName, filter.val); err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -148,6 +160,11 @@ func (j *JoinNode) pushFilter(filters []filterTuple) error {
 				}
 			}
 			parent.setWhereFilter(filter.expr)
+		}
+		if j.IsLeftJoin && !j.HasRightFilter {
+			if checkFilterInNode(filter, j.Right.getReferredTables()) {
+				j.HasRightFilter = true
+			}
 		}
 	}
 	return err

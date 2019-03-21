@@ -584,3 +584,13 @@ func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*TableInfo) ([]filter
 
 	return tuples, nil
 }
+
+// checkIsWithNull used to check whether `is null`.
+func checkIsWithNull(expr sqlparser.Expr) bool {
+	if exp, ok := expr.(*sqlparser.IsExpr); ok {
+		if exp.Operator == sqlparser.IsNullStr {
+			return true
+		}
+	}
+	return false
+}
