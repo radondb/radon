@@ -28,9 +28,9 @@ func (spanner *Spanner) handleChecksumTable(session *driver.Session, query strin
 	}
 
 	// Merge checksum.
-	var crc int64
+	var crc uint32
 	for _, row := range qr.Rows {
-		crc += row[1].ToNative().(int64)
+		crc += uint32((row[1].ToNative().(int64)))
 	}
 
 	newqr := &sqltypes.Result{}
