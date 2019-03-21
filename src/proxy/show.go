@@ -215,9 +215,11 @@ func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query str
 		return nil, err
 	}
 
-	// If shardType is GLOBAL, send raw query; if shardType is HASH, rewrite the query.
+	// If shardType is GLOBAL, send the query with database; if shardType is HASH, rewrite the query.
 	if shardKey == "" {
-		qr, err = spanner.ExecuteSingle(query)
+		// If the elapsed > pool.maxIdleTime, the new connection without database, add the database.
+		rewritten := fmt.Sprintf("SHOW CREATE TABLE %s.%s", database, table)
+		qr, err = spanner.ExecuteSingle(rewritten)
 		if err != nil {
 			return nil, err
 		}
