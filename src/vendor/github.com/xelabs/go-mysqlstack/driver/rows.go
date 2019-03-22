@@ -112,7 +112,6 @@ func (r *TextRows) RowValues() ([]sqltypes.Value, error) {
 		return nil, errors.New("rows.fields is NIL")
 	}
 
-	empty := true
 	colNumber := len(r.fields)
 	result := make([]sqltypes.Value, colNumber)
 	for i := 0; i < colNumber; i++ {
@@ -125,11 +124,7 @@ func (r *TextRows) RowValues() ([]sqltypes.Value, error) {
 		if v != nil {
 			r.bytes += len(v)
 			result[i] = sqltypes.MakeTrusted(r.fields[i].Type, v)
-			empty = false
 		}
-	}
-	if empty {
-		return nil, nil
 	}
 	return result, nil
 }

@@ -46,6 +46,19 @@ func TestRows(t *testing.T) {
 		RowsAffected: 123,
 		InsertID:     123456789,
 	}
+	result3 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "name",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.NULL,
+			},
+		},
+	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	th := NewTestHandler(log)
@@ -86,5 +99,17 @@ func TestRows(t *testing.T) {
 		want := 13
 		got := int(rows.Bytes())
 		assert.Equal(t, want, got)
+	}
+
+	// query
+	{
+		client, err := NewConn("mock", "mock", address, "test", "")
+		assert.Nil(t, err)
+		defer client.Close()
+
+		th.AddQuery("SELECT3", result3)
+		rows, err := client.Query("SELECT3")
+		assert.Nil(t, err)
+		assert.Equal(t, result3.Fields, rows.Fields())
 	}
 }
