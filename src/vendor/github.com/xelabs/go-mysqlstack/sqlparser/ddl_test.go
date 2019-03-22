@@ -136,6 +136,19 @@ func TestDDL1(t *testing.T) {
 				"	`t2` timestamp not null default current_timestamp on update current_timestamp comment 'currenttimestamp'\n" +
 				")",
 		},
+		// Fulltext.
+		{
+			input: "create table t (\n" +
+				"	id INT PRIMARY KEY,\n" +
+				"	title VARCHAR(200),\n" +
+				"   FULLTEXT INDEX ngram_idx(title,body) WITH PARSER ngram\n" +
+				")",
+			output: "create table t (\n" +
+				"	`id` int primary key,\n" +
+				"	`title` varchar(200),\n" +
+				"	fulltext index `ngram_idx` (`title`, `body`) WITH PARSER ngram\n" +
+				")",
+		},
 
 		// Index.
 		{

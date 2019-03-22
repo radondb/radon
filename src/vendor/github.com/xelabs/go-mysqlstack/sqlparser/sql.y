@@ -104,6 +104,8 @@ func forceEOF(yylex interface{}) {
 %left <bytes> UNION
 %token <bytes> SELECT INSERT UPDATE DELETE FROM WHERE GROUP HAVING ORDER BY LIMIT OFFSET FOR
 %token <bytes> ALL DISTINCT AS EXISTS ASC DESC INTO DUPLICATE KEY DEFAULT SET LOCK FULL CHECKSUM
+// FULLTEXT.
+%token <bytes> FULLTEXT PARSER NGRAM
 %token <bytes> VALUES LAST_INSERT_ID
 %token <bytes> NEXT VALUE SHARE MODE
 %token <bytes> SQL_NO_CACHE SQL_CACHE
@@ -865,6 +867,10 @@ index_definition:
   {
     $$ = &IndexDefinition{Info: $1, Columns: $3}
   }
+  | index_info '(' index_column_list ')' WITH PARSER NGRAM
+  {
+    $$ = &IndexDefinition{Info: $1, Columns: $3}
+  }
 
 index_info:
   PRIMARY KEY
@@ -873,16 +879,21 @@ index_info:
   }
 | UNIQUE index_or_key ID
   {
-    $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent(string($3)), Unique: true}
+    $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent(string($3)), Primary: false, Unique: true}
   }
 | UNIQUE ID
   {
-    $$ = &IndexInfo{Type: string($1), Name: NewColIdent(string($2)), Unique: true}
+    $$ = &IndexInfo{Type: string($1), Name: NewColIdent(string($2)), Primary:false, Unique: true}
   }
 | index_or_key ID
   {
-    $$ = &IndexInfo{Type: string($1), Name: NewColIdent(string($2)), Unique: false}
+    $$ = &IndexInfo{Type: string($1), Name: NewColIdent(string($2)), Primary: false, Unique: false}
   }
+| FULLTEXT INDEX ID
+  {
+    $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent(string($3)), Primary: false, Unique: false, Fulltext: true}
+  }
+
 
 index_or_key:
     INDEX
@@ -2558,6 +2569,7 @@ non_reserved_keyword:
 | ENGINE
 | EXPANSION
 | FLOAT_TYPE
+| FULLTEXT
 | GLOBAL
 | INT
 | INTEGER

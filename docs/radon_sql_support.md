@@ -45,6 +45,8 @@ Contents
       * [CHECKSUM](#checksum)
          * [CHECKSUM TABLE](#checksum-table)
       * [SET](#set)
+    * [Full Text Search](#full-text-search)
+      * [ngram Full Text Parser](#ngram-full-text-parser)
     * [Others](#others)
       * [Using AUTO_INCREMENT](#using-auto-increment)
 
@@ -940,6 +942,38 @@ mysql> checksum table test.t1;
 * For compatibility JDBC/mydumper
 * SET is an empty operation, *all operations will not take effect*, do not use it directly。
 
+## Full Text Search
+###  ngram Full Text Parser
+
+`Instructions`
+* RadonDB supports Full-Text Search, provides an ngram full-text parser that supports Chinese, Japanese, and Korean (CJK).
+* RadonDB Full-Text tables are partitioned (MySQL Partitioned tables do not support FULLTEXT indexes or searches), and query runs ` in parallel`.
+
+`Example: `
+
+```
+mysql>CREATE TABLE `articles` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `title` varchar(200) DEFAULT NULL,
+  `body` text,
+  PRIMARY KEY (`id`),
+  FULLTEXT INDEX `ngram_idx` (`title`,`body`) WITH PARSER ngram
+) ENGINE=InnoDB PARTITION BY HASH(id);
+
+mysql>INSERT INTO articles (title,body) VALUES
+    ('数据库管理','在本教程中我将向你展示如何管理数据库'),
+    ('数据库应用开发','学习开发数据库应用程序');
+
+
+SELECT title from articles  WHERE MATCH (title, body) AGAINST ('数据库' IN BOOLEAN MODE);
++-----------------------+
+| title                 |
++-----------------------+
+| 数据库应用开发        |
+| 数据库管理            |
++-----------------------+
+2 rows in set (0.04 sec)
+```
 
 ## Others
 ###  Using AUTO INCREMENT
