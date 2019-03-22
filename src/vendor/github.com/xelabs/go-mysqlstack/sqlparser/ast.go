@@ -816,6 +816,9 @@ func (idx *IndexDefinition) Format(buf *TrackedBuffer) {
 		}
 	}
 	buf.Myprintf(")")
+	if idx.Info.Fulltext {
+		buf.Myprintf(" WITH PARSER ngram")
+	}
 }
 
 // WalkSubtree walks the nodes of the subtree.
@@ -835,10 +838,11 @@ func (idx *IndexDefinition) WalkSubtree(visit Visit) error {
 
 // IndexInfo describes the name and type of an index in a CREATE TABLE statement
 type IndexInfo struct {
-	Type    string
-	Name    ColIdent
-	Primary bool
-	Unique  bool
+	Type     string
+	Name     ColIdent
+	Primary  bool
+	Unique   bool
+	Fulltext bool
 }
 
 // Format formats the node.
