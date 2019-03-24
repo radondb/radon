@@ -40,8 +40,10 @@ func (r *Router) HashUniform(table, shardkey string, backends []string) (*config
 	sort.Strings(backends)
 	tableConf := &config.TableConfig{
 		Name:       table,
-		ShardType:  methodTypeHash,
+		Slots:      r.conf.Slots,
+		Blocks:     r.conf.Blocks,
 		ShardKey:   shardkey,
+		ShardType:  methodTypeHash,
 		Partitions: make([]*config.PartitionConfig, 0, 16),
 	}
 
