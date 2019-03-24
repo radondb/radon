@@ -135,7 +135,7 @@ func TestWhereFilters(t *testing.T) {
 
 		p = p.pushJoinInWhere(joins)
 
-		p, err = p.calcRoute()
+		_, err = p.calcRoute()
 		assert.Nil(t, err)
 
 		assert.Nil(t, err)
@@ -176,7 +176,7 @@ func TestWhereFiltersError(t *testing.T) {
 
 		p = p.pushJoinInWhere(joins)
 
-		p, err = p.calcRoute()
+		_, err = p.calcRoute()
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}

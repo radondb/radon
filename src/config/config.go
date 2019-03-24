@@ -165,6 +165,8 @@ type AutoIncrement struct {
 // TableConfig tuple.
 type TableConfig struct {
 	Name          string             `json:"name"`
+	Slots         int                `json:"slots-readonly"`
+	Blocks        int                `json:"blocks-readonly"`
 	ShardType     string             `json:"shardtype"`
 	ShardKey      string             `json:"shardkey"`
 	Partitions    []*PartitionConfig `json:"partitions"`

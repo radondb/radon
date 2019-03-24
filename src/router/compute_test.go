@@ -21,6 +21,9 @@ import (
 func TestRouterCompute(t *testing.T) {
 	datas := `{
 	"name": "t1",
+	"slots-readonly": 4096,
+	"blocks-readonly": 128,
+	"shardkey": "id",
 	"shardtype": "HASH",
 	"shardkey": "id",
 	"partitions": [

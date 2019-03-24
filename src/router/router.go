@@ -103,7 +103,11 @@ func (r *Router) addTable(db string, tbl *config.TableConfig) error {
 	// methods
 	switch tbl.ShardType {
 	case methodTypeHash:
-		hash := NewHash(r.log, r.conf.Slots, tbl)
+		slots := tbl.Slots
+		if slots == 0 {
+			slots = r.conf.Slots
+		}
+		hash := NewHash(r.log, slots, tbl)
 		if err := hash.Build(); err != nil {
 			return err
 		}
