@@ -889,7 +889,7 @@ index_info:
   {
     $$ = &IndexInfo{Type: string($1), Name: NewColIdent(string($2)), Primary: false, Unique: false}
   }
-| FULLTEXT INDEX ID
+| FULLTEXT index_or_key ID
   {
     $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent(string($3)), Primary: false, Unique: false, Fulltext: true}
   }
