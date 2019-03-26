@@ -34,6 +34,7 @@ type Spanner struct {
 	throttle      *xbase.Throttle
 	plugins       *plugins.Plugin
 	diskChecker   *DiskCheck
+	manager       *Manager
 	readonly      sync2.AtomicBool
 	serverVersion string
 }
@@ -65,12 +66,19 @@ func (spanner *Spanner) Init() error {
 		return err
 	}
 	spanner.diskChecker = diskChecker
+
+	mgr := NewManager(log, spanner.sessions, conf.Proxy)
+	if err := mgr.Init(); err != nil {
+		return err
+	}
+	spanner.manager = mgr
 	return nil
 }
 
 // Close used to close spanner.
 func (spanner *Spanner) Close() error {
 	spanner.diskChecker.Close()
+	spanner.manager.Close()
 	spanner.log.Info("spanner.closed...")
 	return nil
 }

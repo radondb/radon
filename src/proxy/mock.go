@@ -146,3 +146,10 @@ func MockProxy1(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func())
 		os.RemoveAll(tmpDir)
 	}
 }
+
+// MockConfigIdleTxnTimeout1 mocks the config with IdleTxnTimeout=1.
+func MockConfigIdleTxnTimeout1() *config.Config {
+	conf := MockDefaultConfig()
+	conf.Proxy.IdleTxnTimeout = 1 // 1s
+	return conf
+}

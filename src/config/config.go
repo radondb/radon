@@ -31,6 +31,7 @@ type ProxyConfig struct {
 	PeerAddress      string `json:"peer-address,omitempty"`
 	LongQueryTime    int    `json:"long-query-time"`
 	StreamBufferSize int    `json:"stream-buffer-size"`
+	IdleTxnTimeout   uint32 `json:"kill-idle-transaction"` //is consistent with the official 8.0 kill_idle_transaction
 }
 
 // DefaultProxyConfig returns default proxy config.
@@ -45,6 +46,7 @@ func DefaultProxyConfig() *ProxyConfig {
 		PeerAddress:      "127.0.0.1:8080",
 		LongQueryTime:    5,                // 5 seconds
 		StreamBufferSize: 1024 * 1024 * 32, // 32MB
+		IdleTxnTimeout:   10,               // 10 seconds
 	}
 }
 

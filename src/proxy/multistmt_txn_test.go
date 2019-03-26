@@ -38,7 +38,7 @@ func TestProxyHandleMStmtTxnBegin(t *testing.T) {
 	assert.Nil(t, err)
 
 	{
-		query := "begin;"
+		query := "BEGIN;"
 		fakedbs.AddQuery(query, fakedb.Result3)
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
