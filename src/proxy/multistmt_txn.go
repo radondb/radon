@@ -23,14 +23,14 @@ func (spanner *Spanner) handleMultiStmtTxn(session *driver.Session, query string
 	log := spanner.log
 	snode := node.(*sqlparser.Transaction)
 	switch snode.Action {
-	case "start transaction":
-		qr, err = spanner.handleStartTransaction(session, query, node)
-	case "begin":
-		qr, err = spanner.handleBegin(session, query, node)
-	case "rollback":
-		qr, err = spanner.handleRollback(session, query, node)
-	case "commit":
-		qr, err = spanner.handleCommit(session, query, node)
+	case sqlparser.StartTxnStr:
+		qr, err = spanner.handleStartTransaction(session, snode.Action, node)
+	case sqlparser.BeginTxnStr:
+		qr, err = spanner.handleBegin(session, snode.Action, node)
+	case sqlparser.RollbackTxnStr:
+		qr, err = spanner.handleRollback(session, snode.Action, node)
+	case sqlparser.CommitTxnStr:
+		qr, err = spanner.handleCommit(session, snode.Action, node)
 	}
 	if err != nil {
 		log.Error("proxy.query.multistmt.txn.[%s].error:%s", query, err)

@@ -19,6 +19,10 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
+const (
+	sessionStateInTransaction = "In transaction"
+)
+
 // Sessions tuple.
 type Sessions struct {
 	log *xlog.Log
@@ -285,7 +289,6 @@ func (ss *Sessions) Snapshot() []SessionInfo {
 	ss.mu.Lock()
 	for _, v := range ss.sessions {
 		v.mu.Lock()
-		defer v.mu.Unlock()
 		info := SessionInfo{
 			ID:      v.session.ID(),
 			User:    v.session.User(),
@@ -302,10 +305,47 @@ func (ss *Sessions) Snapshot() []SessionInfo {
 
 		if v.transaction != nil {
 			// https://dev.mysql.com/doc/refman/5.7/en/general-thread-states.html about state.
-			info.State = "In transaction"
+			info.State = sessionStateInTransaction
 		}
 
 		infos = append(infos, info)
+		v.mu.Unlock()
+	}
+	ss.mu.Unlock()
+	sort.Sort(infos)
+	return infos
+}
+
+// SnapshotTxn returns all sessions info in transaction.
+func (ss *Sessions) SnapshotTxn() []SessionInfo {
+	var infos sessionInfos
+
+	now := time.Now().Unix()
+	ss.mu.Lock()
+	for _, v := range ss.sessions {
+		v.mu.Lock()
+		if v.transaction == nil {
+			v.mu.Unlock()
+			continue
+		}
+
+		info := SessionInfo{
+			ID:      v.session.ID(),
+			User:    v.session.User(),
+			Host:    v.session.Addr(),
+			DB:      v.session.Schema(),
+			Command: "Sleep",
+			Time:    uint32(now - (int64)(v.session.LastQueryTime().Unix())),
+		}
+
+		if v.node != nil {
+			info.Command = "Query"
+			info.Info = v.query
+		}
+		info.State = sessionStateInTransaction
+
+		infos = append(infos, info)
+		v.mu.Unlock()
 	}
 	ss.mu.Unlock()
 	sort.Sort(infos)
