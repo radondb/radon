@@ -29,6 +29,7 @@ func TestExecutor1(t *testing.T) {
 	defer cleanup()
 	fakedbs.AddQueryPattern("create table sbtest.A.*", fakedb.Result3)
 	fakedbs.AddQueryPattern("create database.*", fakedb.Result3)
+	fakedbs.AddQueryPattern("select.*", fakedb.Result3)
 
 	database := "sbtest"
 	route, cleanup := router.MockNewRouter(log)
@@ -90,6 +91,8 @@ func TestExecutor1(t *testing.T) {
 		assert.Nil(t, err)
 
 		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		err = plan.Build()
+		assert.Nil(t, err)
 		err = planTree.Add(plan)
 		assert.Nil(t, err)
 	}

@@ -40,32 +40,9 @@ func NewMergeExecutor(log *xlog.Log, node *planner.MergeNode, txn backend.Transa
 func (m *MergeExecutor) execute(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext) error {
 	var err error
 	reqCtx.Querys = m.node.Querys
-	subPlanTree := m.node.Children()
 	if ctx.Results, err = m.txn.Execute(reqCtx); err != nil {
 		return err
 	}
 
-	// Execute all the children plan.
-	if subPlanTree != nil {
-		for _, subPlan := range subPlanTree.Plans() {
-			switch subPlan.Type() {
-			case planner.PlanTypeAggregate:
-				aggrExecutor := NewAggregateExecutor(m.log, subPlan)
-				if err := aggrExecutor.Execute(ctx); err != nil {
-					return err
-				}
-			case planner.PlanTypeOrderby:
-				orderByExecutor := NewOrderByExecutor(m.log, subPlan)
-				if err := orderByExecutor.Execute(ctx); err != nil {
-					return err
-				}
-			case planner.PlanTypeLimit:
-				limitExecutor := NewLimitExecutor(m.log, subPlan)
-				if err := limitExecutor.Execute(ctx); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
+	return execSubPlan(m.log, m.node, ctx)
 }
