@@ -58,7 +58,7 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 1, len(j.JoinOn))
+		assert.Equal(t, 1, len(j.joinOn))
 		assert.False(t, j.IsLeftJoin)
 		assert.Equal(t, 1, len(j.tableFilter))
 
@@ -74,7 +74,7 @@ func TestScanTableExprs(t *testing.T) {
 	}
 	// left join.
 	{
-		query := "select * from A left join B on A.id=B.id and A.id=1 and 1=1 and B.a=1 and A.b>B.b"
+		query := "select * from A left join B on A.id=B.id and A.id=1 and 1=1 and B.a=1 and A.b+B.b>0"
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
@@ -85,7 +85,7 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 1, len(j.JoinOn))
+		assert.Equal(t, 1, len(j.joinOn))
 		assert.True(t, j.IsLeftJoin)
 		assert.Equal(t, 0, len(j.tableFilter))
 
@@ -99,9 +99,11 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, m, tbInfo.parent)
 		assert.Equal(t, -1, m.index)
 		assert.NotNil(t, j.otherJoinOn)
-		err = j.pushOtherJoin()
+
+		i := 0
+		err = j.pushOtherJoin(&i)
 		got := err.Error()
-		assert.Equal(t, "unsupported: on.clause.in.cross-shard.join", got)
+		assert.Equal(t, "unsupported: clause.'A.b + B.b > 0'.in.cross-shard.join", got)
 	}
 	// right join1.
 	{
@@ -116,11 +118,13 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 1, len(j.JoinOn))
+		assert.Equal(t, 1, len(j.joinOn))
 		assert.True(t, j.IsLeftJoin)
 		assert.Equal(t, 0, len(j.tableFilter))
 		assert.NotNil(t, j.otherJoinOn)
-		err = j.pushOtherJoin()
+
+		i := 0
+		err = j.pushOtherJoin(&i)
 		assert.Nil(t, err)
 	}
 	// right join2.
@@ -136,7 +140,7 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 1, len(j.JoinOn))
+		assert.Equal(t, 1, len(j.joinOn))
 		assert.True(t, j.IsLeftJoin)
 		assert.Equal(t, 0, len(j.tableFilter))
 
@@ -152,7 +156,9 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, -1, m.index)
 		assert.True(t, m.hasParen)
 		assert.NotNil(t, j.otherJoinOn)
-		err = j.pushOtherJoin()
+
+		i := 0
+		err = j.pushOtherJoin(&i)
 		assert.Nil(t, err)
 	}
 	// can merge shard tables.
@@ -231,7 +237,7 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 2, len(j.JoinOn))
+		assert.Equal(t, 2, len(j.joinOn))
 		assert.False(t, j.IsLeftJoin)
 		assert.Equal(t, 1, len(j.noTableFilter))
 		assert.Equal(t, 1, len(j.tableFilter))
@@ -314,7 +320,7 @@ func TestScanTableExprs(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 		assert.Equal(t, 1, len(j.otherFilter))
-		assert.Equal(t, 1, len(j.JoinOn))
+		assert.Equal(t, 1, len(j.joinOn))
 		tbMaps := j.getReferredTables()
 		assert.Equal(t, 3, len(tbMaps))
 		tbInfo := tbMaps["B"]
@@ -323,7 +329,7 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 2, len(j2.JoinOn))
+		assert.Equal(t, 2, len(j2.joinOn))
 		assert.Equal(t, j2.Right, tbInfo.parent)
 	}
 }

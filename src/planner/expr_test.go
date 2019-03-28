@@ -133,7 +133,7 @@ func TestWhereFilters(t *testing.T) {
 		err = p.pushFilter(filters)
 		assert.Nil(t, err)
 
-		p = p.pushJoinInWhere(joins)
+		p = p.pushEqualCmpr(joins)
 
 		_, err = p.calcRoute()
 		assert.Nil(t, err)
@@ -144,12 +144,12 @@ func TestWhereFilters(t *testing.T) {
 
 func TestWhereFiltersError(t *testing.T) {
 	querys := []string{
-		"select * from G,A,B where A.id=B.id and A.a > B.a",
-		"select * from A join B on A.id=B.id join G on G.id=A.id where A.a>B.a",
+		"select * from G,A,B where A.id=B.id and A.a + B.a > 0",
+		"select * from A join B on A.id=B.id join G on G.id=A.id where A.a + B.a > 0",
 	}
 	wants := []string{
-		"unsupported: where.clause.in.cross-shard.join",
-		"unsupported: where.clause.in.cross-shard.join",
+		"unsupported: clause.'A.a + B.a > 0'.in.cross-shard.join",
+		"unsupported: clause.'A.a + B.a > 0'.in.cross-shard.join",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
@@ -174,9 +174,11 @@ func TestWhereFiltersError(t *testing.T) {
 		err = p.pushFilter(filters)
 		assert.Nil(t, err)
 
-		p = p.pushJoinInWhere(joins)
+		p = p.pushEqualCmpr(joins)
+		p, err = p.calcRoute()
+		assert.Nil(t, err)
 
-		_, err = p.calcRoute()
+		err = p.(*JoinNode).handleOthers()
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}
@@ -382,8 +384,8 @@ func TestSelectExprsError(t *testing.T) {
 	}
 	wants := []string{
 		"unsupported: group.by.field[s].should.be.in.noaggregate.select.list",
-		"unsupported: select.expr.in.cross-shard.join",
-		"unsupported: select.expr.in.cross-shard.join",
+		"unsupported: expr.'concat(B.str, G.str)'.in.cross-shard.join",
+		"unsupported: expr.'concat(A.str, B.str)'.in.cross-shard.join",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
@@ -474,7 +476,7 @@ func TestParserHavingError(t *testing.T) {
 		"select * from A,B where A.id=1 having C.a>1",
 	}
 	wants := []string{
-		"unsupported: havings.in.cross-shard.join",
+		"unsupported: havings.'G.id = B.id'.in.cross-shard.join",
 		"unsupported: expr[sum(B.id)].in.having.clause",
 		"unsupported: unknown.column.'a'.in.having.clause",
 		"unsupported: unknown.table.'C'.in.having.clause",

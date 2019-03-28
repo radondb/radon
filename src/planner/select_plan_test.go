@@ -168,7 +168,7 @@ func TestSelectPlan(t *testing.T) {
 	"Project": "A.id",
 	"Partitions": [
 		{
-			"Query": "select A.a = 1 as tmpc_0, A.id from sbtest.A6 as A where A.id = 1 order by A.id asc",
+			"Query": "select A.id, A.a = 1 as tmpc_0 from sbtest.A6 as A where A.id = 1 order by A.id asc",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
 		},
@@ -369,13 +369,17 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select avg(*) from A",
 		"select B.* from A",
 		"select * from A where a>1 having count(a) >3",
-		"select A.a from A join B on A.id=B.id join G on G.id=A.id where A.a>B.a",
 		"select a,b from A group by B.a",
 		"select A.id,G.a as a, concat(B.str,G.str), 1 from A,B, A as G group by a",
 		"select *,avg(a) from A",
 		"select A.id from A join B on A.id=B.id right join G on G.id=A.id and A.a>B.a",
 		"select A.id from (A,B) left join G on A.id =G.id and A.a>B.a",
-		"select A.id from A left join B on A.id=B.id where B.str is null",
+		"select A.id from A join B on A.id=B.id right join G on G.id=A.id where concat(B.str,A.str) is null",
+		"select A.id from A join B on A.id >= B.id join G on G.id<=A.id where concat(B.str,A.str) is null",
+		"select A.id from A join B on A.id = B.id join G on G.id<=A.id+B.id",
+		"select A.id from A join B on A.id = B.id join G on A.id+B.id<=G.id",
+		"select A.id from G join (A,B) on A.id+B.id<=G.id",
+		"select A.id from G join (A,B) on G.id<=A.id+B.id",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
@@ -394,13 +398,17 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: syntax.error.at.'avg(*)'",
 		"unsupported:  unknown.table.'B'.in.field.list",
 		"unsupported: expr[count(a)].in.having.clause",
-		"unsupported: where.clause.in.cross-shard.join",
 		"unsupported: unknow.table.in.group.by.field[B.a]",
-		"unsupported: select.expr.in.cross-shard.join",
+		"unsupported: expr.'concat(B.str, G.str)'.in.cross-shard.join",
 		"unsupported: exists.aggregate.and.'*'.select.exprs",
-		"unsupported: on.clause.in.cross-shard.join",
-		"unsupported: select.expr.in.cross-shard.join",
-		"unsupported: where.clause.in.cross-shard.join",
+		"unsupported: on.clause.'A.a > B.a'.in.cross-shard.join",
+		"unsupported: expr.'A.a > B.a as tmpc_0'.in.cross-shard.join",
+		"unsupported: expr.'concat(B.str, A.str) as tmpo_0'.in.cross-shard.join",
+		"unsupported: clause.'concat(B.str, A.str) is null'.in.cross-shard.join",
+		"unsupported: expr.'A.id + B.id as tmpo_0'.in.cross-shard.join",
+		"unsupported: expr.'A.id + B.id as tmpo_0'.in.cross-shard.join",
+		"unsupported: expr.'A.id + B.id as tmpo_1'.in.cross-shard.join",
+		"unsupported: expr.'A.id + B.id as tmpo_1'.in.cross-shard.join",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -437,6 +445,10 @@ func TestSelectSupportedPlan(t *testing.T) {
 		"select A.id from A,B,B as C where B.id = 0 and A.id=C.id and A.id=0",
 		"select A.id from A,A as B where A.id=B.id and A.a=1",
 		"select A.id from A join B on A.id = B.id join G on G.id=A.id and A.id>1 and G.id=3",
+		"select A.id from A left join B on A.id=B.id where B.str is null",
+		"select A.id from A left join B on A.id=B.id where B.str<=>null",
+		"select A.id from A left join B on A.id=B.id where null<=>B.str",
+		"select A.id from A join B on A.id >= B.id join G on G.id<=A.id",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
