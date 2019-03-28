@@ -25,9 +25,10 @@ var (
 
 // JoinExecutor represents join executor.
 type JoinExecutor struct {
-	log  *xlog.Log
-	node *planner.JoinNode
-	txn  backend.Transaction
+	log         *xlog.Log
+	node        *planner.JoinNode
+	left, right PlanExecutor
+	txn         backend.Transaction
 }
 
 // NewJoinExecutor creates the new join executor.

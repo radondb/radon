@@ -45,17 +45,9 @@ func (executor *SelectExecutor) Execute(ctx *xcontext.ResultContext) error {
 	reqCtx.TxnMode = xcontext.TxnRead
 	reqCtx.RawQuery = plan.RawQuery
 
-	switch node := plan.Root.(type) {
-	case *planner.MergeNode:
-		mergeExecutor := NewMergeExecutor(log, node, executor.txn)
-		if err := mergeExecutor.execute(reqCtx, ctx); err != nil {
-			return err
-		}
-	case *planner.JoinNode:
-		joinExecutor := NewJoinExecutor(log, node, executor.txn)
-		if err := joinExecutor.execute(reqCtx, ctx); err != nil {
-			return err
-		}
+	planExec := buildExecutor(log, plan.Root, executor.txn)
+	if err := planExec.execute(reqCtx, ctx); err != nil {
+		return err
 	}
 	return nil
 }
