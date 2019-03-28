@@ -117,8 +117,8 @@ func (m *MergeNode) setNoTableFilter(exprs []sqlparser.Expr) {
 	}
 }
 
-// pushJoinInWhere used to push the 'join' type filters.
-func (m *MergeNode) pushJoinInWhere(joins []joinTuple) PlanNode {
+// pushEqualCmpr used to push the 'join' type filters.
+func (m *MergeNode) pushEqualCmpr(joins []joinTuple) PlanNode {
 	for _, joinFilter := range joins {
 		m.sel.AddWhere(joinFilter.expr)
 	}

@@ -101,7 +101,7 @@ func (p *SelectPlan) Build() error {
 		if err = p.Root.pushFilter(filters); err != nil {
 			return err
 		}
-		p.Root = p.Root.pushJoinInWhere(joins)
+		p.Root = p.Root.pushEqualCmpr(joins)
 	}
 	if p.Root, err = p.Root.calcRoute(); err != nil {
 		return err

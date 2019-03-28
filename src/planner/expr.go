@@ -242,12 +242,12 @@ func parserSelectExprs(exprs sqlparser.SelectExprs, root PlanNode) ([]selectTupl
 	return tuples, hasAggregates, nil
 }
 
-// checkSelectExpr used to check whether the field in the tbInfos.
-func checkSelectExpr(field selectTuple, tbInfos map[string]*TableInfo) bool {
-	if len(field.referTables) == 0 {
+// checkTbInNode used to check whether the filter's referTables in the tbInfos.
+func checkTbInNode(referTables []string, tbInfos map[string]*TableInfo) bool {
+	if len(referTables) == 0 {
 		return true
 	}
-	for _, tb := range field.referTables {
+	for _, tb := range referTables {
 		if _, ok := tbInfos[tb]; !ok {
 			return false
 		}
@@ -255,14 +255,23 @@ func checkSelectExpr(field selectTuple, tbInfos map[string]*TableInfo) bool {
 	return true
 }
 
-// checkFilterInNode used to check whether the filter's referTables in the tbInfos.
-func checkFilterInNode(filter filterTuple, tbInfos map[string]*TableInfo) bool {
-	for _, tb := range filter.referTables {
-		if _, ok := tbInfos[tb]; !ok {
-			return false
+// getTbInExpr used to get the tbs from the expr.
+func getTbInExpr(expr sqlparser.Expr) []string {
+	var referTables []string
+	sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
+		switch node := node.(type) {
+		case *sqlparser.ColName:
+			tableName := node.Qualifier.Name.String()
+			for _, tb := range referTables {
+				if tb == tableName {
+					return true, nil
+				}
+			}
+			referTables = append(referTables, tableName)
 		}
-	}
-	return true
+		return true, nil
+	}, expr)
+	return referTables
 }
 
 func checkInTuple(field, table string, tuples []selectTuple) bool {
@@ -585,12 +594,34 @@ func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*TableInfo) ([]filter
 	return tuples, nil
 }
 
-// checkIsWithNull used to check whether `is null`.
-func checkIsWithNull(expr sqlparser.Expr) bool {
-	if exp, ok := expr.(*sqlparser.IsExpr); ok {
+type nullExpr struct {
+	expr sqlparser.Expr
+	// referred tables.
+	referTables []string
+}
+
+// checkIsWithNull used to check whether `tb.col is null` or `tb.col<=> null`.
+func checkIsWithNull(filter filterTuple, tbInfos map[string]*TableInfo) (bool, nullExpr) {
+	if !checkTbInNode(filter.referTables, tbInfos) {
+		return false, nullExpr{}
+	}
+	if exp, ok := filter.expr.(*sqlparser.IsExpr); ok {
 		if exp.Operator == sqlparser.IsNullStr {
-			return true
+			return true, nullExpr{exp.Expr, filter.referTables}
 		}
 	}
-	return false
+
+	if exp, ok := filter.expr.(*sqlparser.ComparisonExpr); ok {
+		if exp.Operator == sqlparser.NullSafeEqualStr {
+			if _, ok := exp.Left.(*sqlparser.NullVal); ok {
+				return true, nullExpr{exp.Right, filter.referTables}
+			}
+
+			if _, ok := exp.Right.(*sqlparser.NullVal); ok {
+				return true, nullExpr{exp.Left, filter.referTables}
+			}
+		}
+	}
+
+	return false, nullExpr{}
 }
