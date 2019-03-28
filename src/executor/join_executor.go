@@ -14,6 +14,8 @@ import (
 	"xcontext"
 
 	"github.com/pkg/errors"
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -40,4 +42,33 @@ func NewJoinExecutor(log *xlog.Log, node *planner.JoinNode, txn backend.Transact
 // execute used to execute the executor.
 func (m *JoinExecutor) execute(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext) error {
 	return errors.New("unsupported: join")
+}
+
+// joinFields used to join two fields.
+func joinFields(lfields, rfields []*querypb.Field, cols []int) []*querypb.Field {
+	fields := make([]*querypb.Field, len(cols))
+	for i, index := range cols {
+		if index < 0 {
+			fields[i] = lfields[-index-1]
+			continue
+		}
+		fields[i] = rfields[index-1]
+	}
+	return fields
+}
+
+// joinRows used to join two rows.
+func joinRows(lrow, rrow []sqltypes.Value, cols []int) []sqltypes.Value {
+	row := make([]sqltypes.Value, len(cols))
+	for i, index := range cols {
+		if index < 0 {
+			row[i] = lrow[-index-1]
+			continue
+		}
+		// rrow can be nil on left joins
+		if rrow != nil {
+			row[i] = rrow[index-1]
+		}
+	}
+	return row
 }
