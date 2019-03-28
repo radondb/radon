@@ -11,6 +11,7 @@ package driver
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/xlog"
@@ -56,6 +57,14 @@ func TestSession(t *testing.T) {
 		{
 			want := uint8(0x21)
 			got := session1.Charset()
+			assert.Equal(t, want, got)
+		}
+
+		// UpdateTime.
+		{
+			want := time.Now()
+			session1.UpdateTime(want)
+			got := session1.LastQueryTime()
 			assert.Equal(t, want, got)
 		}
 	}

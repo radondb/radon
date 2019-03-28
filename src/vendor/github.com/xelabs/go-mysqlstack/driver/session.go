@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/xelabs/go-mysqlstack/common"
 	"github.com/xelabs/go-mysqlstack/packet"
@@ -25,24 +26,26 @@ import (
 
 // Session is a client connection with greeting and auth.
 type Session struct {
-	id       uint32
-	mu       sync.RWMutex
-	log      *xlog.Log
-	conn     net.Conn
-	schema   string
-	auth     *proto.Auth
-	packets  *packet.Packets
-	greeting *proto.Greeting
+	id            uint32
+	mu            sync.RWMutex
+	log           *xlog.Log
+	conn          net.Conn
+	schema        string
+	auth          *proto.Auth
+	packets       *packet.Packets
+	greeting      *proto.Greeting
+	lastQueryTime time.Time
 }
 
 func newSession(log *xlog.Log, ID uint32, serverVersion string, conn net.Conn) *Session {
 	return &Session{
-		id:       ID,
-		log:      log,
-		conn:     conn,
-		auth:     proto.NewAuth(),
-		greeting: proto.NewGreeting(ID, serverVersion),
-		packets:  packet.NewPackets(conn),
+		id:            ID,
+		log:           log,
+		conn:          conn,
+		auth:          proto.NewAuth(),
+		greeting:      proto.NewGreeting(ID, serverVersion),
+		packets:       packet.NewPackets(conn),
+		lastQueryTime: time.Now(),
 	}
 }
 
@@ -208,4 +211,18 @@ func (s *Session) Charset() uint8 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.auth.Charset()
+}
+
+// LastQueryTime returns the lastQueryTime.
+func (s *Session) LastQueryTime() time.Time {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.lastQueryTime
+}
+
+// UpdateTime update the lastQueryTime.
+func (s *Session) UpdateTime(time time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.lastQueryTime = time
 }
