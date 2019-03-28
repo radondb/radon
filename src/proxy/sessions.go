@@ -292,7 +292,7 @@ func (ss *Sessions) Snapshot() []SessionInfo {
 			Host:    v.session.Addr(),
 			DB:      v.session.Schema(),
 			Command: "Sleep",
-			Time:    uint32(now - v.timestamp),
+			Time:    uint32(now - (int64)(v.session.LastQueryTime().Unix())),
 		}
 
 		if v.node != nil {

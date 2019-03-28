@@ -13,12 +13,12 @@ import (
 	"net"
 	"runtime"
 	"runtime/debug"
-
 	"github.com/xelabs/go-mysqlstack/common"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/xlog"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
+	"time"
 )
 
 // Handler interface.
@@ -211,6 +211,7 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 				return
 			}
 		case sqldb.COM_QUERY:
+			session.UpdateTime(time.Now())
 			query := l.parserComQuery(data)
 			if err = l.handler.ComQuery(session, query, func(qr *sqltypes.Result) error {
 				return session.writeResult(qr)

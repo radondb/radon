@@ -11,6 +11,7 @@ package driver
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqldb"
@@ -242,4 +243,39 @@ func TestServerUnsupportedCommand(t *testing.T) {
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}
+}
+
+func TestServerSessionTimeUpdate(t *testing.T) {
+	result2 := &sqltypes.Result{}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	th := NewTestHandler(log)
+	svr, err := MockMysqlServer(log, th)
+	assert.Nil(t, err)
+	address := svr.Addr()
+	var t1 time.Time
+	var t2 time.Time
+
+	client1, err := NewConn("mock", "mock", address, "test", "")
+	assert.Nil(t, err)
+	th.AddQuery("SELECT2", result2)
+
+	r, err := client1.FetchAll("SELECT2", -1)
+	assert.Nil(t, err)
+	assert.Equal(t, result2, r)
+
+	assert.EqualValues(t, 1, len(th.ss))
+	for _, s := range th.ss {
+		t1 = s.session.LastQueryTime()
+	}
+
+	r, err = client1.FetchAll("SELECT3", -1)
+	assert.NotNil(t, err)
+
+	assert.EqualValues(t, 1, len(th.ss))
+	for _, s := range th.ss {
+		t2 = s.session.LastQueryTime()
+	}
+
+	assert.Equal(t, true, t2.UnixNano()-t1.UnixNano() > 0)
 }
