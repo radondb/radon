@@ -17,12 +17,12 @@ func TestNormalize(t *testing.T) {
 	testcases := []struct {
 		in      string
 		outstmt string
-		outbv   map[string]interface{}
+		outbv   map[string]*querypb.BindVariable
 	}{{
 		// str val
 		in:      "select * from t where v1 = 'aa'",
 		outstmt: "select * from t where v1 = :bv1",
-		outbv: map[string]interface{}{
+		outbv: map[string]*querypb.BindVariable{
 			"bv1": &querypb.BindVariable{
 				Type:  sqltypes.VarBinary,
 				Value: []byte("aa"),
@@ -32,7 +32,7 @@ func TestNormalize(t *testing.T) {
 		// int val
 		in:      "select * from t where v1 = 1",
 		outstmt: "select * from t where v1 = :bv1",
-		outbv: map[string]interface{}{
+		outbv: map[string]*querypb.BindVariable{
 			"bv1": &querypb.BindVariable{
 				Type:  sqltypes.Int64,
 				Value: []byte("1"),
@@ -42,7 +42,7 @@ func TestNormalize(t *testing.T) {
 		// float val
 		in:      "select * from t where v1 = 1.2",
 		outstmt: "select * from t where v1 = :bv1",
-		outbv: map[string]interface{}{
+		outbv: map[string]*querypb.BindVariable{
 			"bv1": &querypb.BindVariable{
 				Type:  sqltypes.Float64,
 				Value: []byte("1.2"),
@@ -52,7 +52,7 @@ func TestNormalize(t *testing.T) {
 		// multiple vals
 		in:      "select * from t where v1 = 1.2 and v2 = 2",
 		outstmt: "select * from t where v1 = :bv1 and v2 = :bv2",
-		outbv: map[string]interface{}{
+		outbv: map[string]*querypb.BindVariable{
 			"bv1": &querypb.BindVariable{
 				Type:  sqltypes.Float64,
 				Value: []byte("1.2"),
@@ -66,7 +66,7 @@ func TestNormalize(t *testing.T) {
 		// bv collision
 		in:      "select * from t where v1 = :bv1 and v2 = 1",
 		outstmt: "select * from t where v1 = :bv1 and v2 = :bv2",
-		outbv: map[string]interface{}{
+		outbv: map[string]*querypb.BindVariable{
 			"bv2": &querypb.BindVariable{
 				Type:  sqltypes.Int64,
 				Value: []byte("1"),
@@ -76,7 +76,7 @@ func TestNormalize(t *testing.T) {
 		// val reuse
 		in:      "select * from t where v1 = 1 and v2 = 1",
 		outstmt: "select * from t where v1 = :bv1 and v2 = :bv1",
-		outbv: map[string]interface{}{
+		outbv: map[string]*querypb.BindVariable{
 			"bv1": &querypb.BindVariable{
 				Type:  sqltypes.Int64,
 				Value: []byte("1"),
@@ -86,7 +86,7 @@ func TestNormalize(t *testing.T) {
 		// ints and strings are different
 		in:      "select * from t where v1 = 1 and v2 = '1'",
 		outstmt: "select * from t where v1 = :bv1 and v2 = :bv2",
-		outbv: map[string]interface{}{
+		outbv: map[string]*querypb.BindVariable{
 			"bv1": &querypb.BindVariable{
 				Type:  sqltypes.Int64,
 				Value: []byte("1"),
@@ -100,17 +100,17 @@ func TestNormalize(t *testing.T) {
 		// comparison with no vals
 		in:      "select * from t where v1 = v2",
 		outstmt: "select * from t where v1 = v2",
-		outbv:   map[string]interface{}{},
+		outbv:   map[string]*querypb.BindVariable{},
 	}, {
 		// IN clause with existing bv
 		in:      "select * from t where v1 in ::list",
 		outstmt: "select * from t where v1 in ::list",
-		outbv:   map[string]interface{}{},
+		outbv:   map[string]*querypb.BindVariable{},
 	}, {
 		// IN clause with non-val values
 		in:      "select * from t where v1 in (1, a)",
 		outstmt: "select * from t where v1 in (:bv1, a)",
-		outbv: map[string]interface{}{
+		outbv: map[string]*querypb.BindVariable{
 			"bv1": &querypb.BindVariable{
 				Type:  sqltypes.Int64,
 				Value: []byte("1"),
@@ -120,7 +120,7 @@ func TestNormalize(t *testing.T) {
 		// IN clause with vals
 		in:      "select * from t where v1 in (1, '2')",
 		outstmt: "select * from t where v1 in ::bv1",
-		outbv: map[string]interface{}{
+		outbv: map[string]*querypb.BindVariable{
 			"bv1": &querypb.BindVariable{
 				Type: sqltypes.Tuple,
 				Values: []*querypb.Value{{
@@ -136,7 +136,7 @@ func TestNormalize(t *testing.T) {
 		// NOT IN clause
 		in:      "select * from t where v1 not in (1, '2')",
 		outstmt: "select * from t where v1 not in ::bv1",
-		outbv: map[string]interface{}{
+		outbv: map[string]*querypb.BindVariable{
 			"bv1": &querypb.BindVariable{
 				Type: sqltypes.Tuple,
 				Values: []*querypb.Value{{
@@ -155,7 +155,7 @@ func TestNormalize(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		bv := make(map[string]interface{})
+		bv := make(map[string]*querypb.BindVariable)
 		Normalize(stmt, bv, prefix)
 		outstmt := String(stmt)
 		if outstmt != tc.outstmt {
