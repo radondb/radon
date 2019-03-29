@@ -49,7 +49,7 @@ func mergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode) {
 		cmp := 0
 		isNull := false
 		for k, key := range node.LeftKeys {
-			cmp = sqltypes.Compare(lrows[0][key.Index], rrows[0][node.RightKeys[k].Index])
+			cmp = sqltypes.NullsafeCompare(lrows[0][key.Index], rrows[0][node.RightKeys[k].Index])
 			if cmp != 0 {
 				break
 			}
@@ -141,7 +141,7 @@ func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *planner.JoinNode,
 					if filter.Exchange {
 						v1, v2 = v2, v1
 					}
-					cmp := sqltypes.Compare(v1, v2)
+					cmp := sqltypes.NullsafeCompare(v1, v2)
 					switch filter.Operator {
 					case sqlparser.EqualStr:
 						if cmp != 0 {
