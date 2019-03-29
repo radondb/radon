@@ -42,6 +42,32 @@ type Value struct {
 	val []byte
 }
 
+// NewValue builds a Value using typ and val. If the value and typ
+// don't match, it returns an error.
+func NewValue(typ querypb.Type, val []byte) (v Value, err error) {
+	switch {
+	case IsSigned(typ):
+		if _, err := strconv.ParseInt(string(val), 0, 64); err != nil {
+			return NULL, err
+		}
+		return MakeTrusted(typ, val), nil
+	case IsUnsigned(typ):
+		if _, err := strconv.ParseUint(string(val), 0, 64); err != nil {
+			return NULL, err
+		}
+		return MakeTrusted(typ, val), nil
+	case IsFloat(typ) || typ == Decimal:
+		if _, err := strconv.ParseFloat(string(val), 64); err != nil {
+			return NULL, err
+		}
+		return MakeTrusted(typ, val), nil
+	case IsQuoted(typ) || typ == Bit || typ == Null:
+		return MakeTrusted(typ, val), nil
+	}
+	// All other types are unsafe or invalid.
+	return NULL, fmt.Errorf("invalid type specified for MakeValue: %v", typ)
+}
+
 // MakeTrusted makes a new Value based on the type.
 // If the value is an integral, then val must be in its canonical
 // form. This function should only be used if you know the value

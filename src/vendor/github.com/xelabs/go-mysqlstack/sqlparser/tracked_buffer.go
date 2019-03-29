@@ -17,13 +17,13 @@ limitations under the License.
 package sqlparser
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 )
 
-type bindLocation struct {
-	offset, length int
-}
+// NodeFormatter defines the signature of a custom node formatter
+// function that can be given to TrackedBuffer for code generation.
+type NodeFormatter func(buf *TrackedBuffer, node SQLNode)
 
 // TrackedBuffer is used to rebuild a query from the ast.
 // bindLocations keeps track of locations in the buffer that
@@ -33,17 +33,24 @@ type bindLocation struct {
 // But you can supply a different formatting function if you
 // want to generate a query that's different from the default.
 type TrackedBuffer struct {
-	*bytes.Buffer
+	*strings.Builder
 	bindLocations []bindLocation
-	nodeFormatter func(buf *TrackedBuffer, node SQLNode)
+	nodeFormatter NodeFormatter
 }
 
 // NewTrackedBuffer creates a new TrackedBuffer.
-func NewTrackedBuffer(nodeFormatter func(buf *TrackedBuffer, node SQLNode)) *TrackedBuffer {
+func NewTrackedBuffer(nodeFormatter NodeFormatter) *TrackedBuffer {
 	return &TrackedBuffer{
-		Buffer:        new(bytes.Buffer),
+		Builder:       new(strings.Builder),
 		nodeFormatter: nodeFormatter,
 	}
+}
+
+// WriteNode function, initiates the writing of a single SQLNode tree by passing
+// through to Myprintf with a default format string
+func (buf *TrackedBuffer) WriteNode(node SQLNode) *TrackedBuffer {
+	buf.Myprintf("%v", node)
+	return buf
 }
 
 // Myprintf mimics fmt.Fprintf(buf, ...), but limited to Node(%v),
@@ -112,4 +119,22 @@ func (buf *TrackedBuffer) WriteArg(arg string) {
 		length: len(arg),
 	})
 	buf.WriteString(arg)
+}
+
+// ParsedQuery returns a ParsedQuery that contains bind
+// locations for easy substitution.
+func (buf *TrackedBuffer) ParsedQuery() *ParsedQuery {
+	return &ParsedQuery{Query: buf.String(), bindLocations: buf.bindLocations}
+}
+
+// HasBindVars returns true if the parsed query uses bind vars.
+func (buf *TrackedBuffer) HasBindVars() bool {
+	return len(buf.bindLocations) != 0
+}
+
+// BuildParsedQuery builds a ParsedQuery from the input.
+func BuildParsedQuery(in string, vars ...interface{}) *ParsedQuery {
+	buf := NewTrackedBuffer(nil)
+	buf.Myprintf(in, vars...)
+	return buf.ParsedQuery()
 }

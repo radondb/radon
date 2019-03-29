@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 	"unsafe"
 )
@@ -30,7 +31,7 @@ func TestAppend(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	var b bytes.Buffer
+	var b strings.Builder
 	Append(&b, tree)
 	got := b.String()
 	want := query
