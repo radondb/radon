@@ -207,7 +207,7 @@ const (
 	// SET specifies a SET type.
 	// Properties: 27, IsQuoted.
 	Type_SET Type = 2075
-	// TUPLE specifies a a tuple. This cannot
+	// TUPLE specifies a tuple. This cannot
 	// be returned in a QueryResult, but it can
 	// be sent as a bind var.
 	// Properties: 28, None.
@@ -215,9 +215,13 @@ const (
 	// GEOMETRY specifies a GEOMETRY type.
 	// Properties: 29, IsQuoted.
 	Type_GEOMETRY Type = 2077
-	// JSON specified a JSON type.
+	// JSON specifies a JSON type.
 	// Properties: 30, IsQuoted.
 	Type_JSON Type = 2078
+	// EXPRESSION specifies a SQL expression.
+	// This type is for internal use only.
+	// Properties: 31, None.
+	Type_EXPRESSION Type = 31
 )
 
 var Type_name = map[int32]string{
@@ -252,39 +256,41 @@ var Type_name = map[int32]string{
 	28:    "TUPLE",
 	2077:  "GEOMETRY",
 	2078:  "JSON",
+	31:    "EXPRESSION",
 }
 var Type_value = map[string]int32{
-	"NULL_TYPE": 0,
-	"INT8":      257,
-	"UINT8":     770,
-	"INT16":     259,
-	"UINT16":    772,
-	"INT24":     261,
-	"UINT24":    774,
-	"INT32":     263,
-	"UINT32":    776,
-	"INT64":     265,
-	"UINT64":    778,
-	"FLOAT32":   1035,
-	"FLOAT64":   1036,
-	"TIMESTAMP": 2061,
-	"DATE":      2062,
-	"TIME":      2063,
-	"DATETIME":  2064,
-	"YEAR":      785,
-	"DECIMAL":   18,
-	"TEXT":      6163,
-	"BLOB":      10260,
-	"VARCHAR":   6165,
-	"VARBINARY": 10262,
-	"CHAR":      6167,
-	"BINARY":    10264,
-	"BIT":       2073,
-	"ENUM":      2074,
-	"SET":       2075,
-	"TUPLE":     28,
-	"GEOMETRY":  2077,
-	"JSON":      2078,
+	"NULL_TYPE":  0,
+	"INT8":       257,
+	"UINT8":      770,
+	"INT16":      259,
+	"UINT16":     772,
+	"INT24":      261,
+	"UINT24":     774,
+	"INT32":      263,
+	"UINT32":     776,
+	"INT64":      265,
+	"UINT64":     778,
+	"FLOAT32":    1035,
+	"FLOAT64":    1036,
+	"TIMESTAMP":  2061,
+	"DATE":       2062,
+	"TIME":       2063,
+	"DATETIME":   2064,
+	"YEAR":       785,
+	"DECIMAL":    18,
+	"TEXT":       6163,
+	"BLOB":       10260,
+	"VARCHAR":    6165,
+	"VARBINARY":  10262,
+	"CHAR":       6167,
+	"BINARY":     10264,
+	"BIT":        2073,
+	"ENUM":       2074,
+	"SET":        2075,
+	"TUPLE":      28,
+	"GEOMETRY":   2077,
+	"JSON":       2078,
+	"EXPRESSION": 31,
 }
 
 func (x Type) String() string {
