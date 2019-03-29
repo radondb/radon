@@ -6,6 +6,7 @@ package sqltypes
 
 import (
 	"fmt"
+
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
 
@@ -59,6 +60,11 @@ func IsText(t querypb.Type) bool {
 // IsBinary returns true if querypb.Type is a binary.
 func IsBinary(t querypb.Type) bool {
 	return int(t)&flagIsBinary == flagIsBinary
+}
+
+// isNumber returns true if the type is any type of number.
+func isNumber(t querypb.Type) bool {
+	return IsIntegral(t) || IsFloat(t) || t == Decimal
 }
 
 // Vitess data types. These are idiomatically

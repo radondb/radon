@@ -7,21 +7,25 @@ package sqltypes
 import (
 	"bytes"
 	"fmt"
+	"strconv"
+
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
 
-// Compare used to compare two values.
-// if return 0, v1=v2;if -1 v1<v2;if 0 v1>v2.
-func Compare(v1, v2 Value) int {
-	switch v1.Type() {
-	case Decimal:
-		v1 = MakeTrusted(Float64, v1.Raw())
-	}
+// numeric represents a numeric value extracted from
+// a Value, used for arithmetic operations.
+type numeric struct {
+	typ  querypb.Type
+	ival int64
+	uval uint64
+	fval float64
+}
 
-	switch v2.Type() {
-	case Decimal:
-		v2 = MakeTrusted(Float64, v2.Raw())
-	}
-
+// NullsafeCompare returns 0 if v1==v2, -1 if v1<v2, and 1 if v1>v2.
+// NULL is the lowest value. If any value is numeric, then a numeric
+// comparison is performed after necessary conversions. If none are
+// numeric, then it's a simple binary comparison.
+func NullsafeCompare(v1, v2 Value) int {
 	if v1.IsNull() {
 		if v2.IsNull() {
 			return 0
@@ -32,89 +36,102 @@ func Compare(v1, v2 Value) int {
 		return 1
 	}
 
-	var err error
-	var out float64
-	vn1 := v1.ToNative()
-	vn2 := v2.ToNative()
-	switch vn1.(type) {
-	case int64:
-		switch vn2.(type) {
-		case int64:
-			return CompareInt64(vn1.(int64), vn2.(int64))
-		case uint64:
-			if vn1.(int64) < 0 {
+	if isNumber(v1.Type()) || isNumber(v2.Type()) {
+		lv1, err := newNumeric(v1)
+		if err != nil {
+			panic(err)
+		}
+		lv2, err := newNumeric(v2)
+		if err != nil {
+			panic(err)
+		}
+		return compareNumeric(lv1, lv2)
+	}
+
+	if v1.Type() == Tuple || v2.Type() == Tuple {
+		panic(fmt.Sprintf("unsupported.value.type:%v.vs.%v", v1.Type(), v2.Type()))
+	}
+
+	return bytes.Compare(v1.val, v2.val)
+}
+
+// newNumeric parses a value and produces an Int64, Uint64 or Float64.
+func newNumeric(v Value) (numeric, error) {
+	str := v.String()
+	switch {
+	case v.IsSigned():
+		ival, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return numeric{}, err
+		}
+		return numeric{ival: ival, typ: Int64}, nil
+	case v.IsUnsigned():
+		uval, err := strconv.ParseUint(str, 10, 64)
+		if err != nil {
+			return numeric{}, err
+		}
+		return numeric{uval: uval, typ: Uint64}, nil
+	case v.IsFloat():
+		fval, err := strconv.ParseFloat(str, 64)
+		if err != nil {
+			return numeric{}, err
+		}
+		return numeric{fval: fval, typ: Float64}, nil
+	}
+
+	// For other types, do best effort.
+	if ival, err := strconv.ParseInt(str, 10, 64); err == nil {
+		return numeric{ival: ival, typ: Int64}, nil
+	}
+	if fval, err := strconv.ParseFloat(str, 64); err == nil {
+		return numeric{fval: fval, typ: Float64}, nil
+	}
+	return numeric{ival: 0, typ: Int64}, nil
+}
+
+func compareNumeric(v1, v2 numeric) int {
+	// Equalize the types.
+	switch v1.typ {
+	case Int64:
+		switch v2.typ {
+		case Uint64:
+			if v1.ival < 0 {
 				return -1
 			}
-			return CompareUint64(uint64(vn1.(int64)), vn2.(uint64))
-		case float64:
-			return CompareFloat64(float64(vn1.(int64)), vn2.(float64))
-		case []byte:
-			if out, err = v2.ParseFloat64(); err != nil {
-				return CompareInt64(vn1.(int64), 0)
-			}
-			return CompareFloat64(float64(vn1.(int64)), out)
-		default:
-			panic(fmt.Sprintf("unsupported.value.type:%T", vn1))
+			v1 = numeric{typ: Uint64, uval: uint64(v1.ival)}
+		case Float64:
+			v1 = numeric{typ: Float64, fval: float64(v1.ival)}
 		}
-	case uint64:
-		switch vn2.(type) {
-		case int64:
-			if vn2.(int64) < 0 {
+	case Uint64:
+		switch v2.typ {
+		case Int64:
+			if v2.ival < 0 {
 				return 1
 			}
-			return CompareUint64(vn1.(uint64), uint64(vn2.(int64)))
-		case uint64:
-			return CompareUint64(vn1.(uint64), vn2.(uint64))
-		case float64:
-			return CompareFloat64(float64(vn1.(uint64)), vn2.(float64))
-		case []byte:
-			if out, err = v2.ParseFloat64(); err != nil {
-				return CompareUint64(vn1.(uint64), 0)
-			}
-			return CompareFloat64(float64(vn1.(uint64)), out)
-		default:
-			panic(fmt.Sprintf("unsupported.value.type:%T", vn1))
+			v2 = numeric{typ: Uint64, uval: uint64(v2.ival)}
+		case Float64:
+			v1 = numeric{typ: Float64, fval: float64(v1.uval)}
 		}
-	case float64:
-		switch vn2.(type) {
-		case int64:
-			return CompareFloat64(vn1.(float64), float64(vn2.(int64)))
-		case uint64:
-			return CompareFloat64(vn1.(float64), float64(vn2.(uint64)))
-		case float64:
-			return CompareFloat64(vn1.(float64), vn2.(float64))
-		case []byte:
-			if out, err = v2.ParseFloat64(); err != nil {
-				return CompareFloat64(vn1.(float64), 0)
-			}
-			return CompareFloat64(vn1.(float64), out)
-		default:
-			panic(fmt.Sprintf("unsupported.value.type:%T", vn1))
-		}
-	case []byte:
-		switch vn2.(type) {
-		case int64:
-			if out, err = v1.ParseFloat64(); err != nil {
-				return CompareInt64(0, vn2.(int64))
-			}
-			return CompareFloat64(out, float64(vn2.(int64)))
-		case uint64:
-			if out, err = v1.ParseFloat64(); err != nil {
-				return CompareUint64(0, vn2.(uint64))
-			}
-			return CompareFloat64(out, float64(vn2.(uint64)))
-		case float64:
-			if out, err = v1.ParseFloat64(); err != nil {
-				return CompareFloat64(0, vn2.(float64))
-			}
-			return CompareFloat64(out, vn2.(float64))
-		case []byte:
-			return bytes.Compare(vn1.([]byte), vn2.([]byte))
-		default:
-			panic(fmt.Sprintf("unsupported.value.type:%T", vn1))
+	case Float64:
+		switch v2.typ {
+		case Int64:
+			v2 = numeric{typ: Float64, fval: float64(v2.ival)}
+		case Uint64:
+			v2 = numeric{typ: Float64, fval: float64(v2.uval)}
 		}
 	}
-	panic(fmt.Sprintf("unsupported.value.type:%T", vn1))
+
+	// Both values are of the same type.
+	switch v1.typ {
+	case Int64:
+		return CompareInt64(v1.ival, v2.ival)
+	case Uint64:
+		return CompareUint64(v1.uval, v2.uval)
+	case Float64:
+		return CompareFloat64(v1.fval, v2.fval)
+	}
+
+	return 0
 }
 
 // CompareInt64 returns an integer comparing the int64 x to y.
@@ -141,17 +158,6 @@ func CompareUint64(x, y uint64) int {
 
 // CompareFloat64 returns an integer comparing the float64 x to y.
 func CompareFloat64(x, y float64) int {
-	if x < y {
-		return -1
-	} else if x == y {
-		return 0
-	}
-
-	return 1
-}
-
-// CompareString returns an integer comparing the string x to y.
-func CompareString(x, y string) int {
 	if x < y {
 		return -1
 	} else if x == y {

@@ -20,13 +20,13 @@ func TestCompare(t *testing.T) {
 		v2 := testVal(Uint24, "5")
 		v3 := testVal(Uint24, "4")
 
-		cmp := Compare(v1, v2)
+		cmp := NullsafeCompare(v1, v2)
 		assert.Equal(t, -1, cmp)
 
-		cmp = Compare(v2, v3)
+		cmp = NullsafeCompare(v2, v3)
 		assert.Equal(t, 1, cmp)
 
-		cmp = Compare(v1, v1)
+		cmp = NullsafeCompare(v1, v1)
 		assert.Equal(t, 0, cmp)
 	}
 	// int64.
@@ -35,13 +35,13 @@ func TestCompare(t *testing.T) {
 		v2 := testVal(Int64, "5")
 		v3 := testVal(Int64, "4")
 
-		cmp := Compare(v1, v2)
+		cmp := NullsafeCompare(v1, v2)
 		assert.Equal(t, -1, cmp)
 
-		cmp = Compare(v2, v3)
+		cmp = NullsafeCompare(v2, v3)
 		assert.Equal(t, 1, cmp)
 
-		cmp = Compare(v1, v1)
+		cmp = NullsafeCompare(v1, v1)
 		assert.Equal(t, 0, cmp)
 	}
 	// float64.
@@ -50,13 +50,13 @@ func TestCompare(t *testing.T) {
 		v2 := testVal(Decimal, "3.142")
 		v3 := testVal(Decimal, "3.1416")
 
-		cmp := Compare(v1, v2)
+		cmp := NullsafeCompare(v1, v2)
 		assert.Equal(t, -1, cmp)
 
-		cmp = Compare(v2, v3)
+		cmp = NullsafeCompare(v2, v3)
 		assert.Equal(t, 1, cmp)
 
-		cmp = Compare(v1, v1)
+		cmp = NullsafeCompare(v1, v1)
 		assert.Equal(t, 0, cmp)
 	}
 	// []byte.
@@ -65,13 +65,13 @@ func TestCompare(t *testing.T) {
 		v2 := testVal(VarChar, "sci")
 		v3 := testVal(VarChar, "qq")
 
-		cmp := Compare(v1, v2)
+		cmp := NullsafeCompare(v1, v2)
 		assert.Equal(t, -1, cmp)
 
-		cmp = Compare(v2, v3)
+		cmp = NullsafeCompare(v2, v3)
 		assert.Equal(t, 1, cmp)
 
-		cmp = Compare(v1, v1)
+		cmp = NullsafeCompare(v1, v1)
 		assert.Equal(t, 0, cmp)
 	}
 	// different type.
@@ -80,13 +80,13 @@ func TestCompare(t *testing.T) {
 		v2 := testVal(Decimal, "3.0")
 		v3 := testVal(VarChar, "3")
 
-		cmp := Compare(v1, v2)
+		cmp := NullsafeCompare(v1, v2)
 		assert.Equal(t, 0, cmp)
 
-		cmp = Compare(v1, v3)
+		cmp = NullsafeCompare(v1, v3)
 		assert.Equal(t, 0, cmp)
 
-		cmp = Compare(v2, v3)
+		cmp = NullsafeCompare(v2, v3)
 		assert.Equal(t, 0, cmp)
 	}
 	// different type.
@@ -94,7 +94,7 @@ func TestCompare(t *testing.T) {
 		v1 := testVal(Float64, "2.5")
 		v2 := testVal(Decimal, "2.5")
 
-		cmp := Compare(v1, v2)
+		cmp := NullsafeCompare(v1, v2)
 		assert.Equal(t, 0, cmp)
 	}
 	// v1 is null.
@@ -102,7 +102,7 @@ func TestCompare(t *testing.T) {
 		v1 := NULL
 		v2 := testVal(VarChar, "qq")
 
-		cmp := Compare(v1, v2)
+		cmp := NullsafeCompare(v1, v2)
 		assert.Equal(t, -1, cmp)
 	}
 	// v2 is null.
@@ -110,7 +110,7 @@ func TestCompare(t *testing.T) {
 		v1 := testVal(VarChar, "qq")
 		v2 := NULL
 
-		cmp := Compare(v1, v2)
+		cmp := NullsafeCompare(v1, v2)
 		assert.Equal(t, 1, cmp)
 	}
 	// v1 v2 are null.
@@ -118,7 +118,7 @@ func TestCompare(t *testing.T) {
 		v1 := NULL
 		v2 := NULL
 
-		cmp := Compare(v1, v2)
+		cmp := NullsafeCompare(v1, v2)
 		assert.Equal(t, 0, cmp)
 	}
 
@@ -128,13 +128,13 @@ func TestCompare(t *testing.T) {
 		v2 := testVal(Float64, "-5.1")
 		v3 := testVal(VarChar, "a")
 
-		cmp := Compare(v1, v2)
+		cmp := NullsafeCompare(v1, v2)
 		assert.Equal(t, 1, cmp)
 
-		cmp = Compare(v2, v3)
+		cmp = NullsafeCompare(v2, v3)
 		assert.Equal(t, -1, cmp)
 
-		cmp = Compare(v1, v3)
+		cmp = NullsafeCompare(v1, v3)
 		assert.Equal(t, 1, cmp)
 	}
 }
