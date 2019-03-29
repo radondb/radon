@@ -69,10 +69,11 @@ testpoc:
 	go test -v poc
 testmonitor:
 	go test -v monitor
-
 testplugins:
 	go test -v plugins
 	go test -v plugins/autoincrement
+testmysqlstack:
+	cd src/vendor/github.com/xelabs/go-mysqlstack&&make test
 
 testfuzz:
 	go test -v -race fuzz/sqlparser

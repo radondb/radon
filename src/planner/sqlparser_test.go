@@ -17,6 +17,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -740,5 +742,46 @@ func TestSqlSet(t *testing.T) {
 			}
 			return true, nil
 		}, sel)
+	}
+}
+
+func TestSqlBindVariables(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+
+	tests := []struct {
+		query string
+		want  string
+	}{
+		{
+			query: "select * from t1 where id = 1",
+			want:  "select * from t1 where id = :v1",
+		},
+
+		{
+			query: "insert into t1(id, name) values (1, 2)",
+			want:  "insert into t1(id, name) values (:v1, :v2)",
+		},
+	}
+
+	for _, test := range tests {
+		stmt, err := sqlparser.Parse(test.query)
+		assert.Nil(t, err)
+
+		bv := make(map[string]*querypb.BindVariable)
+		bv["v1"] = sqltypes.Int64BindVariable(1)
+		bv["v2"] = sqltypes.Int64BindVariable(2)
+
+		sqlparser.Normalize(stmt, bv, "v")
+		bindvarQuery := sqlparser.String(stmt)
+		log.Debug("bindvar.query: %s", bindvarQuery)
+
+		parsedQuery := sqlparser.NewParsedQuery(stmt)
+		bytes, err := parsedQuery.GenerateQuery(bv, nil)
+		assert.Nil(t, err)
+		finalQuery := string(bytes)
+		log.Debug("final.query: %s", finalQuery)
+
+		assert.Equal(t, test.want, bindvarQuery)
+		assert.Equal(t, test.query, finalQuery)
 	}
 }
