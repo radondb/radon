@@ -10,44 +10,33 @@
 package driver
 
 import (
+	"fmt"
 	"net"
 	"runtime"
 	"runtime/debug"
-	"github.com/xelabs/go-mysqlstack/common"
+	"strings"
+	"time"
+
+	"github.com/xelabs/go-mysqlstack/proto"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/xlog"
 
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
-	"time"
 )
 
 // Handler interface.
 type Handler interface {
-	// NewSession is called when a session is coming.
-	NewSession(session *Session)
-
-	// SessionInc is called when a new session is commit and the user is assigned, to monitor the client connection.
-	SessionInc(session *Session)
-
-	// SessionDec is called when a session is exit, to monitor the client connection.
-	SessionDec(session *Session)
-
-	// SessionClosed is called when a session exit.
-	SessionClosed(session *Session)
-
-	// Check the session.
-	SessionCheck(session *Session) error
-
-	// Check the Auth request.
-	AuthCheck(session *Session) error
-
-	// Handle the cominitdb.
-	ComInitDB(session *Session, database string) error
-
-	// Handle the queries.
-	ComQuery(session *Session, query string, callback func(*sqltypes.Result) error) error
-
 	ServerVersion() string
+	NewSession(session *Session)
+	SessionInc(session *Session)
+	SessionDec(session *Session)
+	SessionClosed(session *Session)
+	SessionCheck(session *Session) error
+	AuthCheck(session *Session) error
+	ComInitDB(session *Session, database string) error
+	ComQuery(session *Session, query string, bindVariables map[string]*querypb.BindVariable, callback func(*sqltypes.Result) error) error
 }
 
 // Listener is a connection handler.
@@ -113,6 +102,33 @@ func (l *Listener) parserComQuery(data []byte) string {
 		data = data[:last]
 	}
 	return common.BytesToString(data)
+}
+
+func (l *Listener) parserComStatement(data []byte, session *Session) (*Statement, error) {
+	data = data[1:]
+	buf := common.ReadBuffer(data)
+	stmtID, err := buf.ReadU32()
+	if err != nil {
+		return nil, err
+	}
+	stmt, ok := session.statements[stmtID]
+	if !ok {
+		return nil, fmt.Errorf("can.not.found.the.stmt.id:%v", stmtID)
+	}
+	return stmt, nil
+}
+
+func (l *Listener) parserComStatementExecute(data []byte, session *Session) (*Statement, error) {
+	stmt, err := l.parserComStatement(data, session)
+	if err != nil {
+		return nil, err
+	}
+	protoStmt, err := proto.UnPackStatementExecute(data[1:], stmt.ParamCount, sqltypes.ParseMySQLValues)
+	if err != nil {
+		return nil, err
+	}
+	stmt.BindVars = protoStmt.BindVars
+	return stmt, nil
 }
 
 // handle is called in a go routine for each client connection.
@@ -192,8 +208,10 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 		}
 
 		switch data[0] {
+		// COM_QUIT
 		case sqldb.COM_QUIT:
 			return
+			// COM_INIT_DB
 		case sqldb.COM_INIT_DB:
 			db := l.parserComInitDB(data)
 			if err = l.handler.ComInitDB(session, db); err != nil {
@@ -206,15 +224,17 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 					return
 				}
 			}
+			// COM_PING
 		case sqldb.COM_PING:
 			if err = session.packets.WriteOK(0, 0, session.greeting.Status(), 0); err != nil {
 				return
 			}
+			// COM_QUERY
 		case sqldb.COM_QUERY:
 			session.UpdateTime(time.Now())
 			query := l.parserComQuery(data)
-			if err = l.handler.ComQuery(session, query, func(qr *sqltypes.Result) error {
-				return session.writeResult(qr)
+			if err = l.handler.ComQuery(session, query, nil, func(qr *sqltypes.Result) error {
+				return session.writeTextRows(qr)
 			}); err != nil {
 				log.Error("server.handle.query.from.session[%v].error:%+v.query[%s]", ID, err, query)
 				if werr := session.writeErrFromError(err); werr != nil {
@@ -222,6 +242,74 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 				}
 				continue
 			}
+			// COM_STMT_PREPARE
+		case sqldb.COM_STMT_PREPARE:
+			session.statementID++
+			session.UpdateTime(time.Now())
+			id := session.statementID
+			query := l.parserComQuery(data)
+			paramCount := uint16(strings.Count(query, "?"))
+			stmt := &Statement{
+				ID:          id,
+				PrepareStmt: query,
+				ParamCount:  paramCount,
+				BindVars:    make(map[string]*querypb.BindVariable, paramCount),
+			}
+			for i := uint16(0); i < paramCount; i++ {
+				stmt.BindVars[fmt.Sprintf("v%d", i+1)] = &querypb.BindVariable{Type: querypb.Type_VARCHAR, Value: []byte("?")}
+			}
+			session.statements[id] = stmt
+			if err := session.writeStatementPrepareResult(stmt); err != nil {
+				log.Error("server.handle.stmt.prepare.from.session[%v].error:%+v.query[%s]", ID, err, query)
+				if werr := session.writeErrFromError(err); werr != nil {
+					return
+				}
+				delete(session.statements, id)
+				continue
+			}
+			// COM_STMT_EXECUTE
+		case sqldb.COM_STMT_EXECUTE:
+			stmt, err := l.parserComStatementExecute(data, session)
+			if err != nil {
+				log.Error("server.handle.stmt.execute.from.session[%v].error:%+v", ID, err)
+				if werr := session.writeErrFromError(err); werr != nil {
+					return
+				}
+				continue
+			}
+			if err = l.handler.ComQuery(session, stmt.PrepareStmt, sqltypes.CopyBindVariables(stmt.BindVars), func(qr *sqltypes.Result) error {
+				return session.writeBinaryRows(qr)
+			}); err != nil {
+				log.Error("server.handle.stmt.prepare.from.session[%v].error:%+v", ID, err)
+				if werr := session.writeErrFromError(err); werr != nil {
+					return
+				}
+				continue
+			}
+			// COM_STMT_RESET
+		case sqldb.COM_STMT_RESET:
+			stmt, err := l.parserComStatement(data, session)
+			if err != nil {
+				log.Error("server.handle.stmt.reset.from.session[%v].error:%+v", ID, err)
+				if werr := session.writeErrFromError(err); werr != nil {
+					return
+				}
+				continue
+			}
+			if stmt.ParamCount > 0 {
+				stmt.BindVars = make(map[string]*querypb.BindVariable, stmt.ParamCount)
+			}
+			// COM_STMT_CLOSE
+		case sqldb.COM_STMT_CLOSE:
+			stmt, err := l.parserComStatement(data, session)
+			if err != nil {
+				log.Error("server.handle.stmt.close.from.session[%v].error:%+v", ID, err)
+				if werr := session.writeErrFromError(err); werr != nil {
+					return
+				}
+				continue
+			}
+			delete(session.statements, stmt.ID)
 		default:
 			cmd := sqldb.CommandString(data[0])
 			log.Error("session.command:%s.not.implemented", cmd)

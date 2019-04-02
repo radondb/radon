@@ -10,9 +10,9 @@
 package proto
 
 import (
-	"github.com/xelabs/go-mysqlstack/common"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )

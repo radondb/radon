@@ -17,7 +17,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/hack"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -200,7 +200,7 @@ func (p *InsertPlan) JSON() string {
 	if err != nil {
 		return err.Error()
 	}
-	return hack.String(bout)
+	return common.BytesToString(bout)
 }
 
 // Children returns the children of the plan.

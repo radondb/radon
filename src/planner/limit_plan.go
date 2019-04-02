@@ -15,7 +15,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/hack"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -90,7 +90,7 @@ func (p *LimitPlan) Build() error {
 
 	if node.Offset != nil {
 		val := node.Offset.(*sqlparser.SQLVal)
-		out, err := strconv.ParseInt(hack.String(val.Val), 10, 64)
+		out, err := strconv.ParseInt(common.BytesToString(val.Val), 10, 64)
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func (p *LimitPlan) Build() error {
 
 	if node.Rowcount != nil {
 		val := node.Rowcount.(*sqlparser.SQLVal)
-		out, err := strconv.ParseInt(hack.String(val.Val), 10, 64)
+		out, err := strconv.ParseInt(common.BytesToString(val.Val), 10, 64)
 		if err != nil {
 			return err
 		}

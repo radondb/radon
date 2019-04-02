@@ -287,6 +287,97 @@ func TestProxyQuerys(t *testing.T) {
 	}
 }
 
+func TestProxyQueryStmtPrepare(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	result11 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "id",
+				Type: querypb.Type_INT32,
+			},
+			{
+				Name: "name",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte("10")),
+				sqltypes.MakeTrusted(sqltypes.VarChar, []byte("name1")),
+			},
+		},
+	}
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQuery("insert into test.t1_0021(id, name) values (10, 'name1')", result11)
+		fakedbs.AddQuery("select * from test.t1_0021 as t1 where id = 10 and name = 'name1'", result11)
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// prepare.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+
+		// Insert.
+		{
+			params := []sqltypes.Value{
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte("10")),
+				sqltypes.MakeTrusted(sqltypes.VarChar, []byte("name1")),
+			}
+
+			query := "insert into t1(id, name) values(?,?)"
+			stmt, err := client.ComStatementPrepare(query)
+			assert.Nil(t, err)
+
+			err = stmt.ComStatementExecute(params)
+			assert.Nil(t, err)
+			stmt.ComStatementClose()
+		}
+
+		// Select.
+		{
+			params := []sqltypes.Value{
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte("10")),
+				sqltypes.MakeTrusted(sqltypes.VarChar, []byte("name1")),
+			}
+			query := "select * from t1 where id=? and name=?"
+
+			stmt, err := client.ComStatementPrepare(query)
+			assert.Nil(t, err)
+
+			qr, err := stmt.ComStatementQuery(params)
+			assert.Nil(t, err)
+			log.Debug("%+v", qr)
+			stmt.ComStatementClose()
+		}
+	}
+}
+
 // Proxy with system database query.
 // Such as: select * from information_schema.
 func TestProxyQuerySystemDatabase(t *testing.T) {

@@ -13,11 +13,12 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/xelabs/go-mysqlstack/common"
 	"github.com/xelabs/go-mysqlstack/proto"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
 const (
@@ -143,7 +144,8 @@ func (p *Packets) WriteERR(errorCode uint16, sqlState string, format string, arg
 	return p.Write(proto.PackERR(e))
 }
 
-// Append appends packets to buffer but not write to stream
+// Append appends packets to buffer but not write to stream.
+// This is underlying packet unit.
 // NOTICE: SequenceID++
 func (p *Packets) Append(rawdata []byte) error {
 	pkt := common.NewBuffer(64)
@@ -162,6 +164,23 @@ func (p *Packets) Append(rawdata []byte) error {
 	}
 	p.seq++
 	return nil
+}
+
+// ReadOK used to read the OK packet.
+func (p *Packets) ReadOK() error {
+	// EOF packet
+	data, err := p.Next()
+	if err != nil {
+		return err
+	}
+	switch data[0] {
+	case proto.OK_PACKET:
+		return nil
+	case proto.ERR_PACKET:
+		return p.ParseERR(data)
+	default:
+		return sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "unexpected.ok.packet[%+v]", data)
+	}
 }
 
 // ReadEOF used to read the EOF packet.
@@ -285,4 +304,86 @@ func (p *Packets) ReadColumns(colNumber int) ([]*querypb.Field, error) {
 		columns = append(columns, column)
 	}
 	return columns, nil
+}
+
+// WriteStatementPrepareResponse -- write the stmt prepare response to client by server.
+func (p *Packets) WriteStatementPrepareResponse(clientFlags uint32, stmt *proto.Statement) error {
+	// First write statement prepare package.
+	datas := proto.PackStatementPrepare(stmt)
+	if err := p.Append(datas); err != nil {
+		return err
+	}
+
+	// Send param fields.
+	if stmt.ParamCount > 0 {
+		for i := uint16(0); i < stmt.ParamCount; i++ {
+			buf := common.NewBuffer(64)
+			field := &querypb.Field{Name: "?", Type: sqltypes.VarBinary, Charset: 63}
+			buf.WriteBytes(proto.PackColumn(field))
+			if err := p.Append(buf.Datas()); err != nil {
+				return err
+			}
+		}
+		if (clientFlags & sqldb.CLIENT_DEPRECATE_EOF) == 0 {
+			p.AppendEOF(0, 0)
+		}
+	}
+	return p.Flush()
+}
+
+// ReadStatementPrepareResponse -- read the stmt prepare response by client from the server.
+func (p *Packets) ReadStatementPrepareResponse(clientFlags uint32) (*proto.Statement, error) {
+	var err error
+	var data []byte
+
+	if data, err = p.Next(); err != nil {
+		return nil, err
+	}
+
+	switch data[0] {
+	case proto.ERR_PACKET:
+		return nil, p.ParseERR(data)
+	}
+
+	stmt, err := proto.UnPackStatementPrepare(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if stmt.ParamCount > 0 {
+		for i := uint16(0); i < stmt.ParamCount; i++ {
+			if data, err = p.Next(); err != nil {
+				return nil, err
+			}
+			if _, err = proto.UnpackColumn(data); err != nil {
+				return nil, err
+			}
+		}
+
+		if (clientFlags & sqldb.CLIENT_DEPRECATE_EOF) == 0 {
+			if err = p.ReadEOF(); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if stmt.ColumnCount > 0 {
+		for i := uint16(0); i < stmt.ColumnCount; i++ {
+			if data, err = p.Next(); err != nil {
+				return nil, err
+			}
+			column, err := proto.UnpackColumn(data)
+			if err != nil {
+				return nil, err
+			}
+			stmt.ColumnNames = append(stmt.ColumnNames, column.Name)
+		}
+
+		if (clientFlags & sqldb.CLIENT_DEPRECATE_EOF) == 0 {
+			if err = p.ReadEOF(); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return stmt, nil
 }

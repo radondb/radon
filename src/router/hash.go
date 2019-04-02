@@ -20,8 +20,8 @@ import (
 	"github.com/pkg/errors"
 	jump "github.com/renstrom/go-jump-consistent-hash"
 
-	"github.com/xelabs/go-mysqlstack/common"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 

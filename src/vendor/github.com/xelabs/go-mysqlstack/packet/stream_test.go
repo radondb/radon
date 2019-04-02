@@ -10,9 +10,11 @@
 package packet
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/xelabs/go-mysqlstack/common"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
 // TEST EFFECTS:

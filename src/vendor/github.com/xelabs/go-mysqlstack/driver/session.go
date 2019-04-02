@@ -15,12 +15,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xelabs/go-mysqlstack/common"
 	"github.com/xelabs/go-mysqlstack/packet"
 	"github.com/xelabs/go-mysqlstack/proto"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/xlog"
 
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
@@ -35,6 +35,8 @@ type Session struct {
 	packets       *packet.Packets
 	greeting      *proto.Greeting
 	lastQueryTime time.Time
+	statementID   uint32                // used to identify different statements for the same session.
+	statements    map[uint32]*Statement // Save the metadata of the session related to the prepare operation.
 }
 
 func newSession(log *xlog.Log, ID uint32, serverVersion string, conn net.Conn) *Session {
@@ -46,6 +48,7 @@ func newSession(log *xlog.Log, ID uint32, serverVersion string, conn net.Conn) *
 		greeting:      proto.NewGreeting(ID, serverVersion),
 		packets:       packet.NewPackets(conn),
 		lastQueryTime: time.Now(),
+		statements:    make(map[uint32]*Statement),
 	}
 }
 
@@ -71,7 +74,7 @@ func (s *Session) writeFields(result *sqltypes.Result) error {
 	return nil
 }
 
-func (s *Session) writeRows(result *sqltypes.Result) error {
+func (s *Session) appendTextRows(result *sqltypes.Result) error {
 	// 2. Append rows.
 	for _, row := range result.Rows {
 		rowBuf := common.NewBuffer(16)
@@ -82,6 +85,45 @@ func (s *Session) writeRows(result *sqltypes.Result) error {
 				rowBuf.WriteLenEncodeBytes(val.Raw())
 			}
 		}
+		if err := s.packets.Append(rowBuf.Datas()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// http://dev.mysql.com/doc/internals/en/binary-protocol-resultset-row.html
+func (s *Session) appendBinaryRows(result *sqltypes.Result) error {
+	colCount := len(result.Fields)
+
+	for _, row := range result.Rows {
+		valBuf := common.NewBuffer(16)
+		nullMask := make([]byte, (colCount+7+2)/8)
+
+		for fieldPos, val := range row {
+			if val.IsNull() || (val.Raw() == nil) {
+				bytePos := (fieldPos + 2) / 8
+				bitPos := uint8((fieldPos + 2) % 8)
+				//doc: https://dev.mysql.com/doc/internals/en/null-bitmap.html
+				//nulls[byte_pos] |= 1 << bit_pos
+				//nulls[1] |= 1 << 2;
+				nullMask[bytePos] |= 1 << bitPos
+				continue
+			}
+
+			v, err := val.ToMySQL()
+			if err != nil {
+				return err
+			}
+			valBuf.WriteBytes(v)
+		}
+
+		rowBuf := common.NewBuffer(16)
+		// OK header.
+		rowBuf.WriteU8(proto.OK_PACKET)
+		// NULL-bitmap
+		rowBuf.WriteBytes(nullMask)
+		rowBuf.WriteBytes(valBuf.Datas())
 		if err := s.packets.Append(rowBuf.Datas()); err != nil {
 			return err
 		}
@@ -108,7 +150,7 @@ func (s *Session) flush() error {
 	return s.packets.Flush()
 }
 
-func (s *Session) writeResult(result *sqltypes.Result) error {
+func (s *Session) writeBaseRows(rowMode RowMode, result *sqltypes.Result) error {
 	if len(result.Fields) == 0 {
 		if result.State == sqltypes.RStateNone {
 			// This is just an INSERT result, send an OK packet.
@@ -122,8 +164,15 @@ func (s *Session) writeResult(result *sqltypes.Result) error {
 		if err := s.writeFields(result); err != nil {
 			return err
 		}
-		if err := s.writeRows(result); err != nil {
-			return err
+		switch rowMode {
+		case TextRowMode:
+			if err := s.appendTextRows(result); err != nil {
+				return err
+			}
+		case BinaryRowMode:
+			if err := s.appendBinaryRows(result); err != nil {
+				return err
+			}
 		}
 		if err := s.writeFinish(result); err != nil {
 			return err
@@ -133,13 +182,40 @@ func (s *Session) writeResult(result *sqltypes.Result) error {
 			return err
 		}
 	case sqltypes.RStateRows:
-		if err := s.writeRows(result); err != nil {
-			return err
+		switch rowMode {
+		case TextRowMode:
+			if err := s.appendTextRows(result); err != nil {
+				return err
+			}
+		case BinaryRowMode:
+			if err := s.appendBinaryRows(result); err != nil {
+				return err
+			}
 		}
 	case sqltypes.RStateFinished:
 		if err := s.writeFinish(result); err != nil {
 			return err
 		}
+	}
+	return s.flush()
+}
+
+func (s *Session) writeTextRows(result *sqltypes.Result) error {
+	return s.writeBaseRows(TextRowMode, result)
+}
+
+func (s *Session) writeBinaryRows(result *sqltypes.Result) error {
+	return s.writeBaseRows(BinaryRowMode, result)
+}
+
+// writeStatementPrepareResult -- writes the packed prepare result to client.
+func (s *Session) writeStatementPrepareResult(stmt *Statement) error {
+	protoStmt := &proto.Statement{
+		ID:         stmt.ID,
+		ParamCount: stmt.ParamCount,
+	}
+	if err := s.packets.WriteStatementPrepareResponse(s.auth.ClientFlags(), protoStmt); err != nil {
+		return err
 	}
 	return s.flush()
 }

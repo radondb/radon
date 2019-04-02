@@ -15,11 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xelabs/go-mysqlstack/common"
 	"github.com/xelabs/go-mysqlstack/packet"
 	"github.com/xelabs/go-mysqlstack/proto"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
@@ -40,15 +40,11 @@ type Conn interface {
 
 	InitDB(db string) error
 	Command(command byte) error
-	// Query get the row cursor.
 	Query(sql string) (Rows, error)
 	Exec(sql string) error
-
-	// FetchAll fetchs all results.
 	FetchAll(sql string, maxrows int) (*sqltypes.Result, error)
-
-	// FetchAllWithFunc fetchs all results but the row cursor can be interrupted by the fn.
 	FetchAllWithFunc(sql string, maxrows int, fn Func) (*sqltypes.Result, error)
+	ComStatementPrepare(sql string) (*Statement, error)
 }
 
 type conn struct {
@@ -166,7 +162,12 @@ func NewConn(username, password, address, database, charset string) (Conn, error
 	return c, nil
 }
 
-func (c *conn) query(command byte, sql string) (Rows, error) {
+// NextPacket used to get the next packet
+func (c *conn) NextPacket() ([]byte, error) {
+	return c.packets.Next()
+}
+
+func (c *conn) baseQuery(mode RowMode, command byte, datas []byte) (Rows, error) {
 	var ok *proto.OK
 	var myerr, err error
 	var columns []*querypb.Field
@@ -180,7 +181,7 @@ func (c *conn) query(command byte, sql string) (Rows, error) {
 	}()
 
 	// Query.
-	if err = c.packets.WriteCommand(command, common.StringToBytes(sql)); err != nil {
+	if err = c.packets.WriteCommand(command, datas); err != nil {
 		return nil, err
 	}
 
@@ -205,11 +206,30 @@ func (c *conn) query(command byte, sql string) (Rows, error) {
 			}
 		}
 	}
-	rows := NewTextRows(c)
-	rows.rowsAffected = ok.AffectedRows
-	rows.insertID = ok.LastInsertID
-	rows.fields = columns
+	var rows Rows
+	switch mode {
+	case TextRowMode:
+		textRows := NewTextRows(c)
+		textRows.rowsAffected = ok.AffectedRows
+		textRows.insertID = ok.LastInsertID
+		textRows.fields = columns
+		rows = textRows
+	case BinaryRowMode:
+		binRows := NewBinaryRows(c)
+		binRows.rowsAffected = ok.AffectedRows
+		binRows.insertID = ok.LastInsertID
+		binRows.fields = columns
+		rows = binRows
+	}
 	return rows, nil
+}
+
+func (c *conn) comQuery(command byte, datas []byte) (Rows, error) {
+	return c.baseQuery(TextRowMode, command, datas)
+}
+
+func (c *conn) stmtQuery(command byte, datas []byte) (Rows, error) {
+	return c.baseQuery(BinaryRowMode, command, datas)
 }
 
 // ConnectionID is the connection id at greeting
@@ -219,19 +239,21 @@ func (c *conn) ConnectionID() uint32 {
 
 // Query execute the query and return the row iterator
 func (c *conn) Query(sql string) (Rows, error) {
-	return c.query(sqldb.COM_QUERY, sql)
+	return c.comQuery(sqldb.COM_QUERY, common.StringToBytes(sql))
 }
 
+// Ping -- ping command.
 func (c *conn) Ping() error {
-	rows, err := c.query(sqldb.COM_PING, "")
+	rows, err := c.comQuery(sqldb.COM_PING, []byte{})
 	if err != nil {
 		return err
 	}
 	return rows.Close()
 }
 
+// InitDB -- Init DB command.
 func (c *conn) InitDB(db string) error {
-	rows, err := c.query(sqldb.COM_INIT_DB, db)
+	rows, err := c.comQuery(sqldb.COM_INIT_DB, common.StringToBytes(db))
 	if err != nil {
 		return err
 	}
@@ -240,7 +262,7 @@ func (c *conn) InitDB(db string) error {
 
 // Exec executes the query and drain the results
 func (c *conn) Exec(sql string) error {
-	rows, err := c.query(sqldb.COM_QUERY, sql)
+	rows, err := c.comQuery(sqldb.COM_QUERY, common.StringToBytes(sql))
 	if err != nil {
 		return err
 	}
@@ -251,6 +273,7 @@ func (c *conn) Exec(sql string) error {
 	return nil
 }
 
+// FetchAll -- fetch all command.
 func (c *conn) FetchAll(sql string, maxrows int) (*sqltypes.Result, error) {
 	return c.FetchAllWithFunc(sql, maxrows, func(rows Rows) error { return nil })
 }
@@ -265,7 +288,7 @@ func (c *conn) FetchAllWithFunc(sql string, maxrows int, fn Func) (*sqltypes.Res
 	var qrRow []sqltypes.Value
 	var qrRows [][]sqltypes.Value
 
-	if iRows, err = c.query(sqldb.COM_QUERY, sql); err != nil {
+	if iRows, err = c.comQuery(sqldb.COM_QUERY, common.StringToBytes(sql)); err != nil {
 		return nil, err
 	}
 
@@ -307,13 +330,25 @@ func (c *conn) FetchAllWithFunc(sql string, maxrows int, fn Func) (*sqltypes.Res
 	return qr, err
 }
 
-// NextPacket used to get the next packet
-func (c *conn) NextPacket() ([]byte, error) {
-	return c.packets.Next()
+// ComStatementPrepare -- statement prepare command.
+func (c *conn) ComStatementPrepare(sql string) (*Statement, error) {
+	if err := c.packets.WriteCommand(sqldb.COM_STMT_PREPARE, common.StringToBytes(sql)); err != nil {
+		return nil, err
+	}
+	stmt, err := c.packets.ReadStatementPrepareResponse(c.greeting.Capability)
+	if err != nil {
+		return nil, err
+	}
+	return &Statement{
+		conn:        c,
+		ID:          stmt.ID,
+		ColumnNames: stmt.ColumnNames,
+	}, nil
 }
 
+// Command -- execute a command.
 func (c *conn) Command(command byte) error {
-	rows, err := c.query(command, "")
+	rows, err := c.comQuery(command, []byte{})
 	if err != nil {
 		return err
 	}
@@ -324,10 +359,12 @@ func (c *conn) Command(command byte) error {
 	return nil
 }
 
+// Quit -- quite command.
 func (c *conn) Quit() {
 	c.packets.WriteCommand(sqldb.COM_QUIT, nil)
 }
 
+// Cleanup -- cleanup connection.
 func (c *conn) Cleanup() {
 	if c.netConn != nil {
 		c.netConn.Close()

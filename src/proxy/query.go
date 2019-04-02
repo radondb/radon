@@ -18,6 +18,8 @@ import (
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
+
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
@@ -34,7 +36,7 @@ func returnQuery(qr *sqltypes.Result, callback func(qr *sqltypes.Result) error, 
 // 1. DDL
 // 2. DML
 // 3. USE DB
-func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback func(qr *sqltypes.Result) error) error {
+func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVariables map[string]*querypb.BindVariable, callback func(qr *sqltypes.Result) error) error {
 	var qr *sqltypes.Result
 	log := spanner.log
 	throttle := spanner.throttle
@@ -57,6 +59,8 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 		qr.Warnings = 1
 		return returnQuery(qr, callback, err)
 	}
+
+	// Trim space and ';'.
 	query = strings.TrimSpace(query)
 	query = strings.TrimSuffix(query, ";")
 
@@ -64,6 +68,23 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, callback
 	if err != nil {
 		log.Error("query[%v].parser.error: %v", query, err)
 		return sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, err.Error())
+	}
+
+	// Bind variables.
+	if bindVariables != nil {
+		parsedQuery := sqlparser.NewParsedQuery(node)
+		query, err = parsedQuery.GenerateQuery(bindVariables, nil)
+		if err != nil {
+			log.Error("query[%v].parsed.GenerateQuery.error: %v, bind:%+v", query, err, bindVariables)
+			return sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, err.Error())
+		}
+
+		// This sucks.
+		node, err = sqlparser.Parse(query)
+		if err != nil {
+			log.Error("query[%v].parser.error: %v", query, err)
+			return sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, err.Error())
+		}
 	}
 
 	// Readonly check.

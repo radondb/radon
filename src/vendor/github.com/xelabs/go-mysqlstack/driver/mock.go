@@ -19,8 +19,10 @@ import (
 	"time"
 
 	"github.com/xelabs/go-mysqlstack/sqldb"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
+
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
 func randomPort(min int, max int) int {
@@ -205,7 +207,7 @@ func (th *TestHandler) ComInitDB(s *Session, db string) error {
 }
 
 // ComQuery implements the interface.
-func (th *TestHandler) ComQuery(s *Session, query string, callback func(qr *sqltypes.Result) error) error {
+func (th *TestHandler) ComQuery(s *Session, query string, bindVariables map[string]*querypb.BindVariable, callback func(qr *sqltypes.Result) error) error {
 	log := th.log
 	query = strings.ToLower(query)
 
@@ -226,15 +228,13 @@ func (th *TestHandler) ComQuery(s *Session, query string, callback func(qr *sqlt
 			case <-time.After(time.Millisecond * time.Duration(cond.Delay)):
 				log.Debug("mock.handler.delay.done...")
 			}
-			callback(cond.Result)
-			return nil
+			return callback(cond.Result)
 		case COND_ERROR:
 			return cond.Error
 		case COND_PANIC:
 			log.Panic("mock.handler.panic....")
 		case COND_NORMAL:
-			callback(cond.Result)
-			return nil
+			return callback(cond.Result)
 		case COND_STREAM:
 			flds := cond.Result.Fields
 			// Send Fields for stream.
@@ -275,8 +275,7 @@ func (th *TestHandler) ComQuery(s *Session, query string, callback func(qr *sqlt
 			}
 			th.mu.Unlock()
 		}
-		callback(&sqltypes.Result{})
-		return nil
+		return callback(&sqltypes.Result{})
 	}
 
 	th.mu.Lock()
@@ -289,8 +288,7 @@ func (th *TestHandler) ComQuery(s *Session, query string, callback func(qr *sqlt
 	}
 	for _, pat := range th.patterns {
 		if pat.expr.MatchString(query) {
-			callback(pat.result)
-			return nil
+			return callback(pat.result)
 		}
 	}
 
@@ -302,8 +300,7 @@ func (th *TestHandler) ComQuery(s *Session, query string, callback func(qr *sqlt
 			idx = v.idx
 			v.idx++
 		}
-		callback(v.conds[idx].Result)
-		return nil
+		return callback(v.conds[idx].Result)
 	}
 	return fmt.Errorf("mock.handler.query[%v].error[can.not.found.the.cond.please.set.first]", query)
 }
