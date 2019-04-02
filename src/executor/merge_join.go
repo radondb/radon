@@ -13,7 +13,7 @@ import (
 	"sync"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/hack"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
@@ -98,7 +98,7 @@ func fetchSameKeyRows(rows [][]sqltypes.Value, joins []planner.JoinKey, index in
 			keySlice = append(keySlice, rows[index][join.Index].Raw()...)
 			keySlice = append(keySlice, 0x02)
 		}
-		str = hack.String(keySlice)
+		str = common.BytesToString(keySlice)
 	}
 	chunk = append(chunk, rows[index])
 	index++
@@ -109,7 +109,7 @@ func fetchSameKeyRows(rows [][]sqltypes.Value, joins []planner.JoinKey, index in
 			keySlice = append(keySlice, rows[index][join.Index].Raw()...)
 			keySlice = append(keySlice, 0x02)
 		}
-		key = hack.String(keySlice)
+		key = common.BytesToString(keySlice)
 
 		if key != str {
 			break

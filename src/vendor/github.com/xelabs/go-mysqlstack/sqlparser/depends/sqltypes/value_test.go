@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
 
@@ -508,6 +509,15 @@ func TestToNative(t *testing.T) {
 		v := tcase.in.ToNative()
 		if !reflect.DeepEqual(v, tcase.out) {
 			t.Errorf("%v.ToNative = %#v, want %#v", makePretty(tcase.in), v, tcase.out)
+		}
+
+		v1, err := tcase.in.ToMySQL()
+		if err != nil {
+			t.Errorf("%v.ToMySQL= %#v", makePretty(tcase.in), v1)
+		}
+		buf := common.ReadBuffer(v1)
+		if v, err := ParseMySQLValues(buf, tcase.in.typ); err != nil {
+			t.Errorf("%v.ParseMySQLValues= %v", makePretty(tcase.in), v)
 		}
 	}
 }

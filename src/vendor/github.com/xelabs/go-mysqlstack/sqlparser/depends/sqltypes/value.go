@@ -9,10 +9,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/hack"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
@@ -94,6 +96,11 @@ func NewInt32(v int32) Value {
 // NewUint64 builds an Uint64 Value.
 func NewUint64(v uint64) Value {
 	return MakeTrusted(Uint64, strconv.AppendUint(nil, v, 10))
+}
+
+// NewFloat32 builds an Float64 Value.
+func NewFloat32(v float32) Value {
+	return MakeTrusted(Float32, strconv.AppendFloat(nil, float64(v), 'f', -1, 64))
 }
 
 // NewFloat64 builds an Float64 Value.
@@ -275,7 +282,7 @@ func (vs Values) Len() int {
 
 // String returns the raw value as a string.
 func (v Value) String() string {
-	return hack.String(v.val)
+	return common.BytesToString(v.val)
 }
 
 // ToNative converts Value to a native go type.
@@ -390,6 +397,685 @@ func (v Value) IsBinary() bool {
 	return IsBinary(v.typ)
 }
 
+// ToString returns the value as MySQL would return it as string.
+// If the value is not convertible like in the case of Expression, it returns nil.
+func (v Value) ToString() string {
+	if v.typ == Expression {
+		return ""
+	}
+	return common.BytesToString(v.val)
+}
+
+func writebyte(c byte, b BinWriter) {
+	if err := b.WriteByte(c); err != nil {
+		panic(err)
+	}
+}
+
+func writebytes(val []byte, b BinWriter) {
+	n, err := b.Write(val)
+	if err != nil {
+		panic(err)
+	}
+	if n != len(val) {
+		panic(errors.New("short write"))
+	}
+}
+
+func writeByte(data []byte, pos int, value byte) int {
+	data[pos] = value
+	return pos + 1
+}
+
+func writeUint16(data []byte, pos int, value uint16) int {
+	data[pos] = byte(value)
+	data[pos+1] = byte(value >> 8)
+	return pos + 2
+}
+
+func writeUint32(data []byte, pos int, value uint32) int {
+	data[pos] = byte(value)
+	data[pos+1] = byte(value >> 8)
+	data[pos+2] = byte(value >> 16)
+	data[pos+3] = byte(value >> 24)
+	return pos + 4
+}
+
+func writeUint64(data []byte, pos int, value uint64) int {
+	data[pos] = byte(value)
+	data[pos+1] = byte(value >> 8)
+	data[pos+2] = byte(value >> 16)
+	data[pos+3] = byte(value >> 24)
+	data[pos+4] = byte(value >> 32)
+	data[pos+5] = byte(value >> 40)
+	data[pos+6] = byte(value >> 48)
+	data[pos+7] = byte(value >> 56)
+	return pos + 8
+}
+
+// lenEncIntSize returns the number of bytes required to encode a
+// variable-length integer.
+func lenEncIntSize(i uint64) int {
+	switch {
+	case i < 251:
+		return 1
+	case i < 1<<16:
+		return 3
+	case i < 1<<24:
+		return 4
+	default:
+		return 9
+	}
+}
+
+func writeLenEncInt(data []byte, pos int, i uint64) int {
+	switch {
+	case i < 251:
+		data[pos] = byte(i)
+		return pos + 1
+	case i < 1<<16:
+		data[pos] = 0xfc
+		data[pos+1] = byte(i)
+		data[pos+2] = byte(i >> 8)
+		return pos + 3
+	case i < 1<<24:
+		data[pos] = 0xfd
+		data[pos+1] = byte(i)
+		data[pos+2] = byte(i >> 8)
+		data[pos+3] = byte(i >> 16)
+		return pos + 4
+	default:
+		data[pos] = 0xfe
+		data[pos+1] = byte(i)
+		data[pos+2] = byte(i >> 8)
+		data[pos+3] = byte(i >> 16)
+		data[pos+4] = byte(i >> 24)
+		data[pos+5] = byte(i >> 32)
+		data[pos+6] = byte(i >> 40)
+		data[pos+7] = byte(i >> 48)
+		data[pos+8] = byte(i >> 56)
+		return pos + 9
+	}
+}
+
+// ToMySQL converts Value to a mysql type value.
+func (v Value) ToMySQL() ([]byte, error) {
+	var out []byte
+	pos := 0
+	switch v.typ {
+	case Null:
+		// no-op
+	case Int8:
+		val, err := strconv.ParseInt(v.ToString(), 10, 8)
+		if err != nil {
+			return []byte{}, err
+		}
+		out = make([]byte, 1)
+		writeByte(out, pos, uint8(val))
+	case Uint8:
+		val, err := strconv.ParseUint(v.ToString(), 10, 8)
+		if err != nil {
+			return []byte{}, err
+		}
+		out = make([]byte, 1)
+		writeByte(out, pos, uint8(val))
+	case Uint16:
+		val, err := strconv.ParseUint(v.ToString(), 10, 16)
+		if err != nil {
+			return []byte{}, err
+		}
+		out = make([]byte, 2)
+		writeUint16(out, pos, uint16(val))
+	case Int16, Year:
+		val, err := strconv.ParseInt(v.ToString(), 10, 16)
+		if err != nil {
+			return []byte{}, err
+		}
+		out = make([]byte, 2)
+		writeUint16(out, pos, uint16(val))
+	case Uint24, Uint32:
+		val, err := strconv.ParseUint(v.ToString(), 10, 32)
+		if err != nil {
+			return []byte{}, err
+		}
+		out = make([]byte, 4)
+		writeUint32(out, pos, uint32(val))
+	case Int24, Int32:
+		val, err := strconv.ParseInt(v.ToString(), 10, 32)
+		if err != nil {
+			return []byte{}, err
+		}
+		out = make([]byte, 4)
+		writeUint32(out, pos, uint32(val))
+	case Float32:
+		val, err := strconv.ParseFloat(v.ToString(), 32)
+		if err != nil {
+			return []byte{}, err
+		}
+		bits := math.Float32bits(float32(val))
+		out = make([]byte, 4)
+		writeUint32(out, pos, bits)
+	case Uint64:
+		val, err := strconv.ParseUint(v.ToString(), 10, 64)
+		if err != nil {
+			return []byte{}, err
+		}
+		out = make([]byte, 8)
+		writeUint64(out, pos, uint64(val))
+	case Int64:
+		val, err := strconv.ParseInt(v.ToString(), 10, 64)
+		if err != nil {
+			return []byte{}, err
+		}
+		out = make([]byte, 8)
+		writeUint64(out, pos, uint64(val))
+	case Float64:
+		val, err := strconv.ParseFloat(v.ToString(), 64)
+		if err != nil {
+			return []byte{}, err
+		}
+		bits := math.Float64bits(val)
+		out = make([]byte, 8)
+		writeUint64(out, pos, bits)
+	case Timestamp, Date, Datetime:
+		if len(v.val) > 19 {
+			out = make([]byte, 1+11)
+			out[pos] = 0x0b
+			pos++
+			year, err := strconv.ParseUint(string(v.val[0:4]), 10, 16)
+			if err != nil {
+				return []byte{}, err
+			}
+			month, err := strconv.ParseUint(string(v.val[5:7]), 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			day, err := strconv.ParseUint(string(v.val[8:10]), 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			hour, err := strconv.ParseUint(string(v.val[11:13]), 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			minute, err := strconv.ParseUint(string(v.val[14:16]), 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			second, err := strconv.ParseUint(string(v.val[17:19]), 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			val := make([]byte, 6)
+			count := copy(val, v.val[20:])
+			for i := 0; i < (6 - count); i++ {
+				val[count+i] = 0x30
+			}
+			microSecond, err := strconv.ParseUint(string(val), 10, 32)
+			if err != nil {
+				return []byte{}, err
+			}
+			pos = writeUint16(out, pos, uint16(year))
+			pos = writeByte(out, pos, byte(month))
+			pos = writeByte(out, pos, byte(day))
+			pos = writeByte(out, pos, byte(hour))
+			pos = writeByte(out, pos, byte(minute))
+			pos = writeByte(out, pos, byte(second))
+			pos = writeUint32(out, pos, uint32(microSecond))
+		} else if len(v.val) > 10 {
+			out = make([]byte, 1+7)
+			out[pos] = 0x07
+			pos++
+			year, err := strconv.ParseUint(string(v.val[0:4]), 10, 16)
+			if err != nil {
+				return []byte{}, err
+			}
+			month, err := strconv.ParseUint(string(v.val[5:7]), 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			day, err := strconv.ParseUint(string(v.val[8:10]), 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			hour, err := strconv.ParseUint(string(v.val[11:13]), 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			minute, err := strconv.ParseUint(string(v.val[14:16]), 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			second, err := strconv.ParseUint(string(v.val[17:]), 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			pos = writeUint16(out, pos, uint16(year))
+			pos = writeByte(out, pos, byte(month))
+			pos = writeByte(out, pos, byte(day))
+			pos = writeByte(out, pos, byte(hour))
+			pos = writeByte(out, pos, byte(minute))
+			pos = writeByte(out, pos, byte(second))
+		} else if len(v.val) > 0 {
+			out = make([]byte, 1+4)
+			out[pos] = 0x04
+			pos++
+			year, err := strconv.ParseUint(string(v.val[0:4]), 10, 16)
+			if err != nil {
+				return []byte{}, err
+			}
+			month, err := strconv.ParseUint(string(v.val[5:7]), 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			day, err := strconv.ParseUint(string(v.val[8:]), 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			pos = writeUint16(out, pos, uint16(year))
+			pos = writeByte(out, pos, byte(month))
+			pos = writeByte(out, pos, byte(day))
+		} else {
+			out = make([]byte, 1)
+			out[pos] = 0x00
+		}
+	case Time:
+		if string(v.val) == "00:00:00" {
+			out = make([]byte, 1)
+			out[pos] = 0x00
+		} else if strings.Contains(string(v.val), ".") {
+			out = make([]byte, 1+12)
+			out[pos] = 0x0c
+			pos++
+
+			sub1 := strings.Split(string(v.val), ":")
+			if len(sub1) != 3 {
+				err := fmt.Errorf("incorrect time value, ':' is not found")
+				return []byte{}, err
+			}
+			sub2 := strings.Split(sub1[2], ".")
+			if len(sub2) != 2 {
+				err := fmt.Errorf("incorrect time value, '.' is not found")
+				return []byte{}, err
+			}
+
+			var total []byte
+			if strings.HasPrefix(sub1[0], "-") {
+				out[pos] = 0x01
+				total = []byte(sub1[0])
+				total = total[1:]
+			} else {
+				out[pos] = 0x00
+				total = []byte(sub1[0])
+			}
+			pos++
+
+			h, err := strconv.ParseUint(string(total), 10, 32)
+			if err != nil {
+				return []byte{}, err
+			}
+
+			days := uint32(h) / 24
+			hours := uint32(h) % 24
+			minute := sub1[1]
+			second := sub2[0]
+			microSecond := sub2[1]
+
+			minutes, err := strconv.ParseUint(minute, 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+
+			seconds, err := strconv.ParseUint(second, 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			pos = writeUint32(out, pos, uint32(days))
+			pos = writeByte(out, pos, byte(hours))
+			pos = writeByte(out, pos, byte(minutes))
+			pos = writeByte(out, pos, byte(seconds))
+
+			val := make([]byte, 6)
+			count := copy(val, microSecond)
+			for i := 0; i < (6 - count); i++ {
+				val[count+i] = 0x30
+			}
+			microSeconds, err := strconv.ParseUint(string(val), 10, 32)
+			if err != nil {
+				return []byte{}, err
+			}
+			pos = writeUint32(out, pos, uint32(microSeconds))
+		} else if len(v.val) > 0 {
+			out = make([]byte, 1+8)
+			out[pos] = 0x08
+			pos++
+
+			sub1 := strings.Split(string(v.val), ":")
+			if len(sub1) != 3 {
+				err := fmt.Errorf("incorrect time value, ':' is not found")
+				return []byte{}, err
+			}
+
+			var total []byte
+			if strings.HasPrefix(sub1[0], "-") {
+				out[pos] = 0x01
+				total = []byte(sub1[0])
+				total = total[1:]
+			} else {
+				out[pos] = 0x00
+				total = []byte(sub1[0])
+			}
+			pos++
+
+			h, err := strconv.ParseUint(string(total), 10, 32)
+			if err != nil {
+				return []byte{}, err
+			}
+
+			days := uint32(h) / 24
+			hours := uint32(h) % 24
+			minute := sub1[1]
+			second := sub1[2]
+
+			minutes, err := strconv.ParseUint(minute, 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+
+			seconds, err := strconv.ParseUint(second, 10, 8)
+			if err != nil {
+				return []byte{}, err
+			}
+			pos = writeUint32(out, pos, uint32(days))
+			pos = writeByte(out, pos, byte(hours))
+			pos = writeByte(out, pos, byte(minutes))
+			pos = writeByte(out, pos, byte(seconds))
+		} else {
+			err := fmt.Errorf("incorrect time value")
+			return []byte{}, err
+		}
+	case Decimal, Text, VarChar, VarBinary, Char, Bit, Enum, Set, Geometry, Binary, TypeJSON:
+		l := len(v.val)
+		length := lenEncIntSize(uint64(l)) + l
+		out = make([]byte, length)
+		pos = writeLenEncInt(out, pos, uint64(l))
+		copy(out[pos:], v.val)
+	case Blob:
+		l := len(v.val)
+		length := lenEncIntSize(uint64(l)) + l + 1
+		out = make([]byte, length)
+		pos = writeLenEncInt(out, pos, uint64(l))
+		copy(out[pos:], v.val)
+	default:
+		out = make([]byte, len(v.val))
+		copy(out, v.val)
+	}
+	return out, nil
+}
+
+func ParseMySQLValues(buf *common.Buffer, typ querypb.Type) (interface{}, error) {
+	switch typ {
+	case Null:
+		return nil, nil
+	case Int8, Uint8:
+		return buf.ReadU8()
+	case Uint16:
+		return buf.ReadU16()
+	case Int16, Year:
+		val, err := buf.ReadU16()
+		if err != nil {
+			return nil, err
+		}
+		return int16(val), nil
+	case Uint24, Uint32:
+		return buf.ReadU32()
+	case Int24, Int32:
+		val, err := buf.ReadU32()
+		if err != nil {
+			return nil, err
+		}
+		return int32(val), nil
+	case Float32:
+		val, err := buf.ReadU32()
+		if err != nil {
+			return nil, err
+		}
+		return math.Float32frombits(val), nil
+	case Uint64:
+		return buf.ReadU64()
+	case Int64:
+		val, err := buf.ReadU64()
+		if err != nil {
+			return nil, err
+		}
+		return int64(val), nil
+	case Float64:
+		val, err := buf.ReadU64()
+		if err != nil {
+			return nil, err
+		}
+		return math.Float64frombits(val), nil
+	case Timestamp, Date, Datetime:
+		var out []byte
+
+		size, err := buf.ReadU8()
+		if err != nil {
+			return nil, err
+		}
+		switch size {
+		case 0x00:
+			out = append(out, ' ')
+		case 0x0b:
+			year, err := buf.ReadU16()
+			if err != nil {
+				return nil, err
+			}
+
+			month, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			day, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			hour, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			minute, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			second, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			microSecond, err := buf.ReadU32()
+			if err != nil {
+				return nil, err
+			}
+
+			val := strconv.Itoa(int(year)) + "-" +
+				strconv.Itoa(int(month)) + "-" +
+				strconv.Itoa(int(day)) + " " +
+				strconv.Itoa(int(hour)) + ":" +
+				strconv.Itoa(int(minute)) + ":" +
+				strconv.Itoa(int(second)) + "." +
+				strconv.Itoa(int(microSecond))
+			out = []byte(val)
+			return out, nil
+		case 0x07:
+			year, err := buf.ReadU16()
+			if err != nil {
+				return nil, err
+			}
+
+			month, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			day, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			hour, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			minute, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			second, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			val := strconv.Itoa(int(year)) + "-" +
+				strconv.Itoa(int(month)) + "-" +
+				strconv.Itoa(int(day)) + " " +
+				strconv.Itoa(int(hour)) + ":" +
+				strconv.Itoa(int(minute)) + ":" +
+				strconv.Itoa(int(second))
+			out = []byte(val)
+			return out, nil
+		case 0x04:
+			year, err := buf.ReadU16()
+			if err != nil {
+				return nil, err
+			}
+
+			month, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			day, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+			val := strconv.Itoa(int(year)) + "-" +
+				strconv.Itoa(int(month)) + "-" +
+				strconv.Itoa(int(day))
+			out = []byte(val)
+			return out, nil
+		default:
+			return nil, fmt.Errorf("datetime.error")
+		}
+	case Time:
+		var out []byte
+
+		size, err := buf.ReadU8()
+		if err != nil {
+			return nil, err
+		}
+		switch size {
+		case 0x00:
+			copy(out, "00:00:00")
+		case 0x0c:
+			isNegative, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			days, err := buf.ReadU32()
+			if err != nil {
+				return nil, err
+			}
+
+			hour, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			hours := uint32(hour) + days*uint32(24)
+
+			minute, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			second, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			microSecond, err := buf.ReadU32()
+			if err != nil {
+				return nil, err
+			}
+
+			val := ""
+			if isNegative == 0x01 {
+				val += "-"
+			}
+			val += strconv.Itoa(int(hours)) + ":" +
+				strconv.Itoa(int(minute)) + ":" +
+				strconv.Itoa(int(second)) + "." +
+				strconv.Itoa(int(microSecond))
+			out = []byte(val)
+			return out, nil
+		case 0x08:
+			isNegative, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			days, err := buf.ReadU32()
+			if err != nil {
+				return nil, err
+			}
+
+			hour, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			hours := uint32(hour) + days*uint32(24)
+
+			minute, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			second, err := buf.ReadU8()
+			if err != nil {
+				return nil, err
+			}
+
+			val := ""
+			if isNegative == 0x01 {
+				val += "-"
+			}
+			val += strconv.Itoa(int(hours)) + ":" +
+				strconv.Itoa(int(minute)) + ":" +
+				strconv.Itoa(int(second))
+			out = []byte(val)
+			return out, nil
+		default:
+			return nil, fmt.Errorf("time.error")
+		}
+	case Decimal, Text, Blob, VarChar, Char,
+		Bit, Enum, Set, Geometry, TypeJSON:
+		return buf.ReadLenEncodeString()
+	case VarBinary, Binary:
+		return buf.ReadLenEncodeBytes()
+	default:
+		return nil, fmt.Errorf("type.unhandle.error")
+	}
+	return nil, fmt.Errorf("type.unhandle.error")
+}
+
 func encodeBytesSQL(val []byte, b BinWriter) {
 	writebyte('\'', b)
 	for _, ch := range val {
@@ -409,22 +1095,6 @@ func encodeBytesASCII(val []byte, b BinWriter) {
 	encoder.Write(val)
 	encoder.Close()
 	writebyte('\'', b)
-}
-
-func writebyte(c byte, b BinWriter) {
-	if err := b.WriteByte(c); err != nil {
-		panic(err)
-	}
-}
-
-func writebytes(val []byte, b BinWriter) {
-	n, err := b.Write(val)
-	if err != nil {
-		panic(err)
-	}
-	if n != len(val) {
-		panic(errors.New("short write"))
-	}
 }
 
 // SQLEncodeMap specifies how to escape binary data with '\'.

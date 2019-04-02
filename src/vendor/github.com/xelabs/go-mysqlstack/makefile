@@ -9,7 +9,6 @@ test:
 	@echo "--> Testing..."
 	@$(MAKE) testxlog
 	@$(MAKE) testsqlparser
-	@$(MAKE) testcommon
 	@$(MAKE) testsqldb
 	@$(MAKE) testproto
 	@$(MAKE) testpacket
@@ -19,8 +18,6 @@ testxlog:
 	go test -v ./xlog
 testsqlparser:
 	go test -v ./sqlparser/...
-testcommon:
-	go test -v ./common
 testsqldb:
 	go test -v ./sqldb
 testproto:
@@ -30,7 +27,7 @@ testpacket:
 testdriver:
 	go test -v ./driver
 
-COVPKGS = ./sqlparser ./common ./sqldb ./proto ./packet ./driver ./sqlparser/depends/sqltypes
+COVPKGS = ./sqlparser/... ./sqldb ./proto ./packet ./driver
 coverage:
 	go get github.com/pierrre/gotestcover
 	gotestcover -coverprofile=coverage.out -v $(COVPKGS)

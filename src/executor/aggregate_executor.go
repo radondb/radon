@@ -12,7 +12,7 @@ import (
 	"planner"
 	"xcontext"
 
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/hack"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
@@ -61,7 +61,7 @@ func (executor *AggregateExecutor) aggregate(result *sqltypes.Result) {
 			keySlice = append(keySlice, row1[v.Index].Raw()...)
 			keySlice = append(keySlice, 0x02)
 		}
-		key := hack.String(keySlice)
+		key := common.BytesToString(keySlice)
 		if row2, ok := groups[key]; !ok {
 			groups[key] = row1
 		} else {

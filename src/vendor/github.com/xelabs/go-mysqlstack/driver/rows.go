@@ -11,15 +11,23 @@ package driver
 
 import (
 	"errors"
+	"fmt"
 
-	"github.com/xelabs/go-mysqlstack/common"
 	"github.com/xelabs/go-mysqlstack/proto"
 
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
 var _ Rows = &TextRows{}
+
+type RowMode int
+
+const (
+	TextRowMode RowMode = iota
+	BinaryRowMode
+)
 
 // Rows presents row cursor interface.
 type Rows interface {
@@ -34,8 +42,8 @@ type Rows interface {
 	RowValues() ([]sqltypes.Value, error)
 }
 
-// TextRows presents row tuple.
-type TextRows struct {
+// BaseRows --
+type BaseRows struct {
 	c            Conn
 	end          bool
 	err          error
@@ -47,17 +55,19 @@ type TextRows struct {
 	fields       []*querypb.Field
 }
 
-// NewTextRows creates TextRows.
-func NewTextRows(c Conn) *TextRows {
-	return &TextRows{
-		c:      c,
-		buffer: common.NewBuffer(8),
-	}
+// TextRows presents row tuple.
+type TextRows struct {
+	BaseRows
+}
+
+// BinaryRows presents binary row tuple.
+type BinaryRows struct {
+	BaseRows
 }
 
 // Next implements the Rows interface.
 // http://dev.mysql.com/doc/internals/en/com-query-response.html#packet-ProtocolText::ResultsetRow
-func (r *TextRows) Next() bool {
+func (r *BaseRows) Next() bool {
 	defer func() {
 		if r.err != nil {
 			r.c.Cleanup()
@@ -99,7 +109,7 @@ func (r *TextRows) Next() bool {
 }
 
 // Close drain the rest packets and check the error.
-func (r *TextRows) Close() error {
+func (r *BaseRows) Close() error {
 	for r.Next() {
 	}
 	return r.LastError()
@@ -107,7 +117,7 @@ func (r *TextRows) Close() error {
 
 // RowValues implements the Rows interface.
 // https://dev.mysql.com/doc/internals/en/com-query-response.html#packet-ProtocolText::ResultsetRow
-func (r *TextRows) RowValues() ([]sqltypes.Value, error) {
+func (r *BaseRows) RowValues() ([]sqltypes.Value, error) {
 	if r.fields == nil {
 		return nil, errors.New("rows.fields is NIL")
 	}
@@ -130,31 +140,99 @@ func (r *TextRows) RowValues() ([]sqltypes.Value, error) {
 }
 
 // Datas implements the Rows interface.
-func (r *TextRows) Datas() []byte {
+func (r *BaseRows) Datas() []byte {
 	return r.buffer.Datas()
 }
 
 // Fields implements the Rows interface.
-func (r *TextRows) Fields() []*querypb.Field {
+func (r *BaseRows) Fields() []*querypb.Field {
 	return r.fields
 }
 
 // Bytes returns all the memory usage which read by this row cursor.
-func (r *TextRows) Bytes() int {
+func (r *BaseRows) Bytes() int {
 	return r.bytes
 }
 
 // RowsAffected implements the Rows interface.
-func (r *TextRows) RowsAffected() uint64 {
+func (r *BaseRows) RowsAffected() uint64 {
 	return r.rowsAffected
 }
 
 // LastInsertID implements the Rows interface.
-func (r *TextRows) LastInsertID() uint64 {
+func (r *BaseRows) LastInsertID() uint64 {
 	return r.insertID
 }
 
 // LastError implements the Rows interface.
-func (r *TextRows) LastError() error {
+func (r *BaseRows) LastError() error {
 	return r.err
+}
+
+// NewTextRows creates TextRows.
+func NewTextRows(c Conn) *TextRows {
+	textRows := &TextRows{}
+	textRows.c = c
+	textRows.buffer = common.NewBuffer(8)
+	return textRows
+}
+
+// NewBinaryRows creates BinaryRows.
+func NewBinaryRows(c Conn) *BinaryRows {
+	binaryRows := &BinaryRows{}
+	binaryRows.c = c
+	binaryRows.buffer = common.NewBuffer(8)
+	return binaryRows
+}
+
+// RowValues implements the Rows interface.
+// https://dev.mysql.com/doc/internals/en/binary-protocol-resultset-row.html
+func (r *BinaryRows) RowValues() ([]sqltypes.Value, error) {
+	if r.fields == nil {
+		return nil, errors.New("rows.fields is NIL")
+	}
+
+	header, err := r.buffer.ReadU8()
+	if err != nil {
+		return nil, err
+	}
+	if header != proto.OK_PACKET {
+		return nil, fmt.Errorf("binary.rows.header.is.not.ok[%v]", header)
+	}
+
+	colCount := len(r.fields)
+	// NULL-bitmap,  [(column-count + 7 + 2) / 8 bytes]
+	nullMask, err := r.buffer.ReadBytes(int((colCount + 7 + 2) / 8))
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]sqltypes.Value, colCount)
+	for i := 0; i < colCount; i++ {
+		// Field is NULL
+		// (byte >> bit-pos) % 2 == 1
+		if ((nullMask[(i+2)>>3] >> uint((i+2)&7)) & 1) == 1 {
+			result[i] = sqltypes.Value{}
+			continue
+		}
+
+		v, err := sqltypes.ParseMySQLValues(r.buffer, r.fields[i].Type)
+		if err != nil {
+			r.c.Cleanup()
+			return nil, err
+		}
+
+		if v != nil {
+			val, err := sqltypes.BuildValue(v)
+			if err != nil {
+				r.c.Cleanup()
+				return nil, err
+			}
+			r.bytes += val.Len()
+			result[i] = val
+		} else {
+			result[i] = sqltypes.Value{}
+		}
+	}
+	return result, nil
 }

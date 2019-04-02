@@ -21,8 +21,215 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
+
+func TestProtoConversions(t *testing.T) {
+	v := MakeTrusted(Int64, []byte{0x31})
+	got := ValueToProto(v)
+	want := &querypb.Value{Type: Int64, Value: []byte("1")}
+
+	assert.Equal(t, want, got)
+	gotback := ProtoToValue(got)
+	if !reflect.DeepEqual(gotback, v) {
+		t.Errorf("ProtoToValue: %v, want %v", gotback, v)
+	}
+}
+
+func TestBuildBindVariables(t *testing.T) {
+	tcases := []struct {
+		in  map[string]interface{}
+		out map[string]*querypb.BindVariable
+		err string
+	}{{
+		in:  nil,
+		out: nil,
+	}, {
+		in: map[string]interface{}{
+			"k": int64(1),
+		},
+		out: map[string]*querypb.BindVariable{
+			"k": Int64BindVariable(1),
+		},
+	}}
+	for _, tcase := range tcases {
+		bindVars, err := BuildBindVariables(tcase.in)
+		if err != nil {
+			if err.Error() != tcase.err {
+				t.Errorf("MapToBindVars(%v) error: %v, want %s", tcase.in, err, tcase.err)
+			}
+			continue
+		}
+		if tcase.err != "" {
+			t.Errorf("MapToBindVars(%v) error: nil, want %s", tcase.in, tcase.err)
+			continue
+		}
+		assert.Equal(t, bindVars, tcase.out)
+	}
+}
+
+func TestBuildBindVariable(t *testing.T) {
+	tcases := []struct {
+		in  interface{}
+		out *querypb.BindVariable
+		err string
+	}{{
+		in: "aa",
+		out: &querypb.BindVariable{
+			Type:  querypb.Type_VARCHAR,
+			Value: []byte("aa"),
+		},
+	}, {
+		in: []byte("aa"),
+		out: &querypb.BindVariable{
+			Type:  querypb.Type_VARBINARY,
+			Value: []byte("aa"),
+		},
+	}, {
+		in: int(1),
+		out: &querypb.BindVariable{
+			Type:  querypb.Type_INT64,
+			Value: []byte("1"),
+		},
+	}, {
+		in: int64(1),
+		out: &querypb.BindVariable{
+			Type:  querypb.Type_INT64,
+			Value: []byte("1"),
+		},
+	}, {
+		in: uint64(1),
+		out: &querypb.BindVariable{
+			Type:  querypb.Type_UINT64,
+			Value: []byte("1"),
+		},
+	}, {
+		in: float64(1),
+		out: &querypb.BindVariable{
+			Type:  querypb.Type_FLOAT64,
+			Value: []byte("1"),
+		},
+	}, {
+		in:  nil,
+		out: NullBindVariable,
+	}, {
+		in: MakeTrusted(Int64, []byte("1")),
+		out: &querypb.BindVariable{
+			Type:  querypb.Type_INT64,
+			Value: []byte("1"),
+		},
+	}, {
+		in: &querypb.BindVariable{
+			Type:  querypb.Type_INT64,
+			Value: []byte("1"),
+		},
+		out: &querypb.BindVariable{
+			Type:  querypb.Type_INT64,
+			Value: []byte("1"),
+		},
+	}, {
+		in: []interface{}{"aa", int64(1)},
+		out: &querypb.BindVariable{
+			Type: querypb.Type_TUPLE,
+			Values: []*querypb.Value{{
+				Type:  querypb.Type_VARCHAR,
+				Value: []byte("aa"),
+			}, {
+				Type:  querypb.Type_INT64,
+				Value: []byte("1"),
+			}},
+		},
+	}, {
+		in: []string{"aa", "bb"},
+		out: &querypb.BindVariable{
+			Type: querypb.Type_TUPLE,
+			Values: []*querypb.Value{{
+				Type:  querypb.Type_VARCHAR,
+				Value: []byte("aa"),
+			}, {
+				Type:  querypb.Type_VARCHAR,
+				Value: []byte("bb"),
+			}},
+		},
+	}, {
+		in: [][]byte{[]byte("aa"), []byte("bb")},
+		out: &querypb.BindVariable{
+			Type: querypb.Type_TUPLE,
+			Values: []*querypb.Value{{
+				Type:  querypb.Type_VARBINARY,
+				Value: []byte("aa"),
+			}, {
+				Type:  querypb.Type_VARBINARY,
+				Value: []byte("bb"),
+			}},
+		},
+	}, {
+		in: []int{1, 2},
+		out: &querypb.BindVariable{
+			Type: querypb.Type_TUPLE,
+			Values: []*querypb.Value{{
+				Type:  querypb.Type_INT64,
+				Value: []byte("1"),
+			}, {
+				Type:  querypb.Type_INT64,
+				Value: []byte("2"),
+			}},
+		},
+	}, {
+		in: []int64{1, 2},
+		out: &querypb.BindVariable{
+			Type: querypb.Type_TUPLE,
+			Values: []*querypb.Value{{
+				Type:  querypb.Type_INT64,
+				Value: []byte("1"),
+			}, {
+				Type:  querypb.Type_INT64,
+				Value: []byte("2"),
+			}},
+		},
+	}, {
+		in: []uint64{1, 2},
+		out: &querypb.BindVariable{
+			Type: querypb.Type_TUPLE,
+			Values: []*querypb.Value{{
+				Type:  querypb.Type_UINT64,
+				Value: []byte("1"),
+			}, {
+				Type:  querypb.Type_UINT64,
+				Value: []byte("2"),
+			}},
+		},
+	}, {
+		in: []float64{1, 2},
+		out: &querypb.BindVariable{
+			Type: querypb.Type_TUPLE,
+			Values: []*querypb.Value{{
+				Type:  querypb.Type_FLOAT64,
+				Value: []byte("1"),
+			}, {
+				Type:  querypb.Type_FLOAT64,
+				Value: []byte("2"),
+			}},
+		},
+	}}
+	for _, tcase := range tcases {
+		bv, err := BuildBindVariable(tcase.in)
+		if err != nil {
+			if err.Error() != tcase.err {
+				t.Errorf("ToBindVar(%T(%v)) error: %v, want %s", tcase.in, tcase.in, err, tcase.err)
+			}
+			continue
+		}
+		if tcase.err != "" {
+			t.Errorf("ToBindVar(%T(%v)) error: nil, want %s", tcase.in, tcase.in, tcase.err)
+			continue
+		}
+
+		assert.Equal(t, bv, tcase.out)
+	}
+}
 
 func TestValidateBindVarables(t *testing.T) {
 	tcases := []struct {
