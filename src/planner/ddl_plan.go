@@ -135,6 +135,7 @@ func (p *DDLPlan) Build() error {
 			if node.Table.Qualifier.IsEmpty() {
 				segTable = fmt.Sprintf("`%s`.`%s`", database, segTable)
 				rawQuery := strings.Replace(p.RawQuery, "`", "", 2)
+				// \b: https://www.regular-expressions.info/wordboundaries.html
 				re, _ := regexp.Compile(fmt.Sprintf(`\b(%s)\b`, table))
 				query = re.ReplaceAllString(rawQuery, segTable)
 			} else {

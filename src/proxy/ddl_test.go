@@ -368,6 +368,97 @@ func TestProxyDDLTable(t *testing.T) {
 	}
 }
 
+func TestProxyDropTables(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("show tables from .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("alter table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("drop table `db1`.*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("drop table `db2`.*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("truncate table .*", &sqltypes.Result{})
+	}
+
+	// create database;
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database db1"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+	// create database;
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database db2"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "db1", "utf8")
+		assert.Nil(t, err)
+		query := "create table t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+	// create global table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "db1", "utf8")
+		assert.Nil(t, err)
+		query := "create table t2(a int, b int) GLOBAL"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+	// create single table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "db2", "utf8")
+		assert.Nil(t, err)
+		query := "create table t3(a int, b int) SINGLE"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// drop tables.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "db1", "utf8")
+		assert.Nil(t, err)
+		query := "drop table db2.t3, t2, db1.t1"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+}
+
+func TestProxyDropTablesPrivilegeN(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxyPrivilegeN(log, MockDefaultConfig())
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern(".* database .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+	}
+
+	// drop tables.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "drop table test.t1"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+}
+
 func TestProxyDDLIndex(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
