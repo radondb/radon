@@ -16,8 +16,10 @@ limitations under the License.
 
 package sqlparser
 
-import "strings"
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestDDL1(t *testing.T) {
 	validSQL := []struct {
@@ -229,6 +231,11 @@ func TestDDL1(t *testing.T) {
 		{
 			input:  "drop table t1",
 			output: "drop table t1",
+		},
+
+		{
+			input:  "drop table t1, t2",
+			output: "drop table t1, t2",
 		},
 
 		{

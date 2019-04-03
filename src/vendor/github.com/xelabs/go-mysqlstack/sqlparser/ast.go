@@ -560,6 +560,9 @@ type DDL struct {
 	Database      TableIdent
 	TableSpec     *TableSpec
 
+	// Tables is set if Action is DropStr.
+	Tables TableNames
+
 	// table column operation
 	DropColumnName  string
 	ModifyColumnDef *ColumnDefinition
@@ -620,7 +623,7 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 		if node.IfExists {
 			exists = " if exists"
 		}
-		buf.Myprintf("%s%s %v", node.Action, exists, node.Table)
+		buf.Myprintf("%s%s %v", node.Action, exists, node.Tables)
 	case DropIndexStr:
 		buf.Myprintf("%s %s on %v", node.Action, node.IndexName, node.Table)
 	case RenameStr:
@@ -651,6 +654,7 @@ func (node *DDL) WalkSubtree(visit Visit) error {
 		visit,
 		node.Table,
 		node.NewName,
+		node.Tables,
 	)
 }
 
@@ -1293,6 +1297,27 @@ type SimpleTableExpr interface {
 
 func (TableName) iSimpleTableExpr() {}
 func (*Subquery) iSimpleTableExpr() {}
+
+// TableNames is a list of TableName.
+type TableNames []TableName
+
+// Format formats the node.
+func (node TableNames) Format(buf *TrackedBuffer) {
+	var prefix string
+	for _, n := range node {
+		buf.Myprintf("%s%v", prefix, n)
+		prefix = ", "
+	}
+}
+
+func (node TableNames) WalkSubtree(visit Visit) error {
+	for _, n := range node {
+		if err := Walk(visit, n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // TableName represents a table  name.
 // Qualifier, if specified, represents a database or keyspace.

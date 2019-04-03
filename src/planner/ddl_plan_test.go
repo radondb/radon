@@ -23,7 +23,6 @@ func TestDDLPlan1(t *testing.T) {
 		"{\n\t\"RawQuery\": \"create table A(a int)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create table `sbtest`.`A0`(a int)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table `sbtest`.`A2`(a int)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table `sbtest`.`A4`(a int)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table `sbtest`.`A8`(a int)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
 		"{\n\t\"RawQuery\": \"create table G(a int)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create table `sbtest`.`G`(a int)\",\n\t\t\t\"Backend\": \"backend1\",\n\t\t\t\"Range\": \"\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table `sbtest`.`G`(a int)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"\"\n\t\t}\n\t]\n}",
 		"{\n\t\"RawQuery\": \"create table S(a int)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create table `sbtest`.`S`(a int)\",\n\t\t\t\"Backend\": \"backend1\",\n\t\t\t\"Range\": \"\"\n\t\t}\n\t]\n}",
-		"{\n\t\"RawQuery\": \"drop table sbtest.A\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"drop table `sbtest`.`A0`\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"drop table `sbtest`.`A2`\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"drop table `sbtest`.`A4`\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"drop table `sbtest`.`A8`\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
 		"{\n\t\"RawQuery\": \"alter table A engine = tokudb\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`A0` engine = tokudb\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`A2` engine = tokudb\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`A4` engine = tokudb\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`A8` engine = tokudb\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
 		"{\n\t\"RawQuery\": \"create index idx_a on A(a)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create index idx_a on `sbtest`.`A0`(a)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create index idx_a on `sbtest`.`A2`(a)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create index idx_a on `sbtest`.`A4`(a)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create index idx_a on `sbtest`.`A8`(a)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
 		"{\n\t\"RawQuery\": \"drop index idx_a on sbtest.A\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"drop index idx_a on `sbtest`.`A0`\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"drop index idx_a on `sbtest`.`A2`\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"drop index idx_a on `sbtest`.`A4`\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"drop index idx_a on `sbtest`.`A8`\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
@@ -39,7 +38,6 @@ func TestDDLPlan1(t *testing.T) {
 		"create table A(a int)",
 		"create table G(a int)",
 		"create table S(a int)",
-		"drop table sbtest.A",
 		"alter table A engine = tokudb",
 		"create index idx_a on A(a)",
 		"drop index idx_a on sbtest.A",
@@ -86,6 +84,62 @@ func TestDDLPlan1(t *testing.T) {
 			want := PlanTypeDDL
 			got := plan.Type()
 			assert.Equal(t, want, got)
+		}
+	}
+}
+
+func TestDROPPlan(t *testing.T) {
+	results := []string{
+		"{\n\t\"RawQuery\": \"drop table sbtest.A\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"drop table `sbtest`.`A0`\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"drop table `sbtest`.`A2`\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"drop table `sbtest`.`A4`\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"drop table `sbtest`.`A8`\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
+	}
+
+	querys := []string{
+		"drop table sbtest.A",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableGConfig(), router.MockTableSConfig())
+	assert.Nil(t, err)
+	planTree := NewPlanTree()
+	for i, query := range querys {
+		log.Debug("%v", query)
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		dropNode := node.(*sqlparser.DDL)
+
+		for _, tableIdent := range dropNode.Tables {
+			if !tableIdent.Qualifier.IsEmpty() {
+				database = tableIdent.Qualifier.String()
+			}
+			dropNode.Table = tableIdent
+
+			plan := NewDDLPlan(log, database, query, dropNode, route)
+			// plan build
+			{
+				err := plan.Build()
+				assert.Nil(t, err)
+				{
+					err := planTree.Add(plan)
+					assert.Nil(t, err)
+				}
+				want := results[i]
+				got := plan.JSON()
+				log.Info(got)
+				assert.Equal(t, want, got)
+				assert.True(t, nil == plan.Children())
+			}
+
+			// type
+			{
+				want := PlanTypeDDL
+				got := plan.Type()
+				assert.Equal(t, want, got)
+			}
 		}
 	}
 }

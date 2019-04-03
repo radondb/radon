@@ -65,6 +65,7 @@ func forceEOF(yylex interface{}) {
   tableExprs    TableExprs
   tableExpr     TableExpr
   tableName     TableName
+  tableNames    TableNames
   indexHints    *IndexHints
   expr          Expr
   exprs         Exprs
@@ -200,6 +201,7 @@ func forceEOF(yylex interface{}) {
 %type <tableExpr> table_reference table_factor join_table
 %type <str> inner_join outer_join natural_join
 %type <tableName> table_name into_table_name database_from_opt
+%type <tableNames> table_name_list
 %type <aliasedTableName> aliased_table_name
 %type <indexHints> index_hint_list
 %type <colIdents> index_list
@@ -974,13 +976,13 @@ alter_statement:
 
 
 drop_statement:
-  DROP TABLE exists_opt table_name
+  DROP TABLE exists_opt table_name_list
   {
     var exists bool
     if $3 != 0 {
       exists = true
     }
-    $$ = &DDL{Action: DropTableStr, Table: $4, IfExists: exists}
+    $$ = &DDL{Action: DropTableStr, Tables: $4, IfExists: exists}
   }
 | DROP INDEX ID ON table_name
   {
@@ -994,6 +996,16 @@ drop_statement:
       exists = true
     }
     $$ = &DDL{Action: DropDBStr, Database: $4, IfExists: exists}
+  }
+
+table_name_list:
+  table_name
+  {
+    $$ = TableNames{$1}
+  }
+| table_name_list ',' table_name
+  {
+    $$ = append($$, $3)
   }
 
 truncate_statement:
