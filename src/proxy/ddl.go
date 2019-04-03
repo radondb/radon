@@ -157,18 +157,31 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 	}
 
 	// Table operation.
-	if !ddl.Table.Qualifier.IsEmpty() {
+	// when Drop Table, maybe multiple tables, can't use the ddl.Table.Qualifier.
+	if ddl.Action != sqlparser.DropTableStr && !ddl.Table.Qualifier.IsEmpty() {
 		database = ddl.Table.Qualifier.String()
 	}
 
-	// Check the database ACL.
-	if err := route.DatabaseACL(database); err != nil {
-		return nil, err
+	var databases []string
+	if ddl.Action == sqlparser.DropTableStr {
+		for _, tableIdent := range ddl.Tables {
+			if !tableIdent.Qualifier.IsEmpty() {
+				databases = append(databases, ddl.Table.Qualifier.String())
+			}
+		}
 	}
+	databases = append(databases, database)
 
-	privilegePlug := spanner.plugins.PlugPrivilege()
-	if err := privilegePlug.Check(database, session.User(), node); err != nil {
-		return nil, err
+	for _, db := range databases {
+		// Check the database ACL.
+		if err := route.DatabaseACL(db); err != nil {
+			return nil, err
+		}
+		// Check the database privilege.
+		privilegePlug := spanner.plugins.PlugPrivilege()
+		if err := privilegePlug.Check(db, session.User(), node); err != nil {
+			return nil, err
+		}
 	}
 
 	switch ddl.Action {
@@ -243,27 +256,46 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		}
 		return r, nil
 	case sqlparser.DropTableStr:
-		// Check the database and table is exists.
-		table := ddl.Table.Name.String()
+		r := &sqltypes.Result{}
+		tables := ddl.Tables
+		for _, tableIdent := range tables {
+			node.Table = tableIdent
+			table := tableIdent.Name.String()
+			db := database
+			// The query need differentiate, ddl_plan will define database.
+			var query string
+			if tableIdent.Qualifier.IsEmpty() {
+				query = fmt.Sprintf("drop table %s", table)
+			} else {
+				//If the tableIdent with Qualifier, us it as db, or else use the default.
+				db = tableIdent.Qualifier.String()
+				query = fmt.Sprintf("drop table %s.%s", db, table)
+			}
 
-		if !checkDatabaseExists(database, route) {
-			return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, database)
-		}
+			// Check the database and table is exists.
+			if !checkDatabaseExists(db, route) {
+				return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, db)
+			}
 
-		// Check table exists.
-		if node.IfExists && !checkTableExists(database, table, route) {
-			return &sqltypes.Result{}, nil
-		}
+			// Check table exists.
+			if node.IfExists && !checkTableExists(db, table, route) {
+				return &sqltypes.Result{}, nil
+			}
 
-		// Execute.
-		r, err := spanner.ExecuteDDL(session, database, query, node)
-		if err != nil {
-			log.Error("spanner.ddl.execute[%v].error[%+v]", query, err)
+			// Execute.
+			r, err := spanner.ExecuteDDL(session, db, query, node)
+			if err != nil {
+				log.Error("spanner.ddl.execute[%v].error[%+v]", query, err)
+			}
+			if err := route.DropTable(db, table); err != nil {
+				log.Error("spanner.ddl.router.drop.table[%s].error[%+v]", table, err)
+			}
+
+			if err != nil {
+				return r, err
+			}
 		}
-		if err := route.DropTable(database, table); err != nil {
-			log.Error("spanner.ddl.router.drop.table[%s].error[%+v]", table, err)
-		}
-		return r, err
+		return r, nil
 	case sqlparser.CreateIndexStr, sqlparser.DropIndexStr,
 		sqlparser.AlterEngineStr, sqlparser.AlterCharsetStr,
 		sqlparser.AlterAddColumnStr, sqlparser.AlterDropColumnStr, sqlparser.AlterModifyColumnStr,
