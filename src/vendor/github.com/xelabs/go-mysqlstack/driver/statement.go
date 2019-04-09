@@ -106,7 +106,10 @@ func (s *Statement) ComStatementReset() error {
 	data[1] = byte(s.ID >> 8)
 	data[2] = byte(s.ID >> 16)
 	data[3] = byte(s.ID >> 24)
-	return s.conn.packets.WriteCommand(sqldb.COM_STMT_RESET, data[:])
+	if err := s.conn.packets.WriteCommand(sqldb.COM_STMT_RESET, data[:]); err != nil {
+		return err
+	}
+	return s.conn.packets.ReadOK()
 }
 
 // ComStatementClose -- close the stmt.
@@ -118,5 +121,8 @@ func (s *Statement) ComStatementClose() error {
 	data[1] = byte(s.ID >> 8)
 	data[2] = byte(s.ID >> 16)
 	data[3] = byte(s.ID >> 24)
-	return s.conn.packets.WriteCommand(sqldb.COM_STMT_CLOSE, data[:])
+	if err := s.conn.packets.WriteCommand(sqldb.COM_STMT_CLOSE, data[:]); err != nil {
+		return err
+	}
+	return s.conn.packets.ReadOK()
 }
