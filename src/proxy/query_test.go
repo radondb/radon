@@ -84,7 +84,8 @@ func TestProxyQuerySet(t *testing.T) {
 	}
 }
 
-func TestProxyQueryComments(t *testing.T) {
+// JDBC/Pthon connector tests.
+func TestProxyQueryDriver(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
@@ -92,6 +93,7 @@ func TestProxyQueryComments(t *testing.T) {
 	querys := []string{
 		"/*!40014 SET FOREIGN_KEY_CHECKS=0*/",
 		"select a /*xx*/ from t1",
+		"SET NAMES 'utf8' COLLATE 'utf8_general_ci'",
 	}
 
 	// fakedbs.
