@@ -299,6 +299,9 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 			if stmt.ParamCount > 0 {
 				stmt.BindVars = make(map[string]*querypb.BindVariable, stmt.ParamCount)
 			}
+			if err = session.packets.WriteOK(0, 0, session.greeting.Status(), 0); err != nil {
+				return
+			}
 			// COM_STMT_CLOSE
 		case sqldb.COM_STMT_CLOSE:
 			stmt, err := l.parserComStatement(data, session)
@@ -310,6 +313,9 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 				continue
 			}
 			delete(session.statements, stmt.ID)
+			if err = session.packets.WriteOK(0, 0, session.greeting.Status(), 0); err != nil {
+				return
+			}
 		default:
 			cmd := sqldb.CommandString(data[0])
 			log.Error("session.command:%s.not.implemented", cmd)
