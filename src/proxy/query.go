@@ -284,14 +284,12 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 		spanner.auditLog(session, R, xbase.RADON, query, qr)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Set:
-		log.Warning("proxy.query.set.query:%s", query)
 		if qr, err = spanner.handleSet(session, query, node); err != nil {
 			log.Error("proxy.set[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
 		spanner.auditLog(session, R, xbase.SET, query, qr)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Checksum:
-		log.Warning("proxy.query.checksum.query:%s", query)
 		if qr, err = spanner.handleChecksumTable(session, query, node); err != nil {
 			log.Error("proxy.checksum[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
