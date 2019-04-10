@@ -143,12 +143,10 @@ func PackStatementExecute(stmtID uint32, parameters []sqltypes.Value) ([]byte, e
 	if paramsLen > 0 {
 		// NULL-bitmap, length: (num-params+7)/8
 		buf.WriteBytes(nullMask)
-	}
 
-	// newParameterBoundFlag 1 [1 byte]
-	buf.WriteU8(1)
+		// newParameterBoundFlag 1 [1 byte]
+		buf.WriteU8(1)
 
-	if paramsLen > 0 {
 		// params type
 		buf.WriteBytes(paramsType)
 		// params value
@@ -193,52 +191,52 @@ func UnPackStatementExecute(data []byte, paramsCount uint16, parseValueFn func(*
 		if bitMap, err = buf.ReadBytes(int((paramsCount + 7) / 8)); err != nil {
 			return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading NULL-bitmap failed")
 		}
-	}
 
-	var newParamsBoundFlag byte
-	if newParamsBoundFlag, err = buf.ReadU8(); err != nil {
-		return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading NULL-bitmap failed")
-	}
-	if newParamsBoundFlag == 0x01 {
-		var mysqlType, flags byte
+		var newParamsBoundFlag byte
+		if newParamsBoundFlag, err = buf.ReadU8(); err != nil {
+			return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading NULL-bitmap failed")
+		}
+		if newParamsBoundFlag == 0x01 {
+			var mysqlType, flags byte
+			for i := uint16(0); i < paramsCount; i++ {
+				if mysqlType, err = buf.ReadU8(); err != nil {
+					return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading parameter type failed")
+				}
+
+				if flags, err = buf.ReadU8(); err != nil {
+					return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading parameter flags failed")
+				}
+				// Convert MySQL type to Vitess type.
+				valType, err := sqltypes.MySQLToType(int64(mysqlType), int64(flags))
+				if err != nil {
+					return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, fmt.Sprintf("MySQLToType(%v,%v) failed: %v", mysqlType, flags, err))
+				}
+				paramsType[i] = int32(valType)
+			}
+		}
+
 		for i := uint16(0); i < paramsCount; i++ {
-			if mysqlType, err = buf.ReadU8(); err != nil {
-				return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading parameter type failed")
+			var val interface{}
+			if paramsType[i] == int32(sqltypes.Text) || paramsType[i] == int32(sqltypes.Blob) {
+				continue
 			}
 
-			if flags, err = buf.ReadU8(); err != nil {
-				return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading parameter flags failed")
+			if (bitMap[i/8] & (1 << uint(i%8))) > 0 {
+				val, err = parseValueFn(buf, sqltypes.Null)
+			} else {
+				val, err = parseValueFn(buf, querypb.Type(paramsType[i]))
 			}
-			// Convert MySQL type to Vitess type.
-			valType, err := sqltypes.MySQLToType(int64(mysqlType), int64(flags))
 			if err != nil {
-				return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, fmt.Sprintf("MySQLToType(%v,%v) failed: %v", mysqlType, flags, err))
+				return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, fmt.Sprintf("decoding parameter value failed(%v) failed: %v", paramsType[i], err))
 			}
-			paramsType[i] = int32(valType)
-		}
-	}
 
-	for i := uint16(0); i < paramsCount; i++ {
-		var val interface{}
-		if paramsType[i] == int32(sqltypes.Text) || paramsType[i] == int32(sqltypes.Blob) {
-			continue
+			// If value is nil, must set bind variables to nil.
+			bv, err := sqltypes.BuildBindVariable(val)
+			if err != nil {
+				return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, fmt.Sprintf("build converted parameters value failed: %v", err))
+			}
+			stmt.BindVars[fmt.Sprintf("v%d", i+1)] = bv
 		}
-
-		if (bitMap[i/8] & (1 << uint(i%8))) > 0 {
-			val, err = parseValueFn(buf, sqltypes.Null)
-		} else {
-			val, err = parseValueFn(buf, querypb.Type(paramsType[i]))
-		}
-		if err != nil {
-			return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, fmt.Sprintf("decoding parameter value failed(%v) failed: %v", paramsType[i], err))
-		}
-
-		// If value is nil, must set bind variables to nil.
-		bv, err := sqltypes.BuildBindVariable(val)
-		if err != nil {
-			return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, fmt.Sprintf("build converted parameters value failed: %v", err))
-		}
-		stmt.BindVars[fmt.Sprintf("v%d", i+1)] = bv
 	}
 	return stmt, nil
 }
