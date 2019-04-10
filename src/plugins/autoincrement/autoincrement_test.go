@@ -61,21 +61,31 @@ func TestPluginAutoincModifyForAutoinc(t *testing.T) {
 			want:    "insert into t1(b, a) values (1, 65536), (2, 65537), (3, 65538)",
 			autoinc: &config.AutoIncrement{Column: "a"},
 		},
+
 		{
 			query:   "insert into t1(b) values(1)",
 			want:    "insert into t1(b, a) values (1, 65536)",
 			autoinc: &config.AutoIncrement{Column: "a"},
 		},
+
 		// replace
 		{
 			query:   "replace into t1 (b) values(1),(2)",
 			want:    "replace into t1(b, a) values (1, 65536), (2, 65537)",
 			autoinc: &config.AutoIncrement{Column: "a"},
 		},
+
 		// With autoinc column.
 		{
 			query:   "insert into t1(a) values(1),(2),(3)",
 			want:    "insert into t1(a) values (1), (2), (3)",
+			autoinc: &config.AutoIncrement{Column: "a"},
+		},
+
+		// Insert with select.
+		{
+			query:   "insert into t1(a) select a from t1",
+			want:    "insert into t1(a) select a from t1",
 			autoinc: &config.AutoIncrement{Column: "a"},
 		},
 	}

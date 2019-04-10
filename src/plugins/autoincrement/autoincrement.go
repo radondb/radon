@@ -100,7 +100,10 @@ func (autoinc *AutoIncrement) Process(database string, ins *sqlparser.Insert) er
 	// Get seq(thread-safe).
 	autoinc.mu.Lock()
 	seq = autoinc.seq
-	autoinc.seq += uint64(len(ins.Rows.(sqlparser.Values)))
+	switch rows := ins.Rows.(type) {
+	case sqlparser.Values:
+		autoinc.seq += uint64(len(rows))
+	}
 	autoinc.mu.Unlock()
 
 	if tblInfo.AutoIncrement != nil {
