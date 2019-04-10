@@ -77,3 +77,46 @@ func TestProxySet(t *testing.T) {
 		}
 	}
 }
+
+func TestProxySetAutocommit(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		proxy.conf.Proxy.TwopcEnable = true
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("xa .*", &sqltypes.Result{})
+	}
+
+	// set.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		{
+			query := "set autocommit=0"
+			_, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "select 1"
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "commit"
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
+		{
+			query := "set autocommit=1"
+			_, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "commit"
+			_, err = client.FetchAll(query, -1)
+			assert.NotNil(t, err)
+		}
+	}
+}
