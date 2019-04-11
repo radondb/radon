@@ -34,6 +34,12 @@ type session struct {
 }
 
 func (s *session) setStreamingFetchVar(r bool) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if r {
 		s.capabilities |= cap_streaming_fetch
 	} else {
@@ -42,5 +48,10 @@ func (s *session) setStreamingFetchVar(r bool) {
 }
 
 func (s *session) getStreamingFetchVar() bool {
+	if s == nil {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.capabilities&cap_streaming_fetch != 0
 }

@@ -137,6 +137,20 @@ func (ss *Sessions) getTxnSession(session *driver.Session) *session {
 	return ss.sessions[session.ID()]
 }
 
+// getSessionTxn used to get txn in the connection session.
+func (ss *Sessions) getSessionTxn(session *driver.Session) backend.Transaction {
+	ss.mu.RLock()
+	s, ok := ss.sessions[session.ID()]
+	if !ok {
+		ss.mu.RUnlock()
+		return nil
+	}
+	ss.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.transaction
+}
+
 // TxnBinding used to bind txn to the session.
 func (ss *Sessions) TxnBinding(s *driver.Session, txn backend.Transaction, node sqlparser.Statement, query string) {
 	ss.mu.RLock()

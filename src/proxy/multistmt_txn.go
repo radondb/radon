@@ -9,8 +9,6 @@
 package proxy
 
 import (
-	"backend"
-
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -64,7 +62,6 @@ func (spanner *Spanner) ExecuteBegin(session *driver.Session, query string, node
 	conf := spanner.conf
 	sessions := spanner.sessions
 	scatter := spanner.scatter
-	var txn backend.Transaction
 	var err error
 
 	if !spanner.isTwoPC() {
@@ -72,9 +69,7 @@ func (spanner *Spanner) ExecuteBegin(session *driver.Session, query string, node
 		return nil, errors.Errorf("spanner.query.execute.multistmt.txn.error[twopc-disable]")
 	}
 
-	currentSession := sessions.getTxnSession(session)
-	txn = currentSession.transaction
-
+	txn := sessions.getSessionTxn(session)
 	//1. If the previous cmd is not in transaction, and the autocommit = 0, the begin will implicit commit in mysql,
 	// the case is not supported. https://dev.mysql.com/doc/refman/5.7/en/implicit-commit.html
 	//2. If txn is not nil, it isn't supported. e.g., begin;sql1;sql2;.. begin;(return err, and the txn isn't free);
@@ -109,7 +104,6 @@ func (spanner *Spanner) ExecuteBegin(session *driver.Session, query string, node
 func (spanner *Spanner) ExecuteRollback(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	log := spanner.log
 	sessions := spanner.sessions
-	var txn backend.Transaction
 
 	if !spanner.isTwoPC() {
 		log.Error("spanner.execute.multistmt.txn.rollback.2pc.disable")
@@ -117,10 +111,7 @@ func (spanner *Spanner) ExecuteRollback(session *driver.Session, query string, n
 		return qr, errors.Errorf("spanner.execute.multistmt.txn.rollback.error[twopc-disable]")
 	}
 
-	// transaction.
-	currentSession := sessions.getTxnSession(session)
-	txn = currentSession.transaction
-
+	txn := sessions.getSessionTxn(session)
 	// return err if query is "rollback" without begin a multi-transaction.
 	if txn == nil {
 		log.Error("spanner.execute.multistmt.txn.rollback.error.txn.not.begin")
@@ -144,7 +135,6 @@ func (spanner *Spanner) ExecuteRollback(session *driver.Session, query string, n
 func (spanner *Spanner) ExecuteCommit(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	log := spanner.log
 	sessions := spanner.sessions
-	var txn backend.Transaction
 
 	if !spanner.isTwoPC() {
 		log.Error("spanner.execute.multistmt.txn.commit.error.2pc.disable")
@@ -152,10 +142,7 @@ func (spanner *Spanner) ExecuteCommit(session *driver.Session, query string, nod
 		return qr, errors.Errorf("spanner.execute.multistmt.txn.commit.error:[twopc-disable]")
 	}
 
-	// transaction.
-	currentSession := sessions.getTxnSession(session)
-	txn = currentSession.transaction
-
+	txn := sessions.getSessionTxn(session)
 	// return err if "commit" was sent without begin a multi-transaction.
 	if txn == nil {
 		log.Error("spanner.execute.multistmt.txn.commit.error.txn.not.begin")

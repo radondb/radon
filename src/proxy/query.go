@@ -206,7 +206,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Select:
 		txSession := spanner.sessions.getTxnSession(session)
-		if txSession.getStreamingFetchVar() {
+		if txSession != nil && txSession.getStreamingFetchVar() {
 			if err = spanner.handleSelectStream(session, query, node, callback); err != nil {
 				log.Error("proxy.select.for.backup:[%s].error:%+v", xbase.TruncateQuery(query, 256), err)
 				return err

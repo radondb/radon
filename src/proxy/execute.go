@@ -25,7 +25,10 @@ func (spanner *Spanner) ExecuteMultiStmtsInTxn(session *driver.Session, database
 	log := spanner.log
 	router := spanner.router
 	sessions := spanner.sessions
-	txSession := sessions.getTxnSession(session)
+	txn := sessions.getSessionTxn(session)
+	if txn == nil {
+		return nil, errors.Errorf("the txn in the session[%v] is nil.", session)
+	}
 
 	sessions.MultiStmtTxnBinding(session, nil, node, query)
 
@@ -33,7 +36,7 @@ func (spanner *Spanner) ExecuteMultiStmtsInTxn(session *driver.Session, database
 	if err != nil {
 		return nil, err
 	}
-	executors := executor.NewTree(log, plans, txSession.transaction)
+	executors := executor.NewTree(log, plans, txn)
 	qr, err := executors.Execute()
 	if err != nil {
 		// need the user to rollback
@@ -108,8 +111,8 @@ func (spanner *Spanner) ExecuteDDL(session *driver.Session, database string, que
 	spanner.log.Info("spanner.execute.ddl.query:%s", query)
 	timeout := spanner.conf.Proxy.DDLTimeout
 
-	txSession := spanner.sessions.getTxnSession(session)
-	if spanner.isTwoPC() && txSession.transaction != nil {
+	txn := spanner.sessions.getSessionTxn(session)
+	if spanner.isTwoPC() && txn != nil {
 		return nil, errors.Errorf("in.multiStmtTrans.unsupported.DDL:%v.", query)
 	}
 
@@ -197,9 +200,9 @@ func (spanner *Spanner) ExecuteStreamFetch(session *driver.Session, database str
 // ExecuteDML used to execute some DML querys to shards.
 func (spanner *Spanner) ExecuteDML(session *driver.Session, database string, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	if spanner.isTwoPC() {
-		txSession := spanner.sessions.getTxnSession(session)
 		if spanner.IsDML(node) {
-			if txSession.transaction == nil {
+			txn := spanner.sessions.getSessionTxn(session)
+			if txn == nil {
 				return spanner.ExecuteSingleStmtTxnTwoPC(session, database, query, node)
 			} else {
 				return spanner.ExecuteMultiStmtsInTxn(session, database, query, node)
