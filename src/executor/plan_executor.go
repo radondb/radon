@@ -13,12 +13,15 @@ import (
 	"planner"
 	"xcontext"
 
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
 // PlanExecutor interface.
 type PlanExecutor interface {
 	execute(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext) error
+	execBindVars(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable, wantfields bool) error
+	getFields(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable) error
 }
 
 // buildExecutor used to build the executor tree.
