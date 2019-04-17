@@ -200,9 +200,9 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 	l.handler.SessionInc(session)
 	defer l.handler.SessionDec(session)
 
+	// Reset packet sequence ID.
+	session.packets.ResetSeq()
 	for {
-		// Reset packet sequence ID.
-		session.packets.ResetSeq()
 		if data, err = session.packets.Next(); err != nil {
 			return
 		}
@@ -240,7 +240,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 				if werr := session.writeErrFromError(err); werr != nil {
 					return
 				}
-				continue
 			}
 			// COM_STMT_PREPARE
 		case sqldb.COM_STMT_PREPARE:
@@ -265,7 +264,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 					return
 				}
 				delete(session.statements, id)
-				continue
 			}
 			// COM_STMT_EXECUTE
 		case sqldb.COM_STMT_EXECUTE:
@@ -276,7 +274,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 				if werr := session.writeErrFromError(err); werr != nil {
 					return
 				}
-				continue
 			}
 			if err = l.handler.ComQuery(session, stmt.PrepareStmt, sqltypes.CopyBindVariables(stmt.BindVars), func(qr *sqltypes.Result) error {
 				return session.writeBinaryRows(qr)
@@ -285,7 +282,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 				if werr := session.writeErrFromError(err); werr != nil {
 					return
 				}
-				continue
 			}
 			// COM_STMT_RESET
 		case sqldb.COM_STMT_RESET:
@@ -296,7 +292,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 				if werr := session.writeErrFromError(err); werr != nil {
 					return
 				}
-				continue
 			}
 			if stmt.ParamCount > 0 {
 				stmt.BindVars = make(map[string]*querypb.BindVariable, stmt.ParamCount)
@@ -313,12 +308,8 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 				if werr := session.writeErrFromError(err); werr != nil {
 					return
 				}
-				continue
 			}
 			delete(session.statements, stmt.ID)
-			if err = session.packets.WriteOK(0, 0, session.greeting.Status(), 0); err != nil {
-				return
-			}
 		default:
 			cmd := sqldb.CommandString(data[0])
 			log.Error("session.command:%s.not.implemented", cmd)

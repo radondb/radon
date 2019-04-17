@@ -124,5 +124,5 @@ func (s *Statement) ComStatementClose() error {
 	if err := s.conn.packets.WriteCommand(sqldb.COM_STMT_CLOSE, data[:]); err != nil {
 		return err
 	}
-	return s.conn.packets.ReadOK()
+	return nil
 }
