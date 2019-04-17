@@ -59,35 +59,131 @@ func (j *JoinExecutor) execute(reqCtx *xcontext.RequestContext, ctx *xcontext.Re
 		}
 	}
 
-	lctx := xcontext.NewResultContext()
-	rctx := xcontext.NewResultContext()
-	wg.Add(1)
-	go oneExec(j.left, lctx)
-	wg.Add(1)
-	go oneExec(j.right, rctx)
-	wg.Wait()
-	if len(allErrors) > 0 {
-		return allErrors[0]
-	}
-
-	ctx.Results = &sqltypes.Result{}
-	ctx.Results.Fields = joinFields(lctx.Results.Fields, rctx.Results.Fields, j.node.Cols)
-	if len(lctx.Results.Rows) == 0 {
-		return nil
-	}
-
-	if len(rctx.Results.Rows) == 0 {
-		concatLeftAndNil(lctx.Results.Rows, j.node, ctx.Results)
+	if j.node.Strategy == planner.NestedLoop {
+		joinVars := make(map[string]*querypb.BindVariable)
+		if err := j.execBindVars(reqCtx, ctx, joinVars, true); err != nil {
+			return err
+		}
 	} else {
-		switch j.node.Strategy {
-		case planner.SortMerge:
-			sortMergeJoin(lctx.Results, rctx.Results, ctx.Results, j.node)
-		case planner.Cartesian:
-			cartesianProduct(lctx.Results, rctx.Results, ctx.Results, j.node)
+		lctx := xcontext.NewResultContext()
+		rctx := xcontext.NewResultContext()
+		wg.Add(1)
+		go oneExec(j.left, lctx)
+		wg.Add(1)
+		go oneExec(j.right, rctx)
+		wg.Wait()
+		if len(allErrors) > 0 {
+			return allErrors[0]
+		}
+
+		ctx.Results = &sqltypes.Result{}
+		ctx.Results.Fields = joinFields(lctx.Results.Fields, rctx.Results.Fields, j.node.Cols)
+		if len(lctx.Results.Rows) == 0 {
+			return nil
+		}
+
+		if len(rctx.Results.Rows) == 0 {
+			concatLeftAndNil(lctx.Results.Rows, j.node, ctx.Results)
+		} else {
+			switch j.node.Strategy {
+			case planner.SortMerge:
+				sortMergeJoin(lctx.Results, rctx.Results, ctx.Results, j.node)
+			case planner.Cartesian:
+				cartesianProduct(lctx.Results, rctx.Results, ctx.Results, j.node)
+			}
 		}
 	}
 
 	return execSubPlan(j.log, j.node, ctx)
+}
+
+// execBindVars used to execute querys with bindvas.
+func (j *JoinExecutor) execBindVars(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable, wantfields bool) error {
+	var err error
+	lctx := xcontext.NewResultContext()
+	rctx := xcontext.NewResultContext()
+	ctx.Results = &sqltypes.Result{}
+
+	joinVars := make(map[string]*querypb.BindVariable)
+	if err = j.left.execBindVars(reqCtx, lctx, bindVars, wantfields); err != nil {
+		return err
+	}
+
+	for _, lrow := range lctx.Results.Rows {
+		blend := true
+		matchCnt := 0
+		for _, idx := range j.node.LeftTmpCols {
+			vn := lrow[idx].ToNative()
+			if vn.(int64) == 0 {
+				blend = false
+				break
+			}
+		}
+		if blend {
+			for k, col := range j.node.Vars {
+				joinVars[k] = sqltypes.ValueBindVariable(lrow[col])
+			}
+			if err = j.right.execBindVars(reqCtx, rctx, combineVars(bindVars, joinVars), wantfields); err != nil {
+				return err
+			}
+			if wantfields {
+				wantfields = false
+				ctx.Results.Fields = joinFields(lctx.Results.Fields, rctx.Results.Fields, j.node.Cols)
+			}
+			for _, rrow := range rctx.Results.Rows {
+				matchCnt++
+				ok := true
+				for _, idx := range j.node.RightTmpCols {
+					if !rrow[idx].IsNull() {
+						ok = false
+						break
+					}
+				}
+				if ok {
+					ctx.Results.Rows = append(ctx.Results.Rows, joinRows(lrow, rrow, j.node.Cols))
+					ctx.Results.RowsAffected++
+				}
+			}
+		}
+		if matchCnt == 0 {
+			concatLeftAndNil([][]sqltypes.Value{lrow}, j.node, ctx.Results)
+		}
+	}
+
+	if wantfields {
+		wantfields = false
+		for k := range j.node.Vars {
+			joinVars[k] = sqltypes.NullBindVariable
+		}
+		if err = j.right.getFields(reqCtx, rctx, combineVars(bindVars, joinVars)); err != nil {
+			return err
+		}
+		ctx.Results.Fields = joinFields(lctx.Results.Fields, rctx.Results.Fields, j.node.Cols)
+	}
+	return nil
+}
+
+// getFields fetches the field info.
+func (j *JoinExecutor) getFields(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable) error {
+	var err error
+	lctx := xcontext.NewResultContext()
+	rctx := xcontext.NewResultContext()
+
+	joinVars := make(map[string]*querypb.BindVariable)
+	if err = j.left.getFields(reqCtx, lctx, bindVars); err != nil {
+		return err
+	}
+
+	for k := range j.node.Vars {
+		joinVars[k] = sqltypes.NullBindVariable
+	}
+	if err = j.right.getFields(reqCtx, rctx, bindVars); err != nil {
+		return err
+	}
+
+	ctx.Results = &sqltypes.Result{}
+	ctx.Results.Fields = joinFields(lctx.Results.Fields, rctx.Results.Fields, j.node.Cols)
+	return nil
 }
 
 // joinFields used to join two fields.
@@ -117,6 +213,17 @@ func joinRows(lrow, rrow []sqltypes.Value, cols []int) []sqltypes.Value {
 		}
 	}
 	return row
+}
+
+func combineVars(bv1, bv2 map[string]*querypb.BindVariable) map[string]*querypb.BindVariable {
+	out := make(map[string]*querypb.BindVariable)
+	for k, v := range bv1 {
+		out[k] = v
+	}
+	for k, v := range bv2 {
+		out[k] = v
+	}
+	return out
 }
 
 // cartesianProduct used to produce cartesian product.

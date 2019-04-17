@@ -17,6 +17,7 @@ import (
 	"router"
 	"xcontext"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/xlog"
@@ -324,13 +325,23 @@ func TestJoinExecutor(t *testing.T) {
 		},
 	}
 	r3 := &sqltypes.Result{}
+	r4 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name:  "a",
+				Type:  querypb.Type_VARCHAR,
+				Table: "G",
+			},
+		},
+		Rows: [][]sqltypes.Value{},
+	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
 
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig())
+	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 
 	// Create scatter and query handler.
@@ -350,6 +361,14 @@ func TestJoinExecutor(t *testing.T) {
 	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A2 as A order by A.name asc", r3)
 	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A4 as A order by A.name asc", r3)
 	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A8 as A order by A.name asc", r3)
+	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name from sbtest.A8 as A where A.id = 2", r14)
+	fakedbs.AddQuery("select A.id, A.name from sbtest.A8 as A where 1 != 1", r12)
+	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A0 as A", r11)
+	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A2 as A", r3)
+	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A4 as A", r3)
+	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A8 as A", r3)
+	fakedbs.AddQuery("select /*+nested+*/ G.a from sbtest.G", r4)
+
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B0 as B", r21)
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B1 as B", r22)
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B0 as B order by B.name asc", r21)
@@ -360,6 +379,14 @@ func TestJoinExecutor(t *testing.T) {
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B1 as B where B.name = 's' and B.id > 2 order by B.id asc", r21)
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B0 as B where B.id > 2 order by B.id asc", r21)
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B1 as B where B.id > 2 order by B.id asc", r2)
+	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.B1 as B where B.id = 1 and 'go' = B.name", r21)
+	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.B1 as B where B.id = 1 and 'lang' = B.name", r2)
+	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.B1 as B where B.id = 1 and 'niu' = B.name", r21)
+	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.B1 as B where B.id = 1", r21)
+	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.B1 as B where B.id = 1 and 'nice' = B.name", r21)
+	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.b1 as b where b.id = 1 and 'nil' = b.name", r21)
+	fakedbs.AddQuery("select b.name, b.id from sbtest.b1 as b where 1 != 1", r21)
+
 	querys := []string{
 		"select A.id, B.name from A right join B on A.id=B.id where A.id > 2 group by A.id",
 		"select A.id, B.name from A join B on A.id=B.id where A.id > 2 group by A.id limit 1",
@@ -376,6 +403,10 @@ func TestJoinExecutor(t *testing.T) {
 		"select A.id, B.name, B.id, A.name from A join B on A.id<=B.id and A.name<=>B.name and A.id=2 and B.id=0 group by A.id",
 		"select A.id, B.name, B.id, A.name from A join B on A.id < B.id and A.name<=>B.name and A.id=2 and B.id=0 group by A.id",
 		"select A.id, B.name, B.id, A.name, A.id > 2 as tmpc_0 from A join B on A.name=B.name and A.id>=B.id and A.id > B.id group by A.id",
+		"select /*+nested+*/ A.id, B.name, B.id from A join B on A.name=B.name where A.id = 2 and B.id = 1 group by A.id limit 1",
+		"select /*+nested+*/ A.id, A.name, B.name, B.id from B join A on A.name=B.name where A.id = 2 and B.id = 1 group by A.id limit 1",
+		"select /*+nested+*/ A.id, B.name, B.id, A.name from A left join B on A.name=B.name and A.id>2 where B.name is null and B.id = 1 group by A.id",
+		"select /*+nested+*/ A.id, A.name, B.name, B.id from G,A,B where G.a=A.a and A.name=B.name and A.id=2 and B.id=1",
 	}
 	results := []string{
 		"[[3 go] [5 lang]]",
@@ -393,6 +424,10 @@ func TestJoinExecutor(t *testing.T) {
 		"[[4 lang 5 lang]]",
 		"[[4 lang 5 lang]]",
 		"[[6 lang 5 lang 1]]",
+		"[[4 go 3]]",
+		"[]",
+		"[]",
+		"[]",
 	}
 
 	for i, query := range querys {
@@ -416,6 +451,98 @@ func TestJoinExecutor(t *testing.T) {
 			got := fmt.Sprintf("%v", ctx.Results.Rows)
 			assert.Equal(t, want, got)
 			log.Debug("%+v", ctx.Results)
+		}
+	}
+}
+
+func TestExecutorErr(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	// Create scatter and query handler.
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	// desc
+	fakedbs.AddQueryErrorPattern("select .*", errors.New("mock.execute.error"))
+
+	querys := []string{
+		"select A.id,A.name from A",
+		"select A.id, A.name, B.name, B.id from G,A,B where G.a=A.a and A.name=B.name and A.id=2 and B.id=1",
+	}
+
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+
+		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		err = plan.Build()
+		assert.Nil(t, err)
+		log.Debug("plan:%+v", plan.JSON())
+
+		txn, err := scatter.CreateTransaction()
+		assert.Nil(t, err)
+		defer txn.Finish()
+		executor := NewSelectExecutor(log, plan, txn)
+		{
+			plan := executor.plan.(*planner.SelectPlan)
+			reqCtx := xcontext.NewRequestContext()
+			reqCtx.Mode = plan.ReqMode
+			reqCtx.TxnMode = xcontext.TxnRead
+			reqCtx.RawQuery = plan.RawQuery
+			ctx := xcontext.NewResultContext()
+			planExec := buildExecutor(log, plan.Root, executor.txn)
+			joinVars := make(map[string]*querypb.BindVariable)
+			err := planExec.getFields(reqCtx, ctx, joinVars)
+			assert.NotNil(t, err)
+		}
+	}
+}
+
+func TestGetFieldErr(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	// Create scatter and query handler.
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	// desc
+	fakedbs.AddQueryErrorPattern("select .*", errors.New("mock.execute.error"))
+
+	querys := []string{
+		"select A.id, B.name from A right join B on A.id=B.id where A.id > 2 group by A.id",
+		"select * from A",
+		"select /*+nested+*/ A.id, B.name, B.id from A join B on A.name=B.name where A.id = 2 and B.id = 1 group by A.id limit 1",
+	}
+
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+
+		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		err = plan.Build()
+		assert.Nil(t, err)
+		log.Debug("plan:%+v", plan.JSON())
+
+		txn, err := scatter.CreateTransaction()
+		assert.Nil(t, err)
+		defer txn.Finish()
+		executor := NewSelectExecutor(log, plan, txn)
+		{
+			ctx := xcontext.NewResultContext()
+			err := executor.Execute(ctx)
+			assert.NotNil(t, err)
 		}
 	}
 }

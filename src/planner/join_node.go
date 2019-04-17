@@ -495,7 +495,7 @@ func (j *JoinNode) buildKeyFilter(filter filterTuple, isFind bool) bool {
 // pushSelectExprs used to push the select fields.
 func (j *JoinNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error {
 	if j.isHint {
-		j.reOrder(1)
+		j.reOrder(0)
 	}
 	if hasAggregates {
 		return errors.New("unsupported: cross-shard.query.with.aggregates")
