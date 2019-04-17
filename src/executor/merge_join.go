@@ -122,7 +122,10 @@ func fetchSameKeyRows(rows [][]sqltypes.Value, joins []planner.JoinKey, index in
 
 // concatLeftAndRight used to concat thle left and right results, handle otherJoinOn|rightNull|OtherFilter.
 func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *planner.JoinNode, res *sqltypes.Result) {
-	for _, lrow := range lrows {
+	var mu sync.Mutex
+	p := newCalcPool(joinWorkers)
+	mathOps := func(lrow []sqltypes.Value) {
+		defer p.done()
 		blend := true
 		matchCnt := 0
 		for _, idx := range node.LeftTmpCols {
@@ -191,17 +194,27 @@ func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *planner.JoinNode,
 						}
 					}
 					if ok {
+						mu.Lock()
 						res.Rows = append(res.Rows, joinRows(lrow, rrow, node.Cols))
 						res.RowsAffected++
+						mu.Unlock()
 					}
 				}
 			}
 		}
-
-		if matchCnt == 0 {
-			concatLeftAndNil([][]sqltypes.Value{lrow}, node, res)
+		if matchCnt == 0 && node.IsLeftJoin && !node.HasRightFilter {
+			mu.Lock()
+			res.Rows = append(res.Rows, joinRows(lrow, nil, node.Cols))
+			res.RowsAffected++
+			mu.Unlock()
 		}
 	}
+
+	for _, lrow := range lrows {
+		p.add(1)
+		go mathOps(lrow)
+	}
+	p.wait()
 }
 
 func concatLeftAndNil(lrows [][]sqltypes.Value, node *planner.JoinNode, res *sqltypes.Result) {
@@ -211,4 +224,39 @@ func concatLeftAndNil(lrows [][]sqltypes.Value, node *planner.JoinNode, res *sql
 			res.RowsAffected++
 		}
 	}
+}
+
+// calcPool used to the merge join calc.
+type calcPool struct {
+	queue chan int
+	wg    *sync.WaitGroup
+}
+
+func newCalcPool(size int) *calcPool {
+	if size <= 0 {
+		size = 1
+	}
+	return &calcPool{
+		queue: make(chan int, size),
+		wg:    &sync.WaitGroup{},
+	}
+}
+
+func (p *calcPool) add(delta int) {
+	for i := 0; i < delta; i++ {
+		p.queue <- 1
+	}
+	for i := 0; i > delta; i-- {
+		<-p.queue
+	}
+	p.wg.Add(delta)
+}
+
+func (p *calcPool) done() {
+	<-p.queue
+	p.wg.Done()
+}
+
+func (p *calcPool) wait() {
+	p.wg.Wait()
 }
