@@ -126,7 +126,7 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 	case *sqlparser.Subquery:
 		err = errors.New("unsupported: subquery.in.select")
 	}
-	mn.sel = &sqlparser.Select{From: sqlparser.TableExprs([]sqlparser.TableExpr{tableExpr})}
+	mn.Sel = &sqlparser.Select{From: sqlparser.TableExprs([]sqlparser.TableExpr{tableExpr})}
 	return mn, err
 }
 
@@ -229,23 +229,23 @@ func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, r
 func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJoinOn []filterTuple) (*MergeNode, error) {
 	var err error
 	if lmn.hasParen {
-		lmn.sel.From = sqlparser.TableExprs{&sqlparser.ParenTableExpr{Exprs: lmn.sel.From}}
+		lmn.Sel.From = sqlparser.TableExprs{&sqlparser.ParenTableExpr{Exprs: lmn.Sel.From}}
 	}
 	if rmn.hasParen {
-		rmn.sel.From = sqlparser.TableExprs{&sqlparser.ParenTableExpr{Exprs: rmn.sel.From}}
+		rmn.Sel.From = sqlparser.TableExprs{&sqlparser.ParenTableExpr{Exprs: rmn.Sel.From}}
 	}
 	if joinExpr == nil {
-		lmn.sel.From = append(lmn.sel.From, rmn.sel.From...)
+		lmn.Sel.From = append(lmn.Sel.From, rmn.Sel.From...)
 	} else {
-		lmn.sel.From = sqlparser.TableExprs{joinExpr}
+		lmn.Sel.From = sqlparser.TableExprs{joinExpr}
 	}
 
 	for k, v := range rmn.getReferredTables() {
 		v.parent = lmn
 		lmn.referredTables[k] = v
 	}
-	if rmn.sel.Where != nil {
-		lmn.setWhereFilter(rmn.sel.Where.Expr)
+	if rmn.Sel.Where != nil {
+		lmn.Sel.AddWhere(rmn.Sel.Where.Expr)
 	}
 
 	lmn.shardCount += rmn.shardCount

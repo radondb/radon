@@ -179,7 +179,7 @@ func TestScanTableExprs(t *testing.T) {
 		tbInfo := tbMaps["A"]
 		assert.Equal(t, m, tbInfo.parent)
 		assert.Equal(t, 2323, m.index)
-		assert.NotNil(t, m.sel.Where)
+		assert.NotNil(t, m.Sel.Where)
 	}
 	// with parenthese query.
 	{
@@ -222,7 +222,7 @@ func TestScanTableExprs(t *testing.T) {
 		tbInfo := tbMaps["B"]
 		assert.Equal(t, m, tbInfo.parent)
 		assert.Equal(t, 2323, m.index)
-		assert.NotNil(t, m.sel.Where)
+		assert.NotNil(t, m.Sel.Where)
 	}
 	// two join on conditions.
 	{
@@ -267,8 +267,8 @@ func TestScanTableExprs(t *testing.T) {
 		tbMaps := m.getReferredTables()
 		assert.Equal(t, 2, len(tbMaps))
 		assert.Equal(t, 2323, m.index)
-		assert.Equal(t, 2, len(m.sel.From))
-		assert.NotNil(t, m.sel.Where)
+		assert.Equal(t, 2, len(m.Sel.From))
+		assert.NotNil(t, m.Sel.Where)
 	}
 	// haspare.
 	{

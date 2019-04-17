@@ -21,7 +21,7 @@ type PlanNode interface {
 	setParenthese(hasParen bool)
 	pushFilter(filters []filterTuple) error
 	setParent(p PlanNode)
-	setWhereFilter(filter sqlparser.Expr)
+	setWhereFilter(filter filterTuple)
 	setNoTableFilter(exprs []sqlparser.Expr)
 	pushEqualCmpr(joins []joinTuple) PlanNode
 	calcRoute() (PlanNode, error)
@@ -32,8 +32,10 @@ type PlanNode interface {
 	pushLimit(sel *sqlparser.Select) error
 	pushMisc(sel *sqlparser.Select)
 	Children() *PlanTree
-	buildQuery()
+	buildQuery(tbInfos map[string]*TableInfo)
 	GetQuery() []xcontext.QueryTuple
+	reOrder(int)
+	Order() int
 }
 
 // findLCA get the two plannode's lowest common ancestors node.
@@ -63,4 +65,41 @@ func getOneTableInfo(tbInfos map[string]*TableInfo) (string, *TableInfo) {
 		return tb, tbInfo
 	}
 	return "", nil
+}
+
+// procure requests for the specified column from the plan
+// and returns the join var name for it.
+func procure(tbInfos map[string]*TableInfo, col *sqlparser.ColName) string {
+	var joinVar string
+	field := col.Name.String()
+	table := col.Qualifier.Name.String()
+	tbInfo := tbInfos[table]
+	node := tbInfo.parent
+	jn := node.parent.(*JoinNode)
+
+	joinVar = col.Qualifier.Name.CompliantName() + "_" + col.Name.CompliantName()
+	if _, ok := jn.Vars[joinVar]; ok {
+		return joinVar
+	}
+
+	tuples := node.getFields()
+	index := -1
+	for i, tuple := range tuples {
+		if len(tuple.referTables) == 1 && table == tuple.referTables[0] && field == tuple.field {
+			index = i
+			break
+		}
+	}
+	// key not in the select fields.
+	if index == -1 {
+		tuple := selectTuple{
+			expr:        &sqlparser.AliasedExpr{Expr: col},
+			field:       field,
+			referTables: []string{table},
+		}
+		index, _ = node.pushSelectExpr(tuple)
+	}
+
+	jn.Vars[joinVar] = index
+	return joinVar
 }
