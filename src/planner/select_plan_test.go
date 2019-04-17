@@ -179,6 +179,22 @@ func TestSelectPlan(t *testing.T) {
 		}
 	]
 }`,
+		`{
+	"RawQuery": "select /*+nested+*/ A.id from A join B on A.id = B.id where A.id = 1",
+	"Project": "A.id",
+	"Partitions": [
+		{
+			"Query": "select /*+nested+*/ A.id from sbtest.A6 as A where A.id = 1",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		},
+		{
+			"Query": "select /*+nested+*/ 1 from sbtest.B1 as B where :A_id = B.id and B.id = 1",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
 	}
 	querys := []string{
 		"select 1, sum(a),avg(a),a,b from sbtest.A where id>1 group by a,b order by a desc limit 10 offset 100",
@@ -187,6 +203,7 @@ func TestSelectPlan(t *testing.T) {
 		"select A.id,B.id from A join B on A.id=B.id where A.id=1",
 		"select A.id from A join B where A.id=1",
 		"select A.id from A left join B on A.id=B.id and A.a=1 and B.b=2 and 1=1 where B.id=1",
+		"select /*+nested+*/ A.id from A join B on A.id = B.id where A.id = 1",
 	}
 
 	// Database not null.
@@ -380,6 +397,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select A.id from A join B on A.id = B.id join G on A.id+B.id<=G.id",
 		"select A.id from G join (A,B) on A.id+B.id<=G.id",
 		"select A.id from G join (A,B) on G.id<=A.id+B.id",
+		"select A.id as tmp, B.id from A,B having tmp=1",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
@@ -409,6 +427,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: expr.'A.id + B.id as tmpo_0'.in.cross-shard.join",
 		"unsupported: expr.'A.id + B.id as tmpo_1'.in.cross-shard.join",
 		"unsupported: expr.'A.id + B.id as tmpo_1'.in.cross-shard.join",
+		"unsupported: unknown.column.'tmp'.in.having.clause",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -449,6 +468,15 @@ func TestSelectSupportedPlan(t *testing.T) {
 		"select A.id from A left join B on A.id=B.id where B.str<=>null",
 		"select A.id from A left join B on A.id=B.id where null<=>B.str",
 		"select A.id from A join B on A.id >= B.id join G on G.id<=A.id",
+		"select /*+nested+*/ A.id from A join B on A.id=B.id right join G on G.id=A.id and A.a>B.a",
+		"select /*+nested+*/ A.id from (A,B) left join G on A.id =G.id and A.a>B.a",
+		"select /*+nested+*/ A.id from A join B on A.id=B.id right join G on G.id=A.id where concat(B.str,A.str) is null",
+		"select /*+nested+*/ A.id from A join B on A.id >= B.id join G on G.id<=A.id where concat(B.str,A.str) is null",
+		"select /*+nested+*/ A.id from A join B on A.id = B.id join G on G.id<=A.id+B.id",
+		"select /*+nested+*/ A.id from A join B on A.id = B.id join G on A.id+B.id<=G.id",
+		"select /*+nested+*/ A.id from G join (A,B) on A.id+B.id<=G.id",
+		"select /*+nested+*/ A.id from G join (A,B) on G.id<=A.id+B.id",
+		"select /*+nested+*/ A.id from G,A,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))

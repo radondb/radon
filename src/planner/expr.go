@@ -546,6 +546,7 @@ func checkShard(table, col string, tbInfos map[string]*TableInfo, router *router
 }
 
 // parserHaving used to check the having exprs and parser into tuples.
+// unsupport: `select t2.id as tmp, t1.id from t2,t1 having tmp=1`.
 func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*TableInfo) ([]filterTuple, error) {
 	filters := splitAndExpression(nil, exprs)
 	var tuples []filterTuple

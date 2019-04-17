@@ -109,12 +109,14 @@ func (p *SelectPlan) Build() error {
 
 	mn, ok := p.Root.(*MergeNode)
 	if ok && mn.routeLen == 1 {
-		node.From = mn.sel.From
-		node.Where = mn.sel.Where
-		mn.sel = node
-		mn.buildQuery()
+		node.From = mn.Sel.From
+		node.Where = mn.Sel.Where
+		mn.Sel = node
+		mn.buildQuery(tbInfos)
 		return nil
 	}
+
+	p.Root.pushMisc(node)
 
 	var groups []selectTuple
 	fields, hasAggregates, err := parserSelectExprs(node.SelectExprs, p.Root)
@@ -153,8 +155,8 @@ func (p *SelectPlan) Build() error {
 			return err
 		}
 	}
-	p.Root.pushMisc(node)
-	p.Root.buildQuery()
+
+	p.Root.buildQuery(tbInfos)
 	return nil
 }
 
@@ -183,7 +185,7 @@ func (p *SelectPlan) JSON() string {
 	// Project.
 	exprs := p.node.SelectExprs
 	if m, ok := p.Root.(*MergeNode); ok {
-		exprs = m.sel.SelectExprs
+		exprs = m.Sel.SelectExprs
 	}
 	buf := sqlparser.NewTrackedBuffer(nil)
 	buf.Myprintf("%v", exprs)
