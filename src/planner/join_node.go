@@ -654,15 +654,19 @@ func (j *JoinNode) pushSelectExpr(field selectTuple) (int, error) {
 			return -1, err
 		}
 		j.Cols = append(j.Cols, -index-1)
-	} else if checkTbInNode(field.referTables, j.Right.getReferredTables()) {
-		index, err := j.Right.pushSelectExpr(field)
-		if err != nil {
-			return -1, err
-		}
-		j.Cols = append(j.Cols, index+1)
 	} else {
-		if j.isHint {
-			index, _ := j.Right.pushSelectExpr(field)
+		if exp, ok := field.expr.(*sqlparser.AliasedExpr); ok && j.IsLeftJoin {
+			if _, ok := exp.Expr.(*sqlparser.FuncExpr); ok {
+				buf := sqlparser.NewTrackedBuffer(nil)
+				field.expr.Format(buf)
+				return -1, errors.Errorf("unsupported: expr.'%s'.in.cross-shard.left.join", buf.String())
+			}
+		}
+		if checkTbInNode(field.referTables, j.Right.getReferredTables()) || j.isHint {
+			index, err := j.Right.pushSelectExpr(field)
+			if err != nil {
+				return -1, err
+			}
 			j.Cols = append(j.Cols, index+1)
 		} else {
 			buf := sqlparser.NewTrackedBuffer(nil)

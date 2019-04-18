@@ -398,6 +398,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select A.id from G join (A,B) on A.id+B.id<=G.id",
 		"select A.id from G join (A,B) on G.id<=A.id+B.id",
 		"select A.id as tmp, B.id from A,B having tmp=1",
+		"select COALESCE(B.b, ''), IF(B.b IS NULL, FALSE, TRUE) AS spent from A left join B on A.a=B.a",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
@@ -428,6 +429,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: expr.'A.id + B.id as tmpo_1'.in.cross-shard.join",
 		"unsupported: expr.'A.id + B.id as tmpo_1'.in.cross-shard.join",
 		"unsupported: unknown.column.'tmp'.in.having.clause",
+		"unsupported: expr.'COALESCE(B.b, '')'.in.cross-shard.left.join",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -477,6 +479,8 @@ func TestSelectSupportedPlan(t *testing.T) {
 		"select /*+nested+*/ A.id from G join (A,B) on A.id+B.id<=G.id",
 		"select /*+nested+*/ A.id from G join (A,B) on G.id<=A.id+B.id",
 		"select /*+nested+*/ A.id from G,A,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
+		"select COALESCE(A.b, ''), IF(A.b IS NULL, FALSE, TRUE) AS spent from A left join B on A.a=B.a",
+		"select COALESCE(B.b, ''), IF(B.b IS NULL, FALSE, TRUE) AS spent from A join B on A.a=B.a",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
