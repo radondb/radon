@@ -411,7 +411,7 @@ func TestJoinExecutor(t *testing.T) {
 	results := []string{
 		"[[3 go] [5 lang]]",
 		"[[3 go]]",
-		"[[3 go 3] [4  ] [5  ] [6 lang 5] [6  ]]",
+		"[[3 go 3] [4  ] [5  ] [6 lang 5]]",
 		"[[3  3] [4  3] [5  3]]",
 		"[]",
 		"[]",

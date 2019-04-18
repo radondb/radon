@@ -467,17 +467,6 @@ func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.
 			continue
 		}
 		table = group.referTables[0]
-
-		// shardkey is a unique constraints key. if fields contains shardkey,
-		// that mains each row of data is unique. neednot process groupby again.
-		// unsupport alias.
-		ok, err := checkShard(table, col.Name.String(), tbInfos, router)
-		if err != nil {
-			return nil, err
-		}
-		if ok {
-			return nil, nil
-		}
 	}
 
 	return groupTuples, nil
@@ -489,22 +478,6 @@ func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router 
 	// if has groupby, neednot process distinct again.
 	if node.Distinct == "" || len(node.GroupBy) > 0 {
 		return groups, nil
-	}
-
-	// shardkey is a unique constraints key. if fields contains shardkey,
-	// that mains each row of data is unique. neednot process distinct again.
-	for _, tuple := range fields {
-		if expr, ok := tuple.expr.(*sqlparser.AliasedExpr); ok {
-			if exp, ok := expr.Expr.(*sqlparser.ColName); ok {
-				ok, err := checkShard(tuple.referTables[0], exp.Name.String(), tbInfos, router)
-				if err != nil {
-					return nil, err
-				}
-				if ok {
-					return groups, nil
-				}
-			}
-		}
 	}
 
 	// distinct convert to groupby.
@@ -526,23 +499,6 @@ func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router 
 	}
 	node.Distinct = ""
 	return fields, nil
-}
-
-// checkShard used to check whether the col is shardkey.
-func checkShard(table, col string, tbInfos map[string]*TableInfo, router *router.Router) (bool, error) {
-	tbInfo, ok := tbInfos[table]
-	if !ok {
-		return false, errors.Errorf("unsupported: unknown.column.'%s.%s'.in.field.list", table, col)
-	}
-
-	shardkey, err := router.ShardKey(tbInfo.database, tbInfo.tableName)
-	if err != nil {
-		return false, err
-	}
-	if shardkey == col {
-		return true, nil
-	}
-	return false, nil
 }
 
 // parserHaving used to check the having exprs and parser into tuples.
