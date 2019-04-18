@@ -44,6 +44,8 @@ type Connection interface {
 	Execute(string) (*sqltypes.Result, error)
 	ExecuteStreamFetch(string) (driver.Rows, error)
 	ExecuteWithLimits(query string, timeout int, maxmem int) (*sqltypes.Result, error)
+	ConnectionLock()
+	ConnectionUnlock()
 }
 
 type connection struct {
@@ -66,6 +68,7 @@ type connection struct {
 	timestamp int64
 
 	counters *stats.Counters
+	usingMu  sync.RWMutex
 }
 
 // NewConnection creates a new connection.
@@ -106,6 +109,16 @@ func (c *connection) Ping() error {
 // ID returns the connection ID.
 func (c *connection) ID() uint32 {
 	return c.connectionID
+}
+
+// ConnectionLock avoid SQL Executed in the same connection.
+func (c *connection) ConnectionLock() {
+	c.usingMu.Lock()
+}
+
+// ConnectionUnlock free the lock
+func (c *connection) ConnectionUnlock() {
+	c.usingMu.Unlock()
 }
 
 // UseDB used to send a 'use database' query to MySQL.
@@ -198,7 +211,7 @@ func (c *connection) ExecuteWithLimits(query string, timeout int, memlimits int)
 	// execute.
 	if qr, err = c.driver.FetchAllWithFunc(query, -1, checkFunc); err != nil {
 		c.counters.Add(poolCounterBackendExecuteAllError, 1)
-		log.Error("conn[%s].execute[%s].error:%+v", c.address, query, err)
+		log.Error("conn[%s].id[%d].execute[%s].error:%+v", c.address, c.ID(), query, err)
 		c.lastErr = err
 
 		// Connection is killed.

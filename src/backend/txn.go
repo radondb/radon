@@ -517,12 +517,16 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 		} else {
 			for _, query := range querys {
 				var innerqr *sqltypes.Result
-
+				//avoid goroutines use the same connection in the twopc, https://github.com/radondb/radon/issues/316
+				c.ConnectionLock()
 				// Execute to backends.
 				if innerqr, x = c.ExecuteWithLimits(query, txn.timeout, txn.maxResult); x != nil {
 					log.Error("txn.execute.on[%v].query[%v].error:%+v", c.Address(), query, x)
+					c.ConnectionUnlock()
 					break
 				}
+				c.ConnectionUnlock()
+
 				mu.Lock()
 				qr.AppendResult(innerqr)
 				mu.Unlock()
