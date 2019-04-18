@@ -195,7 +195,7 @@ func TestCheckGroupBy(t *testing.T) {
 	wants := []int{
 		1,
 		2,
-		0,
+		2,
 		1,
 		1,
 	}
@@ -272,7 +272,7 @@ func TestCheckDistinct(t *testing.T) {
 	}
 	wants := []int{
 		2,
-		0,
+		1,
 		1,
 	}
 

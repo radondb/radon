@@ -113,6 +113,9 @@ func TestSelectPlan(t *testing.T) {
 	],
 	"GatherMerge": [
 		"id"
+	],
+	"HashGroupBy": [
+		"id"
 	]
 }`,
 		`{
@@ -330,6 +333,9 @@ func TestSelectPlanDatabaseIsNull(t *testing.T) {
 		"A"
 	],
 	"GatherMerge": [
+		"id"
+	],
+	"HashGroupBy": [
 		"id"
 	]
 }`,

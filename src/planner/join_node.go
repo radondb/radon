@@ -81,9 +81,6 @@ type JoinNode struct {
 	LeftKeys, RightKeys []JoinKey
 	// eg: t1 join t2 on t1.a>t2.a, 't1.a>t2.a' parser into CmpFilter.
 	CmpFilter []Comparison
-	// if Left is MergeNode and LeftKeys contain unique keys, LeftUnique will be true.
-	// used in sort merge join.
-	LeftUnique, RightUnique bool
 	/*
 	 * eg: 't1 left join t2 on t1.a=t2.a and t1.b=2' where t1.c=t2.c and 1=1 and t2.b>2 where
 	 * t2.str is null. 't1.b=2' will parser into otherJoinOn, IsLeftJoin is true, 't1.c=t2.c'
@@ -711,14 +708,7 @@ func (j *JoinNode) handleJoinOn() {
 			m.Sel.AddWhere(join.expr)
 		} else {
 			leftKey.Index = j.buildOrderBy(join.left, j.Left)
-			if lok && !j.LeftUnique {
-				j.LeftUnique = (leftKey.Field == j.referredTables[leftKey.Table].shardKey)
-			}
-
 			rightKey.Index = j.buildOrderBy(join.right, j.Right)
-			if rok && !j.RightUnique {
-				j.RightUnique = (rightKey.Field == j.referredTables[rightKey.Table].shardKey)
-			}
 		}
 		j.LeftKeys = append(j.LeftKeys, leftKey)
 		j.RightKeys = append(j.RightKeys, rightKey)

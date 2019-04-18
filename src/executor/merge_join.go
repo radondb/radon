@@ -38,8 +38,8 @@ func sortMergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode) {
 
 // mergeJoin used to join the sorted results.
 func mergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode) {
-	lrows, lidx, lstr := fetchSameKeyRows(lres.Rows, node.LeftKeys, 0, "", node.LeftUnique)
-	rrows, ridx, rstr := fetchSameKeyRows(rres.Rows, node.RightKeys, 0, "", node.RightUnique)
+	lrows, lidx, lstr := fetchSameKeyRows(lres.Rows, node.LeftKeys, 0, "")
+	rrows, ridx, rstr := fetchSameKeyRows(rres.Rows, node.RightKeys, 0, "")
 	for lrows != nil {
 		if rrows == nil {
 			concatLeftAndNil(lres.Rows[lidx-len(lrows):], node, res)
@@ -65,19 +65,19 @@ func mergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode) {
 			} else {
 				concatLeftAndRight(lrows, rrows, node, res)
 			}
-			lrows, lidx, lstr = fetchSameKeyRows(lres.Rows, node.LeftKeys, lidx, lstr, node.LeftUnique)
-			rrows, ridx, rstr = fetchSameKeyRows(rres.Rows, node.RightKeys, ridx, rstr, node.RightUnique)
+			lrows, lidx, lstr = fetchSameKeyRows(lres.Rows, node.LeftKeys, lidx, lstr)
+			rrows, ridx, rstr = fetchSameKeyRows(rres.Rows, node.RightKeys, ridx, rstr)
 		} else if cmp > 0 {
-			rrows, ridx, rstr = fetchSameKeyRows(rres.Rows, node.RightKeys, ridx, rstr, node.RightUnique)
+			rrows, ridx, rstr = fetchSameKeyRows(rres.Rows, node.RightKeys, ridx, rstr)
 		} else {
 			concatLeftAndNil(lrows, node, res)
-			lrows, lidx, lstr = fetchSameKeyRows(lres.Rows, node.LeftKeys, lidx, lstr, node.LeftUnique)
+			lrows, lidx, lstr = fetchSameKeyRows(lres.Rows, node.LeftKeys, lidx, lstr)
 		}
 	}
 }
 
 // fetchSameKeyRows used to fetch the same joinkey values' rows.
-func fetchSameKeyRows(rows [][]sqltypes.Value, joins []planner.JoinKey, index int, str string, isUnique bool) ([][]sqltypes.Value, int, string) {
+func fetchSameKeyRows(rows [][]sqltypes.Value, joins []planner.JoinKey, index int, str string) ([][]sqltypes.Value, int, string) {
 	var chunk [][]sqltypes.Value
 	var key string
 	if index >= len(rows) {
@@ -86,10 +86,6 @@ func fetchSameKeyRows(rows [][]sqltypes.Value, joins []planner.JoinKey, index in
 
 	if len(joins) == 0 {
 		return rows, len(rows), ""
-	}
-
-	if isUnique {
-		return rows[index : index+1], index + 1, ""
 	}
 
 	if str == "" {
