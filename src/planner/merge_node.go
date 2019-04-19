@@ -222,8 +222,10 @@ func (m *MergeNode) pushLimit(sel *sqlparser.Select) error {
 		return err
 	}
 	m.children.Add(limitPlan)
-	// Rewrite the limit clause.
-	m.Sel.Limit = limitPlan.ReWritten()
+	if len(m.Sel.GroupBy) == 0 {
+		// Rewrite the limit clause.
+		m.Sel.Limit = limitPlan.ReWritten()
+	}
 	return nil
 }
 

@@ -60,152 +60,152 @@ func TestProxyExplain(t *testing.T) {
 	"Project": "1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b",
 	"Partitions": [
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0000 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0000 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend0",
 			"Range": "[0-128)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0001 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0001 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend0",
 			"Range": "[128-256)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0002 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0002 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend0",
 			"Range": "[256-384)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0003 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0003 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend0",
 			"Range": "[384-512)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0004 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0004 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend0",
 			"Range": "[512-640)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0005 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0005 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend0",
 			"Range": "[640-819)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0006 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0006 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend1",
 			"Range": "[819-947)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0007 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0007 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend1",
 			"Range": "[947-1075)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0008 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0008 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend1",
 			"Range": "[1075-1203)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0009 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0009 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend1",
 			"Range": "[1203-1331)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0010 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0010 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend1",
 			"Range": "[1331-1459)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0011 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0011 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend1",
 			"Range": "[1459-1638)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0012 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0012 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend2",
 			"Range": "[1638-1766)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0013 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0013 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend2",
 			"Range": "[1766-1894)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0014 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0014 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend2",
 			"Range": "[1894-2022)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0015 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0015 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend2",
 			"Range": "[2022-2150)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0016 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0016 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend2",
 			"Range": "[2150-2278)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0017 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0017 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend2",
 			"Range": "[2278-2457)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0018 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0018 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend3",
 			"Range": "[2457-2585)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0019 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0019 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend3",
 			"Range": "[2585-2713)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0020 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0020 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend3",
 			"Range": "[2713-2841)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0021 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0021 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend3",
 			"Range": "[2841-2969)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0022 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0022 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend3",
 			"Range": "[2969-3097)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0023 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0023 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend3",
 			"Range": "[3097-3276)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0024 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0024 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend4",
 			"Range": "[3276-3404)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0025 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0025 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend4",
 			"Range": "[3404-3532)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0026 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0026 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend4",
 			"Range": "[3532-3660)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0027 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0027 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend4",
 			"Range": "[3660-3788)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0028 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0028 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend4",
 			"Range": "[3788-3916)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0029 as t1 where id \u003e 1 group by a, b order by a desc limit 110",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0029 as t1 where id \u003e 1 group by a, b order by a desc",
 			"Backend": "backend4",
 			"Range": "[3916-4096)"
 		}
