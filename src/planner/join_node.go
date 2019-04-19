@@ -266,7 +266,7 @@ func (j *JoinNode) setOtherJoin(filters []filterTuple) {
 func (j *JoinNode) pushOtherJoin(idx *int) error {
 	if j.otherJoinOn != nil {
 		if len(j.otherJoinOn.others) > 0 {
-			if err := j.pushOtherFilters(j.otherJoinOn.others, idx); err != nil {
+			if err := j.pushOtherFilters(j.otherJoinOn.others, idx, true); err != nil {
 				return err
 			}
 		}
@@ -538,7 +538,7 @@ func (j *JoinNode) handleOthers() error {
 		return err
 	}
 
-	return j.pushOtherFilters(j.otherFilter, &idx)
+	return j.pushOtherFilters(j.otherFilter, &idx, false)
 }
 
 // pushNullExprs used to push rightNull.
@@ -554,7 +554,7 @@ func (j *JoinNode) pushNullExprs(idx *int) error {
 }
 
 // pushOtherFilters used to push otherFilter.
-func (j *JoinNode) pushOtherFilters(filters []filterTuple, idx *int) error {
+func (j *JoinNode) pushOtherFilters(filters []filterTuple, idx *int, isOtherJoin bool) error {
 	for _, filter := range filters {
 		var err error
 		var lidx, ridx int
@@ -579,6 +579,18 @@ func (j *JoinNode) pushOtherFilters(filters []filterTuple, idx *int) error {
 			right := getTbInExpr(exp.Right)
 			ltb := j.Left.getReferredTables()
 			rtb := j.Right.getReferredTables()
+			if exp.Operator == sqlparser.EqualStr && (isOtherJoin || !j.IsLeftJoin) &&
+				len(left) == 1 && len(right) == 1 {
+				if !checkTbInNode(left, ltb) {
+					exp.Left, exp.Right = exp.Right, exp.Left
+					left, right = right, left
+				}
+				leftKey := j.buildOrderBy(exp.Left, j.Left, idx)
+				rightKey := j.buildOrderBy(exp.Right, j.Right, idx)
+				j.LeftKeys = append(j.LeftKeys, leftKey)
+				j.RightKeys = append(j.RightKeys, rightKey)
+				continue
+			}
 			if checkTbInNode(left, ltb) && checkTbInNode(right, rtb) {
 				if lidx, err = j.pushOtherFilter(exp.Left, j.Left, left, idx); err != nil {
 					return err
@@ -612,9 +624,10 @@ func (j *JoinNode) pushOtherFilters(filters []filterTuple, idx *int) error {
 // pushOtherFilter used to push otherFilter.
 func (j *JoinNode) pushOtherFilter(expr sqlparser.Expr, node PlanNode, tbs []string, idx *int) (int, error) {
 	var err error
+	var field string
 	index := -1
 	if col, ok := expr.(*sqlparser.ColName); ok {
-		field := col.Name.String()
+		field = col.Name.String()
 		table := col.Qualifier.Name.String()
 		tuples := node.getFields()
 		for i, tuple := range tuples {
@@ -626,18 +639,23 @@ func (j *JoinNode) pushOtherFilter(expr sqlparser.Expr, node PlanNode, tbs []str
 	}
 	// key not in the select fields.
 	if index == -1 {
-		alias := fmt.Sprintf("tmpo_%d", *idx)
-		as := sqlparser.NewColIdent(alias)
+		aliasExpr := &sqlparser.AliasedExpr{Expr: expr}
+		if field == "" {
+			field = fmt.Sprintf("tmpo_%d", *idx)
+			as := sqlparser.NewColIdent(field)
+			aliasExpr.As = as
+			(*idx)++
+		}
+
 		tuple := selectTuple{
-			expr:        &sqlparser.AliasedExpr{Expr: expr, As: as},
-			field:       alias,
+			expr:        aliasExpr,
+			field:       field,
 			referTables: tbs,
 		}
 		index, err = node.pushSelectExpr(tuple)
 		if err != nil {
 			return index, err
 		}
-		(*idx)++
 	}
 
 	return index, nil
@@ -691,45 +709,62 @@ func (j *JoinNode) handleJoinOn() {
 	}
 
 	for _, join := range j.joinOn {
-		leftKey := JoinKey{Field: join.left.Name.String(),
-			Table: join.left.Qualifier.Name.String(),
-		}
-		rightKey := JoinKey{Field: join.right.Name.String(),
-			Table: join.right.Qualifier.Name.String(),
-		}
-
+		var leftKey, rightKey JoinKey
 		if j.isHint {
-			ltb := j.referredTables[leftKey.Table]
-			rtb := j.referredTables[rightKey.Table]
+			lt := join.left.Qualifier.Name.String()
+			rt := join.right.Qualifier.Name.String()
+			ltb := j.referredTables[lt]
+			rtb := j.referredTables[rt]
 			m := ltb.parent
 			if m.Order() < rtb.parent.Order() {
 				m = rtb.parent
 			}
 			m.Sel.AddWhere(join.expr)
+			leftKey = JoinKey{Field: join.left.Name.String(),
+				Table: lt,
+			}
+			rightKey = JoinKey{Field: join.right.Name.String(),
+				Table: rt,
+			}
 		} else {
-			leftKey.Index = j.buildOrderBy(join.left, j.Left)
-			rightKey.Index = j.buildOrderBy(join.right, j.Right)
+			leftKey = j.buildOrderBy(join.left, j.Left, nil)
+			rightKey = j.buildOrderBy(join.right, j.Right, nil)
 		}
 		j.LeftKeys = append(j.LeftKeys, leftKey)
 		j.RightKeys = append(j.RightKeys, rightKey)
 	}
 }
 
-func (j *JoinNode) buildOrderBy(col *sqlparser.ColName, node PlanNode) int {
-	field := col.Name.String()
-	table := col.Qualifier.Name.String()
-	tuples := node.getFields()
+func (j *JoinNode) buildOrderBy(expr sqlparser.Expr, node PlanNode, idx *int) JoinKey {
+	var field, table string
+	var col *sqlparser.ColName
 	index := -1
-	for i, tuple := range tuples {
-		if len(tuple.referTables) == 1 && table == tuple.referTables[0] && field == tuple.field {
-			index = i
-			break
+	switch exp := expr.(type) {
+	case *sqlparser.ColName:
+		tuples := node.getFields()
+		field = exp.Name.String()
+		table = exp.Qualifier.Name.String()
+		for i, tuple := range tuples {
+			if len(tuple.referTables) == 1 && table == tuple.referTables[0] && field == tuple.field {
+				index = i
+				break
+			}
 		}
+		col = exp
 	}
+
 	// key not in the select fields.
 	if index == -1 {
+		aliasExpr := &sqlparser.AliasedExpr{Expr: expr}
+		if field == "" {
+			field = fmt.Sprintf("tmpo_%d", *idx)
+			as := sqlparser.NewColIdent(field)
+			aliasExpr.As = as
+			col = &sqlparser.ColName{Name: as}
+			(*idx)++
+		}
 		tuple := selectTuple{
-			expr:        &sqlparser.AliasedExpr{Expr: col},
+			expr:        aliasExpr,
 			field:       field,
 			referTables: []string{table},
 		}
@@ -743,7 +778,7 @@ func (j *JoinNode) buildOrderBy(col *sqlparser.ColName, node PlanNode) int {
 		})
 	}
 
-	return index
+	return JoinKey{field, table, index}
 }
 
 // pushHaving used to push having exprs.
