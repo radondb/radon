@@ -198,6 +198,27 @@ func TestSelectPlan(t *testing.T) {
 		}
 	]
 }`,
+		`{
+	"RawQuery": "select A.id from A left join B on A.a+1=B.a where A.id=1",
+	"Project": "A.id",
+	"Partitions": [
+		{
+			"Query": "select A.id, A.a + 1 as tmpo_0 from sbtest.A6 as A where A.id = 1 order by tmpo_0 asc",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		},
+		{
+			"Query": "select B.a from sbtest.B0 as B order by B.a asc",
+			"Backend": "backend1",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "select B.a from sbtest.B1 as B order by B.a asc",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
 	}
 	querys := []string{
 		"select 1, sum(a),avg(a),a,b from sbtest.A where id>1 group by a,b order by a desc limit 10 offset 100",
@@ -207,6 +228,7 @@ func TestSelectPlan(t *testing.T) {
 		"select A.id from A join B where A.id=1",
 		"select A.id from A left join B on A.id=B.id and A.a=1 and B.b=2 and 1=1 where B.id=1",
 		"select /*+nested+*/ A.id from A join B on A.id = B.id where A.id = 1",
+		"select A.id from A left join B on A.a+1=B.a where A.id=1",
 	}
 
 	// Database not null.
@@ -432,8 +454,8 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: clause.'concat(B.str, A.str) is null'.in.cross-shard.join",
 		"unsupported: expr.'A.id + B.id as tmpo_0'.in.cross-shard.join",
 		"unsupported: expr.'A.id + B.id as tmpo_0'.in.cross-shard.join",
-		"unsupported: expr.'A.id + B.id as tmpo_1'.in.cross-shard.join",
-		"unsupported: expr.'A.id + B.id as tmpo_1'.in.cross-shard.join",
+		"unsupported: expr.'A.id + B.id as tmpo_0'.in.cross-shard.join",
+		"unsupported: expr.'A.id + B.id as tmpo_0'.in.cross-shard.join",
 		"unsupported: unknown.column.'tmp'.in.having.clause",
 		"unsupported: expr.'COALESCE(B.b, '')'.in.cross-shard.left.join",
 	}
