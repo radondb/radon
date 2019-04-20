@@ -207,6 +207,8 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 			return
 		}
 
+		// Update the session last query time for session idle.
+		session.updateLastQueryTime(time.Now())
 		switch data[0] {
 		// COM_QUIT
 		case sqldb.COM_QUIT:
@@ -231,7 +233,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 			}
 			// COM_QUERY
 		case sqldb.COM_QUERY:
-			session.UpdateTime(time.Now())
 			query := l.parserComQuery(data)
 			if err = l.handler.ComQuery(session, query, nil, func(qr *sqltypes.Result) error {
 				return session.writeTextRows(qr)
@@ -244,7 +245,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 			// COM_STMT_PREPARE
 		case sqldb.COM_STMT_PREPARE:
 			session.statementID++
-			session.UpdateTime(time.Now())
 			id := session.statementID
 			query := l.parserComQuery(data)
 			paramCount := uint16(strings.Count(query, "?"))
@@ -267,7 +267,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 			}
 			// COM_STMT_EXECUTE
 		case sqldb.COM_STMT_EXECUTE:
-			session.UpdateTime(time.Now())
 			stmt, err := l.parserComStatementExecute(data, session)
 			if err != nil {
 				log.Error("server.handle.stmt.execute.from.session[%v].error:%+v", ID, err)
@@ -285,7 +284,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 			}
 			// COM_STMT_RESET
 		case sqldb.COM_STMT_RESET:
-			session.UpdateTime(time.Now())
 			stmt, err := l.parserComStatement(data, session)
 			if err != nil {
 				log.Error("server.handle.stmt.reset.from.session[%v].error:%+v", ID, err)
@@ -301,7 +299,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 			}
 			// COM_STMT_CLOSE
 		case sqldb.COM_STMT_CLOSE:
-			session.UpdateTime(time.Now())
 			stmt, err := l.parserComStatement(data, session)
 			if err != nil {
 				log.Error("server.handle.stmt.close.from.session[%v].error:%+v", ID, err)
