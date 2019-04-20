@@ -63,7 +63,7 @@ func TestSession(t *testing.T) {
 		// UpdateTime.
 		{
 			want := time.Now()
-			session1.UpdateTime(want)
+			session1.updateLastQueryTime(want)
 			got := session1.LastQueryTime()
 			assert.Equal(t, want, got)
 		}

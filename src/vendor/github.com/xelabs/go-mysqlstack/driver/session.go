@@ -296,8 +296,8 @@ func (s *Session) LastQueryTime() time.Time {
 	return s.lastQueryTime
 }
 
-// UpdateTime update the lastQueryTime.
-func (s *Session) UpdateTime(time time.Time) {
+// updateLastQueryTime update the lastQueryTime.
+func (s *Session) updateLastQueryTime(time time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lastQueryTime = time
