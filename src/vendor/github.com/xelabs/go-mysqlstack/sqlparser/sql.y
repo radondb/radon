@@ -1010,6 +1010,10 @@ kill_statement:
   {
     $$ = &Kill{ QueryID: &NumVal{raw: string($2)}}
   }
+| KILL QUERY INTEGRAL force_eof
+  {
+    $$ = &Kill{ QueryID: &NumVal{raw: string($3)}}
+  }
 
 transaction_statement:
   BEGIN force_eof

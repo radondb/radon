@@ -35,6 +35,11 @@ func TestKill(t *testing.T) {
 			input:  "kill 10000000000000000000000000000000",
 			output: "kill 10000000000000000000000000000000",
 		},
+
+		{
+			input:  "kill query 1",
+			output: "kill 1",
+		},
 	}
 
 	for _, exp := range validSQL {
