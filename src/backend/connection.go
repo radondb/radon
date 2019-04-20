@@ -47,25 +47,19 @@ type Connection interface {
 }
 
 type connection struct {
+	mu           sync.Mutex
 	log          *xlog.Log
 	connectionID uint32
 	user         string
 	password     string
 	address      string
 	charset      string
-
-	pool *Pool
-
-	// If lastErr is not nil, this connection should be closed.
-	lastErr error
-
-	killed sync2.AtomicBool
-	driver driver.Conn
-
-	// Recycle timestamp, in seconds.
-	timestamp int64
-
-	counters *stats.Counters
+	pool         *Pool
+	lastErr      error // If lastErr is not nil, this connection should be closed.
+	killed       sync2.AtomicBool
+	driver       driver.Conn
+	timestamp    int64 // Recycle timestamp, in seconds.
+	counters     *stats.Counters
 }
 
 // NewConnection creates a new connection.
@@ -194,6 +188,10 @@ func (c *connection) ExecuteWithLimits(query string, timeout int, memlimits int)
 		}
 		return nil
 	}
+
+	// Thread safe.
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// execute.
 	if qr, err = c.driver.FetchAllWithFunc(query, -1, checkFunc); err != nil {

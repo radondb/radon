@@ -10,6 +10,7 @@ package backend
 
 import (
 	"errors"
+	"sync"
 	"testing"
 
 	"fakedb"
@@ -208,108 +209,35 @@ func TestConnectionClosed(t *testing.T) {
 	}
 }
 
-/*
-func TestConnectionRealServer(t *testing.T) {
+func TestConnectionExecuteThreadSafe(t *testing.T) {
+	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	conf := &config.BackendConfig{
-		Name:           "node1",
-		Address:        "127.0.0.1:3304",
-		User:           "root",
-		Password:       "",
-		DBName:         "",
-		Charset:        "utf8",
-		MaxConnections: 1024,
-		MaxMemoryUsage: 1024 * 1024 * 1024,
-		QueryTimeout:   20000,
-	}
 
-	pool := NewPool(log, mysqlStats, conf)
-	conn := NewConnection(log, pool)
-	if err := conn.Dial(); err == nil {
-		defer conn.Close()
+	// MySQL Server starts...
+	fakedb := fakedb.New(log, 1)
+	defer fakedb.Close()
 
-		// usedb
-		{
-			err := conn.UseDB("mysql")
-			assert.Nil(t, err)
-		}
+	config := fakedb.BackendConfs()[0]
+	conn, cleanup := MockClientWithConfig(log, config)
+	defer cleanup()
+	// execute timeout
+	{
+		fakedb.AddQueryDelay("SELECT2", result2, 1000)
 
-		// create database
-		{
-			_, err := conn.Execute("create database if not exists test")
-			assert.Nil(t, err)
-		}
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := conn.ExecuteWithLimits("SELECT2", 100, 100)
+			assert.NotNil(t, err)
+		}()
 
-		// create table
-		{
-			_, err := conn.Execute("create table if not exists test.t1(a int)")
-			assert.Nil(t, err)
-		}
-
-		// insert
-		{
-			r, err := conn.Execute("insert into test.t1 values(1),(2),(3)")
-			assert.Nil(t, err)
-			log.Debug("query:%+v", r)
-		}
-
-		// selset
-		{
-			N := 10000
-			now := time.Now()
-			for i := 0; i < N; i++ {
-				conn.Execute("select * from test.t1")
-			}
-			took := time.Since(now)
-			log.Debug(" LOOP\t%v COST %v, avg:%v/s", N, took, (int64(N)/(took.Nanoseconds()/1e6))*1000)
-		}
-
-		// selset
-		{
-			N := 10000
-			now := time.Now()
-			for i := 0; i < N; i++ {
-				conn.Execute("select * from test.t1")
-			}
-			took := time.Since(now)
-			log.Debug(" LOOP\t%v COST %v, avg:%v/s", N, took, (int64(N)/(took.Nanoseconds()/1e6))*1000)
-		}
-
-		// usedb
-		{
-			err := conn.UseDB("test")
-			assert.Nil(t, err)
-		}
-
-		// selset
-		{
-			N := 10000
-			now := time.Now()
-			for i := 0; i < N; i++ {
-				conn.Execute("select * from t1")
-			}
-			took := time.Since(now)
-			log.Debug(" LOOP\t%v COST %v, avg:%v/s", N, took, (int64(N)/(took.Nanoseconds()/1e6))*1000)
-		}
-		log.Debug("--status:%s", mysqlStats.String())
-
-		// mysql.user
-		{
-			_, err := conn.Execute("select * from mysql.user")
-			assert.Nil(t, err)
-		}
-
-		// drop database
-		{
-			_, err := conn.Execute("drop database test")
-			assert.Nil(t, err)
-		}
-
-		// kill
-		{
-			err := conn.Kill("killme")
-			assert.Nil(t, err)
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := conn.ExecuteWithLimits("SELECT2", 100, 100)
+			assert.NotNil(t, err)
+		}()
+		wg.Wait()
 	}
 }
-*/
