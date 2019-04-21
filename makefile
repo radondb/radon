@@ -7,7 +7,6 @@ build:
 	@echo "--> Building..."
 	@mkdir -p bin/
 	go build -v -o bin/radon    --ldflags '$(LDFLAGS)' src/radon/radon.go
-	go build -v -o bin/radoncli --ldflags '$(LDFLAGS)' src/cli/cli.go
 	@chmod 755 bin/*
 
 clean:
@@ -63,8 +62,6 @@ testsyncer:
 	go test -v -race syncer
 testctl:
 	go test -v -race ctl/v1
-testcli:
-	go test -v -race cli/cmd
 testpoc:
 	go test -v poc
 testmonitor:
