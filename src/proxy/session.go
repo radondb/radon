@@ -76,22 +76,10 @@ func (s *session) close() {
 	// 1. if txn has finished, abort do nothing.
 	// 2. if txn has aborted, finished do nothing.
 	//
-	// Txn abortable case:
-	// 1. select query.
-	// 2. DDL query.
-	// If the client closed, txn will be abort by backend.
-	if transaction != nil && node != nil {
-		switch node.(type) {
-		case *sqlparser.Select, *sqlparser.DDL:
-			if err := transaction.Abort(); err != nil {
-				log.Error("session.close.txn.abort.error:%+v", err)
-				return
-			}
-		case *sqlparser.Transaction:
-			if err := transaction.Abort(); err != nil {
-				log.Error("session.close.txn.abort.error:%+v", err)
-				return
-			}
+	if transaction != nil {
+		if err := transaction.Abort(); err != nil {
+			log.Error("session.close.txn.abort.error:%+v", err)
+			return
 		}
 	}
 }
