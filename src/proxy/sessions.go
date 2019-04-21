@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"backend"
+
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/xlog"
@@ -44,35 +45,9 @@ func (ss *Sessions) Add(s *driver.Session) {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 	ss.sessions[s.ID()] = &session{
+		log:       ss.log,
 		session:   s,
 		timestamp: time.Now().Unix()}
-}
-
-func (ss *Sessions) txnAbort(txn backend.Transaction, node sqlparser.Statement) {
-	log := ss.log
-	// If transaction is not nil, means we can abort it when the session exit.
-	// Here there is some races:
-	// 1. if txn has finished, abort do nothing.
-	// 2. if txn has aborted, finished do nothing.
-	//
-	// Txn abortable case:
-	// 1. select query.
-	// 2. DDL query.
-	// If the client closed, txn will be abort by backend.
-	if txn != nil && node != nil {
-		switch node.(type) {
-		case *sqlparser.Select, *sqlparser.DDL:
-			if err := txn.Abort(); err != nil {
-				log.Error("proxy.session.txn.abort.error:%+v", err)
-				return
-			}
-		case *sqlparser.Transaction:
-			if err := txn.Abort(); err != nil {
-				log.Error("proxy.session.txn.abort.error:%+v", err)
-				return
-			}
-		}
-	}
 }
 
 // Remove used to remove the session from the map when session exit.
@@ -83,15 +58,10 @@ func (ss *Sessions) Remove(s *driver.Session) {
 		ss.mu.Unlock()
 		return
 	}
-	session.mu.Lock()
-	txn := session.transaction
-	node := session.node
-	session.mu.Unlock()
 	delete(ss.sessions, s.ID())
 	ss.mu.Unlock()
 
-	// txn abort.
-	ss.txnAbort(txn, node)
+	session.close()
 }
 
 // Kill used to kill a live session.
@@ -106,21 +76,11 @@ func (ss *Sessions) Kill(id uint32, reason string) {
 		ss.mu.Unlock()
 		return
 	}
-	log.Warning("session.id[%v].killed.reason:%s", id, reason)
-	session.mu.Lock()
-	txn := session.transaction
-	node := session.node
-	sess := session.session
-	session.mu.Unlock()
-
 	delete(ss.sessions, id)
 	ss.mu.Unlock()
+	log.Warning("session.id[%v].killed.reason:%s", id, reason)
 
-	// 1.close the session connection from the server side.
-	sess.Close()
-
-	// 2. abort the txn.
-	ss.txnAbort(txn, node)
+	session.close()
 }
 
 // Reaches used to check whether the sessions count reaches(>=) the quota.
@@ -228,19 +188,8 @@ func (ss *Sessions) Close() {
 	i := 0
 	for {
 		ss.mu.Lock()
-		for k, v := range ss.sessions {
-			v.mu.Lock()
-			txn := v.transaction
-			sess := v.session
-			node := v.node
-			v.mu.Unlock()
-			if txn == nil {
-				delete(ss.sessions, k)
-				sess.Close()
-			} else {
-				// Try to abort READ-ONLY or DDL statement.
-				ss.txnAbort(txn, node)
-			}
+		for _, v := range ss.sessions {
+			v.close()
 		}
 		c := len(ss.sessions)
 		ss.mu.Unlock()

@@ -83,6 +83,7 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 			if c, x = txn.twopcConnection(back); x != nil {
 				log.Error("txn.xa.fetch.connection.state[%v].on[%s].query[%v].error:%+v", state, back, query, x)
 			} else {
+				log.Debug("conn[ID:%v].xa.execute[%v]", c.ID(), query)
 				if _, x = c.Execute(query); x != nil {
 					log.Error("txn.xa.execute[%v].on[%v].error:%+v", query, c.Address(), x)
 				}
@@ -104,6 +105,7 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 					}
 				}
 
+				log.Debug("conn[ID:%v].xa.execute[%v]", c.ID(), query)
 				if _, x = c.Execute(query); x != nil {
 					log.Error("txn.xa.execute[maxretry:%v, retried:%v].state[%v].on[%v].query[%v].error[%T]:%+v", maxRetry, retry, state, c.Address(), query, x, x)
 					if sqlErr, ok := x.(*sqldb.SQLError); ok {
@@ -195,7 +197,6 @@ func (txn *Txn) xaStart() error {
 		txn.incErrors()
 		return err
 	}
-	log.Debug("%v", start)
 	return nil
 }
 
@@ -212,7 +213,6 @@ func (txn *Txn) xaEnd() error {
 		txn.incErrors()
 		return err
 	}
-	log.Debug("%v", end)
 	return nil
 }
 
@@ -229,7 +229,6 @@ func (txn *Txn) xaPrepare() error {
 		txn.incErrors()
 		return err
 	}
-	log.Debug("%v", prepare)
 	return nil
 }
 
@@ -251,7 +250,6 @@ func (txn *Txn) xaCommit() {
 			log.Error("txn.xa.WriteXaCommitErrLog.query[%v].error[%T]:%+v", commit, err, err)
 		}
 	}
-	log.Debug("%v", commit)
 }
 
 func (txn *Txn) xaRollback() {
@@ -270,5 +268,4 @@ func (txn *Txn) xaRollback() {
 			log.Error("txn.xa.WriteXaCommitErrLog.query[%v].error[%T]:%+v", rollback, err, err)
 		}
 	}
-	log.Debug("%v", rollback)
 }

@@ -9,8 +9,8 @@
 package proxy
 
 import (
-	"sync"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,7 +21,7 @@ import (
 )
 
 func TestKillIdleTxn(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.WARNING))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
 	fakedbs, proxy, cleanup := MockProxy1(log, MockConfigIdleTxnTimeout1())
 	defer cleanup()
@@ -78,7 +78,7 @@ func TestKillIdleTxn(t *testing.T) {
 }
 
 func TestKillIdleTxnInTxnLongQuery(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.WARNING))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
 	fakedbs, proxy, cleanup := MockProxy1(log, MockConfigIdleTxnTimeout1())
 	defer cleanup()
@@ -169,7 +169,7 @@ func TestKillIdleTxnInTxnLongQuery(t *testing.T) {
 }
 
 func TestKillIdleTxnLongQueryInExecuteSingle(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.WARNING))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
 	fakedbs, proxy, cleanup := MockProxy1(log, MockConfigIdleTxnTimeout1())
 	defer cleanup()
