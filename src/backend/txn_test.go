@@ -362,4 +362,8 @@ func TestTxnSetting(t *testing.T) {
 			assert.Equal(t, want, got)
 		}
 	}
+
+	{
+		txn.SetSessionID(1)
+	}
 }
