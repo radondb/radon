@@ -98,6 +98,11 @@ func (spanner *Spanner) NewSession(s *driver.Session) {
 	spanner.sessions.Add(s)
 }
 
+// SessionClosed impl.
+func (spanner *Spanner) SessionClosed(s *driver.Session) {
+	spanner.sessions.Remove(s)
+}
+
 // SessionInc increase client connection metrics, it need the user is assigned
 func (spanner *Spanner) SessionInc(s *driver.Session) {
 	monitor.ClientConnectionInc(s.User())
@@ -106,11 +111,6 @@ func (spanner *Spanner) SessionInc(s *driver.Session) {
 // SessionDec decrease client connection metrics.
 func (spanner *Spanner) SessionDec(s *driver.Session) {
 	monitor.ClientConnectionDec(s.User())
-}
-
-// SessionClosed impl.
-func (spanner *Spanner) SessionClosed(s *driver.Session) {
-	spanner.sessions.Remove(s)
 }
 
 // ServerVersion impl -- returns server version of Radon when greeting.

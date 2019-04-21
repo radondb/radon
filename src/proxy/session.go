@@ -10,6 +10,7 @@ package proxy
 
 import (
 	"sync"
+	"time"
 
 	"backend"
 
@@ -48,8 +49,18 @@ func (s *session) getStreamingFetchVar() bool {
 	return s.capabilities&cap_streaming_fetch != 0
 }
 
+func newSession(log *xlog.Log, s *driver.Session) *session {
+	log.Debug("session[%v].created", s.ID())
+	return &session{
+		log:       log,
+		session:   s,
+		timestamp: time.Now().Unix(),
+	}
+}
+
 func (s *session) close() {
 	log := s.log
+	id := s.session.ID()
 
 	// close the session connection from the server side.
 	s.session.Close()
@@ -58,6 +69,7 @@ func (s *session) close() {
 	node := s.node
 	transaction := s.transaction
 	s.mu.Unlock()
+	log.Debug("session[%v].close.txn:%+v.node:%+v", id, transaction, node)
 
 	// If transaction is not nil, means we can abort it when the session exit.
 	// Here there is some races:

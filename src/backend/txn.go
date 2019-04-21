@@ -62,6 +62,7 @@ type Transaction interface {
 	CommitScatter() error
 	RollbackScatter() error
 	SetMultiStmtTxn()
+	SetSessionID(id uint32)
 
 	SetTimeout(timeout int)
 	SetMaxResult(max int)
@@ -75,6 +76,7 @@ type Txn struct {
 	log               *xlog.Log
 	id                uint64
 	xid               string
+	sessionID         uint32
 	mu                sync.Mutex
 	mgr               *TxnManager
 	req               *xcontext.RequestContext
@@ -335,9 +337,14 @@ func (txn *Txn) RollbackScatter() error {
 	return nil
 }
 
-// SetMultiStmtTxn ...
+// SetMultiStmtTxn --
 func (txn *Txn) SetMultiStmtTxn() {
 	txn.isMultiStmtTxn = true
+}
+
+// SetSessionID -- bind the txn to session id, for debug.
+func (txn *Txn) SetSessionID(id uint32) {
+	txn.sessionID = id
 }
 
 // ExecuteRaw used to execute raw query, txn not implemented.
@@ -399,7 +406,7 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 		if c, x = txn.fetchOneConnection(back); x != nil {
 			log.Error("txn.fetch.connection.on[%s].querys[%v].error:%+v", back, querys, x)
 		} else {
-			log.Debug("conn[ID:%v].txn.execute[%v]", c.ID(), querys[0])
+			log.Debug("conn[%v].txn.sessid[%v].execute[%v]", c.ID(), txn.sessionID, querys[0])
 			for _, query := range querys {
 				var innerqr *sqltypes.Result
 

@@ -83,7 +83,7 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 			if c, x = txn.twopcConnection(back); x != nil {
 				log.Error("txn.xa.fetch.connection.state[%v].on[%s].query[%v].error:%+v", state, back, query, x)
 			} else {
-				log.Debug("conn[ID:%v].xa.execute[%v]", c.ID(), query)
+				log.Debug("conn[%v].txn.sessid[%v].xa.execute[%v]", c.ID(), txn.sessionID, query)
 				if _, x = c.Execute(query); x != nil {
 					log.Error("txn.xa.execute[%v].on[%v].error:%+v", query, c.Address(), x)
 				}
@@ -105,7 +105,7 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 					}
 				}
 
-				log.Debug("conn[ID:%v].xa.execute[%v]", c.ID(), query)
+				log.Debug("conn[%v].txn.sessid[%v].xa.execute[%v]", c.ID(), txn.sessionID, query)
 				if _, x = c.Execute(query); x != nil {
 					log.Error("txn.xa.execute[maxretry:%v, retried:%v].state[%v].on[%v].query[%v].error[%T]:%+v", maxRetry, retry, state, c.Address(), query, x, x)
 					if sqlErr, ok := x.(*sqldb.SQLError); ok {

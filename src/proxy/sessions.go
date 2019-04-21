@@ -44,10 +44,7 @@ func NewSessions(log *xlog.Log) *Sessions {
 func (ss *Sessions) Add(s *driver.Session) {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
-	ss.sessions[s.ID()] = &session{
-		log:       ss.log,
-		session:   s,
-		timestamp: time.Now().Unix()}
+	ss.sessions[s.ID()] = newSession(ss.log, s)
 }
 
 // Remove used to remove the session from the map when session exit.
@@ -99,6 +96,7 @@ func (ss *Sessions) getTxnSession(session *driver.Session) *session {
 
 // TxnBinding used to bind txn to the session.
 func (ss *Sessions) TxnBinding(s *driver.Session, txn backend.Transaction, node sqlparser.Statement, query string) {
+
 	ss.mu.RLock()
 	session, ok := ss.sessions[s.ID()]
 	if !ok {
@@ -115,6 +113,9 @@ func (ss *Sessions) TxnBinding(s *driver.Session, txn backend.Transaction, node 
 	}
 	session.query = q
 	session.node = node
+
+	// Bind sid to txn.
+	txn.SetSessionID(s.ID())
 	session.transaction = txn
 	session.timestamp = time.Now().Unix()
 }
@@ -139,6 +140,7 @@ func (ss *Sessions) TxnUnBinding(s *driver.Session) {
 
 // MultiStmtTxnBinding used to bind txn, node, query to the session
 func (ss *Sessions) MultiStmtTxnBinding(s *driver.Session, txn backend.Transaction, node sqlparser.Statement, query string) {
+
 	ss.mu.RLock()
 	session, ok := ss.sessions[s.ID()]
 	if !ok {
@@ -157,6 +159,8 @@ func (ss *Sessions) MultiStmtTxnBinding(s *driver.Session, txn backend.Transacti
 	session.node = node
 	// txn should not be nil when "begin" or "start transaction" is executed, to be set just once during the trans.
 	if txn != nil {
+		// Bind sid to txn.
+		txn.SetSessionID(s.ID())
 		session.transaction = txn
 	}
 	session.timestamp = time.Now().Unix()
