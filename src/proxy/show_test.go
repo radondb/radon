@@ -587,7 +587,7 @@ func TestProxyShowColumns(t *testing.T) {
 		},
 	}
 
-	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
 	address := proxy.Address()

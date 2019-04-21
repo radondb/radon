@@ -399,6 +399,7 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 		if c, x = txn.fetchOneConnection(back); x != nil {
 			log.Error("txn.fetch.connection.on[%s].querys[%v].error:%+v", back, querys, x)
 		} else {
+			log.Debug("conn[ID:%v].txn.execute[%v]", c.ID(), querys[0])
 			for _, query := range querys {
 				var innerqr *sqltypes.Result
 
