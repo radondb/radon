@@ -69,6 +69,7 @@ testmonitor:
 testplugins:
 	go test -v plugins
 	go test -v plugins/autoincrement
+	go test -v plugins/privilege
 testmysqlstack:
 	cd src/vendor/github.com/xelabs/go-mysqlstack&&make test
 

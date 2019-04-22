@@ -20,11 +20,11 @@ import (
 
 // Plugin --
 type Plugin struct {
-	log          *xlog.Log
-	conf         *config.Config
-	router       *router.Router
-	scatter      *backend.Scatter
-	autoincement *autoincrement.AutoIncrement
+	log           *xlog.Log
+	conf          *config.Config
+	router        *router.Router
+	scatter       *backend.Scatter
+	autoincrement autoincrement.AutoIncrementHandler
 }
 
 // NewPlugin -- creates new Plugin.
@@ -47,15 +47,16 @@ func (plugin *Plugin) Init() error {
 	if err := autoincPlug.Init(); err != nil {
 		return err
 	}
-	plugin.autoincement = autoincPlug
+	plugin.autoincrement = autoincPlug
 	return nil
 }
 
 // Close -- do nothing.
 func (plugin *Plugin) Close() {
+	plugin.autoincrement.Close()
 }
 
 // PlugAutoIncrement -- return AutoIncrement plug.
-func (plugin *Plugin) PlugAutoIncrement() *autoincrement.AutoIncrement {
-	return plugin.autoincement
+func (plugin *Plugin) PlugAutoIncrement() autoincrement.AutoIncrementHandler {
+	return plugin.autoincrement
 }

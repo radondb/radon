@@ -9,11 +9,9 @@
 package autoincrement
 
 import (
-	"strconv"
 	"sync"
 	"time"
 
-	"config"
 	"router"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -30,7 +28,7 @@ type AutoIncrement struct {
 }
 
 // NewAutoIncrement -- creates new AutoIncrement.
-func NewAutoIncrement(log *xlog.Log, router *router.Router) *AutoIncrement {
+func NewAutoIncrement(log *xlog.Log, router *router.Router) AutoIncrementHandler {
 	return &AutoIncrement{
 		log:    log,
 		router: router,
@@ -41,43 +39,6 @@ func NewAutoIncrement(log *xlog.Log, router *router.Router) *AutoIncrement {
 func (autoinc *AutoIncrement) Init() error {
 	autoinc.seq = uint64(time.Now().UnixNano())
 	return nil
-}
-
-// GetAutoIncrement -- used to get config AutoIncrement from 'create table' DDL sqlnode.
-func GetAutoIncrement(node *sqlparser.DDL) *config.AutoIncrement {
-	switch node.Action {
-	case sqlparser.CreateTableStr:
-		for _, col := range node.TableSpec.Columns {
-			if col.Type.Autoincrement {
-				return &config.AutoIncrement{
-					Column: col.Name.String(),
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func modifyForAutoinc(ins *sqlparser.Insert, autoinc *config.AutoIncrement, seq uint64) {
-	col := sqlparser.NewColIdent(autoinc.Column)
-
-	// Insert has autoinc column.
-	for _, column := range ins.Columns {
-		if col.Equal(column) {
-			return
-		}
-	}
-
-	// Insert does not has autoinc column
-	// 1. append column info to the end.
-	ins.Columns = append(ins.Columns, col)
-
-	// 2. append vals to each row's end.
-	rows := ins.Rows.(sqlparser.Values)
-	for i := range rows {
-		seq++
-		rows[i] = append(rows[i], sqlparser.NewIntVal([]byte(strconv.FormatUint(seq, 10))))
-	}
 }
 
 // Process -- process auto-increment.
@@ -109,5 +70,10 @@ func (autoinc *AutoIncrement) Process(database string, ins *sqlparser.Insert) er
 	if tblInfo.AutoIncrement != nil {
 		modifyForAutoinc(ins, tblInfo.AutoIncrement, seq)
 	}
+	return nil
+}
+
+// Close -- close the plugin.
+func (autoinc *AutoIncrement) Close() error {
 	return nil
 }
