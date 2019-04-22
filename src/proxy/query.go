@@ -86,6 +86,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 			return sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, err.Error())
 		}
 	}
+	log.Debug("query:%v", query)
 
 	// Readonly check.
 	if spanner.ReadOnly() {

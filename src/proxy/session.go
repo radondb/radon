@@ -69,7 +69,7 @@ func (s *session) close() {
 	node := s.node
 	transaction := s.transaction
 	s.mu.Unlock()
-	log.Debug("session[%v].close.txn:%+v.node:%+v", id, transaction, node)
+	log.Warning("session[%v].close.txn:%+v.node:%+v", id, transaction, node)
 
 	// If transaction is not nil, means we can abort it when the session exit.
 	// Here there is some races:
