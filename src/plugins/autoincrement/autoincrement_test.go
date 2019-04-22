@@ -114,6 +114,7 @@ func TestPluginAutoIncrement(t *testing.T) {
 	autoplug := NewAutoIncrement(log, route)
 	err := autoplug.Init()
 	assert.Nil(t, err)
+	defer autoplug.Close()
 
 	tests := []struct {
 		query   string
