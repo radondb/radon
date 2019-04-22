@@ -436,8 +436,9 @@ func checkJoinOn(lpn, rpn PlanNode, join joinTuple) (joinTuple, error) {
 }
 
 // checkGroupBy used to check groupby.
-func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.Router, tbInfos map[string]*TableInfo) ([]selectTuple, error) {
+func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.Router, tbInfos map[string]*TableInfo, canOpt bool) ([]selectTuple, error) {
 	var groupTuples []selectTuple
+	hasShard := false
 	for _, expr := range exprs {
 		var group *selectTuple
 		// TODO: support group by 1,2.
@@ -463,21 +464,53 @@ func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.
 		if group == nil {
 			return nil, errors.Errorf("unsupported: group.by.field[%s].should.be.in.select.list", field)
 		}
-		if len(group.referTables) != 1 {
-			continue
+		if canOpt {
+			if len(group.referTables) != 1 {
+				continue
+			}
+			table = group.referTables[0]
+			var err error
+			// If fields contains shardkey, just push down the group by,
+			// neednot process groupby again. unsupport alias.
+			hasShard, err = checkShard(table, col.Name.String(), tbInfos, router)
+			if err != nil {
+				return nil, err
+			}
 		}
-		table = group.referTables[0]
 	}
 
+	if hasShard {
+		return nil, nil
+	}
 	return groupTuples, nil
 }
 
 // checkDistinct used to check the distinct, and convert distinct to groupby.
-func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router *router.Router, tbInfos map[string]*TableInfo) ([]selectTuple, error) {
+func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router *router.Router, tbInfos map[string]*TableInfo, canOpt bool) ([]selectTuple, error) {
 	// field in grouby must be contained in the select exprs, that mains groups is a subset of fields.
 	// if has groupby, neednot process distinct again.
 	if node.Distinct == "" || len(node.GroupBy) > 0 {
 		return groups, nil
+	}
+
+	// If fields contains shardkey, just push down group by,
+	// neednot process distinct again.
+	hasShard := false
+	if canOpt {
+		for _, tuple := range fields {
+			if expr, ok := tuple.expr.(*sqlparser.AliasedExpr); ok {
+				if exp, ok := expr.Expr.(*sqlparser.ColName); ok {
+					ok, err := checkShard(tuple.referTables[0], exp.Name.String(), tbInfos, router)
+					if err != nil {
+						return nil, err
+					}
+					if ok {
+						hasShard = true
+						break
+					}
+				}
+			}
+		}
 	}
 
 	// distinct convert to groupby.
@@ -498,6 +531,9 @@ func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router 
 		}
 	}
 	node.Distinct = ""
+	if hasShard {
+		return nil, nil
+	}
 	return fields, nil
 }
 
@@ -581,4 +617,21 @@ func checkIsWithNull(filter filterTuple, tbInfos map[string]*TableInfo) (bool, n
 	}
 
 	return false, nullExpr{}
+}
+
+// checkShard used to check whether the col is shardkey.
+func checkShard(table, col string, tbInfos map[string]*TableInfo, router *router.Router) (bool, error) {
+	tbInfo, ok := tbInfos[table]
+	if !ok {
+		return false, errors.Errorf("unsupported: unknown.column.'%s.%s'.in.field.list", table, col)
+	}
+
+	shardkey, err := router.ShardKey(tbInfo.database, tbInfo.tableName)
+	if err != nil {
+		return false, err
+	}
+	if shardkey == col {
+		return true, nil
+	}
+	return false, nil
 }
