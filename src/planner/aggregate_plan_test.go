@@ -124,7 +124,8 @@ func TestAggregatePlan(t *testing.T) {
 		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
 		assert.True(t, hasAgg)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables())
+		_, ok := p.(*MergeNode)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), !hasAgg && ok)
 		assert.Nil(t, err)
 		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 		// plan build
@@ -251,7 +252,8 @@ func TestAggregatePlanUpperCase(t *testing.T) {
 		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
 		assert.True(t, hasAgg)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables())
+		_, ok := p.(*MergeNode)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), !hasAgg && ok)
 		assert.Nil(t, err)
 		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 		// plan build
@@ -307,7 +309,8 @@ func TestAggregatePlanHaving(t *testing.T) {
 		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
 		assert.True(t, hasAgg)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables())
+		_, ok := p.(*MergeNode)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), !hasAgg && ok)
 		assert.Nil(t, err)
 		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 		// plan build
@@ -352,7 +355,8 @@ func TestAggregatePlanUnsupported(t *testing.T) {
 		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
 		assert.True(t, hasAgg)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables())
+		_, ok := p.(*MergeNode)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), !hasAgg && ok)
 		if err == nil {
 			plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 			err := plan.Build()
@@ -422,7 +426,8 @@ func TestAggregatePlans(t *testing.T) {
 		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
 		assert.True(t, hasAgg)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables())
+		_, ok := p.(*MergeNode)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), !hasAgg && ok)
 		assert.Nil(t, err)
 		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 		// plan build
