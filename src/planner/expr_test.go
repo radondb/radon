@@ -191,6 +191,7 @@ func TestCheckGroupBy(t *testing.T) {
 		"select a,b,A.id from A group by id,a",
 		"select A.id as a from A group by a",
 		"select A.id+G.id as id from A,G group by id",
+		"select A.id from A group by id",
 	}
 	wants := []int{
 		1,
@@ -198,6 +199,7 @@ func TestCheckGroupBy(t *testing.T) {
 		2,
 		1,
 		1,
+		0,
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
