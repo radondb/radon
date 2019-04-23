@@ -125,7 +125,7 @@ func TestAggregatePlan(t *testing.T) {
 		assert.Nil(t, err)
 		assert.True(t, hasAgg)
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), !hasAgg && ok)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
 		assert.Nil(t, err)
 		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 		// plan build
@@ -253,7 +253,7 @@ func TestAggregatePlanUpperCase(t *testing.T) {
 		assert.Nil(t, err)
 		assert.True(t, hasAgg)
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), !hasAgg && ok)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
 		assert.Nil(t, err)
 		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 		// plan build
@@ -310,7 +310,7 @@ func TestAggregatePlanHaving(t *testing.T) {
 		assert.Nil(t, err)
 		assert.True(t, hasAgg)
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), !hasAgg && ok)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
 		assert.Nil(t, err)
 		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 		// plan build
@@ -356,7 +356,7 @@ func TestAggregatePlanUnsupported(t *testing.T) {
 		assert.Nil(t, err)
 		assert.True(t, hasAgg)
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), !hasAgg && ok)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
 		if err == nil {
 			plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 			err := plan.Build()
@@ -427,7 +427,7 @@ func TestAggregatePlans(t *testing.T) {
 		assert.Nil(t, err)
 		assert.True(t, hasAgg)
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), !hasAgg && ok)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
 		assert.Nil(t, err)
 		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
 		// plan build

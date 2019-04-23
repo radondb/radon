@@ -124,11 +124,11 @@ func (p *SelectPlan) Build() error {
 		return err
 	}
 
-	if groups, err = checkGroupBy(node.GroupBy, fields, p.router, tbInfos, !hasAggregates && ok); err != nil {
+	if groups, err = checkGroupBy(node.GroupBy, fields, p.router, tbInfos, ok); err != nil {
 		return err
 	}
 
-	if groups, err = checkDistinct(node, groups, fields, p.router, tbInfos, !hasAggregates && ok); err != nil {
+	if groups, err = checkDistinct(node, groups, fields, p.router, tbInfos, ok); err != nil {
 		return err
 	}
 

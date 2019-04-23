@@ -108,13 +108,7 @@ func TestSelectPlan(t *testing.T) {
 			"Range": "[512-4096)"
 		}
 	],
-	"Aggregate": [
-		"A"
-	],
 	"GatherMerge": [
-		"id"
-	],
-	"HashGroupBy": [
 		"id"
 	]
 }`,
@@ -351,13 +345,7 @@ func TestSelectPlanDatabaseIsNull(t *testing.T) {
 			"Range": "[512-4096)"
 		}
 	],
-	"Aggregate": [
-		"A"
-	],
 	"GatherMerge": [
-		"id"
-	],
-	"HashGroupBy": [
 		"id"
 	]
 }`,
