@@ -165,6 +165,13 @@ func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser
 	m.Sel.SelectExprs = sel.SelectExprs
 	m.Sel.GroupBy = sel.GroupBy
 	m.Sel.Distinct = sel.Distinct
+
+	// eg: select id,sum(a) from tb group by id;
+	// id is tb's shard key. neednot build aggrPlan.
+	if len(groups) == 0 && len(sel.GroupBy) > 0 {
+		return nil
+	}
+
 	if hasAggregates || len(groups) > 0 {
 		aggrPlan := NewAggregatePlan(m.log, m.Sel.SelectExprs, fields, groups)
 		if err := aggrPlan.Build(); err != nil {
