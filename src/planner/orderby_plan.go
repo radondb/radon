@@ -10,6 +10,7 @@ package planner
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -85,12 +86,27 @@ func (p *OrderByPlan) analyze() error {
 				}
 			}
 
-			if !checkInTuple(orderBy.Field, orderBy.Table, p.tuples) {
-				return errors.Errorf("unsupported: orderby[%+v].should.in.select.list", orderBy.Field)
+			ok, tuple := checkInTuple(orderBy.Field, orderBy.Table, p.tuples)
+			if !ok {
+				field := orderBy.Field
+				if orderBy.Table != "" {
+					field = fmt.Sprintf("%s.%s", orderBy.Table, orderBy.Field)
+				}
+				return errors.Errorf("unsupported: orderby[%s].should.in.select.list", field)
+			}
+
+			if tuple.field != "*" {
+				if tuple.alias != "" {
+					orderBy.Field = tuple.alias
+				} else {
+					orderBy.Field = tuple.field
+				}
 			}
 			p.OrderBys = append(p.OrderBys, orderBy)
 		default:
-			return errors.Errorf("unsupported: orderby:%+v", o.Expr)
+			buf := sqlparser.NewTrackedBuffer(nil)
+			e.Format(buf)
+			return errors.Errorf("unsupported: orderby:[%+v].type.should.be.colname", buf.String())
 		}
 	}
 	return nil

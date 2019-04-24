@@ -192,13 +192,17 @@ func TestCheckGroupBy(t *testing.T) {
 		"select A.id as a from A group by a",
 		"select A.id+G.id as id from A,G group by id",
 		"select A.id from A group by id",
+		"select id as a from A group by id",
+		"select id as a from A group by A.id",
 	}
 	wants := []int{
 		1,
 		2,
-		2,
+		0,
+		0,
 		1,
-		1,
+		0,
+		0,
 		0,
 	}
 
@@ -237,7 +241,7 @@ func TestCheckGroupByError(t *testing.T) {
 	}
 	wants := []string{
 		"unsupported: unknow.table.in.group.by.field[B.a]",
-		"unsupported: group.by.field.have.expression",
+		"unsupported: group.by.[1].type.should.be.colname",
 		"unsupported: group.by.field[id].should.be.in.select.list",
 	}
 
@@ -390,7 +394,7 @@ func TestSelectExprsError(t *testing.T) {
 		"select A.id,G.a as a, concat(A.str,B.str) from A join B on A.id=B.id join G on A.a=G.a",
 	}
 	wants := []string{
-		"unsupported: group.by.field[s].should.be.in.noaggregate.select.list",
+		"unsupported: group.by.field[sum(A.id)].should.be.in.noaggregate.select.list",
 		"unsupported: expr.'concat(B.str, G.str)'.in.cross-shard.join",
 		"unsupported: expr.'concat(A.str, B.str)'.in.cross-shard.join",
 	}
@@ -559,7 +563,7 @@ func TestPushOrderByError(t *testing.T) {
 	}
 	wants := []string{
 		"unsupported: orderby[b].should.in.select.list",
-		"unsupported: orderby[b].should.in.select.list",
+		"unsupported: orderby[B.b].should.in.select.list",
 		"unsupported: unknow.table.in.order.by.field[C.a]",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))

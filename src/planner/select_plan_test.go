@@ -213,6 +213,25 @@ func TestSelectPlan(t *testing.T) {
 		}
 	]
 }`,
+		`{
+	"RawQuery": "select B.id as a from B group by a",
+	"Project": "B.id as a",
+	"Partitions": [
+		{
+			"Query": "select B.id as a from sbtest.B0 as B group by a order by a asc",
+			"Backend": "backend1",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "select B.id as a from sbtest.B1 as B group by a order by a asc",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	],
+	"GatherMerge": [
+		"a"
+	]
+}`,
 	}
 	querys := []string{
 		"select 1, sum(a),avg(a),a,b from sbtest.A where id>1 group by a,b order by a desc limit 10 offset 100",
@@ -223,6 +242,7 @@ func TestSelectPlan(t *testing.T) {
 		"select A.id from A left join B on A.id=B.id and A.a=1 and B.b=2 and 1=1 where B.id=1",
 		"select /*+nested+*/ A.id from A join B on A.id = B.id where A.id = 1",
 		"select A.id from A left join B on A.a+1=B.a where A.id=1",
+		"select B.id as a from B group by a",
 	}
 
 	// Database not null.
@@ -415,6 +435,10 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select A.id from G join (A,B) on G.id<=A.id+B.id",
 		"select A.id as tmp, B.id from A,B having tmp=1",
 		"select COALESCE(B.b, ''), IF(B.b IS NULL, FALSE, TRUE) AS spent from A left join B on A.a=B.a",
+		"select A.a as b from A order by A.b",
+		"select a+1 from A order by a+1",
+		"select b as a from A group by A.a",
+		"select a+1 from A group by a+1",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
@@ -437,15 +461,19 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: expr.'concat(B.str, G.str)'.in.cross-shard.join",
 		"unsupported: exists.aggregate.and.'*'.select.exprs",
 		"unsupported: on.clause.'A.a > B.a'.in.cross-shard.join",
-		"unsupported: expr.'A.a > B.a as tmpc_0'.in.cross-shard.join",
-		"unsupported: expr.'concat(B.str, A.str) as tmpo_0'.in.cross-shard.join",
+		"unsupported: expr.'A.a > B.a'.in.cross-shard.join",
+		"unsupported: expr.'concat(B.str, A.str)'.in.cross-shard.join",
 		"unsupported: clause.'concat(B.str, A.str) is null'.in.cross-shard.join",
-		"unsupported: expr.'A.id + B.id as tmpo_0'.in.cross-shard.join",
-		"unsupported: expr.'A.id + B.id as tmpo_0'.in.cross-shard.join",
-		"unsupported: expr.'A.id + B.id as tmpo_0'.in.cross-shard.join",
-		"unsupported: expr.'A.id + B.id as tmpo_0'.in.cross-shard.join",
+		"unsupported: expr.'A.id + B.id'.in.cross-shard.join",
+		"unsupported: expr.'A.id + B.id'.in.cross-shard.join",
+		"unsupported: expr.'A.id + B.id'.in.cross-shard.join",
+		"unsupported: expr.'A.id + B.id'.in.cross-shard.join",
 		"unsupported: unknown.column.'tmp'.in.having.clause",
 		"unsupported: expr.'COALESCE(B.b, '')'.in.cross-shard.left.join",
+		"unsupported: orderby[A.b].should.in.select.list",
+		"unsupported: orderby:[a + 1].type.should.be.colname",
+		"unsupported: group.by.field[A.a].should.be.in.select.list",
+		"unsupported: group.by.[a + 1].type.should.be.colname",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -467,7 +495,6 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 			want := results[i]
 			got := err.Error()
 			assert.Equal(t, want, got)
-
 		}
 	}
 }
