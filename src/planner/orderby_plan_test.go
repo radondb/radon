@@ -24,9 +24,12 @@ func TestOrderByPlan(t *testing.T) {
 		"select a,*,c,d from A order by a asc",
 		"select a as b,c,d from A order by b desc",
 		"select A.* from A order by A.a",
+		"select A.* from A order by a",
 		"select * from A order by A.a",
 		"select a from A order by A.a",
 		"select A.a from A order by a",
+		"select a as b from A order by a",
+		"select a as b from A order by A.a",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -61,7 +64,7 @@ func TestOrderByPlanError(t *testing.T) {
 	}
 	results := []string{
 		"unsupported: orderby[c].should.in.select.list",
-		"unsupported: orderby:&{Qualifier: Name:rand Distinct:false Exprs:[]}",
+		"unsupported: orderby:[rand()].type.should.be.colname",
 		"unsupported: unknow.table.in.order.by.field[X.a]",
 	}
 

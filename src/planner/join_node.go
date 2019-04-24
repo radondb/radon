@@ -243,13 +243,18 @@ func (j *JoinNode) setOtherJoin(filters []filterTuple) {
 			continue
 		}
 		if checkTbInNode(filter.referTables, j.Left.getReferredTables()) {
+			buf := sqlparser.NewTrackedBuffer(nil)
+			filter.expr.Format(buf)
+			field := buf.String()
+
 			alias := fmt.Sprintf("tmpc_%d", i)
-			field := selectTuple{
+			tuple := selectTuple{
 				expr:        &sqlparser.AliasedExpr{Expr: filter.expr, As: sqlparser.NewColIdent(alias)},
-				field:       alias,
+				field:       field,
+				alias:       alias,
 				referTables: filter.referTables,
 			}
-			j.otherJoinOn.left = append(j.otherJoinOn.left, field)
+			j.otherJoinOn.left = append(j.otherJoinOn.left, tuple)
 			i++
 		} else if checkTbInNode(filter.referTables, j.Right.getReferredTables()) {
 			j.otherJoinOn.right = append(j.otherJoinOn.right, filter)
@@ -624,16 +629,18 @@ func (j *JoinNode) pushOtherFilters(filters []filterTuple, idx *int, isOtherJoin
 // pushOtherFilter used to push otherFilter.
 func (j *JoinNode) pushOtherFilter(expr sqlparser.Expr, node PlanNode, tbs []string, idx *int) (int, error) {
 	var err error
-	var field string
+	var field, alias string
 	index := -1
 	if col, ok := expr.(*sqlparser.ColName); ok {
 		field = col.Name.String()
 		table := col.Qualifier.Name.String()
 		tuples := node.getFields()
 		for i, tuple := range tuples {
-			if len(tuple.referTables) == 1 && table == tuple.referTables[0] && field == tuple.field {
-				index = i
-				break
+			if tuple.isCol {
+				if table == tuple.referTables[0] && field == tuple.field {
+					index = i
+					break
+				}
 			}
 		}
 	}
@@ -641,8 +648,12 @@ func (j *JoinNode) pushOtherFilter(expr sqlparser.Expr, node PlanNode, tbs []str
 	if index == -1 {
 		aliasExpr := &sqlparser.AliasedExpr{Expr: expr}
 		if field == "" {
-			field = fmt.Sprintf("tmpo_%d", *idx)
-			as := sqlparser.NewColIdent(field)
+			buf := sqlparser.NewTrackedBuffer(nil)
+			expr.Format(buf)
+			field = buf.String()
+
+			alias = fmt.Sprintf("tmpo_%d", *idx)
+			as := sqlparser.NewColIdent(alias)
 			aliasExpr.As = as
 			(*idx)++
 		}
@@ -650,6 +661,7 @@ func (j *JoinNode) pushOtherFilter(expr sqlparser.Expr, node PlanNode, tbs []str
 		tuple := selectTuple{
 			expr:        aliasExpr,
 			field:       field,
+			alias:       alias,
 			referTables: tbs,
 		}
 		index, err = node.pushSelectExpr(tuple)
@@ -672,9 +684,7 @@ func (j *JoinNode) pushSelectExpr(field selectTuple) (int, error) {
 	} else {
 		if exp, ok := field.expr.(*sqlparser.AliasedExpr); ok && j.IsLeftJoin {
 			if _, ok := exp.Expr.(*sqlparser.FuncExpr); ok {
-				buf := sqlparser.NewTrackedBuffer(nil)
-				field.expr.Format(buf)
-				return -1, errors.Errorf("unsupported: expr.'%s'.in.cross-shard.left.join", buf.String())
+				return -1, errors.Errorf("unsupported: expr.'%s'.in.cross-shard.left.join", field.field)
 			}
 		}
 		if checkTbInNode(field.referTables, j.Right.getReferredTables()) || j.isHint {
@@ -684,9 +694,7 @@ func (j *JoinNode) pushSelectExpr(field selectTuple) (int, error) {
 			}
 			j.Cols = append(j.Cols, index+1)
 		} else {
-			buf := sqlparser.NewTrackedBuffer(nil)
-			field.expr.Format(buf)
-			return -1, errors.Errorf("unsupported: expr.'%s'.in.cross-shard.join", buf.String())
+			return -1, errors.Errorf("unsupported: expr.'%s'.in.cross-shard.join", field.field)
 		}
 	}
 	j.fields = append(j.fields, field)
@@ -736,7 +744,7 @@ func (j *JoinNode) handleJoinOn() {
 }
 
 func (j *JoinNode) buildOrderBy(expr sqlparser.Expr, node PlanNode, idx *int) JoinKey {
-	var field, table string
+	var field, table, alias string
 	var col *sqlparser.ColName
 	index := -1
 	switch exp := expr.(type) {
@@ -745,9 +753,11 @@ func (j *JoinNode) buildOrderBy(expr sqlparser.Expr, node PlanNode, idx *int) Jo
 		field = exp.Name.String()
 		table = exp.Qualifier.Name.String()
 		for i, tuple := range tuples {
-			if len(tuple.referTables) == 1 && table == tuple.referTables[0] && field == tuple.field {
-				index = i
-				break
+			if tuple.isCol {
+				if table == tuple.referTables[0] && field == tuple.field {
+					index = i
+					break
+				}
 			}
 		}
 		col = exp
@@ -757,8 +767,12 @@ func (j *JoinNode) buildOrderBy(expr sqlparser.Expr, node PlanNode, idx *int) Jo
 	if index == -1 {
 		aliasExpr := &sqlparser.AliasedExpr{Expr: expr}
 		if field == "" {
-			field = fmt.Sprintf("tmpo_%d", *idx)
-			as := sqlparser.NewColIdent(field)
+			buf := sqlparser.NewTrackedBuffer(nil)
+			expr.Format(buf)
+			field = buf.String()
+
+			alias = fmt.Sprintf("tmpo_%d", *idx)
+			as := sqlparser.NewColIdent(alias)
 			aliasExpr.As = as
 			col = &sqlparser.ColName{Name: as}
 			(*idx)++
@@ -766,6 +780,7 @@ func (j *JoinNode) buildOrderBy(expr sqlparser.Expr, node PlanNode, idx *int) Jo
 		tuple := selectTuple{
 			expr:        aliasExpr,
 			field:       field,
+			alias:       alias,
 			referTables: []string{table},
 		}
 		index, _ = node.pushSelectExpr(tuple)

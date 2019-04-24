@@ -9,6 +9,7 @@
 package planner
 
 import (
+	"fmt"
 	"router"
 
 	"github.com/pkg/errors"
@@ -115,42 +116,45 @@ func checkComparison(expr sqlparser.Expr) error {
 }
 
 // For example: select count(*), count(distinct x.a) as cstar, max(x.a) as mb, t.a as a1, x.b from t,x group by a1,b
-// {field:count(*) referTables:{}   aggrFuc:count  aggrField:*   distinct:false}
-// {field:cstar    referTables:{x}  aggrFuc:count  aggrField:*   distinct:true}
-// {field:mb       referTables:{x}  aggrFuc:max    aggrField:x.a distinct:false}
-// {field:a1       referTables:{t}  aggrFuc:}
-// {field:b      referTables:{x}  aggrFuc:}
+// {field:count(*) referTables:{}  aggrFuc:count aggrField:*   distinct:false isCol:false}
+// {field:cstar    referTables:{x} aggrFuc:count aggrField:*   distinct:true  isCol:false}
+// {field:mb       referTables:{x} aggrFuc:max   aggrField:x.a distinct:false isCol:false}
+// {field:a1       referTables:{t} aggrFuc:      isCol:true}
+// {field:b        referTables:{x} aggrFuc:      isCol:true}
 type selectTuple struct {
-	//select expression
+	//select expression.
 	expr sqlparser.SelectExpr
-	//the field name of mysql returns
+	//the field name.
 	field string
-	//the referred tables
+	// the alias of the field.
+	alias string
+	//the referred tables.
 	referTables []string
-	//aggregate function name
+	//aggregate function name.
 	aggrFuc string
-	//field in the aggregate function
-	aggrField string
-	distinct  bool
+	//field in the aggregate function.
+	aggrField       string
+	distinct, isCol bool
 }
 
 // parserSelectExpr parses the AliasedExpr to select tuple.
 func parserSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*TableInfo) (*selectTuple, bool, error) {
 	funcName := ""
+	field := ""
 	aggrField := ""
 	distinct := false
+	isCol := false
 	hasAggregates := false
 	referTables := make([]string, 0, 4)
 
-	field := expr.As.String()
-	if field == "" {
-		if col, ok := expr.Expr.(*sqlparser.ColName); ok {
-			field = col.Name.String()
-		} else {
-			buf := sqlparser.NewTrackedBuffer(nil)
-			expr.Format(buf)
-			field = buf.String()
-		}
+	alias := expr.As.String()
+	if col, ok := expr.Expr.(*sqlparser.ColName); ok {
+		field = col.Name.String()
+		isCol = true
+	} else {
+		buf := sqlparser.NewTrackedBuffer(nil)
+		expr.Expr.Format(buf)
+		field = buf.String()
 	}
 
 	err := sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
@@ -203,7 +207,7 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*TableInfo
 		return nil, hasAggregates, err
 	}
 
-	return &selectTuple{expr, field, referTables, funcName, aggrField, distinct}, hasAggregates, nil
+	return &selectTuple{expr, field, alias, referTables, funcName, aggrField, distinct, isCol}, hasAggregates, nil
 }
 
 func parserSelectExprs(exprs sqlparser.SelectExprs, root PlanNode) ([]selectTuple, bool, error) {
@@ -274,29 +278,38 @@ func getTbInExpr(expr sqlparser.Expr) []string {
 	return referTables
 }
 
-func checkInTuple(field, table string, tuples []selectTuple) bool {
+func checkInTuple(field, table string, tuples []selectTuple) (bool, *selectTuple) {
 	for _, tuple := range tuples {
-		if tuple.field == "*" || tuple.field == field {
-			if table == "" || len(tuple.referTables) == 0 {
-				return true
-			}
-			if len(tuple.referTables) == 1 && tuple.referTables[0] == table {
-				return true
+		if table == "" && (tuple.field == "*" || field == tuple.alias) {
+			return true, &tuple
+		}
+
+		if tuple.field == "*" && (len(tuple.referTables) == 0 || tuple.referTables[0] == table) {
+			return true, &tuple
+		}
+
+		if tuple.isCol {
+			if field == tuple.field && (table == "" || table == tuple.referTables[0]) {
+				return true, &tuple
 			}
 		}
 	}
-	return false
+	return false, nil
 }
 
 // decomposeAvg decomposes avg(a) to sum(a) and count(a).
 func decomposeAvg(tuple *selectTuple) []*sqlparser.AliasedExpr {
 	var ret []*sqlparser.AliasedExpr
+	alias := tuple.alias
+	if alias == "" {
+		alias = tuple.field
+	}
 	sum := &sqlparser.AliasedExpr{
 		Expr: &sqlparser.FuncExpr{
 			Name:  sqlparser.NewColIdent("sum"),
 			Exprs: []sqlparser.SelectExpr{&sqlparser.AliasedExpr{Expr: sqlparser.NewValArg([]byte(tuple.aggrField))}},
 		},
-		As: sqlparser.NewColIdent(tuple.field),
+		As: sqlparser.NewColIdent(alias),
 	}
 	count := &sqlparser.AliasedExpr{Expr: &sqlparser.FuncExpr{
 		Name:  sqlparser.NewColIdent("count"),
@@ -444,7 +457,9 @@ func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.
 		// TODO: support group by 1,2.
 		col, ok := expr.(*sqlparser.ColName)
 		if !ok {
-			return nil, errors.New("unsupported: group.by.field.have.expression")
+			buf := sqlparser.NewTrackedBuffer(nil)
+			expr.Format(buf)
+			return nil, errors.Errorf("unsupported: group.by.[%s].type.should.be.colname", buf.String())
 		}
 		field := col.Name.String()
 		table := col.Qualifier.Name.String()
@@ -455,24 +470,34 @@ func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.
 		}
 
 		for _, tuple := range fields {
-			if tuple.field == field && (table == "" || len(tuple.referTables) == 1 && tuple.referTables[0] == table) {
+			find := false
+			if table == "" && field == tuple.alias {
+				find = true
+			} else {
+				if tuple.isCol {
+					if field == tuple.field && (table == "" || table == tuple.referTables[0]) {
+						find = true
+					}
+				}
+			}
+			if find {
 				group = &tuple
 				groupTuples = append(groupTuples, *group)
 				break
 			}
 		}
 		if group == nil {
+			if table != "" {
+				field = fmt.Sprintf("%s.%s", table, field)
+			}
 			return nil, errors.Errorf("unsupported: group.by.field[%s].should.be.in.select.list", field)
 		}
-		if canOpt {
-			if len(group.referTables) != 1 {
-				continue
-			}
+		if canOpt && group.isCol && !hasShard {
 			table = group.referTables[0]
 			var err error
 			// If fields contains shardkey, just push down the group by,
 			// neednot process groupby again. unsupport alias.
-			hasShard, err = checkShard(table, col.Name.String(), tbInfos, router)
+			hasShard, err = checkShard(table, group.field, tbInfos, router)
 			if err != nil {
 				return nil, err
 			}
@@ -498,16 +523,14 @@ func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router 
 	hasShard := false
 	if canOpt {
 		for _, tuple := range fields {
-			if expr, ok := tuple.expr.(*sqlparser.AliasedExpr); ok {
-				if exp, ok := expr.Expr.(*sqlparser.ColName); ok {
-					ok, err := checkShard(tuple.referTables[0], exp.Name.String(), tbInfos, router)
-					if err != nil {
-						return nil, err
-					}
-					if ok {
-						hasShard = true
-						break
-					}
+			if tuple.isCol {
+				ok, err := checkShard(tuple.referTables[0], tuple.field, tbInfos, router)
+				if err != nil {
+					return nil, err
+				}
+				if ok {
+					hasShard = true
+					break
 				}
 			}
 		}

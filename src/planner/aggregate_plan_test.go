@@ -95,7 +95,7 @@ func TestAggregatePlan(t *testing.T) {
 			"Type": "GROUP BY"
 		},
 		{
-			"Field": "b1",
+			"Field": "b",
 			"Index": 8,
 			"Type": "GROUP BY"
 		},
@@ -223,7 +223,7 @@ func TestAggregatePlanUpperCase(t *testing.T) {
 			"Type": "GROUP BY"
 		},
 		{
-			"Field": "b1",
+			"Field": "b",
 			"Index": 8,
 			"Type": "GROUP BY"
 		},
@@ -377,7 +377,7 @@ func TestAggregatePlans(t *testing.T) {
 		`{
 	"Aggrs": [
 		{
-			"Field": "b1",
+			"Field": "avg(a)",
 			"Index": 0,
 			"Type": "AVG"
 		},

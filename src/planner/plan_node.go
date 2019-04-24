@@ -85,9 +85,11 @@ func procure(tbInfos map[string]*TableInfo, col *sqlparser.ColName) string {
 	tuples := node.getFields()
 	index := -1
 	for i, tuple := range tuples {
-		if len(tuple.referTables) == 1 && table == tuple.referTables[0] && field == tuple.field {
-			index = i
-			break
+		if tuple.isCol {
+			if field == tuple.field && table == tuple.referTables[0] {
+				index = i
+				break
+			}
 		}
 	}
 	// key not in the select fields.
