@@ -210,6 +210,7 @@ func (c *RouterConfig) UnmarshalJSON(b []byte) error {
 type ScatterConfig struct {
 	XaCheckInterval int    `json:"xa-check-interval"`
 	XaCheckDir      string `json:"xa-check-dir"`
+	XaCheckRetrys   int    `json:"xa-check-retrys`
 }
 
 // DefaultScatterConfig returns default ScatterConfig config.
@@ -217,6 +218,7 @@ func DefaultScatterConfig() *ScatterConfig {
 	return &ScatterConfig{
 		XaCheckInterval: 10,
 		XaCheckDir:      "./xacheck", //In the production environment, don't set the tmp dir
+		XaCheckRetrys:	10,
 	}
 }
 
