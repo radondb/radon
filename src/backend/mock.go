@@ -88,6 +88,7 @@ func MockScatterDefault(log *xlog.Log) *config.ScatterConfig {
 	return &config.ScatterConfig{
 		XaCheckInterval: 1,
 		XaCheckDir:      dir,
+		XaCheckRetrys:   10,
 	}
 }
 
@@ -96,6 +97,7 @@ func MockScatterDefault2(dir string) *config.ScatterConfig {
 	return &config.ScatterConfig{
 		XaCheckInterval: 1,
 		XaCheckDir:      dir,
+		XaCheckRetrys:   10,
 	}
 }
 
