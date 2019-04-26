@@ -16,7 +16,6 @@ import (
 	"backend"
 	"config"
 
-	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
@@ -134,10 +133,9 @@ func (p *Privilege) CheckPrivilege(db string, user string, node sqlparser.Statem
 }
 
 // Check -- checks the session privilege on the database.
-func (p *Privilege) Check(session *driver.Session, node sqlparser.Statement) error {
-	db := ""
+func (p *Privilege) Check(database string, user string, node sqlparser.Statement) error {
 	ok := true
-	user := session.User()
+	db := database
 
 	if node != nil {
 		sqlparser.Walk(func(nod sqlparser.SQLNode) (kontinue bool, err error) {
@@ -145,17 +143,20 @@ func (p *Privilege) Check(session *driver.Session, node sqlparser.Statement) err
 			case sqlparser.TableName:
 				if !nod.Qualifier.IsEmpty() {
 					db = nod.Qualifier.String()
-					if !p.CheckPrivilege(db, user, node) {
-						ok = false
-						return false, nil
-					}
+				}
+				if !p.CheckPrivilege(db, user, node) {
+					ok = false
+					return false, nil
 				}
 			}
 			return true, nil
 		}, node)
-	} else {
-		db = session.Schema()
-		if !p.CheckPrivilege(db, user, nil) {
+	}
+
+	// Not table node, such as show.
+	if ok {
+		// Not table node or node is nil.
+		if !p.CheckPrivilege(db, user, node) {
 			ok = false
 		}
 	}
@@ -274,26 +275,6 @@ func (p *Privilege) loadUserPrivileges() (map[string]userPriv, error) {
 		privis[userpriv.user] = userpriv
 	}
 	return privis, nil
-}
-
-func (p *Privilege) getPrivByDbUser(db string, user string) *privilege {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
-	userpriv, ok := p.userPrivs[user]
-	// User privi canot be found.
-	if !ok {
-		return nil
-	}
-
-	dbpriv, ok := userpriv.dbPrivs[db]
-	if !ok {
-		// Db privilege canot be found, returns the user privileges.
-		return &userpriv.priv
-	} else {
-		// Returns db privileges.
-		return &dbpriv.priv
-	}
 }
 
 // execute -- get the result from backend.
