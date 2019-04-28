@@ -52,8 +52,6 @@ func testAggregate(typ string, result *Result) {
 		result.Rows[i] = v
 		i++
 	}
-	result.OrderedByAsc(result.Fields[0].Name)
-	result.Sort()
 }
 
 func TestAggregator(t *testing.T) {
