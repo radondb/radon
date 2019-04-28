@@ -30,7 +30,6 @@ type Result struct {
 	Warnings     uint16                `json:"warnings"`
 	Rows         [][]Value             `json:"rows"`
 	Extras       *querypb.ResultExtras `json:"extras"`
-	sorters      []*sorter
 	State        ResultState
 }
 

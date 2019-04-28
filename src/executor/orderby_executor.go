@@ -10,9 +10,11 @@ package executor
 
 import (
 	"planner"
+	"sort"
 	"xcontext"
 
 	"github.com/pkg/errors"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -36,21 +38,44 @@ func NewOrderByExecutor(log *xlog.Log, plan planner.Plan) *OrderByExecutor {
 
 // Execute used to execute the executor.
 func (executor *OrderByExecutor) Execute(ctx *xcontext.ResultContext) error {
+	var err error
 	rs := ctx.Results
 	plan := executor.plan.(*planner.OrderByPlan)
 
-	for _, orderby := range plan.OrderBys {
-		switch orderby.Direction {
-		case planner.ASC:
-			if err := rs.OrderedByAsc(orderby.Table, orderby.Field); err != nil {
-				return errors.WithStack(err)
+	sort.Slice(rs.Rows, func(i, j int) bool {
+		// If there are any errors below, the function sets
+		// the external err and returns true. Once err is set,
+		// all subsequent calls return true. This will make
+		// Slice think that all elements are in the correct
+		// order and return more quickly.
+		for _, orderby := range plan.OrderBys {
+			if err != nil {
+				return true
 			}
-		case planner.DESC:
-			if err := rs.OrderedByDesc(orderby.Table, orderby.Field); err != nil {
-				return errors.WithStack(err)
+
+			idx := -1
+			for k, f := range rs.Fields {
+				if f.Name == orderby.Field && (orderby.Table == "" || orderby.Table == f.Table) {
+					idx = k
+					break
+				}
 			}
+			if idx == -1 {
+				err = errors.Errorf("can.not.find.the.orderby.field[%s].direction.asc", orderby.Field)
+				return true
+			}
+
+			cmp := sqltypes.NullsafeCompare(rs.Rows[i][idx], rs.Rows[j][idx])
+			if cmp == 0 {
+				continue
+			}
+			if orderby.Direction == planner.DESC {
+				cmp = -cmp
+			}
+			return cmp < 0
 		}
-	}
-	rs.Sort()
-	return nil
+		return true
+	})
+
+	return err
 }

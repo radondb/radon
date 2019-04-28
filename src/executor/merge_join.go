@@ -10,6 +10,7 @@ package executor
 
 import (
 	"planner"
+	"sort"
 	"sync"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -22,10 +23,16 @@ func sortMergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode) {
 	var wg sync.WaitGroup
 	sort := func(keys []planner.JoinKey, res *sqltypes.Result) {
 		defer wg.Done()
-		for _, key := range keys {
-			res.OrderedByAsc(key.Table, key.Field)
-		}
-		res.Sort()
+		sort.Slice(res.Rows, func(i, j int) bool {
+			for _, key := range keys {
+				cmp := sqltypes.NullsafeCompare(res.Rows[i][key.Index], res.Rows[j][key.Index])
+				if cmp == 0 {
+					continue
+				}
+				return cmp < 0
+			}
+			return true
+		})
 	}
 	wg.Add(1)
 	go sort(node.LeftKeys, lres)
