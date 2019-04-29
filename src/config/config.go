@@ -218,7 +218,7 @@ func DefaultScatterConfig() *ScatterConfig {
 	return &ScatterConfig{
 		XaCheckInterval: 10,
 		XaCheckDir:      "./xacheck", //In the production environment, don't set the tmp dir
-		XaCheckRetrys:	10,
+		XaCheckRetrys:   10,
 	}
 }
 

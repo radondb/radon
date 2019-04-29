@@ -17,6 +17,7 @@ import (
 
 	"config"
 	"fakedb"
+	"plugins/privilege"
 
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
@@ -135,6 +136,8 @@ func MockProxy1(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func())
 	if err := config.WriteConfig(path.Join(conf.Proxy.MetaDir, "backend.json"), backendsConf); err != nil {
 		log.Panic("mock.proxy.write.backends.config.error:%+v", err)
 	}
+
+	privilege.MockInitPrivilege(fakedbs)
 
 	// Proxy.
 	mockJSON := tmpDir + "/radon_mock.json"

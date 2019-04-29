@@ -11,177 +11,21 @@ package privilege
 import (
 	"testing"
 
-	"proxy"
+	"backend"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/xelabs/go-mysqlstack/xlog"
-
 	"github.com/xelabs/go-mysqlstack/sqlparser"
-	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
-)
-
-var (
-	userRs = &sqltypes.Result{
-		Fields: []*querypb.Field{
-			{
-				Name: "Host",
-				Type: querypb.Type_VARCHAR,
-			},
-
-			{
-				Name: "User",
-				Type: querypb.Type_VARCHAR,
-			},
-
-			{
-				Name: "Select_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Insert_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Update_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Delete_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Create_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Drop_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Alter_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Index_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Show_db_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Super_priv",
-				Type: querypb.Type_ENUM,
-			},
-		},
-		Rows: [][]sqltypes.Value{
-			{
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("%")),
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("mock")),
-			},
-		},
-	}
-
-	dbRs = &sqltypes.Result{
-		Fields: []*querypb.Field{
-			{
-				Name: "Host",
-				Type: querypb.Type_VARCHAR,
-			},
-
-			{
-				Name: "User",
-				Type: querypb.Type_VARCHAR,
-			},
-
-			{
-				Name: "Select_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Insert_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Update_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Delete_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Create_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Drop_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Alter_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Index_priv",
-				Type: querypb.Type_ENUM,
-			},
-
-			{
-				Name: "Db",
-				Type: querypb.Type_VARCHAR,
-			},
-		},
-		Rows: [][]sqltypes.Value{
-			{
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("%")),
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("mock")),
-			},
-		},
-	}
+	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
 func TestLoadUserPrivilege(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
-
-	// Init privileges.
-	{
-		// userRS.
-		for i := 2; i < len(userRs.Fields); i++ {
-			userRs.Rows[0] = append(userRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_ENUM, []byte("Y")))
-		}
-
-		// dbRs.
-		for i := 2; i < len(userRs.Fields); i++ {
-			dbRs.Rows[0] = append(dbRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_ENUM, []byte("Y")))
-		}
-		dbRs.Rows[0] = append(dbRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test")))
-	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
 	// Create scatter and query handler.
-	fakedbs, proxy, cleanup := proxy.MockProxy(log)
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
-	scatter := proxy.Scatter()
 
-	fakedbs.AddQuery("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, alter_priv, index_priv, show_db_priv, super_priv from mysql.user", userRs)
-	fakedbs.AddQueryPattern("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, grant_priv, alter_priv, index_priv, db from .*", dbRs)
+	MockInitPrivilege(fakedbs)
 
 	handler := NewPrivilege(log, nil, scatter)
 	err := handler.Init()
@@ -284,7 +128,7 @@ func TestLoadUserPrivilege(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i, test := range tests {
 		var err error
 		var errmsg string
 		var node sqlparser.Statement
@@ -294,7 +138,7 @@ func TestLoadUserPrivilege(t *testing.T) {
 			assert.Nil(t, err)
 		}
 		err = handler.Check(test.db, test.user, node)
-		log.Debug("err:%v", err)
+		log.Warning("err:%v, i:%d", err, i)
 		if err != nil {
 			errmsg = err.Error()
 		}
@@ -305,28 +149,11 @@ func TestLoadUserPrivilege(t *testing.T) {
 func TestLoadUserPrivilegeDenied(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 
-	// Init privileges.
-	{
-		// userRS.
-		for i := 2; i < len(userRs.Fields); i++ {
-			userRs.Rows[0][i] = sqltypes.MakeTrusted(querypb.Type_ENUM, []byte("N"))
-		}
-
-		// dbRs.
-		i := 2
-		for ; i < len(userRs.Fields); i++ {
-			dbRs.Rows[0][i] = sqltypes.MakeTrusted(querypb.Type_ENUM, []byte("N"))
-		}
-		dbRs.Rows[0][i] = sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test"))
-	}
-
 	// Create scatter and query handler.
-	fakedbs, proxy, cleanup := proxy.MockProxy(log)
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
-	scatter := proxy.Scatter()
 
-	fakedbs.AddQuery("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, alter_priv, index_priv, show_db_priv, super_priv from mysql.user", userRs)
-	fakedbs.AddQueryPattern("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, grant_priv, alter_priv, index_priv, db from .*", dbRs)
+	MockInitPrivilege(fakedbs)
 
 	handler := NewPrivilege(log, nil, scatter)
 	err := handler.Init()

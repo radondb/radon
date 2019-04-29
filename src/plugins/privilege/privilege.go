@@ -29,6 +29,7 @@ type privilege struct {
 	deletePriv bool
 	createPriv bool
 	dropPriv   bool
+	grantPriv  bool
 	alterPriv  bool
 	indexPriv  bool
 	showDBPriv bool
@@ -188,16 +189,14 @@ func (p *Privilege) UpdatePrivileges() error {
 }
 
 // loadPrivileges -- used to get the backend's user privileges.
-// mysql> select Host, Db, User, Select_priv, Insert_priv, Update_priv, Delete_priv, Create_priv, Drop_priv, Grant_priv, Alter_priv from mysql.db;
-// +-----------+--------------------+---------------+-------------+-------------+-------------+-------------+-------------+-----------+------------+------------+
-// | Host      | Db                 | User          | Select_priv | Insert_priv | Update_priv | Delete_priv | Create_priv | Drop_priv | Grant_priv | Alter_priv |
-// +-----------+--------------------+---------------+-------------+-------------+-------------+-------------+-------------+-----------+------------+------------+
-// | localhost | performance_schema | mysql.session | Y           | N           | N           | N           | N           | N         | N          | N          |
-// | localhost | sys                | mysql.sys     | N           | N           | N           | N           | N           | N         | N          | N          |
-// | localhost | test1              | u1            | Y           | Y           | Y           | Y           | Y           | Y         | N          | Y          |
-// | %         | db1                | x2            | Y           | Y           | Y           | Y           | Y           | N         | N          | N          |
-// | %         | db2                | x2            | Y           | Y           | Y           | Y           | Y           | N         | N          | N          |
-// +-----------+--------------------+---------------+-------------+-------------+-------------+-------------+-------------+-----------+------------+------------+
+// mysql> select Host, User, Select_priv, Insert_priv, Update_priv, Delete_priv, Create_priv, Drop_priv, Grant_priv, Alter_priv, Index_priv, db from mysql.db;
+//+-----------+---------------+-------------+-------------+-------------+-------------+-------------+-----------+------------+------------+------------+--------------------+
+//| Host      | User          | Select_priv | Insert_priv | Update_priv | Delete_priv | Create_priv | Drop_priv | Grant_priv | Alter_priv | Index_priv | db                 |
+//+-----------+---------------+-------------+-------------+-------------+-------------+-------------+-----------+------------+------------+------------+--------------------+
+//| localhost | mysql.session | Y           | N           | N           | N           | N           | N         | N          | N          | N          | performance_schema |
+//| localhost | mysql.sys     | N           | N           | N           | N           | N           | N         | N          | N          | N          | sys                |
+//| %         | a             | Y           | Y           | N           | N           | Y           | N         | N          | N          | N          | p1                 |
+//+-----------+---------------+-------------+-------------+-------------+-------------+-------------+-----------+------------+------------+------------+--------------------+
 func (p *Privilege) loadDBPrivileges(host string, user string) (map[string]dbPriv, error) {
 	privis := make(map[string]dbPriv)
 
@@ -218,25 +217,26 @@ func (p *Privilege) loadDBPrivileges(host string, user string) (map[string]dbPri
 				deletePriv: string(r[5].Raw()) == "Y",
 				createPriv: string(r[6].Raw()) == "Y",
 				dropPriv:   string(r[7].Raw()) == "Y",
-				alterPriv:  string(r[8].Raw()) == "Y",
-				indexPriv:  string(r[9].Raw()) == "Y",
+				grantPriv:  string(r[8].Raw()) == "Y",
+				alterPriv:  string(r[9].Raw()) == "Y",
+				indexPriv:  string(r[10].Raw()) == "Y",
 			},
-			db: string(r[10].Raw()),
+			db: string(r[11].Raw()),
 		}
 		privis[dbpriv.db] = dbpriv
 	}
 	return privis, nil
 }
 
-// mysql> select Host, User, Select_priv, Insert_priv, Update_priv, Delete_priv, Create_priv, Drop_priv, Grant_priv, Alter_priv from mysql.user;
-// +-----------+---------------+-------------+-------------+-------------+-------------+-------------+-----------+------------+------------+
-// | Host      | User          | Select_priv | Insert_priv | Update_priv | Delete_priv | Create_priv | Drop_priv | Grant_priv | Alter_priv |
-// +-----------+---------------+-------------+-------------+-------------+-------------+-------------+-----------+------------+------------+
-// | localhost | root          | Y           | Y           | Y           | Y           | Y           | Y         | Y          | Y          |
-// | %         | x3            | Y           | Y           | Y           | Y           | Y           | Y         | N          | Y          |
-// | %         | x4            | N           | N           | N           | N           | N           | N         | N          | N          |
-// | %         | xall          | Y           | Y           | Y           | Y           | Y           | Y         | N          | Y          |
-// +-----------+---------------+-------------+-------------+-------------+-------------+-------------+-----------+------------+------------+
+// mysql> select Host, User, Select_priv, Insert_priv, Update_priv, Delete_priv, Create_priv, Drop_priv, Alter_priv, Index_priv, Show_db_priv, Super_priv from mysql.user
+//+-----------+---------------+-------------+-------------+-------------+-------------+-------------+-----------+------------+------------+--------------+------------+
+//| Host      | User          | Select_priv | Insert_priv | Update_priv | Delete_priv | Create_priv | Drop_priv | Alter_priv | Index_priv | Show_db_priv | Super_priv |
+//+-----------+---------------+-------------+-------------+-------------+-------------+-------------+-----------+------------+------------+--------------+------------+
+//| %         | root          | Y           | Y           | Y           | Y           | Y           | Y         | Y          | Y          | Y            | Y          |
+//| localhost | mysql.session | N           | N           | N           | N           | N           | N         | N          | N          | N            | Y          |
+//| localhost | mysql.sys     | N           | N           | N           | N           | N           | N         | N          | N          | N            | N          |
+//| %         | a             | N           | N           | N           | N           | N           | N         | N          | N          | N            | N          |
+//+-----------+---------------+-------------+-------------+-------------+-------------+-------------+-----------+------------+------------+--------------+------------+
 func (p *Privilege) loadUserPrivileges() (map[string]userPriv, error) {
 	privis := make(map[string]userPriv)
 
