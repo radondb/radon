@@ -11,6 +11,9 @@ package plugins
 import (
 	"testing"
 
+	"backend"
+	"plugins/privilege"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
@@ -18,11 +21,20 @@ import (
 func TestPlugins(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
 
-	plugin := NewPlugin(log, nil, nil, nil)
+	//Create scatter and query handler.
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+
+	privilege.MockInitPrivilege(fakedbs)
+
+	plugin := NewPlugin(log, nil, nil, scatter)
 	err := plugin.Init()
 	assert.Nil(t, err)
 	defer plugin.Close()
 
 	autoincPlug := plugin.PlugAutoIncrement()
 	assert.NotNil(t, autoincPlug)
+
+	privilegePlug := plugin.PlugPrivilege()
+	assert.NotNil(t, privilegePlug)
 }

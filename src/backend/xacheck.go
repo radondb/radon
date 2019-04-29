@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	xacheckJSONFile       = "xacheck.json"
+	xacheckJSONFile         = "xacheck.json"
 	xacheckTimesOutJSONFile = "xacheck_timesout.json"
 )
 

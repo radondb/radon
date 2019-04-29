@@ -14,6 +14,7 @@ import (
 	"router"
 
 	"plugins/autoincrement"
+	"plugins/privilege"
 
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
@@ -25,6 +26,7 @@ type Plugin struct {
 	router        *router.Router
 	scatter       *backend.Scatter
 	autoincrement autoincrement.AutoIncrementHandler
+	privilege     privilege.PrivilegeHandler
 }
 
 // NewPlugin -- creates new Plugin.
@@ -37,26 +39,42 @@ func NewPlugin(log *xlog.Log, conf *config.Config, router *router.Router, scatte
 	}
 }
 
-// Init -- used to regeister plug to plugins.
+// Init -- used to register plug to plugins.
 func (plugin *Plugin) Init() error {
 	log := plugin.log
 	router := plugin.router
+	scatter := plugin.scatter
+	config := plugin.conf
 
-	// Regeister AutoIncrement plug.
+	// Register AutoIncrement plug.
 	autoincPlug := autoincrement.NewAutoIncrement(log, router)
 	if err := autoincPlug.Init(); err != nil {
 		return err
 	}
 	plugin.autoincrement = autoincPlug
+
+	// Register privilege plug.
+	privilegePlug := privilege.NewPrivilege(log, config, scatter)
+	if err := privilegePlug.Init(); err != nil {
+		return err
+	}
+	plugin.privilege = privilegePlug
+
 	return nil
 }
 
 // Close -- do nothing.
 func (plugin *Plugin) Close() {
 	plugin.autoincrement.Close()
+	plugin.privilege.Close()
 }
 
 // PlugAutoIncrement -- return AutoIncrement plug.
 func (plugin *Plugin) PlugAutoIncrement() autoincrement.AutoIncrementHandler {
 	return plugin.autoincrement
+}
+
+// PlugPrivilege -- return Privilege plug.
+func (plugin *Plugin) PlugPrivilege() privilege.PrivilegeHandler {
+	return plugin.privilege
 }
