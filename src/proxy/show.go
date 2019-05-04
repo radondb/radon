@@ -43,6 +43,9 @@ func (spanner *Spanner) handleShowCreateDatabase(session *driver.Session, query 
 }
 
 // handleShowTableStatus used to handle the 'SHOW TABLE STATUS' command.
+// | Name          | Engine | Version | Row_format  | Rows    | Avg_row_length | Data_length | Max_data_length     | Index_length | Data_free            | Auto_increment | Create_time         | Update_time         | Check_time | Collation       | Checksum | Create_options | Comment |
+// +---------------+--------+---------+-------------+---------+----------------+-------------+---------------------+--------------+----------------------+----------------+---------------------+---------------------+------------+-----------------+----------+----------------+---------+
+// | block_0000    | TokuDB |      10 | tokudb_zstd |    6134 |           1395 |     8556930 | 9223372036854775807 |       509122 | 18446744073704837574 |           NULL | 2019-04-24 17:36:10 | 2019-05-04 12:47:45 | NULL       | utf8_general_ci |     NULL |                |
 func (spanner *Spanner) handleShowTableStatus(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	ast := node.(*sqlparser.Show)
 	router := spanner.router
@@ -97,15 +100,29 @@ func (spanner *Spanner) handleShowTableStatus(session *driver.Session, query str
 				continue
 			}
 
-			v := (*rewrittenRow)[4].ToNative().(uint64) + row[4].ToNative().(uint64)
-			if (*rewrittenRow)[4], err = sqltypes.BuildConverted((*rewrittenRow)[4].Type(), v); err != nil {
+			// Rows.
+			rows := (*rewrittenRow)[4].ToNative().(uint64) + row[4].ToNative().(uint64)
+			if (*rewrittenRow)[4], err = sqltypes.BuildConverted((*rewrittenRow)[4].Type(), rows); err != nil {
 				return nil, err
 			}
 
+			// Avg_row_length.
 			if (*rewrittenRow)[5].ToNative().(uint64) < row[5].ToNative().(uint64) {
 				if (*rewrittenRow)[5], err = sqltypes.BuildConverted((*rewrittenRow)[5].Type(), row[5]); err != nil {
 					return nil, err
 				}
+			}
+
+			// Data_length.
+			datalength := (*rewrittenRow)[6].ToNative().(uint64) + row[6].ToNative().(uint64)
+			if (*rewrittenRow)[6], err = sqltypes.BuildConverted((*rewrittenRow)[6].Type(), datalength); err != nil {
+				return nil, err
+			}
+
+			// Index_length.
+			indexlength := (*rewrittenRow)[8].ToNative().(uint64) + row[8].ToNative().(uint64)
+			if (*rewrittenRow)[8], err = sqltypes.BuildConverted((*rewrittenRow)[8].Type(), indexlength); err != nil {
+				return nil, err
 			}
 
 			var curTime, oldTime time.Time
