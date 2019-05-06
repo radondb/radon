@@ -69,11 +69,13 @@ func (spanner *Spanner) handleShowTableStatus(session *driver.Session, query str
 		return nil, err
 	}
 
-	// we will do 4 things to merge the sharding tables to one table.
-	// 1. the Name(0) will be removed suffix.
-	// 2. the Rows(4) will be accumulated from the value which is estimated in the sharding tables.
-	// 3. the Avg_row_length(5) will be the biggest.
-	// 4. the Update_time(12) will be the most recent.
+	// we will do 6 things to merge the sharding tables to one table.
+	// 1. the Name(index: 0) will be removed suffix.
+	// 2. the Rows(index: 4) will be accumulated from the value which is estimated in the sharding tables.
+	// 3. the Avg_row_length(index: 5) will be the biggest.
+	// 4. the Data_length(index: 6) will be accumulated...
+	// 5. the Index_length(index: 8) will be accumulated...
+	// 6. the Update_time(index: 12) will be the most recent.
 	newqr := &sqltypes.Result{}
 	tables := make(map[string]*[]sqltypes.Value)
 	global := make(map[string]struct{})
