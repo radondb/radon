@@ -150,6 +150,48 @@ func MockProxy1(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func())
 	}
 }
 
+// MockProxyPrivilegeN mocks the proxy with Privilege N.
+func MockProxyPrivilegeN(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func()) {
+	tmpDir := fakedb.GetTmpDir("", "radon_mock_", log)
+
+	// set Blocks 128
+	conf.Router.Blocks = 128
+	// Fake backends.
+	fakedbs := fakedb.New(log, 5)
+
+	port := randomPort(15000, 20000)
+	addr := fmt.Sprintf(":%d", port)
+
+	conf.Proxy.Endpoint = addr
+
+	fileFormat := "20060102150405.000"
+	t := time.Now().UTC()
+	timestamp := t.Format(fileFormat)
+	metaDir := tmpDir + "/test_radonmeta_" + timestamp
+	conf.Proxy.MetaDir = metaDir
+
+	if x := os.MkdirAll(metaDir, 0777); x != nil {
+		log.Panic("%+v", x)
+	}
+
+	backendsConf := &config.BackendsConfig{Backends: fakedbs.BackendConfs()}
+	if err := config.WriteConfig(path.Join(conf.Proxy.MetaDir, "backend.json"), backendsConf); err != nil {
+		log.Panic("mock.proxy.write.backends.config.error:%+v", err)
+	}
+
+	privilege.MockInitPrivilegeN(fakedbs)
+
+	// Proxy.
+	mockJSON := tmpDir + "/radon_mock.json"
+	proxy := NewProxy(log, mockJSON, "", conf)
+	proxy.Start()
+	return fakedbs, proxy, func() {
+		proxy.Stop()
+		fakedbs.Close()
+		os.RemoveAll(tmpDir)
+	}
+}
+
 // MockConfigIdleTxnTimeout1 mocks the config with IdleTxnTimeout=1.
 func MockConfigIdleTxnTimeout1() *config.Config {
 	conf := MockDefaultConfig()

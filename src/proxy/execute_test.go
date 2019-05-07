@@ -455,3 +455,50 @@ func TestProxyExecuteMultiStmtTxnDMLError(t *testing.T) {
 		assert.Nil(t, err)
 	}
 }
+
+func TestProxyExecutPrivilegeN(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxyPrivilegeN(log, MockDefaultConfig())
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("xa .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// select.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "select * from test.t1"
+		fakedbs.AddQuery(query, fakedb.Result3)
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+		want := "Access denied for user 'mock'@'test' (errno 1045) (sqlstate 28000)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+}
