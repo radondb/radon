@@ -23,6 +23,24 @@ import (
 )
 
 var (
+	showDatabasesResult = &sqltypes.Result{
+		RowsAffected: 2,
+		Fields: []*querypb.Field{
+			{
+				Name: "Database",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test1")),
+			},
+		},
+	}
+
 	showTableStatusResult1 = &sqltypes.Result{
 		RowsAffected: 13,
 		Fields: []*querypb.Field{
@@ -228,7 +246,7 @@ func TestProxyShowDatabases(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("show databases", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("show databases", showDatabasesResult)
 	}
 
 	// show databases.
@@ -237,8 +255,34 @@ func TestProxyShowDatabases(t *testing.T) {
 		assert.Nil(t, err)
 		defer client.Close()
 		query := "show databases"
-		_, err = client.FetchAll(query, -1)
+		qr, err := client.FetchAll(query, -1)
 		assert.Nil(t, err)
+		// the user with super privilege can see all databases.
+		assert.EqualValues(t, 2, len(qr.Rows))
+	}
+}
+
+func TestProxyShowDatabasesPrivilege(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxyPrivilegeNotSuper(log, MockDefaultConfig())
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("show databases", showDatabasesResult)
+	}
+
+	// show databases.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show databases"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		assert.EqualValues(t, 1, len(qr.Rows))
 	}
 }
 
@@ -781,6 +825,61 @@ func TestProxyShowProcesslist(t *testing.T) {
 		assert.Nil(t, err)
 		log.Info("%+v", qr.Rows)
 	}
+	wg.Wait()
+}
+
+func TestProxyShowProcesslistPrivilege(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxyPrivilegeNotSuper(log, MockDefaultConfig())
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("select * .*", &sqltypes.Result{})
+		fakedbs.AddQueryDelay("select * from test.t1_0002", &sqltypes.Result{}, 3000)
+		fakedbs.AddQueryDelay("select * from test.t1_0004", &sqltypes.Result{}, 3000)
+	}
+
+	var wg sync.WaitGroup
+	var clients []driver.Conn
+	nums := 2
+	// long query.
+	{
+		for i := 0; i < nums; i++ {
+			client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+			assert.Nil(t, err)
+			wg.Add(1)
+			go func(c driver.Conn) {
+				defer wg.Done()
+				query := "select * from t1"
+				_, err = client.FetchAll(query, -1)
+			}(client)
+			clients = append(clients, client)
+		}
+	}
+
+	// show processlist.
+	{
+		time.Sleep(time.Second)
+		show, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		qr, err := show.FetchAll("show processlist", -1)
+		assert.Nil(t, err)
+		assert.Equal(t, nums+1, int(qr.RowsAffected))
+	}
+
+	// show processlist.
+	{
+		time.Sleep(time.Second)
+		show, err := driver.NewConn("mock1", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		qr, err := show.FetchAll("show processlist", -1)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, int(qr.RowsAffected))
+	}
+
 	wg.Wait()
 }
 
