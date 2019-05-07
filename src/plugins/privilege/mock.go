@@ -149,8 +149,10 @@ var (
 	}
 )
 
-// MockInitPrivilege init the Rows.
-func MockInitPrivilege(fakedbs *fakedb.DB) {
+// MockInitPrivilegeY init the Rows with Y.
+func MockInitPrivilegeY(fakedbs *fakedb.DB) {
+	UserRs.Rows[0] = UserRs.Rows[0][0:2]
+	DbRs.Rows[0] = DbRs.Rows[0][0:2]
 	{
 		// userRS.
 		for i := 2; i < len(UserRs.Fields); i++ {
@@ -158,7 +160,50 @@ func MockInitPrivilege(fakedbs *fakedb.DB) {
 		}
 
 		// dbRs.
+		for i := 2; i < len(DbRs.Fields)-1; i++ {
+			DbRs.Rows[0] = append(DbRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_ENUM, []byte("Y")))
+		}
+		DbRs.Rows[0] = append(DbRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test")))
+	}
+
+	fakedbs.AddQuery("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, alter_priv, index_priv, show_db_priv, super_priv from mysql.user", UserRs)
+	fakedbs.AddQueryPattern("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, grant_priv, alter_priv, index_priv, db from .*", DbRs)
+}
+
+// MockInitPrivilegeN init the Rows with N.
+func MockInitPrivilegeN(fakedbs *fakedb.DB) {
+	UserRs.Rows[0] = UserRs.Rows[0][0:2]
+	DbRs.Rows[0] = DbRs.Rows[0][0:2]
+	{
+		// userRS.
 		for i := 2; i < len(UserRs.Fields); i++ {
+			UserRs.Rows[0] = append(UserRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_ENUM, []byte("N")))
+		}
+
+		// dbRs.
+		for i := 2; i < len(DbRs.Fields)-1; i++ {
+			DbRs.Rows[0] = append(DbRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_ENUM, []byte("N")))
+		}
+		DbRs.Rows[0] = append(DbRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test")))
+	}
+
+	fakedbs.AddQuery("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, alter_priv, index_priv, show_db_priv, super_priv from mysql.user", UserRs)
+	fakedbs.AddQueryPattern("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, grant_priv, alter_priv, index_priv, db from .*", DbRs)
+}
+
+// MockInitPrivilegeNotSuper init the Rows with N to Super_priv .
+func MockInitPrivilegeNotSuper(fakedbs *fakedb.DB) {
+	UserRs.Rows[0] = UserRs.Rows[0][0:2]
+	DbRs.Rows[0] = DbRs.Rows[0][0:2]
+	{
+		// userRS.
+		for i := 2; i < len(UserRs.Fields)-1; i++ {
+			UserRs.Rows[0] = append(UserRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_ENUM, []byte("Y")))
+		}
+		UserRs.Rows[0] = append(UserRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("N")))
+
+		// dbRs.
+		for i := 2; i < len(DbRs.Fields)-1; i++ {
 			DbRs.Rows[0] = append(DbRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_ENUM, []byte("Y")))
 		}
 		DbRs.Rows[0] = append(DbRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test")))

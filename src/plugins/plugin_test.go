@@ -25,7 +25,7 @@ func TestPlugins(t *testing.T) {
 	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
 
-	privilege.MockInitPrivilege(fakedbs)
+	privilege.MockInitPrivilegeY(fakedbs)
 
 	plugin := NewPlugin(log, nil, nil, scatter)
 	err := plugin.Init()
