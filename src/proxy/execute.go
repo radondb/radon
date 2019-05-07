@@ -196,6 +196,11 @@ func (spanner *Spanner) ExecuteStreamFetch(session *driver.Session, database str
 
 // ExecuteDML used to execute some DML querys to shards.
 func (spanner *Spanner) ExecuteDML(session *driver.Session, database string, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+	privilegePlug := spanner.plugins.PlugPrivilege()
+	if err := privilegePlug.Check(session.Schema(), session.User(), node); err != nil {
+		return nil, err
+	}
+
 	if spanner.isTwoPC() {
 		txSession := spanner.sessions.getTxnSession(session)
 		if spanner.IsDML(node) {

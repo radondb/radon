@@ -147,6 +147,12 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 	if err := route.DatabaseACL(database); err != nil {
 		return nil, err
 	}
+
+	privilegePlug := spanner.plugins.PlugPrivilege()
+	if err := privilegePlug.Check(database, session.User(), node); err != nil {
+		return nil, err
+	}
+
 	switch ddl.Action {
 	case sqlparser.CreateDBStr:
 		if node.IfNotExists && checkDatabaseExists(database, route) {

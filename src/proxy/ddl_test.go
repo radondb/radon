@@ -893,3 +893,26 @@ func TestProxyDDLUnknowDatabase236(t *testing.T) {
 	_, err = client.FetchAll(query, -1)
 	assert.Nil(t, err)
 }
+
+func TestProxyDDLDBPrivilegeN(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxyPrivilegeN(log, MockDefaultConfig())
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern(".* database .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		want := "Access denied for user 'mock'@'test' (errno 1045) (sqlstate 28000)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+}
