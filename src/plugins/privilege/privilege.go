@@ -104,6 +104,13 @@ func (p *Privilege) Init() error {
 	return nil
 }
 
+func (p *Privilege) IsSuperPriv(user string) bool {
+	p.mu.RLock()
+	userpriv := p.userPrivs[user]
+	p.mu.RUnlock()
+	return userpriv.priv.superPriv
+}
+
 // https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html
 func (p *Privilege) CheckPrivilege(db string, user string, node sqlparser.Statement) bool {
 	p.mu.RLock()
@@ -125,6 +132,7 @@ func (p *Privilege) CheckPrivilege(db string, user string, node sqlparser.Statem
 			return (userpriv.priv.superPriv || userpriv.priv.showDBPriv || dbpriv.priv.showDBPriv)
 		case *sqlparser.DDL:
 			user := (userpriv.priv.createPriv && userpriv.priv.dropPriv && userpriv.priv.alterPriv && userpriv.priv.indexPriv)
+			//TODO: just grant part of the oprations and support
 			db := (dbpriv.priv.createPriv && dbpriv.priv.dropPriv && dbpriv.priv.alterPriv && dbpriv.priv.indexPriv)
 			return (userpriv.priv.superPriv || user || db)
 		}
@@ -154,6 +162,7 @@ func (p *Privilege) Check(database string, user string, node sqlparser.Statement
 		}, node)
 	}
 
+	//TODO: if table node, skip the below step.
 	// Not table node, such as show.
 	if ok {
 		// Not table node or node is nil.
@@ -166,6 +175,23 @@ func (p *Privilege) Check(database string, user string, node sqlparser.Statement
 		return sqldb.NewSQLErrorf(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'@'%v'", user, db)
 	}
 	return nil
+}
+
+// GetUserPrivilegeDBS get the user dbPrivs if the user is not super.
+func (p *Privilege) GetUserPrivilegeDBS(user string) (isSuper bool, dbMap map[string]struct{}) {
+	p.mu.RLock()
+	userpriv := p.userPrivs[user]
+	p.mu.RUnlock()
+
+	if userpriv.priv.superPriv {
+		return true, nil
+	}
+
+	dbs := make(map[string]struct{})
+	for db, _ := range userpriv.dbPrivs {
+		dbs[db] = struct{}{}
+	}
+	return false, dbs
 }
 
 // Close -- close the privilege plugin.

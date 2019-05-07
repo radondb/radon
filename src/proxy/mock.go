@@ -137,7 +137,7 @@ func MockProxy1(log *xlog.Log, conf *config.Config) (*fakedb.DB, *Proxy, func())
 		log.Panic("mock.proxy.write.backends.config.error:%+v", err)
 	}
 
-	privilege.MockInitPrivilege(fakedbs)
+	privilege.MockInitPrivilegeY(fakedbs)
 
 	// Proxy.
 	mockJSON := tmpDir + "/radon_mock.json"
