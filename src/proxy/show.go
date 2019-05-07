@@ -29,7 +29,30 @@ import (
 
 // handleShowDatabases used to handle the 'SHOW DATABASES' command.
 func (spanner *Spanner) handleShowDatabases(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
-	return spanner.ExecuteSingle(query)
+	qr, err := spanner.ExecuteSingle(query)
+	if err != nil {
+		return nil, err
+	}
+
+	privilegePlug := spanner.plugins.PlugPrivilege()
+	isSuper, dbs := privilegePlug.GetUserPrivilegeDBS(session.User())
+	if isSuper {
+		return qr, nil
+	} else {
+		newqr := &sqltypes.Result{}
+		for _, row := range qr.Rows {
+			name := string(row[0].Raw())
+			if _, ok := dbs[name]; ok {
+				newqr.RowsAffected++
+				newqr.Rows = append(newqr.Rows, row)
+			}
+		}
+
+		newqr.Fields = []*querypb.Field{
+			{Name: "Database", Type: querypb.Type_VARCHAR},
+		}
+		return newqr, nil
+	}
 }
 
 // handleShowEngines used to handle the 'SHOW ENGINES' command.
@@ -326,7 +349,15 @@ func (spanner *Spanner) handleShowProcesslist(session *driver.Session, query str
 		{Name: "Rows_sent", Type: querypb.Type_INT64},
 		{Name: "Rows_examined", Type: querypb.Type_INT64},
 	}
-	sessionInfos := sessions.Snapshot()
+
+	var sessionInfos []SessionInfo
+	privilegePlug := spanner.plugins.PlugPrivilege()
+	if privilegePlug.IsSuperPriv(session.User()) {
+		sessionInfos = sessions.Snapshot()
+	} else {
+		sessionInfos = sessions.SnapshotUser(session.User())
+	}
+
 	for _, info := range sessionInfos {
 		row := []sqltypes.Value{
 			sqltypes.MakeTrusted(querypb.Type_INT64, []byte(fmt.Sprintf("%v", info.ID))),

@@ -240,4 +240,6 @@ func (db *DB) addMockUser() {
 		},
 	}
 	db.AddQuery("select authentication_string from mysql.user where user='mock'", r1)
+	// Multiple users for the privilege.
+	db.AddQuery("select authentication_string from mysql.user where user='mock1'", r1)
 }

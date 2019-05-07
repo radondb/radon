@@ -94,6 +94,13 @@ func (ss *Sessions) getTxnSession(session *driver.Session) *session {
 	return ss.sessions[session.ID()]
 }
 
+// getSession used to get current connection session.
+func (ss *Sessions) getSession(id uint32) *session {
+	ss.mu.RLock()
+	defer ss.mu.RUnlock()
+	return ss.sessions[id]
+}
+
 // TxnBinding used to bind txn to the session.
 func (ss *Sessions) TxnBinding(s *driver.Session, txn backend.Transaction, node sqlparser.Statement, query string) {
 
@@ -296,6 +303,45 @@ func (ss *Sessions) SnapshotTxn() []SessionInfo {
 			info.Info = v.query
 		}
 		info.State = sessionStateInTransaction
+
+		infos = append(infos, info)
+		v.mu.Unlock()
+	}
+	ss.mu.Unlock()
+	sort.Sort(infos)
+	return infos
+}
+
+// Snapshot returns all session info about the user.
+func (ss *Sessions) SnapshotUser(user string) []SessionInfo {
+	var infos sessionInfos
+
+	now := time.Now().Unix()
+	ss.mu.Lock()
+	for _, v := range ss.sessions {
+		if v.session.User() != user {
+			continue
+		}
+
+		v.mu.Lock()
+		info := SessionInfo{
+			ID:      v.session.ID(),
+			User:    v.session.User(),
+			Host:    v.session.Addr(),
+			DB:      v.session.Schema(),
+			Command: "Sleep",
+			Time:    uint32(now - (int64)(v.session.LastQueryTime().Unix())),
+		}
+
+		if v.node != nil {
+			info.Command = "Query"
+			info.Info = v.query
+		}
+
+		if v.transaction != nil {
+			// https://dev.mysql.com/doc/refman/5.7/en/general-thread-states.html about state.
+			info.State = sessionStateInTransaction
+		}
 
 		infos = append(infos, info)
 		v.mu.Unlock()
