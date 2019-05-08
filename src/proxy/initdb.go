@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/xelabs/go-mysqlstack/driver"
+	"github.com/xelabs/go-mysqlstack/sqldb"
 )
 
 // ComInitDB impl.
@@ -23,6 +24,17 @@ func (spanner *Spanner) ComInitDB(session *driver.Session, database string) erro
 	if err := router.DatabaseACL(database); err != nil {
 		return err
 	}
+
+	privilegePlug := spanner.plugins.PlugPrivilege()
+	isSuper, dbs := privilegePlug.GetUserPrivilegeDBS(session.User())
+	if !isSuper {
+		if _, ok := dbs[database]; !ok {
+			error := sqldb.NewSQLErrorf(sqldb.ER_DBACCESS_DENIED_ERROR, "Access denied for user '%v'@'%%' to database '%v'",
+				session.User(), database)
+			return error
+		}
+	}
+
 	query := fmt.Sprintf("use %s", database)
 	if _, err := spanner.ExecuteSingle(query); err != nil {
 		return err

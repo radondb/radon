@@ -830,7 +830,7 @@ func TestProxyShowProcesslist(t *testing.T) {
 
 func TestProxyShowProcesslistPrivilege(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedbs, proxy, cleanup := MockProxyPrivilegeNotSuper(log, MockDefaultConfig())
+	fakedbs, proxy, cleanup := MockProxyPrivilegeUsers(log, MockDefaultConfig())
 	defer cleanup()
 	address := proxy.Address()
 

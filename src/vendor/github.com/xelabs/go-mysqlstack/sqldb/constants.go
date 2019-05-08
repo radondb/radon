@@ -278,6 +278,9 @@ const (
 	// ER_CON_COUNT_ERROR enum.
 	ER_CON_COUNT_ERROR uint16 = 1040
 
+	// ER_DBACCESS_DENIED_ERROR enum.
+	ER_DBACCESS_DENIED_ERROR = 1044
+
 	// ER_ACCESS_DENIED_ERROR enum.
 	ER_ACCESS_DENIED_ERROR = 1045
 
@@ -286,6 +289,9 @@ const (
 
 	// ER_BAD_DB_ERROR enum.
 	ER_BAD_DB_ERROR = 1049
+
+	// ER_KILL_DENIED_ERROR enum
+	ER_KILL_DENIED_ERROR = 1095
 
 	// ER_UNKNOWN_ERROR enum.
 	ER_UNKNOWN_ERROR = 1105
@@ -326,9 +332,11 @@ const (
 // SQLErrors is the list of sql errors.
 var SQLErrors = map[uint16]*SQLError{
 	ER_CON_COUNT_ERROR:              &SQLError{Num: ER_CON_COUNT_ERROR, State: "08004", Message: "Too many connections"},
+	ER_DBACCESS_DENIED_ERROR:        &SQLError{Num: ER_DBACCESS_DENIED_ERROR, State: "42000", Message: "Access denied for user '%-.48s'@'%' to database '%-.48s'"},
 	ER_ACCESS_DENIED_ERROR:          &SQLError{Num: ER_ACCESS_DENIED_ERROR, State: "28000", Message: "Access denied for user '%-.48s'@'%-.64s' (using password: %s)"},
 	ER_NO_DB_ERROR:                  &SQLError{Num: ER_NO_DB_ERROR, State: "3D000", Message: "No database selected"},
 	ER_BAD_DB_ERROR:                 &SQLError{Num: ER_BAD_DB_ERROR, State: "42000", Message: "Unknown database '%-.192s'"},
+	ER_KILL_DENIED_ERROR:            &SQLError{Num: ER_KILL_DENIED_ERROR, State: "HY000", Message: "You are not owner of thread '%-.192s'"},
 	ER_UNKNOWN_ERROR:                &SQLError{Num: ER_UNKNOWN_ERROR, State: "HY000", Message: "%v"},
 	ER_HOST_NOT_PRIVILEGED:          &SQLError{Num: ER_HOST_NOT_PRIVILEGED, State: "HY000", Message: "Host '%-.64s' is not allowed to connect to this MySQL server"},
 	ER_NO_SUCH_TABLE:                &SQLError{Num: ER_NO_SUCH_TABLE, State: "42S02", Message: "Table '%s' doesn't exist"},
