@@ -35,7 +35,7 @@ func returnQuery(qr *sqltypes.Result, callback func(qr *sqltypes.Result) error, 
 // Supports statements are:
 // 1. DDL
 // 2. DML
-// 3. USE DB
+// 3. USE DB: MySQL client use 'database' won't pass here, FIXME.
 func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVariables map[string]*querypb.BindVariable, callback func(qr *sqltypes.Result) error) error {
 	var qr *sqltypes.Result
 	log := spanner.log

@@ -49,7 +49,7 @@ func TestProxyInsert(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	// Delete.
+	// insert.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
