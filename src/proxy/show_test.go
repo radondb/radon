@@ -927,6 +927,29 @@ func TestProxyShowStatus(t *testing.T) {
 	}
 }
 
+func TestProxyShowStatusPrivilege(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxyPrivilegeN(log, MockDefaultConfig())
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+	}
+
+	// show status.
+	{
+		show, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		_, err = show.FetchAll("show status", -1)
+		assert.NotNil(t, err)
+		want := fmt.Sprintf("Access denied; lacking super privilege for the operation (errno 1227) (sqlstate 42000)")
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+}
+
 func TestProxyShowVersions(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
@@ -1003,5 +1026,51 @@ func TestProxyShowUnsupports(t *testing.T) {
 			got := err.Error()
 			assert.Equal(t, want, got)
 		}
+	}
+}
+
+func TestProxyShowQueryzPrivilege(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxyPrivilegeN(log, MockDefaultConfig())
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+	}
+
+	// show queryz.
+	{
+		show, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		_, err = show.FetchAll("show queryz", -1)
+		assert.NotNil(t, err)
+		want := fmt.Sprintf("Access denied; lacking super privilege for the operation (errno 1227) (sqlstate 42000)")
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+}
+
+func TestProxyShowTxnzPrivilege(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxyPrivilegeN(log, MockDefaultConfig())
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+	}
+
+	// show txnz.
+	{
+		show, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		_, err = show.FetchAll("show txnz", -1)
+		assert.NotNil(t, err)
+		want := fmt.Sprintf("Access denied; lacking super privilege for the operation (errno 1227) (sqlstate 42000)")
+		got := err.Error()
+		assert.Equal(t, want, got)
 	}
 }
