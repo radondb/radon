@@ -27,6 +27,10 @@ import (
 
 var _ Connection = &connection{}
 
+var (
+	queryLogMaxLen = 512 * 1024 // 512KB
+)
+
 // Connection tuple.
 type Connection interface {
 	ID() uint32
@@ -196,7 +200,10 @@ func (c *connection) ExecuteWithLimits(query string, timeout int, memlimits int)
 	// execute.
 	if qr, err = c.driver.FetchAllWithFunc(query, -1, checkFunc); err != nil {
 		c.counters.Add(poolCounterBackendExecuteAllError, 1)
-		log.Error("conn[%s].execute[%s].error:%+v", c.address, query, err)
+		if len(query) > queryLogMaxLen {
+			query = query[:queryLogMaxLen]
+		}
+		log.Error("conn[%s].execute[%s].len[%d].error:%+v", c.address, query, len(query), err)
 		c.lastErr = err
 
 		// Connection is killed.
