@@ -382,6 +382,11 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 	log := spanner.log
 	scatter := spanner.scatter
 
+	privilegePlug := spanner.plugins.PlugPrivilege()
+	if !privilegePlug.IsSuperPriv(session.User()) {
+		return nil, sqldb.NewSQLErrorf(sqldb.ER_SPECIFIC_ACCESS_DENIED_ERROR, "Access denied; lacking super privilege for the operation")
+	}
+
 	qr := &sqltypes.Result{}
 	qr.Fields = []*querypb.Field{
 		{Name: "Variable_name", Type: querypb.Type_VARCHAR},
@@ -512,6 +517,11 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 
 // handleShowQueryz used to handle the query "SHOW QUERYZ".
 func (spanner *Spanner) handleShowQueryz(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+	privilegePlug := spanner.plugins.PlugPrivilege()
+	if !privilegePlug.IsSuperPriv(session.User()) {
+		return nil, sqldb.NewSQLErrorf(sqldb.ER_SPECIFIC_ACCESS_DENIED_ERROR, "Access denied; lacking super privilege for the operation")
+	}
+
 	qr := &sqltypes.Result{}
 	qr.Fields = []*querypb.Field{
 		{Name: "ConnID", Type: querypb.Type_INT64},
@@ -536,6 +546,11 @@ func (spanner *Spanner) handleShowQueryz(session *driver.Session, query string, 
 
 // handleShowTxnz used to handle the query "SHOW TXNZ".
 func (spanner *Spanner) handleShowTxnz(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+	privilegePlug := spanner.plugins.PlugPrivilege()
+	if !privilegePlug.IsSuperPriv(session.User()) {
+		return nil, sqldb.NewSQLErrorf(sqldb.ER_SPECIFIC_ACCESS_DENIED_ERROR, "Access denied; lacking super privilege for the operation")
+	}
+
 	qr := &sqltypes.Result{}
 	qr.Fields = []*querypb.Field{
 		{Name: "TxnID", Type: querypb.Type_INT64},
