@@ -241,3 +241,23 @@ func TestConnectionExecuteThreadSafe(t *testing.T) {
 		wg.Wait()
 	}
 }
+
+func TestTruncateQueryLog(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	var querys []string
+	var queryLogMaxLen = 30
+	querys = []string{
+		"select * from a where i>1 and jjjjjjjjjjjjjjjjjjjjjjjj>1",
+		"select * from a where i>1",
+		"",
+		"\n\n\t",
+	}
+
+	for _, query := range querys {
+		if len(query) > queryLogMaxLen {
+			query = query[:queryLogMaxLen]
+			assert.EqualValues(t, queryLogMaxLen, len(query))
+		}
+		log.Debug("execute[%s].len[%d]", query, len(query))
+	}
+}
