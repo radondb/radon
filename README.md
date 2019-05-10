@@ -9,15 +9,22 @@ RadonDB is an open source, Cloud-native MySQL database for unlimited scalability
 
 RadonDB is a cloud-native database based on MySQL，and architected in fully distributed cluster that enable unlimited scalability (scale-out), capacity and performance. It supported distributed transaction that ensure high data consistency, and leveraged MySQL as storage engine for trusted data reliability. RadonDB is compatible with MySQL protocol, and sup-porting automatic table sharding as well as batch of automation feature for simplifying the maintenance and operation workflow.
 
-## Feature
+## Features
 
-* **Automatic Table Sharding**: automatically sharding (partition) across nodes that minimizing the complexity of maintenance and operation.
-* **Distributed Transaction**: supporting distributed transaction across shards (partitions) and securing Atomicity, Consistency, Isolation, Durability (ACID) for whole transaction process.
-* **Connection Thread Pool**: presetting a set of connected threads that can be lever-aged to accelerating the efficiency of connection between SQL cluster and storage nodes; supporting automatic reconnection and thread reuse.
-* **Auditing and Logging**: Users can choose to enable this function for auditing and logging the SQL query operation in multiple dimensions: query event time, operations statement type, consuming time, etc; this function help to secure operation safety and data compliance; the auditing log is able to be set in multiple modes for high flexibility: read (SQL) only, write only, or read/write simultaneously.
+* **Automatic Sharding**
+* **Auditing and Logging**
+* **Parallel Execution**: Parallel Query, Parallel DML and Parallel DDL
+* **Distributed Transaction**: Snapshot Isolation
+* **Distributed Joins**: Sort-Merge Join, Nested-Loop Join
+* **Distributed Full Text Search**
+* **Multi Tenan by Database**
+* **JSON Support**
+
+## Documentation
+For guidance on installation, deployment, and administration, see our [Documentation](docs).
 
 
-## Architecture
+## Architecture 
 
 ## Overview
 RadonDB is a new generation of distributed relational database (MyNewSQL) based on MySQL. It was designed to create the open-source database our developers would want to use: one that has features such as financial high availability、
@@ -84,6 +91,9 @@ RadonDB achieves the level of SI (Snapshot Isolation) at the level of consistenc
 ``` Transaction with SQL Layer```
 
 The SQL node is stateless, but in order to guarantee transaction `Snapshot Isolation`, it is currently a write-multiple-read mode.
+
+## Live Demo
+ [https://radonchain.org](https://radonchain.org)
 
 ## Issues
 
