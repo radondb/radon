@@ -232,6 +232,58 @@ func TestSelectPlan(t *testing.T) {
 		"a"
 	]
 }`,
+`{
+	"RawQuery": "select avg(distinct id) as tmp,b,sum(id),count(id) from B group by b",
+	"Project": "id as tmp, b, id as ` + "`sum(id)`" + `, id as ` + "`count(id)`" + `",
+	"Partitions": [
+		{
+			"Query": "select id as tmp, b, id as ` + "`sum(id)`" + `, id as ` + "`count(id)`" + ` from sbtest.B0 as B group by b order by b asc",
+			"Backend": "backend1",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "select id as tmp, b, id as ` + "`sum(id)`" + `, id as ` + "`count(id)`" + ` from sbtest.B1 as B group by b order by b asc",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	],
+	"Aggregate": [
+		"avg(distinct id)",
+		"sum(id)",
+		"count(id)"
+	],
+	"GatherMerge": [
+		"b"
+	],
+	"HashGroupBy": [
+		"b"
+	]
+}`,
+`{
+	"RawQuery": "select sum(A.a), B.b from A join B on A.id=B.id where A.id=1 group by B.b",
+	"Project": "A.a as ` + "`sum(A.a)`" + `, B.b",
+	"Partitions": [
+		{
+			"Query": "select A.a as ` + "`sum(A.a)`" + `, A.id from sbtest.A6 as A where A.id = 1 order by A.id asc",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		},
+		{
+			"Query": "select B.b, B.id from sbtest.B1 as B where B.id = 1 order by B.id asc",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	],
+	"Aggregate": [
+		"sum(A.a)"
+	],
+	"GatherMerge": [
+		"B.b"
+	],
+	"HashGroupBy": [
+		"b"
+	]
+}`,
 	}
 	querys := []string{
 		"select 1, sum(a),avg(a),a,b from sbtest.A where id>1 group by a,b order by a desc limit 10 offset 100",
@@ -243,6 +295,8 @@ func TestSelectPlan(t *testing.T) {
 		"select /*+nested+*/ A.id from A join B on A.id = B.id where A.id = 1",
 		"select A.id from A left join B on A.a+1=B.a where A.id=1",
 		"select B.id as a from B group by a",
+		"select avg(distinct id) as tmp,b,sum(id),count(id) from B group by b",
+		"select sum(A.a), B.b from A join B on A.id=B.id where A.id=1 group by B.b",
 	}
 
 	// Database not null.
@@ -439,6 +493,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select a+1 from A order by a+1",
 		"select b as a from A group by A.a",
 		"select a+1 from A group by a+1",
+		"select count(distinct *) from A",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
@@ -474,6 +529,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: orderby:[a + 1].type.should.be.colname",
 		"unsupported: group.by.field[A.a].should.be.in.select.list",
 		"unsupported: group.by.[a + 1].type.should.be.colname",
+		"unsupported: syntax.error.at.'count(distinct *)'",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))

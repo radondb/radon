@@ -25,7 +25,7 @@ type PlanNode interface {
 	setNoTableFilter(exprs []sqlparser.Expr)
 	pushEqualCmpr(joins []joinTuple) PlanNode
 	calcRoute() (PlanNode, error)
-	pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error
+	pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, aggTyp aggrType) error
 	pushSelectExpr(field selectTuple) (int, error)
 	pushHaving(havings []filterTuple) error
 	pushOrderBy(sel *sqlparser.Select, fields []selectTuple) error

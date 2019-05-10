@@ -119,7 +119,7 @@ func (p *SelectPlan) Build() error {
 	p.Root.pushMisc(node)
 
 	var groups []selectTuple
-	fields, hasAggregates, err := parserSelectExprs(node.SelectExprs, p.Root)
+	fields, aggTyp, err := parserSelectExprs(node.SelectExprs, p.Root)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (p *SelectPlan) Build() error {
 		return err
 	}
 
-	if err = p.Root.pushSelectExprs(fields, groups, node, hasAggregates); err != nil {
+	if err = p.Root.pushSelectExprs(fields, groups, node, aggTyp); err != nil {
 		return err
 	}
 

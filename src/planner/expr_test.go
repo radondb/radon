@@ -354,6 +354,7 @@ func TestSelectExprs(t *testing.T) {
 		"select A.id, G.a as a from A,G group by a",
 		"select A.id, B.name from A join B on A.id=B.id",
 		"select A.id, B.name from A join B on A.id=B.id join G on G.a=A.a",
+		"select sum(A.id) from A join B on A.id=B.id",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
@@ -372,14 +373,14 @@ func TestSelectExprs(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
+		fields, aggTyp, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
 		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferredTables(), ok)
 		assert.Nil(t, err)
 
-		err = p.pushSelectExprs(fields, groups, sel, false)
+		err = p.pushSelectExprs(fields, groups, sel, aggTyp)
 		assert.Nil(t, err)
 
 		err = p.pushOrderBy(sel, fields)
@@ -415,37 +416,16 @@ func TestSelectExprsError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
+		fields, aggTyp, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
 		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferredTables(), ok)
 		assert.Nil(t, err)
 
-		err = p.pushSelectExprs(fields, groups, sel, false)
+		err = p.pushSelectExprs(fields, groups, sel, aggTyp)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
-	}
-	{
-		query := "select sum(A.id) from A join B on A.id=B.id"
-		want := "unsupported: cross-shard.query.with.aggregates"
-		node, err := sqlparser.Parse(query)
-		assert.Nil(t, err)
-		sel := node.(*sqlparser.Select)
-
-		p, err := scanTableExprs(log, route, database, sel.From)
-		assert.Nil(t, err)
-
-		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
-		assert.Nil(t, err)
-
-		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferredTables(), ok)
-		assert.Nil(t, err)
-
-		err = p.pushSelectExprs(fields, groups, sel, true)
-		got := err.Error()
-		assert.Equal(t, want, got)
 	}
 }
 

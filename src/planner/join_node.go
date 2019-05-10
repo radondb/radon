@@ -495,19 +495,18 @@ func (j *JoinNode) buildKeyFilter(filter filterTuple, isFind bool) bool {
 }
 
 // pushSelectExprs used to push the select fields.
-func (j *JoinNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, hasAggregates bool) error {
+func (j *JoinNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, aggTyp aggrType) error {
 	if j.isHint {
 		j.reOrder(0)
 	}
-	if hasAggregates {
-		return errors.New("unsupported: cross-shard.query.with.aggregates")
-	}
-	if len(groups) > 0 {
-		aggrPlan := NewAggregatePlan(j.log, sel.SelectExprs, fields, groups)
+
+	if len(groups) > 0 || aggTyp != nullAgg {
+		aggrPlan := NewAggregatePlan(j.log, sel.SelectExprs, fields, groups, false)
 		if err := aggrPlan.Build(); err != nil {
 			return err
 		}
 		j.children.Add(aggrPlan)
+		fields = aggrPlan.tuples
 	}
 	for _, tuple := range fields {
 		if _, err := j.pushSelectExpr(tuple); err != nil {

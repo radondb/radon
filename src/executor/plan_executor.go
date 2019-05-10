@@ -41,9 +41,6 @@ func buildExecutor(log *xlog.Log, plan planner.PlanNode, txn backend.Transaction
 
 // execSubPlan used to execute all the children plan.
 func execSubPlan(log *xlog.Log, node planner.PlanNode, ctx *xcontext.ResultContext) error {
-	if len(ctx.Results.Rows) == 0 {
-		return nil
-	}
 	subPlanTree := node.Children()
 	if subPlanTree != nil {
 		for _, subPlan := range subPlanTree.Plans() {
