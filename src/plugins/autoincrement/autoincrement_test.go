@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"config"
+	"errors"
 	"router"
 
 	"github.com/stretchr/testify/assert"
@@ -23,18 +24,24 @@ func TestPluginAutoincGetAutoIncrement(t *testing.T) {
 	tests := []struct {
 		query  string
 		result *config.AutoIncrement
+		err    error
 	}{
 		{
-			"drop table t1",
-			nil,
+			query:  "drop table t1",
+			result: nil,
 		},
 		{
-			"create table t1(a int)",
-			nil,
+			query:  "create table t1(a int)",
+			result: nil,
 		},
 		{
-			"create table tab_auto_incr(a int not null auto_increment,b int not null,primary key (a))",
-			&config.AutoIncrement{Column: "a"},
+			query:  "create table tab_auto_incr(a int not null auto_increment,b int not null,primary key (a))",
+			result: &config.AutoIncrement{Column: "a"},
+			err:    errors.New("autoincrement.column.type[int].must.be[bigint]"),
+		},
+		{
+			query:  "create table tab_auto_incr(a bigint not null auto_increment,b int not null,primary key (a))",
+			result: &config.AutoIncrement{Column: "a"},
 		},
 	}
 
@@ -42,9 +49,14 @@ func TestPluginAutoincGetAutoIncrement(t *testing.T) {
 		node, err := sqlparser.Parse(test.query)
 		assert.Nil(t, err)
 		ddl := node.(*sqlparser.DDL)
-		auto := GetAutoIncrement(ddl)
-		if test.result != nil {
-			assert.Equal(t, test.result, auto)
+		auto, err := GetAutoIncrement(ddl)
+		if test.err != nil {
+			assert.Equal(t, test.err, err)
+		} else {
+			assert.Nil(t, err)
+			if test.result != nil {
+				assert.Equal(t, test.result, auto)
+			}
 		}
 	}
 }

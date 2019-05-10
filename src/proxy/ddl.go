@@ -197,8 +197,13 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		}
 
 		// Create table.
+
+		autoinc, err := autoincrement.GetAutoIncrement(node)
+		if err != nil {
+			return nil, err
+		}
 		extra := &router.Extra{
-			AutoIncrement: autoincrement.GetAutoIncrement(node),
+			AutoIncrement: autoinc,
 		}
 		if err := route.CreateTable(database, table, shardKey, backends, extra); err != nil {
 			return nil, err
