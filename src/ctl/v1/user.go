@@ -17,11 +17,13 @@ import (
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/xelabs/go-mysqlstack/xlog"
+	"strings"
 )
 
 type userParams struct {
-	User     string `json:"user"`
-	Password string `json:"password"`
+	Databases string `json:"database"`
+	User      string `json:"user"`
+	Password  string `json:"password"`
 }
 
 // CreateUserHandler impl.
@@ -41,12 +43,27 @@ func createUserHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter,
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Warning("api.v1.create.user[from:%v].[%v]", r.RemoteAddr, p)
 
-	query := fmt.Sprintf("GRANT SELECT ON *.* TO '%s'@'%%' IDENTIFIED BY '%s'", p.User, p.Password)
-	if _, err := spanner.ExecuteScatter(query); err != nil {
-		log.Error("api.v1.create.user[%+v].error:%+v", p, err)
-		rest.Error(w, err.Error(), http.StatusServiceUnavailable)
+	if len(p.User) == 0 || len(p.Password) == 0 {
+		log.Error("api.v1.create.user[%+v].error:some param is empty", p)
+		rest.Error(w, "some args are empty", http.StatusNoContent)
+		return
+	}
+
+	if p.Databases == "" {
+		p.Databases = "*"
+	}
+
+	log.Warning("api.v1.create.user[from:%v].[%v]", r.RemoteAddr, p)
+	databases := strings.TrimSuffix(p.Databases, ",")
+	dbList := strings.Split(databases, ",")
+	for _, db := range dbList {
+		query := fmt.Sprintf("GRANT ALL ON %s.* TO '%s'@'%%' IDENTIFIED BY '%s'", db, p.User, p.Password)
+		if _, err := spanner.ExecuteScatter(query); err != nil {
+			log.Error("api.v1.create.user[%+v].error:%+v", p, err)
+			rest.Error(w, err.Error(), http.StatusServiceUnavailable)
+			break
+		}
 	}
 }
 
