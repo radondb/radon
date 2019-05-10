@@ -192,7 +192,7 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*TableInfo
 				buf := sqlparser.NewTrackedBuffer(nil)
 				node.Exprs.Format(buf)
 				aggrField = buf.String()
-				if aggrField == "*" && node.Name.String() != "count" {
+				if aggrField == "*" && (node.Name.String() != "count" || distinct) {
 					return false, errors.Errorf("unsupported: syntax.error.at.'%s'", field)
 				}
 			}
@@ -210,40 +210,68 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*TableInfo
 	return &selectTuple{expr, field, alias, referTables, funcName, aggrField, distinct, isCol}, hasAggregates, nil
 }
 
-func parserSelectExprs(exprs sqlparser.SelectExprs, root PlanNode) ([]selectTuple, bool, error) {
+func parserSelectExprs(exprs sqlparser.SelectExprs, root PlanNode) ([]selectTuple, aggrType, error) {
 	var tuples []selectTuple
-	hasAggregates := false
+	hasAggs := false
+	hasDist := false
+	aggType := nullAgg
 	tbInfos := root.getReferredTables()
+	_, isMergeNode := root.(*MergeNode)
 	for _, expr := range exprs {
 		switch exp := expr.(type) {
 		case *sqlparser.AliasedExpr:
-			tuple, hasAggregate, err := parserSelectExpr(exp, tbInfos)
+			tuple, hasAgg, err := parserSelectExpr(exp, tbInfos)
 			if err != nil {
-				return nil, false, err
+				return nil, aggType, err
 			}
-			if hasAggregate {
-				hasAggregates = true
+			if hasAgg {
+				hasAggs = true
+				hasDist = hasDist || tuple.distinct
 			}
 			tuples = append(tuples, *tuple)
 		case *sqlparser.StarExpr:
-			if _, ok := root.(*MergeNode); !ok {
-				return nil, false, errors.New("unsupported: '*'.expression.in.cross-shard.query")
+			if !isMergeNode {
+				return nil, aggType, errors.New("unsupported: '*'.expression.in.cross-shard.query")
 			}
 			tuple := selectTuple{expr: exp, field: "*"}
 			if !exp.TableName.IsEmpty() {
 				tbName := exp.TableName.Name.String()
 				if _, ok := tbInfos[tbName]; !ok {
-					return nil, false, errors.Errorf("unsupported:  unknown.table.'%s'.in.field.list", tbName)
+					return nil, aggType, errors.Errorf("unsupported:  unknown.table.'%s'.in.field.list", tbName)
 				}
 				tuple.referTables = append(tuple.referTables, tbName)
 			}
 
 			tuples = append(tuples, tuple)
 		case sqlparser.Nextval:
-			return nil, false, errors.Errorf("unsupported: nextval.in.select.exprs")
+			return nil, aggType, errors.Errorf("unsupported: nextval.in.select.exprs")
 		}
 	}
-	return tuples, hasAggregates, nil
+
+	return tuples, setAggregatorType(hasAggs, hasDist, isMergeNode), nil
+}
+
+// aggrType mark aggregate function whether can push down.
+type aggrType int
+
+const (
+	// does not contain an aggregate function.
+	nullAgg aggrType = iota
+	// aggregate function can push down.
+	canPush
+	// aggregate function cannot push down.
+	notPush
+)
+
+// setAggregatorType used to set aggrType.
+func setAggregatorType(hasAggr, hasDist, isMergeNode bool) aggrType {
+	if hasAggr {
+		if hasDist || !isMergeNode {
+			return notPush
+		}
+		return canPush
+	}
+	return nullAgg
 }
 
 // checkTbInNode used to check whether the filter's referTables in the tbInfos.
@@ -317,6 +345,24 @@ func decomposeAvg(tuple *selectTuple) []*sqlparser.AliasedExpr {
 	}}
 	ret = append(ret, sum, count)
 	return ret
+}
+
+// decomposeAgg decomposes the aggregate function.
+// such as: avg(a) -> a as `avg(a)`.
+func decomposeAgg(tuple *selectTuple) *sqlparser.AliasedExpr {
+	field := tuple.aggrField
+	if field == "*" {
+		field = "1"
+	}
+	alias := tuple.alias
+	if alias == "" {
+		alias = tuple.field
+	}
+
+	return &sqlparser.AliasedExpr{
+		Expr: sqlparser.NewValArg([]byte(field)),
+		As:   sqlparser.NewColIdent(alias),
+	}
 }
 
 // convertToLeftJoin converts a right join into a left join.

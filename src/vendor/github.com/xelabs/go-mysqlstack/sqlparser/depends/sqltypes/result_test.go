@@ -45,7 +45,7 @@ func TestCopy(t *testing.T) {
 		InsertID:     1,
 		RowsAffected: 2,
 		Rows: [][]Value{
-			{testVal(Int64, "1"), MakeTrusted(Null, nil)},
+			{testVal(Int64, "1"), NULL},
 			{testVal(Int64, "2"), MakeTrusted(VarChar, nil)},
 			{testVal(Int64, "3"), testVal(VarChar, "")},
 		},
@@ -59,7 +59,7 @@ func TestCopy(t *testing.T) {
 		InsertID:     1,
 		RowsAffected: 2,
 		Rows: [][]Value{
-			{testVal(Int64, "1"), MakeTrusted(Null, nil)},
+			{testVal(Int64, "1"), NULL},
 			{testVal(Int64, "2"), testVal(VarChar, "")},
 			{testVal(Int64, "3"), testVal(VarChar, "")},
 		},

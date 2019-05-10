@@ -9,6 +9,7 @@
 package executor
 
 import (
+	"expression"
 	"planner"
 	"xcontext"
 
@@ -50,11 +51,17 @@ func (executor *AggregateExecutor) aggregate(result *sqltypes.Result) {
 	if plan.Empty() {
 		return
 	}
-	aggrs := plan.NormalAggregators()
-	aggrLen := len(aggrs)
+	aggs := plan.NormalAggregators()
+	aggrLen := len(aggs)
 	groupAggrs := plan.GroupAggregators()
 
-	groups := make(map[string][]sqltypes.Value)
+	type group struct {
+		row      []sqltypes.Value
+		evalCtxs []*expression.AggEvaluateContext
+	}
+
+	aggrs := expression.NewAggregations(aggs, plan.IsPushDown, result.Fields)
+	groups := make(map[string]group)
 	for _, row1 := range result.Rows {
 		keySlice := []byte{0x01}
 		for _, v := range groupAggrs {
@@ -62,11 +69,14 @@ func (executor *AggregateExecutor) aggregate(result *sqltypes.Result) {
 			keySlice = append(keySlice, 0x02)
 		}
 		key := common.BytesToString(keySlice)
-		if row2, ok := groups[key]; !ok {
-			groups[key] = row1
+		if g, ok := groups[key]; !ok {
+			evalCtxs := expression.NewAggEvalCtxs(aggrs, row1)
+			groups[key] = group{row1, evalCtxs}
 		} else {
 			if aggrLen > 0 {
-				groups[key] = operator(aggrs, row1)(row2)
+				for i, aggr := range aggrs {
+					aggr.Update(row1, g.evalCtxs[i])
+				}
 			}
 		}
 	}
@@ -74,60 +84,16 @@ func (executor *AggregateExecutor) aggregate(result *sqltypes.Result) {
 	// Handle the avg operator and rebuild the results.
 	i := 0
 	result.Rows = make([][]sqltypes.Value, len(groups))
-	for _, v := range groups {
-		for _, aggr := range aggrs {
-			switch aggr.Type {
-			case planner.AggrTypeAvg:
-				v1, v2 := v[aggr.Index], v[aggr.Index+1]
-				v[aggr.Index] = sqltypes.Operator(v1, v2, sqltypes.DivFn)
-				deIdxs = append(deIdxs, aggr.Index+1)
-			}
-		}
-		result.Rows[i] = v
+	for _, g := range groups {
+		result.Rows[i], deIdxs = expression.GetResults(aggrs, g.evalCtxs, g.row)
 		i++
 	}
 
+	if len(groups) == 0 && aggrLen > 0 {
+		result.Rows = make([][]sqltypes.Value, 1)
+		evalCtxs := expression.NewAggEvalCtxs(aggrs, nil)
+		result.Rows[0], deIdxs = expression.GetResults(aggrs, evalCtxs, make([]sqltypes.Value, len(aggrs)))
+	}
 	// Remove avg decompose columns.
 	result.RemoveColumns(deIdxs...)
-}
-
-// aggregate supported type: SUM/COUNT/MIN/MAX/AVG.
-func operator(aggrs []planner.Aggregator, x []sqltypes.Value) func([]sqltypes.Value) []sqltypes.Value {
-	return func(y []sqltypes.Value) []sqltypes.Value {
-		ret := sqltypes.Row(x).Copy()
-		for _, aggr := range aggrs {
-			switch aggr.Type {
-			case planner.AggrTypeSum, planner.AggrTypeCount:
-				v1, v2 := x[aggr.Index], y[aggr.Index]
-				if v1.Type() == sqltypes.Null {
-					ret[aggr.Index] = v2
-				} else if v2.Type() == sqltypes.Null {
-					ret[aggr.Index] = v1
-				} else {
-					ret[aggr.Index] = sqltypes.Operator(v1, v2, sqltypes.SumFn)
-				}
-			case planner.AggrTypeMin:
-				v1, v2 := x[aggr.Index], y[aggr.Index]
-				if v1.Type() == sqltypes.Null {
-					ret[aggr.Index] = v2
-				} else if v2.Type() == sqltypes.Null {
-					ret[aggr.Index] = v1
-				} else {
-					ret[aggr.Index] = sqltypes.Operator(v1, v2, sqltypes.MinFn)
-				}
-			case planner.AggrTypeMax:
-				v1, v2 := x[aggr.Index], y[aggr.Index]
-				if v1.Type() == sqltypes.Null {
-					ret[aggr.Index] = v2
-				} else if v2.Type() == sqltypes.Null {
-					ret[aggr.Index] = v1
-				} else {
-					ret[aggr.Index] = sqltypes.Operator(v1, v2, sqltypes.MaxFn)
-				}
-			case planner.AggrTypeAvg:
-				// nop
-			}
-		}
-		return ret
-	}
 }

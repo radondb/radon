@@ -50,9 +50,10 @@ const (
 
 // Aggregator tuple.
 type Aggregator struct {
-	Field string
-	Index int
-	Type  AggrType
+	Field    string
+	Index    int
+	Type     AggrType
+	Distinct bool
 }
 
 // AggregatePlan represents order-by plan.
@@ -67,16 +68,19 @@ type AggregatePlan struct {
 
 	// type
 	typ PlanType
+	// IsPushDown whether aggfunc can be pushed down.
+	IsPushDown bool
 }
 
 // NewAggregatePlan used to create AggregatePlan.
-func NewAggregatePlan(log *xlog.Log, exprs []sqlparser.SelectExpr, tuples, groups []selectTuple) *AggregatePlan {
+func NewAggregatePlan(log *xlog.Log, exprs []sqlparser.SelectExpr, tuples, groups []selectTuple, isPushDown bool) *AggregatePlan {
 	return &AggregatePlan{
-		log:       log,
-		tuples:    tuples,
-		groups:    groups,
-		rewritten: exprs,
-		typ:       PlanTypeAggregate,
+		log:        log,
+		tuples:     tuples,
+		groups:     groups,
+		rewritten:  exprs,
+		typ:        PlanTypeAggregate,
+		IsPushDown: isPushDown,
 	}
 }
 
@@ -94,39 +98,47 @@ func (p *AggregatePlan) analyze() error {
 	// aggregators.
 	k := 0
 	for _, tuple := range tuples {
-		if tuple.distinct {
-			return errors.Errorf("unsupported: distinct.in.function:%+v", tuple.aggrFuc)
-		}
-
-		aggrType := strings.ToLower(tuple.aggrFuc)
-		switch aggrType {
-		case "":
-			// non-func
+		aggrFuc := strings.ToLower(tuple.aggrFuc)
+		if aggrFuc == "" {
 			if tuple.field == "*" {
 				return errors.Errorf("unsupported: exists.aggregate.and.'*'.select.exprs")
 			}
 			nullAggrs = append(nullAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeNull})
-		case "sum":
-			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeSum})
-		case "count":
-			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeCount})
-		case "min":
-			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeMin})
-		case "max":
-			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeMax})
-		case "avg":
-			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeAvg})
-			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("sum(%s)", tuple.aggrField), Index: k, Type: AggrTypeSum})
-			p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("count(%s)", tuple.aggrField), Index: k + 1, Type: AggrTypeCount})
-
-			avgs := decomposeAvg(&tuple)
-			p.rewritten = append(p.rewritten, &sqlparser.AliasedExpr{})
-			copy(p.rewritten[(k+2):], p.rewritten[k+1:])
-			p.rewritten[k] = avgs[0]
-			p.rewritten[(k + 1)] = avgs[1]
 			k++
+			continue
+		}
+
+		var aggType AggrType
+		switch aggrFuc {
+		case "sum":
+			aggType = AggrTypeSum
+		case "count":
+			aggType = AggrTypeCount
+		case "min":
+			aggType = AggrTypeMin
+		case "max":
+			aggType = AggrTypeMax
+		case "avg":
+			aggType = AggrTypeAvg
 		default:
 			return errors.Errorf("unsupported: function:%+v", tuple.aggrFuc)
+		}
+
+		p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: aggType, Distinct: tuple.distinct})
+		if p.IsPushDown {
+			if aggType == AggrTypeAvg {
+				p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("sum(%s)", tuple.aggrField), Index: k, Type: AggrTypeSum})
+				p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("count(%s)", tuple.aggrField), Index: k + 1, Type: AggrTypeCount})
+				avgs := decomposeAvg(&tuple)
+				p.rewritten = append(p.rewritten, &sqlparser.AliasedExpr{})
+				copy(p.rewritten[(k+2):], p.rewritten[k+1:])
+				p.rewritten[k] = avgs[0]
+				p.rewritten[(k + 1)] = avgs[1]
+				k++
+			}
+		} else {
+			p.rewritten[k] = decomposeAgg(&tuple)
+			p.tuples[k].expr = p.rewritten[k]
 		}
 		k++
 	}

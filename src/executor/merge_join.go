@@ -133,7 +133,7 @@ func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *planner.JoinNode,
 		matchCnt := 0
 		for _, idx := range node.LeftTmpCols {
 			vn := lrow[idx].ToNative()
-			if vn.(int64) == 0 {
+			if vn == nil || vn.(int64) == 0 {
 				blend = false
 				break
 			}

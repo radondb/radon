@@ -27,82 +27,98 @@ func TestAggregatePlan(t *testing.T) {
 		{
 			"Field": "min(b)",
 			"Index": 2,
-			"Type": "MIN"
+			"Type": "MIN",
+			"Distinct": false
 		},
 		{
 			"Field": "max(a)",
 			"Index": 3,
-			"Type": "MAX"
+			"Type": "MAX",
+			"Distinct": false
 		},
 		{
 			"Field": "avg(a)",
 			"Index": 4,
-			"Type": "AVG"
+			"Type": "AVG",
+			"Distinct": false
 		},
 		{
 			"Field": "sum(a)",
 			"Index": 4,
-			"Type": "SUM"
+			"Type": "SUM",
+			"Distinct": false
 		},
 		{
 			"Field": "count(a)",
 			"Index": 5,
-			"Type": "COUNT"
+			"Type": "COUNT",
+			"Distinct": false
 		},
 		{
 			"Field": "sum(a)",
 			"Index": 6,
-			"Type": "SUM"
+			"Type": "SUM",
+			"Distinct": false
 		},
 		{
 			"Field": "count(a)",
 			"Index": 7,
-			"Type": "COUNT"
+			"Type": "COUNT",
+			"Distinct": false
 		},
 		{
 			"Field": "avg(b)",
 			"Index": 9,
-			"Type": "AVG"
+			"Type": "AVG",
+			"Distinct": false
 		},
 		{
 			"Field": "sum(b)",
 			"Index": 9,
-			"Type": "SUM"
+			"Type": "SUM",
+			"Distinct": false
 		},
 		{
 			"Field": "count(b)",
 			"Index": 10,
-			"Type": "COUNT"
+			"Type": "COUNT",
+			"Distinct": false
 		},
 		{
 			"Field": "avg(c)",
 			"Index": 12,
-			"Type": "AVG"
+			"Type": "AVG",
+			"Distinct": false
 		},
 		{
 			"Field": "sum(c)",
 			"Index": 12,
-			"Type": "SUM"
+			"Type": "SUM",
+			"Distinct": false
 		},
 		{
 			"Field": "count(c)",
 			"Index": 13,
-			"Type": "COUNT"
+			"Type": "COUNT",
+			"Distinct": false
 		},
 		{
 			"Field": "a",
 			"Index": 1,
-			"Type": "GROUP BY"
+			"Type": "GROUP BY",
+			"Distinct": false
 		},
 		{
 			"Field": "b",
 			"Index": 8,
-			"Type": "GROUP BY"
+			"Type": "GROUP BY",
+			"Distinct": false
 		},
 		{
 			"Field": "c",
 			"Index": 11,
-			"Type": "GROUP BY"
+			"Type": "GROUP BY",
+			"Distinct": false
 		}
 	],
 	"ReWritten": "1, a, min(b), max(a), sum(a) as ` + "`avg(a)`" + `, count(a), sum(a), count(a), b as b1, sum(b) as ` + "`avg(b)`" + `, count(b), c, sum(c) as ` + "`avg(c)`" + `, count(c)"
@@ -121,13 +137,13 @@ func TestAggregatePlan(t *testing.T) {
 		assert.Nil(t, err)
 		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
+		tuples, aggTyp, err := parserSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
-		assert.True(t, hasAgg)
+		assert.Equal(t, canPush, aggTyp)
 		_, ok := p.(*MergeNode)
 		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
+		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups, true)
 		// plan build
 		{
 			err := plan.Build()
@@ -155,82 +171,98 @@ func TestAggregatePlanUpperCase(t *testing.T) {
 		{
 			"Field": "MIN(b)",
 			"Index": 2,
-			"Type": "MIN"
+			"Type": "MIN",
+			"Distinct": false
 		},
 		{
 			"Field": "MAX(a)",
 			"Index": 3,
-			"Type": "MAX"
+			"Type": "MAX",
+			"Distinct": false
 		},
 		{
 			"Field": "AVG(a)",
 			"Index": 4,
-			"Type": "AVG"
+			"Type": "AVG",
+			"Distinct": false
 		},
 		{
 			"Field": "sum(a)",
 			"Index": 4,
-			"Type": "SUM"
+			"Type": "SUM",
+			"Distinct": false
 		},
 		{
 			"Field": "count(a)",
 			"Index": 5,
-			"Type": "COUNT"
+			"Type": "COUNT",
+			"Distinct": false
 		},
 		{
 			"Field": "SUM(a)",
 			"Index": 6,
-			"Type": "SUM"
+			"Type": "SUM",
+			"Distinct": false
 		},
 		{
 			"Field": "COUNT(a)",
 			"Index": 7,
-			"Type": "COUNT"
+			"Type": "COUNT",
+			"Distinct": false
 		},
 		{
 			"Field": "AVG(b)",
 			"Index": 9,
-			"Type": "AVG"
+			"Type": "AVG",
+			"Distinct": false
 		},
 		{
 			"Field": "sum(b)",
 			"Index": 9,
-			"Type": "SUM"
+			"Type": "SUM",
+			"Distinct": false
 		},
 		{
 			"Field": "count(b)",
 			"Index": 10,
-			"Type": "COUNT"
+			"Type": "COUNT",
+			"Distinct": false
 		},
 		{
 			"Field": "AVG(c)",
 			"Index": 12,
-			"Type": "AVG"
+			"Type": "AVG",
+			"Distinct": false
 		},
 		{
 			"Field": "sum(c)",
 			"Index": 12,
-			"Type": "SUM"
+			"Type": "SUM",
+			"Distinct": false
 		},
 		{
 			"Field": "count(c)",
 			"Index": 13,
-			"Type": "COUNT"
+			"Type": "COUNT",
+			"Distinct": false
 		},
 		{
 			"Field": "a",
 			"Index": 1,
-			"Type": "GROUP BY"
+			"Type": "GROUP BY",
+			"Distinct": false
 		},
 		{
 			"Field": "b",
 			"Index": 8,
-			"Type": "GROUP BY"
+			"Type": "GROUP BY",
+			"Distinct": false
 		},
 		{
 			"Field": "c",
 			"Index": 11,
-			"Type": "GROUP BY"
+			"Type": "GROUP BY",
+			"Distinct": false
 		}
 	],
 	"ReWritten": "1, a, MIN(b), MAX(a), sum(a) as ` + "`AVG(a)`" + `, count(a), SUM(a), COUNT(a), b as b1, sum(b) as ` + "`AVG(b)`" + `, count(b), c, sum(c) as ` + "`AVG(c)`" + `, count(c)"
@@ -249,13 +281,13 @@ func TestAggregatePlanUpperCase(t *testing.T) {
 		assert.Nil(t, err)
 		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
+		tuples, aggTyp, err := parserSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
-		assert.True(t, hasAgg)
+		assert.Equal(t, canPush, aggTyp)
 		_, ok := p.(*MergeNode)
 		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
+		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups, true)
 		// plan build
 		{
 			err := plan.Build()
@@ -282,12 +314,14 @@ func TestAggregatePlanHaving(t *testing.T) {
 		{
 			"Field": "count(*)",
 			"Index": 1,
-			"Type": "COUNT"
+			"Type": "COUNT",
+			"Distinct": false
 		},
 		{
 			"Field": "age",
 			"Index": 0,
-			"Type": "GROUP BY"
+			"Type": "GROUP BY",
+			"Distinct": false
 		}
 	],
 	"ReWritten": "age, count(*)"
@@ -306,13 +340,13 @@ func TestAggregatePlanHaving(t *testing.T) {
 		assert.Nil(t, err)
 		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
+		tuples, aggTyp, err := parserSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
-		assert.True(t, hasAgg)
+		assert.Equal(t, canPush, aggTyp)
 		_, ok := p.(*MergeNode)
 		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
+		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups, true)
 		// plan build
 		{
 			err := plan.Build()
@@ -333,12 +367,10 @@ func TestAggregatePlanUnsupported(t *testing.T) {
 	querys := []string{
 		"select sum(a)  from A group by d",
 		"select sum(a),d  from A group by db.t.d",
-		"select count(distinct b) from A",
 	}
 	results := []string{
 		"unsupported: group.by.field[d].should.be.in.select.list",
 		"unsupported: unknow.table.in.group.by.field[t.d]",
-		"unsupported: distinct.in.function:count",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -352,13 +384,13 @@ func TestAggregatePlanUnsupported(t *testing.T) {
 		node := tree.(*sqlparser.Select)
 		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
+		tuples, aggTyp, err := parserSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
-		assert.True(t, hasAgg)
+		assert.Equal(t, canPush, aggTyp)
 		_, ok := p.(*MergeNode)
 		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
 		if err == nil {
-			plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
+			plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups, aggTyp != notPush)
 			err := plan.Build()
 			got := err.Error()
 			assert.Equal(t, results[i], got)
@@ -372,6 +404,7 @@ func TestAggregatePlanUnsupported(t *testing.T) {
 func TestAggregatePlans(t *testing.T) {
 	querys := []string{
 		"select avg(a) as b1, avg(c*100)  from A",
+		"select avg(distinct b),count(*) from A",
 	}
 	results := []string{
 		`{
@@ -379,35 +412,58 @@ func TestAggregatePlans(t *testing.T) {
 		{
 			"Field": "avg(a)",
 			"Index": 0,
-			"Type": "AVG"
+			"Type": "AVG",
+			"Distinct": false
 		},
 		{
 			"Field": "sum(a)",
 			"Index": 0,
-			"Type": "SUM"
+			"Type": "SUM",
+			"Distinct": false
 		},
 		{
 			"Field": "count(a)",
 			"Index": 1,
-			"Type": "COUNT"
+			"Type": "COUNT",
+			"Distinct": false
 		},
 		{
 			"Field": "avg(c * 100)",
 			"Index": 2,
-			"Type": "AVG"
+			"Type": "AVG",
+			"Distinct": false
 		},
 		{
 			"Field": "sum(c * 100)",
 			"Index": 2,
-			"Type": "SUM"
+			"Type": "SUM",
+			"Distinct": false
 		},
 		{
 			"Field": "count(c * 100)",
 			"Index": 3,
-			"Type": "COUNT"
+			"Type": "COUNT",
+			"Distinct": false
 		}
 	],
 	"ReWritten": "sum(a) as b1, count(a), sum(c * 100) as ` + "`avg(c * 100)`" + `, count(c * 100)"
+}`,
+		`{
+	"Aggrs": [
+		{
+			"Field": "avg(distinct b)",
+			"Index": 0,
+			"Type": "AVG",
+			"Distinct": true
+		},
+		{
+			"Field": "count(*)",
+			"Index": 1,
+			"Type": "COUNT",
+			"Distinct": false
+		}
+	],
+	"ReWritten": "b as ` + "`avg(distinct b)`" + `, 1 as ` + "`count(*)`" + `"
 }`,
 	}
 
@@ -423,13 +479,13 @@ func TestAggregatePlans(t *testing.T) {
 		assert.Nil(t, err)
 		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		tuples, hasAgg, err := parserSelectExprs(node.SelectExprs, p)
+		tuples, aggTyp, err := parserSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
-		assert.True(t, hasAgg)
+		//assert.Equal(t, canPush, aggTyp)
 		_, ok := p.(*MergeNode)
 		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
 		assert.Nil(t, err)
-		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups)
+		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups, aggTyp != notPush)
 		// plan build
 		{
 			err := plan.Build()
