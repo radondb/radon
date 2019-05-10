@@ -9,11 +9,17 @@
 package autoincrement
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
 	"config"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser"
+)
+
+var (
+	autoIncColumnType = "bigint"
 )
 
 type AutoIncrementHandler interface {
@@ -23,18 +29,22 @@ type AutoIncrementHandler interface {
 }
 
 // GetAutoIncrement -- used to get config AutoIncrement from 'create table' DDL sqlnode.
-func GetAutoIncrement(node *sqlparser.DDL) *config.AutoIncrement {
+func GetAutoIncrement(node *sqlparser.DDL) (*config.AutoIncrement, error) {
 	switch node.Action {
 	case sqlparser.CreateTableStr:
 		for _, col := range node.TableSpec.Columns {
 			if col.Type.Autoincrement {
-				return &config.AutoIncrement{
-					Column: col.Name.String(),
+				if !strings.EqualFold(col.Type.Type, autoIncColumnType) {
+					return nil, fmt.Errorf("autoincrement.column.type[%v].must.be[%s]", col.Type.Type, autoIncColumnType)
+				} else {
+					return &config.AutoIncrement{
+						Column: col.Name.String(),
+					}, nil
 				}
 			}
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func modifyForAutoinc(ins *sqlparser.Insert, autoinc *config.AutoIncrement, seq uint64) {
