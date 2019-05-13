@@ -26,12 +26,15 @@ func (spanner *Spanner) ComInitDB(session *driver.Session, database string) erro
 	}
 
 	privilegePlug := spanner.plugins.PlugPrivilege()
-	isSuper, dbs := privilegePlug.GetUserPrivilegeDBS(session.User())
-	if !isSuper {
-		if _, ok := dbs[database]; !ok {
-			error := sqldb.NewSQLErrorf(sqldb.ER_DBACCESS_DENIED_ERROR, "Access denied for user '%v'@'%%' to database '%v'",
-				session.User(), database)
-			return error
+	isSet := privilegePlug.CheckUserPrivilegeIsSet(session.User())
+	if !isSet {
+		isSuper := privilegePlug.IsSuperPriv(session.User())
+		if !isSuper {
+			if isExist := privilegePlug.CheckDBinUserPrivilege(session.User(), database); !isExist {
+				error := sqldb.NewSQLErrorf(sqldb.ER_DBACCESS_DENIED_ERROR, "Access denied for user '%v'@'%%' to database '%v'",
+					session.User(), database)
+				return error
+			}
 		}
 	}
 

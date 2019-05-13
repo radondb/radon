@@ -67,6 +67,31 @@ func TestProxyUseDatabasePrivilegeNotSuper(t *testing.T) {
 	// use db.
 	{
 		_, err := driver.NewConn("mock", "mock", address, "test1", "utf8")
+		assert.Nil(t, err)
+	}
+}
+
+func TestProxyUseDatabasePrivilegeDB(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxyPrivilegeN(log, MockDefaultConfig())
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("use test1", &sqltypes.Result{})
+	}
+
+	// connection without database.
+	{
+		_, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+	}
+
+	// use db.
+	{
+		_, err := driver.NewConn("mock", "mock", address, "test1", "utf8")
 		assert.NotNil(t, err)
 	}
 }

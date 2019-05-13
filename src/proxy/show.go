@@ -35,23 +35,28 @@ func (spanner *Spanner) handleShowDatabases(session *driver.Session, query strin
 	}
 
 	privilegePlug := spanner.plugins.PlugPrivilege()
-	isSuper, dbs := privilegePlug.GetUserPrivilegeDBS(session.User())
+	isSuper := privilegePlug.IsSuperPriv(session.User())
 	if isSuper {
 		return qr, nil
 	} else {
-		newqr := &sqltypes.Result{}
-		for _, row := range qr.Rows {
-			name := string(row[0].Raw())
-			if _, ok := dbs[name]; ok {
-				newqr.RowsAffected++
-				newqr.Rows = append(newqr.Rows, row)
+		isSet := privilegePlug.CheckUserPrivilegeIsSet(session.User())
+		if isSet {
+			return qr, nil
+		} else {
+			newqr := &sqltypes.Result{}
+			for _, row := range qr.Rows {
+				db := string(row[0].Raw())
+				if isExist := privilegePlug.CheckDBinUserPrivilege(session.User(), db); isExist {
+					newqr.RowsAffected++
+					newqr.Rows = append(newqr.Rows, row)
+				}
 			}
-		}
 
-		newqr.Fields = []*querypb.Field{
-			{Name: "Database", Type: querypb.Type_VARCHAR},
+			newqr.Fields = []*querypb.Field{
+				{Name: "Database", Type: querypb.Type_VARCHAR},
+			}
+			return newqr, nil
 		}
-		return newqr, nil
 	}
 }
 

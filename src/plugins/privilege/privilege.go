@@ -22,6 +22,8 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
+// https://dev.mysql.com/doc/refman/5.7/en/privileges-provided.html#priv_grant-option
+// TODO: support other privileges.
 type privilege struct {
 	selectPriv bool
 	insertPriv bool
@@ -104,13 +106,6 @@ func (p *Privilege) Init() error {
 	return nil
 }
 
-func (p *Privilege) IsSuperPriv(user string) bool {
-	p.mu.RLock()
-	userpriv := p.userPrivs[user]
-	p.mu.RUnlock()
-	return userpriv.priv.superPriv
-}
-
 // https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html
 func (p *Privilege) CheckPrivilege(db string, user string, node sqlparser.Statement) bool {
 	p.mu.RLock()
@@ -177,21 +172,50 @@ func (p *Privilege) Check(database string, user string, node sqlparser.Statement
 	return nil
 }
 
-// GetUserPrivilegeDBS get the user dbPrivs if the user is not super.
-func (p *Privilege) GetUserPrivilegeDBS(user string) (isSuper bool, dbMap map[string]struct{}) {
+// IsSuperPriv ...
+func (p *Privilege) IsSuperPriv(user string) bool {
+	p.mu.RLock()
+	userpriv := p.userPrivs[user]
+	p.mu.RUnlock()
+	return userpriv.priv.superPriv
+}
+
+// CheckUserPrivilegeIsSet ...
+func (p *Privilege) CheckUserPrivilegeIsSet(user string) bool {
 	p.mu.RLock()
 	userpriv := p.userPrivs[user]
 	p.mu.RUnlock()
 
-	if userpriv.priv.superPriv {
-		return true, nil
-	}
+	isSet := userpriv.priv.selectPriv || userpriv.priv.insertPriv || userpriv.priv.updatePriv || userpriv.priv.deletePriv ||
+		userpriv.priv.createPriv || userpriv.priv.dropPriv || userpriv.priv.grantPriv || userpriv.priv.alterPriv ||
+		userpriv.priv.indexPriv || userpriv.priv.showDBPriv || userpriv.priv.superPriv
+
+	return isSet
+}
+
+// GetUserPrivilegeDBS get the dbmap with dbPrivs in the user.
+func (p *Privilege) GetUserPrivilegeDBS(user string) (dbMap map[string]struct{}) {
+	p.mu.RLock()
+	userpriv := p.userPrivs[user]
+	p.mu.RUnlock()
 
 	dbs := make(map[string]struct{})
 	for db, _ := range userpriv.dbPrivs {
 		dbs[db] = struct{}{}
 	}
-	return false, dbs
+	return dbs
+}
+
+// CheckDBinUserPrivilege ...
+func (p *Privilege) CheckDBinUserPrivilege(user string, db string) bool {
+	p.mu.RLock()
+	userpriv := p.userPrivs[user]
+	p.mu.RUnlock()
+
+	if _, ok := userpriv.dbPrivs[db]; ok {
+		return true
+	}
+	return false
 }
 
 // Close -- close the privilege plugin.
