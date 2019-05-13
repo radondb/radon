@@ -124,6 +124,42 @@ func TestDDL1(t *testing.T) {
 				") engine=tokudb default charset=utf8",
 		},
 
+		// GLOBAL.
+		{
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") GLOBAL",
+			output: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
+
+		// SINGLE.
+		{
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") SINGLE",
+			output: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
+
+		// NORMAL.
+		{
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") ",
+			output: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
+
 		// current timestamp.
 		{
 			input: "create table t (\n" +

@@ -177,7 +177,7 @@ func forceEOF(yylex interface{}) {
 // RadonDB
 %token <empty> PARTITION PARTITIONS HASH XA
 %type <statement> truncate_statement xa_statement explain_statement kill_statement transaction_statement
-%token <bytes> ENGINES VERSIONS PROCESSLIST QUERYZ TXNZ KILL ENGINE
+%token <bytes> ENGINES VERSIONS PROCESSLIST QUERYZ TXNZ KILL ENGINE SINGLE
 // Transaction Tokens
 %token <bytes> BEGIN START TRANSACTION COMMIT ROLLBACK
 // SET tokens
@@ -252,7 +252,7 @@ func forceEOF(yylex interface{}) {
 %type <columnType> column_type
 %type <columnType> int_type decimal_type numeric_type time_type char_type
 %type <optVal> length_opt column_default_opt on_update_opt column_comment_opt
-%type <str> charset_opt collate_opt charset_option engine_option autoincrement_option
+%type <str> charset_opt collate_opt charset_option engine_option autoincrement_option tabletype_option
 %type <boolVal> unsigned_opt zero_fill_opt
 %type <LengthScaleOption> float_length_opt decimal_length_opt
 %type <boolVal> null_opt auto_increment_opt
@@ -428,6 +428,7 @@ create_statement:
     $1.Action = CreateTableStr
     $1.TableSpec = $2
     $1.PartitionName = string($7)
+    $1.TableSpec.Options.Type = PartitionTableType
     $$ = $1
   }
 | CREATE DATABASE not_exists_opt table_id
@@ -463,10 +464,11 @@ table_spec:
   }
 
 table_option_list:
- engine_option autoincrement_option charset_option
+ engine_option autoincrement_option charset_option tabletype_option
   {
     $$.Engine = $1
     $$.Charset = $3
+    $$.Type = $4
   }
 
 engine_option:
@@ -493,6 +495,19 @@ autoincrement_option:
  }
 | AUTO_INCREMENT '=' INTEGRAL
  {
+ }
+
+tabletype_option:
+ {
+    $$= NormalTableType
+ }
+| GLOBAL
+ {
+   $$ = GlobalTableType
+ }
+| SINGLE
+ {
+   $$ = SingleTableType
  }
 
 
@@ -2597,6 +2612,7 @@ non_reserved_keyword:
 | SHARE
 | SIGNED
 | SMALLINT
+| SINGLE
 | TEXT
 | TIME
 | TIMESTAMP
