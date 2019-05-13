@@ -522,7 +522,7 @@ func TestProxyShowCreateTable(t *testing.T) {
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
-		query := "create table g_t1(id int, b int)"
+		query := "create table g_t1(id int, b int) global"
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
 		client.Quit()

@@ -120,7 +120,7 @@ func TestProxyDDLTable(t *testing.T) {
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
-		query := "create table t2(a int, b int)"
+		query := "create table t2(a int, b int) GLOBAL"
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
 	}
@@ -129,7 +129,7 @@ func TestProxyDDLTable(t *testing.T) {
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
-		query := "create table if not exists t2(a int, b int)"
+		query := "create table if not exists t2(a int, b int) GLOBAL"
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
 	}
@@ -444,7 +444,7 @@ func TestProxyDDLColumn(t *testing.T) {
 		"alter table t1 add column(c1 int, c2 varchar(100))",
 		"alter table t1 drop column c2",
 		"alter table t1 modify column c2 varchar(1)",
-		"create table t2(id int, b int)",
+		"create table t2(id int, b int) GLOBAL",
 		"alter table t2 add column(c1 int, c2 varchar(100))",
 		"alter table t2 drop column c2",
 		"alter table t2 modify column c2 varchar(1)",
@@ -914,5 +914,54 @@ func TestProxyDDLDBPrivilegeN(t *testing.T) {
 		want := "Access denied for user 'mock'@'test' (errno 1045) (sqlstate 28000)"
 		got := err.Error()
 		assert.Equal(t, want, got)
+	}
+}
+
+func TestProxyDDLGlobalSingleNormal(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	querys := []string{
+		"CREATE TABLE t1(a int primary key,b int )",
+		"CREATE TABLE t2(a int primary key,b int ) GLOBAL",
+		"CREATE TABLE t4(a int primary key,b int ) partition by hash(a)",
+		"CREATE TABLE t3(a int primary key,b int ) SINGLE",
+		"CREATE TABLE t1(a int ,b int )",
+	}
+
+	results := []string{
+		"",
+		"",
+		"",
+		"single.table.not.impl.yet (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication (errno 1105) (sqlstate HY000)",
+	}
+
+	for i, query := range querys {
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		_, err = client.FetchAll(query, -1)
+		if err != nil {
+			want := results[i]
+			got := err.Error()
+			assert.Equal(t, want, got)
+		}
 	}
 }
