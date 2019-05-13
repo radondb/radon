@@ -582,6 +582,10 @@ const (
 	AlterModifyColumnStr    = "alter table modify column"
 	RenameStr               = "rename"
 	TruncateTableStr        = "truncate table"
+	SingleTableType         = "singletable"
+	GlobalTableType         = "globaltable"
+	PartitionTableType      = "partitiontable"
+	NormalTableType         = "normaltable"
 )
 
 // Format formats the node.
@@ -654,6 +658,7 @@ func (node *DDL) WalkSubtree(visit Visit) error {
 type TableOptions struct {
 	Engine  string
 	Charset string
+	Type    string
 }
 
 // Format formats the node.
