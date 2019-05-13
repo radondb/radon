@@ -232,7 +232,7 @@ func TestSelectPlan(t *testing.T) {
 		"a"
 	]
 }`,
-`{
+		`{
 	"RawQuery": "select avg(distinct id) as tmp,b,sum(id),count(id) from B group by b",
 	"Project": "id as tmp, b, id as ` + "`sum(id)`" + `, id as ` + "`count(id)`" + `",
 	"Partitions": [
@@ -259,7 +259,7 @@ func TestSelectPlan(t *testing.T) {
 		"b"
 	]
 }`,
-`{
+		`{
 	"RawQuery": "select sum(A.a), B.b from A join B on A.id=B.id where A.id=1 group by B.b",
 	"Project": "A.a as ` + "`sum(A.a)`" + `, B.b",
 	"Partitions": [
@@ -494,6 +494,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select b as a from A group by A.a",
 		"select a+1 from A group by a+1",
 		"select count(distinct *) from A",
+		"select t1.a from G",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
@@ -530,6 +531,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: group.by.field[A.a].should.be.in.select.list",
 		"unsupported: group.by.[a + 1].type.should.be.colname",
 		"unsupported: syntax.error.at.'count(distinct *)'",
+		"unsupported: unknown.column.'t1.a'.in.exprs",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
