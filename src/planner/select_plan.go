@@ -111,6 +111,9 @@ func (p *SelectPlan) Build() error {
 	if ok && mn.routeLen == 1 {
 		node.From = mn.Sel.From
 		node.Where = mn.Sel.Where
+		if err = checkTbName(tbInfos, node); err != nil {
+			return err
+		}
 		mn.Sel = node
 		mn.buildQuery(tbInfos)
 		return nil

@@ -54,6 +54,22 @@ func hasSubquery(node sqlparser.SQLNode) bool {
 	return has
 }
 
+func checkTbName(tbInfos map[string]*TableInfo, node sqlparser.SQLNode) error {
+	return sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
+		if col, ok := node.(*sqlparser.ColName); ok {
+			tableName := col.Qualifier.Name.String()
+			if tableName != "" {
+				if _, ok := tbInfos[tableName]; !ok {
+					buf := sqlparser.NewTrackedBuffer(nil)
+					col.Format(buf)
+					return false, errors.Errorf("unsupported: unknown.column.'%s'.in.exprs", buf.String())
+				}
+			}
+		}
+		return true, nil
+	}, node)
+}
+
 func nameMatch(node sqlparser.Expr, table, shardkey string) bool {
 	colname, ok := node.(*sqlparser.ColName)
 	return ok && (colname.Qualifier.Name.String() == "" || colname.Qualifier.Name.String() == table) && (colname.Name.String() == shardkey)
