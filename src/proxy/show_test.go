@@ -282,6 +282,30 @@ func TestProxyShowDatabasesPrivilege(t *testing.T) {
 		query := "show databases"
 		qr, err := client.FetchAll(query, -1)
 		assert.Nil(t, err)
+		assert.EqualValues(t, 2, len(qr.Rows))
+	}
+}
+
+func TestProxyShowDatabasesPrivilegeDB(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxyPrivilegeN(log, MockDefaultConfig())
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("show databases", showDatabasesResult)
+	}
+
+	// show databases.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show databases"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
 		assert.EqualValues(t, 1, len(qr.Rows))
 	}
 }

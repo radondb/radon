@@ -233,9 +233,6 @@ func TestIsSuperPriv(t *testing.T) {
 	for _, test := range tests {
 		isSuper := handler.IsSuperPriv(test.user)
 		assert.Equal(t, true, isSuper)
-
-		isSuper, _ = handler.GetUserPrivilegeDBS(test.user)
-		assert.Equal(t, true, isSuper)
 	}
 }
 
@@ -267,15 +264,33 @@ func TestGetUserPrivilegeDB(t *testing.T) {
 			sql:  "SHOW DATABASES",
 			err:  "",
 		},
+		{
+			name: "show.databases.ok",
+			db:   "test1",
+			user: "mock",
+			sql:  "SHOW DATABASES",
+			err:  "",
+		},
+	}
+
+	for _, test := range tests[:1] {
+		dbs := handler.GetUserPrivilegeDBS(test.user)
+		_, ok := dbs[test.db]
+		assert.Equal(t, true, ok)
+	}
+
+	for _, test := range tests[:1] {
+		isExist := handler.CheckDBinUserPrivilege(test.user, test.db)
+		assert.Equal(t, true, isExist)
+	}
+
+	for _, test := range tests[1:2] {
+		isExist := handler.CheckDBinUserPrivilege(test.user, test.db)
+		assert.Equal(t, false, isExist)
 	}
 
 	for _, test := range tests {
-		isSuper, dbs := handler.GetUserPrivilegeDBS(test.user)
-		assert.Equal(t, false, isSuper)
-		if !isSuper {
-			if _, ok := dbs[test.db]; ok {
-				assert.Equal(t, true, ok)
-			}
-		}
+		isSet := handler.CheckUserPrivilegeIsSet(test.user)
+		assert.EqualValues(t, true, isSet)
 	}
 }
