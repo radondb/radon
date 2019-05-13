@@ -28,16 +28,30 @@ var (
 	}
 )
 
-// CheckCreateTable used to check the CRERATE TABLE statement.
-func CheckCreateTable(ddl *sqlparser.DDL) error {
+func checkEngine(ddl *sqlparser.DDL) {
+	check := false
+	engine := ddl.TableSpec.Options.Engine
+	for _, eng := range supportEngines {
+		if eng == strings.ToLower(engine) {
+			check = true
+			break
+		}
+	}
+
+	// Change the storage engine to InnoDB.
+	if !check {
+		ddl.TableSpec.Options.Engine = "InnoDB"
+	}
+}
+
+func tryGetShardKey(ddl *sqlparser.DDL) (string, error) {
 	shardKey := ddl.PartitionName
 	table := ddl.Table.Name.String()
 
 	if "dual" == table {
-		return fmt.Errorf("spanner.ddl.check.create.table[%s].error:not support", table)
+		return "", fmt.Errorf("spanner.ddl.check.create.table[%s].error:not support", table)
 	}
 
-	// when shardtype is HASH,check shard key and UNIQUE/PRIMARY KEY constraint.
 	if shardKey != "" {
 		shardKeyOK := false
 		constraintCheckOK := true
@@ -55,10 +69,10 @@ func CheckCreateTable(ddl *sqlparser.DDL) error {
 		}
 
 		if !shardKeyOK {
-			return fmt.Errorf("Sharding Key column '%s' doesn't exist in table", shardKey)
+			return "", fmt.Errorf("Sharding Key column '%s' doesn't exist in table", shardKey)
 		}
 		if !constraintCheckOK {
-			return fmt.Errorf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
+			return "", fmt.Errorf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
 		}
 
 		// constraint check in index definition
@@ -74,26 +88,21 @@ func CheckCreateTable(ddl *sqlparser.DDL) error {
 					}
 				}
 				if !constraintCheckOK {
-					return fmt.Errorf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
+					return "", fmt.Errorf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
 				}
 			}
 		}
-	}
-
-	check := false
-	engine := ddl.TableSpec.Options.Engine
-	for _, eng := range supportEngines {
-		if eng == strings.ToLower(engine) {
-			check = true
-			break
+		return shardKey, nil
+	} else {
+		for _, col := range ddl.TableSpec.Columns {
+			colName := col.Name.String()
+			switch col.Type.KeyOpt {
+			case sqlparser.ColKeyUnique, sqlparser.ColKeyUniqueKey, sqlparser.ColKeyPrimary, sqlparser.ColKey:
+				return colName, nil
+			}
 		}
 	}
-
-	// Change the storage engine to InnoDB.
-	if !check {
-		ddl.TableSpec.Options.Engine = "InnoDB"
-	}
-	return nil
+	return "", fmt.Errorf("The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication")
 }
 
 func checkDatabaseExists(database string, router *router.Router) bool {
@@ -177,9 +186,11 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		}
 		return qr, nil
 	case sqlparser.CreateTableStr:
+		var err error
 		table := ddl.Table.Name.String()
 		backends := scatter.Backends()
 		shardKey := ddl.PartitionName
+		tableType := router.TableTypeUnknow
 
 		if !checkDatabaseExists(database, route) {
 			return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, database)
@@ -190,13 +201,21 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 			return &sqltypes.Result{}, nil
 		}
 
-		// Check the table and change the engine.
-		if err := CheckCreateTable(ddl); err != nil {
-			log.Error("spanner.ddl.check.create.table[%s].error:%+v", table, err)
-			return nil, err
-		}
+		// Check engine.
+		checkEngine(ddl)
 
-		// Create table.
+		switch ddl.TableSpec.Options.Type {
+		case sqlparser.PartitionTableType, sqlparser.NormalTableType:
+			if shardKey, err = tryGetShardKey(ddl); err != nil {
+				return nil, err
+			}
+			tableType = router.TableTypePartition
+		case sqlparser.GlobalTableType:
+			tableType = router.TableTypeGlobal
+		case sqlparser.SingleTableType:
+			tableType = router.TableTypeSingle
+			return nil, fmt.Errorf("single.table.not.impl.yet")
+		}
 
 		autoinc, err := autoincrement.GetAutoIncrement(node)
 		if err != nil {
@@ -205,7 +224,7 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		extra := &router.Extra{
 			AutoIncrement: autoinc,
 		}
-		if err := route.CreateTable(database, table, shardKey, backends, extra); err != nil {
+		if err := route.CreateTable(database, table, shardKey, tableType, backends, extra); err != nil {
 			return nil, err
 		}
 		r, err := spanner.ExecuteDDL(session, database, sqlparser.String(ddl), node)

@@ -103,7 +103,6 @@ coverage:
 
 check:
 	go get -v gopkg.in/alecthomas/gometalinter.v2
-	go get -v honnef.co/go/tools/cmd/megacheck
 	bin/gometalinter.v2 -j 4 --disable-all \
 	--enable=gofmt \
 	--enable=golint \
@@ -111,6 +110,5 @@ check:
 	--enable=gosimple \
 	--enable=unconvert \
 	--deadline=10m $(allpkgs) 2>&1 | tee /dev/stderr
-	bin/megacheck $(allpkgs)  2>&1 | tee /dev/stderr
 
 .PHONY: build clean install fmt test coverage check

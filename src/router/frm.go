@@ -19,6 +19,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	TableTypeSingle    = "single"
+	TableTypeGlobal    = "global"
+	TableTypePartition = "partition"
+	TableTypeUnknow    = "unknow"
+)
+
 // writeTableFrmData used to write table's json schema to file.
 // The file name is : [schema-dir]/[database]/[table].json.
 // If the [schema-dir]/[database] directoryis not exists, we will create it first.
@@ -154,25 +161,32 @@ func (r *Router) DropDatabase(db string) error {
 
 // CreateTable used to add a table to router and flush the schema to disk.
 // Lock.
-func (r *Router) CreateTable(db, table, shardKey string, backends []string, extra *Extra) error {
+func (r *Router) CreateTable(db, table, shardKey string, tableType string, backends []string, extra *Extra) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	var err error
 	var tableConf *config.TableConfig
 	log := r.log
-	// Compute the shards config.
-	if shardKey == "" {
-		tableConf, err = r.GlobalUniform(table, backends)
-	} else {
-		tableConf, err = r.HashUniform(table, shardKey, backends)
-	}
-	if err != nil {
-		log.Error("frm.create.table[%s.%s].compute.error:%v", db, table, err)
-		return err
+
+	switch tableType {
+	case TableTypeGlobal:
+		if tableConf, err = r.GlobalUniform(table, backends); err != nil {
+			return err
+		}
+	case TableTypeSingle:
+		// TODO(BohuTANG): single table
+		return fmt.Errorf("single.table.not.impl.yet")
+	case TableTypePartition:
+		if tableConf, err = r.HashUniform(table, shardKey, backends); err != nil {
+			return err
+		}
+	default:
+		if tableConf, err = r.HashUniform(table, shardKey, backends); err != nil {
+			return err
+		}
 	}
 
-	// Set extra.
 	if extra != nil {
 		tableConf.AutoIncrement = extra.AutoIncrement
 	}
