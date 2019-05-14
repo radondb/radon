@@ -497,7 +497,7 @@ func TestProxyExecutPrivilegeN(t *testing.T) {
 		fakedbs.AddQuery(query, fakedb.Result3)
 		_, err = client.FetchAll(query, -1)
 		assert.NotNil(t, err)
-		want := "Access denied for user 'mock'@'test' (errno 1045) (sqlstate 28000)"
+		want := "Access denied for user 'mock'@'%' to database 'test' (errno 1045) (sqlstate 28000)"
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}

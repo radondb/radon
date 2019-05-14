@@ -144,6 +144,10 @@ func (p *Privilege) Check(database string, user string, node sqlparser.Statement
 	if node != nil {
 		sqlparser.Walk(func(nod sqlparser.SQLNode) (kontinue bool, err error) {
 			switch nod := nod.(type) {
+			case *sqlparser.StarExpr:
+				return false, nil
+			case *sqlparser.ColName:
+				return false, nil
 			case sqlparser.TableName:
 				if !nod.Qualifier.IsEmpty() {
 					db = nod.Qualifier.String()
@@ -167,7 +171,7 @@ func (p *Privilege) Check(database string, user string, node sqlparser.Statement
 	}
 
 	if !ok {
-		return sqldb.NewSQLErrorf(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'@'%v'", user, db)
+		return sqldb.NewSQLErrorf(sqldb.ER_ACCESS_DENIED_ERROR, "Access denied for user '%v'@'%%' to database '%v'", user, db)
 	}
 	return nil
 }

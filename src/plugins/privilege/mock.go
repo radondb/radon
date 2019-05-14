@@ -398,3 +398,24 @@ func MockInitPrivilegeUsers(fakedbs *fakedb.DB) {
 	fakedbs.AddQuery("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, alter_priv, index_priv, show_db_priv, super_priv from mysql.user", UserRs1)
 	fakedbs.AddQueryPattern("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, grant_priv, alter_priv, index_priv, db from .*", DbRs1)
 }
+
+//
+func MockInitPrivilegeUserNDatabaseY(fakedbs *fakedb.DB) {
+	UserRs.Rows[0] = UserRs.Rows[0][0:2]
+	DbRs.Rows[0] = DbRs.Rows[0][0:2]
+	{
+		// userRS.
+		for i := 2; i < len(UserRs.Fields); i++ {
+			UserRs.Rows[0] = append(UserRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_ENUM, []byte("N")))
+		}
+
+		// dbRs.
+		for i := 2; i < len(DbRs.Fields)-1; i++ {
+			DbRs.Rows[0] = append(DbRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_ENUM, []byte("Y")))
+		}
+		DbRs.Rows[0] = append(DbRs.Rows[0], sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test")))
+	}
+
+	fakedbs.AddQuery("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, alter_priv, index_priv, show_db_priv, super_priv from mysql.user", UserRs)
+	fakedbs.AddQueryPattern("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, grant_priv, alter_priv, index_priv, db from .*", DbRs)
+}

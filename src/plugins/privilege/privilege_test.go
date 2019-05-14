@@ -116,7 +116,7 @@ func TestLoadUserPrivilege(t *testing.T) {
 			db:   "test",
 			user: "mock1",
 			sql:  "",
-			err:  "Access denied for user 'mock1'@'test' (errno 1045) (sqlstate 28000)",
+			err:  "Access denied for user 'mock1'@'%' to database 'test' (errno 1045) (sqlstate 28000)",
 		},
 
 		{
@@ -124,7 +124,7 @@ func TestLoadUserPrivilege(t *testing.T) {
 			db:   "test",
 			user: "mock1",
 			sql:  "",
-			err:  "Access denied for user 'mock1'@'test' (errno 1045) (sqlstate 28000)",
+			err:  "Access denied for user 'mock1'@'%' to database 'test' (errno 1045) (sqlstate 28000)",
 		},
 	}
 
@@ -142,7 +142,7 @@ func TestLoadUserPrivilege(t *testing.T) {
 		if err != nil {
 			errmsg = err.Error()
 		}
-		assert.True(t, errmsg == test.err)
+		assert.EqualValues(t, test.err, errmsg)
 	}
 }
 
@@ -172,7 +172,7 @@ func TestLoadUserPrivilegeDenied(t *testing.T) {
 			db:   "test",
 			user: "mock",
 			sql:  "select * from test1.t1",
-			err:  "Access denied for user 'mock'@'test1' (errno 1045) (sqlstate 28000)",
+			err:  "Access denied for user 'mock'@'%' to database 'test1' (errno 1045) (sqlstate 28000)",
 		},
 
 		{
@@ -180,7 +180,7 @@ func TestLoadUserPrivilegeDenied(t *testing.T) {
 			db:   "test",
 			user: "mock",
 			sql:  "show table status",
-			err:  "Access denied for user 'mock'@'test' (errno 1045) (sqlstate 28000)",
+			err:  "Access denied for user 'mock'@'%' to database 'test' (errno 1045) (sqlstate 28000)",
 		},
 	}
 
@@ -292,5 +292,67 @@ func TestGetUserPrivilegeDB(t *testing.T) {
 	for _, test := range tests {
 		isSet := handler.CheckUserPrivilegeIsSet(test.user)
 		assert.EqualValues(t, true, isSet)
+	}
+}
+
+func TestCheckPrivilegeSkipCol(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+
+	// Create scatter and query handler.
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 3)
+	defer cleanup()
+
+	MockInitPrivilegeUserNDatabaseY(fakedbs)
+
+	handler := NewPrivilege(log, nil, scatter)
+	err := handler.Init()
+	assert.Nil(t, err)
+	defer handler.Close()
+
+	tests := []struct {
+		name string
+		db   string
+		user string
+		sql  string
+		err  string
+	}{
+		{
+			name: "select.ok",
+			db:   "",
+			user: "mock",
+			sql:  "select * from test.t1",
+			err:  "",
+		},
+		{
+			name: "select.ok",
+			db:   "",
+			user: "mock",
+			sql:  "select t1.a from test.t1",
+			err:  "",
+		},
+		{
+			name: "select.ok",
+			db:   "",
+			user: "mock",
+			sql:  "select a.c1 from test.t1 as a",
+			err:  "",
+		},
+	}
+
+	for i, test := range tests {
+		var err error
+		var errmsg string
+		var node sqlparser.Statement
+
+		if test.sql != "" {
+			node, err = sqlparser.Parse(test.sql)
+			assert.Nil(t, err)
+		}
+		err = handler.Check(test.db, test.user, node)
+		log.Warning("err:%v, i:%d", err, i)
+		if err != nil {
+			errmsg = err.Error()
+		}
+		assert.EqualValues(t, test.err, errmsg)
 	}
 }
