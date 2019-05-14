@@ -101,6 +101,15 @@ func tryGetShardKey(ddl *sqlparser.DDL) (string, error) {
 				return colName, nil
 			}
 		}
+		// constraint check in index definition.
+		for _, index := range ddl.TableSpec.Indexes {
+			info := index.Info
+			if info.Unique || info.Primary {
+				if len(index.Columns) == 1 {
+					return index.Columns[0].Column.String(), nil
+				}
+			}
+		}
 	}
 	return "", fmt.Errorf("The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication")
 }

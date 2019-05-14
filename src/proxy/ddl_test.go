@@ -944,6 +944,9 @@ func TestProxyDDLGlobalSingleNormal(t *testing.T) {
 		"CREATE TABLE t4(a int primary key,b int ) partition by hash(a)",
 		"CREATE TABLE t3(a int primary key,b int ) SINGLE",
 		"CREATE TABLE t1(a int ,b int )",
+		"CREATE TABLE t5(a int ,b int, primary key(a))",
+		"CREATE TABLE t6(a int ,b int, primary key(a, b))",
+		"create table t7(a int, b int unique)",
 	}
 
 	results := []string{
@@ -952,6 +955,9 @@ func TestProxyDDLGlobalSingleNormal(t *testing.T) {
 		"",
 		"single.table.not.impl.yet (errno 1105) (sqlstate HY000)",
 		"The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication (errno 1105) (sqlstate HY000)",
+		"",
+		"The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication (errno 1105) (sqlstate HY000)",
+		"",
 	}
 
 	for i, query := range querys {
