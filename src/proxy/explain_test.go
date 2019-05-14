@@ -294,3 +294,24 @@ func TestProxyExplainUnsupported(t *testing.T) {
 		assert.Equal(t, want, got)
 	}
 }
+
+func TestProxyExplainPrivilege(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxyPrivilegeN(log, MockDefaultConfig())
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+	}
+
+	// explain.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "explain select 1, sum(a),avg(a),a,b from test.t1 as t1 where id>1 group by a,b order by a desc limit 10 offset 100"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+}

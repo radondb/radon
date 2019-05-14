@@ -49,6 +49,11 @@ func (spanner *Spanner) handleExplain(session *driver.Session, query string, nod
 		return qr, nil
 	}
 
+	privilegePlug := spanner.plugins.PlugPrivilege()
+	if err := privilegePlug.Check(database, session.User(), subNode); err != nil {
+		return nil, err
+	}
+
 	// Explain only supports DML.
 	// see https://dev.mysql.com/doc/refman/5.7/en/explain.html
 	switch subNode.(type) {
