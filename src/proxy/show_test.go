@@ -493,6 +493,25 @@ func TestProxyShowCreateTable(t *testing.T) {
 		},
 	}
 
+	r3 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "table",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "create table",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("s_t1")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("create table s_t1")),
+			},
+		},
+	}
+
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
@@ -508,6 +527,7 @@ func TestProxyShowCreateTable(t *testing.T) {
 		fakedbs.AddQuerys("show create table MYSQL.t1", r1)
 		fakedbs.AddQuerys("show create table xxx.t1", r1)
 		fakedbs.AddQuerys("show create table test.g_t1", r2)
+		fakedbs.AddQuerys("show create table test.s_t1", r3)
 	}
 
 	// create database.
@@ -560,7 +580,30 @@ func TestProxyShowCreateTable(t *testing.T) {
 		query := "show create table test.g_t1"
 		qr, err := client.FetchAll(query, -1)
 		assert.Nil(t, err)
-		want := "[g_t1 create table g_t1]"
+		want := "[g_t1 create table g_t1\n/*!GLOBAL*/]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// create test table with single.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create table s_t1(id int, b int) single"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		client.Quit()
+	}
+
+	// show create table which shardType is single.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show create table test.s_t1"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[s_t1 create table s_t1\n/*!SINGLE*/]"
 		got := fmt.Sprintf("%+v", qr.Rows[0])
 		assert.Equal(t, want, got)
 	}
