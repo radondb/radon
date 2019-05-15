@@ -78,9 +78,11 @@ func nameMatch(node sqlparser.Expr, table, shardkey string) bool {
 // isShardKeyChanging returns true if any of the update
 // expressions modify a shardkey column.
 func isShardKeyChanging(exprs sqlparser.UpdateExprs, shardkey string) bool {
-	for _, assignment := range exprs {
-		if shardkey == assignment.Name.Name.String() {
-			return true
+	if shardkey != "" {
+		for _, assignment := range exprs {
+			if shardkey == assignment.Name.Name.String() {
+				return true
+			}
 		}
 	}
 	return false

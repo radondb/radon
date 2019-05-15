@@ -284,6 +284,64 @@ func TestSelectPlan(t *testing.T) {
 		"b"
 	]
 }`,
+		`{
+	"RawQuery": "select 1, sum(a),avg(a),a,b from sbtest.S where id\u003e1 group by a,b order by a desc limit 10 offset 100",
+	"Project": "1, sum(a), avg(a), a, b",
+	"Partitions": [
+		{
+			"Query": "select 1, sum(a), avg(a), a, b from sbtest.S where id \u003e 1 group by a, b order by a desc limit 100, 10",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
+		`{
+	"RawQuery": "select sum(G.a), S.b from G join S on G.id=S.id where G.id\u003e1 group by S.b",
+	"Project": "sum(G.a), S.b",
+	"Partitions": [
+		{
+			"Query": "select sum(G.a), S.b from sbtest.G join sbtest.S on G.id = S.id where G.id \u003e 1 group by S.b",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
+		`{
+	"RawQuery": "select sum(A.a), S.b from A join S on A.id=S.id where A.id=0 group by S.b",
+	"Project": "sum(A.a), S.b",
+	"Partitions": [
+		{
+			"Query": "select sum(A.a), S.b from sbtest.A1 as A join sbtest.S on A.id = S.id where A.id = 0 group by S.b",
+			"Backend": "backend1",
+			"Range": "[0-32)"
+		}
+	]
+}`,
+		`{
+	"RawQuery": "select sum(A.a), S.b from A join S on A.id=S.id where A.id=1 group by S.b",
+	"Project": "A.a as ` + "`sum(A.a)`" + `, S.b",
+	"Partitions": [
+		{
+			"Query": "select A.a as ` + "`sum(A.a)`" + `, A.id from sbtest.A6 as A where A.id = 1 order by A.id asc",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		},
+		{
+			"Query": "select S.b, S.id from sbtest.S where S.id = 1 order by S.id asc",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	],
+	"Aggregate": [
+		"sum(A.a)"
+	],
+	"GatherMerge": [
+		"S.b"
+	],
+	"HashGroupBy": [
+		"b"
+	]
+}`,
 	}
 	querys := []string{
 		"select 1, sum(a),avg(a),a,b from sbtest.A where id>1 group by a,b order by a desc limit 10 offset 100",
@@ -297,6 +355,10 @@ func TestSelectPlan(t *testing.T) {
 		"select B.id as a from B group by a",
 		"select avg(distinct id) as tmp,b,sum(id),count(id) from B group by b",
 		"select sum(A.a), B.b from A join B on A.id=B.id where A.id=1 group by B.b",
+		"select 1, sum(a),avg(a),a,b from sbtest.S where id>1 group by a,b order by a desc limit 10 offset 100",
+		"select sum(G.a), S.b from G join S on G.id=S.id where G.id>1 group by S.b",
+		"select sum(A.a), S.b from A join S on A.id=S.id where A.id=0 group by S.b",
+		"select sum(A.a), S.b from A join S on A.id=S.id where A.id=1 group by S.b",
 	}
 
 	// Database not null.
@@ -307,7 +369,7 @@ func TestSelectPlan(t *testing.T) {
 		route, cleanup := router.MockNewRouter(log)
 		defer cleanup()
 
-		err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+		err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableSConfig(), router.MockTableGConfig())
 		assert.Nil(t, err)
 		for i, query := range querys {
 			node, err := sqlparser.Parse(query)

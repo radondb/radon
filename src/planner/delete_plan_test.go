@@ -110,12 +110,39 @@ func TestDeletePlan(t *testing.T) {
 		}
 	]
 }`,
+		`{
+	"RawQuery": "delete from sbtest.G where id in (1, 2,3)",
+	"Partitions": [
+		{
+			"Query": "delete from sbtest.G where id in (1, 2, 3)",
+			"Backend": "backend1",
+			"Range": ""
+		},
+		{
+			"Query": "delete from sbtest.G where id in (1, 2, 3)",
+			"Backend": "backend2",
+			"Range": ""
+		}
+	]
+}`,
+		`{
+	"RawQuery": "delete from sbtest.S where id in (1, 2,3)",
+	"Partitions": [
+		{
+			"Query": "delete from sbtest.S where id in (1, 2, 3)",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
 	}
 	querys := []string{
 		"delete from sbtest.A where id=1",
 		"delete from sbtest.A where id=1 order by xx",
 		"delete from sbtest.A where name='xx'",
 		"delete from sbtest.A where id in (1, 2,3)",
+		"delete from sbtest.G where id in (1, 2,3)",
+		"delete from sbtest.S where id in (1, 2,3)",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -124,7 +151,7 @@ func TestDeletePlan(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig())
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableGConfig(), router.MockTableSConfig())
 	assert.Nil(t, err)
 	planTree := NewPlanTree()
 	for i, query := range querys {

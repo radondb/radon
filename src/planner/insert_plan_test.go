@@ -500,3 +500,143 @@ func TestReplacePlanGlobal(t *testing.T) {
 		}
 	}
 }
+
+func TestInsertPlanSingle(t *testing.T) {
+	results := []string{
+		`{
+	"RawQuery": "insert into S(id, b, c) values(1,2,3) on duplicate key update c=11",
+	"Partitions": [
+		{
+			"Query": "insert into sbtest.S(id, b, c) values (1, 2, 3) on duplicate key update c = 11",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
+		`{
+	"RawQuery": "insert into S(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+	"Partitions": [
+		{
+			"Query": "insert into sbtest.S(id, b, c) values (1, 2, 3), (23, 4, 5), (65536, 3, 4)",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
+		`{
+	"RawQuery": "insert into sbtest.S(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+	"Partitions": [
+		{
+			"Query": "insert into sbtest.S(id, b, c) values (1, 2, 3), (23, 4, 5), (65536, 3, 4)",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
+	}
+	querys := []string{
+		"insert into S(id, b, c) values(1,2,3) on duplicate key update c=11",
+		"insert into S(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+		"insert into sbtest.S(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableSConfig())
+	assert.Nil(t, err)
+	for i, query := range querys {
+		// database is nil
+		if i == 2 {
+			database = ""
+		}
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewInsertPlan(log, database, query, node.(*sqlparser.Insert), route)
+
+		// plan build
+		{
+			err := plan.Build()
+			assert.Nil(t, err)
+			got := plan.JSON()
+			log.Info(got)
+			want := results[i]
+			assert.Equal(t, want, got)
+			plan.Type()
+			plan.Size()
+		}
+	}
+}
+
+func TestReplacePlanSingle(t *testing.T) {
+	results := []string{
+		`{
+	"RawQuery": "replace into S(id, b, c) values(1,2,3) on duplicate key update c=11",
+	"Partitions": [
+		{
+			"Query": "replace into sbtest.S(id, b, c) values (1, 2, 3) on duplicate key update c = 11",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
+		`{
+	"RawQuery": "replace into S(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+	"Partitions": [
+		{
+			"Query": "replace into sbtest.S(id, b, c) values (1, 2, 3), (23, 4, 5), (65536, 3, 4)",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
+		`{
+	"RawQuery": "replace into sbtest.S(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+	"Partitions": [
+		{
+			"Query": "replace into sbtest.S(id, b, c) values (1, 2, 3), (23, 4, 5), (65536, 3, 4)",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
+	}
+	querys := []string{
+		"replace into S(id, b, c) values(1,2,3) on duplicate key update c=11",
+		"replace into S(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+		"replace into sbtest.S(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableSConfig())
+	assert.Nil(t, err)
+	for i, query := range querys {
+		// database is nil
+		if i == 2 {
+			database = ""
+		}
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewInsertPlan(log, database, query, node.(*sqlparser.Insert), route)
+
+		// plan build
+		{
+			err := plan.Build()
+			assert.Nil(t, err)
+			got := plan.JSON()
+			log.Info(got)
+			want := results[i]
+			assert.Equal(t, want, got)
+			plan.Type()
+			plan.Size()
+		}
+	}
+}

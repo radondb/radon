@@ -407,8 +407,8 @@ func (j *JoinNode) calcRoute() (PlanNode, error) {
 	// left and right node have same routes.
 	if lmn, ok := j.Left.(*MergeNode); ok {
 		if rmn, ok := j.Right.(*MergeNode); ok {
-			if (lmn.backend != "" && lmn.backend == rmn.backend) || rmn.shardCount == 0 || lmn.shardCount == 0 {
-				if lmn.shardCount == 0 {
+			if (lmn.backend != "" && lmn.backend == rmn.backend) || rmn.nonGlobalCnt == 0 || lmn.nonGlobalCnt == 0 {
+				if lmn.nonGlobalCnt == 0 {
 					lmn.backend = rmn.backend
 					lmn.routeLen = rmn.routeLen
 					lmn.index = rmn.index
