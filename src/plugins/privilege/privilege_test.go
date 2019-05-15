@@ -356,3 +356,18 @@ func TestCheckPrivilegeSkipCol(t *testing.T) {
 		assert.EqualValues(t, test.err, errmsg)
 	}
 }
+
+func TestBackendNull(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+
+	// Create scatter and query handler.
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 0)
+	defer cleanup()
+
+	MockInitPrivilegeY(fakedbs)
+
+	handler := NewPrivilege(log, nil, scatter)
+	err := handler.Init()
+	assert.Nil(t, err)
+	defer handler.Close()
+}

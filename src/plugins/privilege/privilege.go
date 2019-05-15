@@ -82,7 +82,6 @@ func (p *Privilege) Init() error {
 
 	if err := p.UpdatePrivileges(); err != nil {
 		log.Error("plugin.privilege.init.privilege.error:%+v", err)
-		return err
 	}
 	log.Info("privilege.init:%+v", p.userPrivs)
 
