@@ -262,7 +262,8 @@ func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query str
 		return nil, err
 	}
 
-	// If shardType is GLOBAL, send the query with database; if shardType is HASH, rewrite the query.
+	// If shardType is GLOBAL or SINGLE, add the tableType to the end of c2;
+	// if shardType is HASH, rewrite the query Result.
 	if shardKey == "" {
 		// If the elapsed > pool.maxIdleTime, the new connection without database, add the database.
 		rewritten := fmt.Sprintf("SHOW CREATE TABLE %s.%s", database, table)
@@ -270,6 +271,20 @@ func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query str
 		if err != nil {
 			return nil, err
 		}
+
+		tableConfig, err := router.TableConfig(database, table)
+		if err != nil {
+			return nil, err
+		}
+		tableType := tableConfig.ShardType
+		// 'show create table' has two columns.
+		c2 := qr.Rows[0][1]
+		// Add tableType to the end of c2Val
+		c2Buf := common.NewBuffer(0)
+		c2Buf.WriteString(string(c2.Raw()))
+		partInfo := fmt.Sprintf("\n/*!%s*/", tableType)
+		c2Buf.WriteString(partInfo)
+		qr.Rows[0][1] = sqltypes.MakeTrusted(c2.Type(), c2Buf.Datas())
 	} else {
 		// Get one table from the router.
 		parts, err := router.Lookup(database, table, nil, nil)
