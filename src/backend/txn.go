@@ -429,7 +429,8 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 	}
 
 	switch req.Mode {
-	// ReqSingle mode: execute on the first one shard of txn.backends.
+	// ReqSingle mode: execute on one of the txn.backends,
+	// it is random sometimes, be careful.
 	case xcontext.ReqSingle:
 		qs := []string{req.RawQuery}
 		for back := range txn.backends {

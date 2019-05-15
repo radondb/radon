@@ -331,7 +331,7 @@ func MockTableG1Config() *config.TableConfig {
 	return mock
 }
 
-// MockTableSConfig config, global shardtype.
+// MockTableSConfig config, single shardtype.
 func MockTableSConfig() *config.TableConfig {
 	return &config.TableConfig{
 		Name:      "S",
