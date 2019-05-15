@@ -112,16 +112,18 @@ Query OK, 0 rows affected (0.01 sec)
     (create_definition,...)
     [ENGINE={InnoDB|TokuDB}]
     [DEFAULT CHARSET=(charset)]
-    [PARTITION BY HASH(shard-key)]
+    [PARTITION BY HASH(shard-key)|SINGLE|GLOBAL]
 ```
 
 `Instructions`
 * Create partition information and generate partition tables on each partition
-* Partition table syntax should include`PARTITION BY HASH(partition key)`
-* Without `PARTITION BY HASH(partition key)`, will create a global table. The global table has full data
-  at ervery backend, it can support join with a partition table.
+* With `GLOBAL` will create a global table. The global table has full data at every backend.
 * The global tables are generally used for tables with fewer changes and smaller capacity, requiring frequent
   association with other tables.
+* With `SINGLE` will create a single table. The single table only on the first backend.
+* With `PARTITION BY HASH(partition key)` will create a hash partition table.
+* Without `PARTITION BY HASH(shard-key)|SINGLE|GLOBAL` will create a partition table. The table's 
+  `PRIMARY|UNIQUE KEY` is the partition key, only support one primary|unique key.
 * The partitioning key only supports specifying one column, the data type of this column is not limited(
   except for TYPE `BINARY/NULL`)
 * The partition mode is HASH, which is evenly distributed across the partitions according to the partition key
@@ -143,11 +145,57 @@ Database changed
 mysql> CREATE TABLE t1(id int, age int) PARTITION BY HASH(id);
 Query OK, 0 rows affected (1.80 sec)
 
-mysql> CREATE TABLE t2(id int, age int);
+mysql> show create table t1\G
+*************************** 1. row ***************************
+       Table: t1
+Create Table: CREATE TABLE `t1` (
+  `id` int(11) DEFAULT NULL,
+  `age` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+/*!50100 PARTITION BY HASH (id) */
+1 row in set (0.051 sec)
+
+mysql> CREATE TABLE t2(id int, age int) GLOBAL;
 Query OK, 0 rows affected (1.80 sec)
 
-mysql> select * from t1 join t2 on t1.id=t2.id where t1.id=1;
-Empty set (0.19 sec)
+mysql> show create table t2\G
+*************************** 1. row ***************************
+       Table: t2
+Create Table: CREATE TABLE `t2` (
+  `id` int(11) DEFAULT NULL,
+  `age` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+/*!GLOBAL*/
+1 row in set (0.047 sec)
+
+mysql> CREATE TABLE t3(id int, age int) SINGLE;
+Query OK, 0 rows affected (1.80 sec)
+
+mysql> show create table t3\G
+*************************** 1. row ***************************
+       Table: t3
+Create Table: CREATE TABLE `t3` (
+  `id` int(11) DEFAULT NULL,
+  `age` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+/*!SINGLE*/
+1 row in set (0.093 sec)
+
+mysql> CREATE TABLE t4(id int, age int);
+ERROR 1105 (HY000): The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication
+mysql> CREATE TABLE t4(id int, age int,primary key(id));
+Query OK, 0 rows affected (1.110 sec)
+
+mysql> show create table t4\G
+*************************** 1. row ***************************
+       Table: t4
+Create Table: CREATE TABLE `t4` (
+  `id` int(11) NOT NULL,
+  `age` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+/*!50100 PARTITION BY HASH (id) */
+1 row in set (0.094 sec)
 ```
 
 #### DROP TABLE
@@ -185,26 +233,28 @@ ALTER TABLE ... ENGINE={InnoDB|TokuDB...}
 mysql> CREATE TABLE t1(id int, age int) PARTITION BY HASH(id);
 Query OK, 0 rows affected (1.76 sec)
 
-mysql> SHOW CREATE TABLE t1\G;
+mysql> SHOW CREATE TABLE t1\G
 *************************** 1. row ***************************
        Table: t1
 Create Table: CREATE TABLE `t1` (
   `id` int(11) DEFAULT NULL,
   `age` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
-1 row in set (0.00 sec)
+/*!50100 PARTITION BY HASH (id) */
+1 row in set (0.046 sec)
 
 mysql> ALTER TABLE t1 ENGINE=TokuDB;
 Query OK, 0 rows affected (0.15 sec)
 
-mysql> SHOW CREATE TABLE t1\G;
+mysql> SHOW CREATE TABLE t1\G
 *************************** 1. row ***************************
        Table: t1
 Create Table: CREATE TABLE `t1` (
   `id` int(11) DEFAULT NULL,
   `age` int(11) DEFAULT NULL
 ) ENGINE=TokuDB DEFAULT CHARSET=utf8
-1 row in set (0.00 sec)
+/*!50100 PARTITION BY HASH (id) */
+1 row in set (0.095 sec)
 ```
 
 #### Change The Table Character Set
@@ -226,26 +276,28 @@ ALTER TABLE table_name CONVERT TO CHARACTER SET {charset}
 mysql> create table t1(id int, b int) partition by hash(id);
 Query OK, 0 rows affected (0.15 sec)
 
-mysql> show create table t1\G;
+mysql> SHOW CREATE TABLE t1\G
 *************************** 1. row ***************************
        Table: t1
 Create Table: CREATE TABLE `t1` (
   `id` int(11) DEFAULT NULL,
   `b` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
-1 row in set (0.00 sec)
+/*!50100 PARTITION BY HASH (id) */
+1 row in set (0.097 sec)
 
 mysql> alter table t1 convert to character set utf8mb4;
 Query OK, 0 rows affected (0.07 sec)
 
-mysql> show create table t1\G;
+mysql> SHOW CREATE TABLE t1\G
 *************************** 1. row ***************************
        Table: t1
 Create Table: CREATE TABLE `t1` (
   `id` int(11) DEFAULT NULL,
   `b` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-1 row in set (0.00 sec)
+/*!50100 PARTITION BY HASH (id) */
+1 row in set (0.045 sec)
 ```
 
 #### TRUNCATE TABLE
@@ -297,7 +349,7 @@ ALTER TABLE table_name ADD COLUMN (col_name column_definition,...)
 mysql> ALTER TABLE t1 ADD COLUMN (b int, c varchar(100));
 Query OK, 0 rows affected (2.94 sec)
 
-mysql> SHOW CREATE TABLE t1\G;
+mysql> SHOW CREATE TABLE t1\G
 *************************** 1. row ***************************
        Table: t1
 Create Table: CREATE TABLE `t1` (
@@ -305,8 +357,9 @@ Create Table: CREATE TABLE `t1` (
   `age` int(11) DEFAULT NULL,
   `b` int(11) DEFAULT NULL,
   `c` varchar(100) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-1 row in set (0.01 sec)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+/*!50100 PARTITION BY HASH (id) */
+1 row in set (0.048 sec)
 ```
 
 #### Drop Column
@@ -327,15 +380,16 @@ ALTER TABLE table_name DROP COLUMN col_name
 mysql>  ALTER TABLE t1 DROP COLUMN c;
 Query OK, 0 rows affected (2.92 sec)
 
-mysql> SHOW CREATE TABLE t1\G;
+mysql> SHOW CREATE TABLE t1\G
 *************************** 1. row ***************************
        Table: t1
 Create Table: CREATE TABLE `t1` (
   `id` int(11) DEFAULT NULL,
   `age` int(11) DEFAULT NULL,
   `b` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-1 row in set (0.00 sec)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+/*!50100 PARTITION BY HASH (id) */
+1 row in set (0.092 sec)
 
 mysql>  ALTER TABLE t1 DROP COLUMN id;
 ERROR 1105 (HY000): unsupported: cannot.drop.the.column.on.shard.key
@@ -359,15 +413,16 @@ ALTER TABLE table_name MODIFY COLUMN col_name column_definition
 mysql> ALTER TABLE t1 MODIFY COLUMN b bigint;
 Query OK, 0 rows affected (4.09 sec)
 
-mysql> SHOW CREATE TABLE t1\G;
+mysql> SHOW CREATE TABLE t1\G
 *************************** 1. row ***************************
        Table: t1
 Create Table: CREATE TABLE `t1` (
   `id` int(11) DEFAULT NULL,
   `age` int(11) DEFAULT NULL,
   `b` bigint(20) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-1 row in set (0.00 sec)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+/*!50100 PARTITION BY HASH (id) */
+1 row in set (0.049 sec)
 mysql>  ALTER TABLE t1 MODIFY COLUMN id bigint;
 ERROR 1105 (HY000): unsupported: cannot.modify.the.column.on.shard.key
 
@@ -418,23 +473,47 @@ Query OK, 0 rows affected (0.09 sec)
 `Syntax`
 ```
 SELECT
+    [DISTINCT]
     select_expr [, select_expr ...]
     [FROM table_references
     [WHERE where_condition]
     [GROUP BY {col_name}
-    [ORDER BY {col_name | expr | position}
+    [HAVING where_condition]
+    [ORDER BY {col_name}
       [ASC | DESC], ...]
-    [LIMIT {[offset,] row_count | row_count OFFSET offset}]]
+    [LIMIT {[offset,] row_count | row_count OFFSET offset}]
+```
+
+`JOIN`
+```
+table_references:
+    escaped_table_reference [, escaped_table_reference] ...
+escaped_table_reference:
+    table_reference
+  | { OJ table_reference }
+table_reference:
+    table_factor
+  | join_table
+table_factor:
+    [schema_name.]tbl_name [[AS] alias]
+  | ( table_references )
+join_table:
+    table_reference [INNER | CROSS] JOIN table_factor [join_condition]
+  | table_reference {LEFT|RIGHT} [OUTER] JOIN table_reference join_condition
+join_condition:
+    ON conditional_expr
 ```
 
 `Instructions`
 
- * Support cross-partition count, sum, avg, max, min and other aggregate functions, *avg field must be in select_expr*, Aggregate  functions only support for numeric values
+ * Support cross-partition count, sum, avg, max, min and other aggregate functions, Aggregate functions only support for numeric values
  * Support cross-partition order by, group by, limit and other operations, *field must be in select_expr*
- * Support complex queries such as joins, automatic routing to AP-Nodes to execute and return
+ * Support complex queries such as joins.
+ * Support where and having clause, having doesn't support aggregate function temporarily.
  * Support retrieving rows computed without reference to any table or specify `DUAL` as a dummy table name in situations where no tables are referenced. 
  * Support alias_name for column like `SELECT columna [[AS] alias] FROM mytable;`.
  * Support alias_name for table like `SELECT columna FROM tbl_name [[AS] alias];`.
+ * Support LEFT|RIGHT OUTER and INNER|CROSS join.
  
 
 `Example: `
@@ -458,12 +537,12 @@ mysql> select id, sum(id) from t2 group by id order by id desc limit 10;
 +------+---------+
 | id   | sum(id) |
 +------+---------+
-|    1 |       1 |
-|    3 |       3 |
-|   13 |      13 |
 |   23 |      23 |
+|   13 |      13 |
+|    3 |       3 |
+|    1 |       1 |
 +------+---------+
-4 rows in set (0.01 sec)
+4 rows in set (1.048 sec)
 ```
 
 
@@ -517,6 +596,48 @@ mysql> select testTbl.id as ID from t2 as testTbl;
 |   13 |
 +------+
 4 rows in set (0.02 sec)
+```
+
+SELECT with `JOIN`, the join statement that cannot be pushed down cannot have `*` in the `selectexpr`:
+```
+mysql> CREATE TABLE t1(id int, age int) partition by HASH(id);
+Query OK, 0 rows affected (1.127 sec)
+
+mysql> INSERT INTO t1(id, age) values(1, 22),(2,25),(3,22),(4,25);
+Query OK, 4 row affected (0.197 sec)
+
+mysql> select id, sum(id) from t2 group by id order by id desc limit 10;
++------+---------+
+| id   | sum(id) |
++------+---------+
+|   23 |      23 |
+|   13 |      13 |
+|    3 |       3 |
+|    1 |       1 |
++------+---------+
+4 rows in set (1.048 sec)
+
+mysql> select * from t1 join t2 on t1.id=t2.id where t2.age=22;
++------+------+------+------+
+| id   | age  | id   | age  |
++------+------+------+------+
+|    3 |   22 |    3 |   22 |
++------+------+------+------+
+1 row in set (1.082 sec)
+
+mysql> select t1.id, t1.age,t2.id from t1 join t2 on t1.age=t2.age where t2.id > 10 order by t1.id;
++------+------+------+
+| id   | age  | id   |
++------+------+------+
+|    1 |   22 |   23 |
+|    1 |   22 |   13 |
+|    3 |   22 |   23 |
+|    3 |   22 |   13 |
++------+------+------+
+4 rows in set (1.056 sec)
+
+mysql> select * from t1 join t2 on t1.age=t2.age where t2.id > 10 order by t1.id;
+ERROR 1105 (HY000): unsupported: '*'.expression.in.cross-shard.query
 ```
 
 ### INSERT
@@ -805,16 +926,15 @@ SHOW CREATE TABLE table_name
 
 `Example: `
 ```
-mysql> SHOW CREATE TABLE t1\G;
+mysql> SHOW CREATE TABLE t1\G
 *************************** 1. row ***************************
        Table: t1
 Create Table: CREATE TABLE `t1` (
   `id` int(11) DEFAULT NULL,
-  `age` int(11) DEFAULT NULL,
-  `b` bigint(20) DEFAULT NULL,
-  KEY `idx_id_age` (`id`,`age`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-1 row in set (0.01 sec)
+  `age` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+/*!50100 PARTITION BY HASH (id) */
+1 row in set (0.094 sec)
 ```
 
 #### SHOW PROCESSLIST
