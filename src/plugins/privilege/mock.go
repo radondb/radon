@@ -399,7 +399,7 @@ func MockInitPrivilegeUsers(fakedbs *fakedb.DB) {
 	fakedbs.AddQueryPattern("select host, user, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, grant_priv, alter_priv, index_priv, db from .*", DbRs1)
 }
 
-//
+// MockInitPrivilegeUserNDatabaseY init the Rows with user priv N and db priv Y.
 func MockInitPrivilegeUserNDatabaseY(fakedbs *fakedb.DB) {
 	UserRs.Rows[0] = UserRs.Rows[0][0:2]
 	DbRs.Rows[0] = DbRs.Rows[0][0:2]
