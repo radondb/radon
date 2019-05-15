@@ -265,9 +265,16 @@ func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query str
 	// If shardType is GLOBAL or SINGLE, add the tableType to the end of c2;
 	// if shardType is HASH, rewrite the query Result.
 	if shardKey == "" {
+		segments, err := router.Lookup(database, table, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		// single table just on the first backend
+		backend := segments[0].Backend
+
 		// If the elapsed > pool.maxIdleTime, the new connection without database, add the database.
 		rewritten := fmt.Sprintf("SHOW CREATE TABLE %s.%s", database, table)
-		qr, err = spanner.ExecuteSingle(rewritten)
+		qr, err = spanner.ExecuteOnThisBackend(backend, rewritten)
 		if err != nil {
 			return nil, err
 		}
