@@ -79,7 +79,7 @@ func TestFrmTable(t *testing.T) {
 	{
 		backends := []string{"backend1", "backend2"}
 		err := router.CreateTable("test", "t3_single", "", TableTypeSingle, backends, nil)
-		assert.NotNil(t, err)
+		assert.Nil(t, err)
 	}
 
 	// Add partition table.
@@ -134,6 +134,13 @@ func TestFrmTableError(t *testing.T) {
 	{
 		backends := []string{"backend1", "backend2"}
 		err := router.CreateTable("test", "", "id", "", backends, nil)
+		assert.NotNil(t, err)
+	}
+
+	// Add single table.
+	{
+		backends := []string{"backend1", "backend2"}
+		err := router.CreateTable("test", "", "", TableTypeSingle, backends, nil)
 		assert.NotNil(t, err)
 	}
 

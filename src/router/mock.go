@@ -331,6 +331,20 @@ func MockTableG1Config() *config.TableConfig {
 	return mock
 }
 
+// MockTableSConfig config, global shardtype.
+func MockTableSConfig() *config.TableConfig {
+	return &config.TableConfig{
+		Name:      "S",
+		ShardType: "SINGLE",
+		ShardKey:  "",
+		Partitions: []*config.PartitionConfig{&config.PartitionConfig{
+			Table:   "S",
+			Segment: "",
+			Backend: "backend1",
+		}},
+	}
+}
+
 // mockTmpDir is only used for MockNewRouter()
 var (
 	log        = xlog.NewStdLog(xlog.Level(xlog.PANIC))

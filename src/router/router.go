@@ -118,6 +118,12 @@ func (r *Router) addTable(db string, tbl *config.TableConfig) error {
 			return err
 		}
 		table.Partition = global
+	case methodTypeSingle:
+		single := NewSingle(r.log, tbl)
+		if err := single.Build(); err != nil {
+			return err
+		}
+		table.Partition = single
 	default:
 		return errors.Errorf("router.unsupport.shardtype:[%v]", tbl.ShardType)
 	}
