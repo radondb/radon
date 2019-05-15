@@ -138,7 +138,7 @@ func TestProxyDDLTable(t *testing.T) {
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
-		query := "create table if not exists ttt.t2(a int, b int)"
+		query := "create table if not exists ttt.t2(a int, b int) GLOBAL"
 		_, err = client.FetchAll(query, -1)
 		assert.NotNil(t, err)
 	}
@@ -169,6 +169,42 @@ func TestProxyDDLTable(t *testing.T) {
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
 		query := "drop table if exists t2"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create single table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create table t3(a int, b int) SINGLE"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create single table again.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create table if not exists t3(a int, b int) SINGLE"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create single table database error.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create table if not exists ttt.t3(a int, b int) SINGLE"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// drop single table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "drop table t3"
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
 	}

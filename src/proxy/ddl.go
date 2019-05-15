@@ -223,7 +223,6 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 			tableType = router.TableTypeGlobal
 		case sqlparser.SingleTableType:
 			tableType = router.TableTypeSingle
-			return nil, fmt.Errorf("single.table.not.impl.yet")
 		}
 
 		autoinc, err := autoincrement.GetAutoIncrement(node)
