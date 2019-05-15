@@ -27,8 +27,8 @@ type MergeNode struct {
 	Sel *sqlparser.Select
 	// router.
 	router *router.Router
-	// shard tables' count in the MergeNode.
-	shardCount int
+	// non-global tables' count in the MergeNode.
+	nonGlobalCnt int
 	// if the query can be pushed down a backend, record.
 	backend string
 	// the shard index, default is -1.
@@ -91,7 +91,7 @@ func (m *MergeNode) pushFilter(filters []filterTuple) error {
 		m.Sel.AddWhere(filter.expr)
 		if len(filter.referTables) == 1 {
 			tbInfo := m.referredTables[filter.referTables[0]]
-			if tbInfo.shardType != "GLOBAL" && tbInfo.parent.index == -1 && filter.val != nil {
+			if tbInfo.shardKey != "" && tbInfo.parent.index == -1 && filter.val != nil {
 				if nameMatch(filter.col, filter.referTables[0], tbInfo.shardKey) {
 					if tbInfo.parent.index, err = m.router.GetIndex(tbInfo.database, tbInfo.tableName, filter.val); err != nil {
 						return err
@@ -132,7 +132,7 @@ func (m *MergeNode) pushEqualCmpr(joins []joinTuple) PlanNode {
 func (m *MergeNode) calcRoute() (PlanNode, error) {
 	var err error
 	for _, tbInfo := range m.referredTables {
-		if m.shardCount == 0 {
+		if m.nonGlobalCnt == 0 {
 			segments, err := m.router.Lookup(tbInfo.database, tbInfo.tableName, nil, nil)
 			if err != nil {
 				return nil, err
@@ -285,7 +285,7 @@ func (m *MergeNode) buildQuery(tbInfos map[string]*TableInfo) {
 		// Rewrite the shard table's name.
 		backend := m.backend
 		for _, tbInfo := range m.referredTables {
-			if tbInfo.shardType == "GLOBAL" {
+			if tbInfo.shardKey == "" {
 				continue
 			}
 			if backend == "" {

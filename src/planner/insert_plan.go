@@ -85,7 +85,8 @@ func (p *InsertPlan) Build() error {
 	if !ok {
 		return errors.Errorf("unsupported: rows.can.not.be.subquery[%T]", node.Rows)
 	}
-	// Table is global table.
+
+	// Table is global or single table.
 	if shardKey == "" {
 		segments, err := p.router.Lookup(database, table, nil, nil)
 		if err != nil {

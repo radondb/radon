@@ -108,12 +108,18 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 		tn.shardType = tn.tableConfig.ShardType
 		tn.tableExpr = tableExpr
 
-		// if a shard table hasn't alias, create one in order to push.
-		if tn.tableConfig.ShardKey != "" {
+		switch tn.shardType {
+		case "GLOBAL":
+			mn.nonGlobalCnt = 0
+		case "SINGLE":
+			mn.index = 0
+			mn.nonGlobalCnt = 1
+		case "HASH":
+			// if a shard table hasn't alias, create one in order to push.
 			if tableExpr.As.String() == "" {
 				tableExpr.As = sqlparser.NewTableIdent(tn.tableName)
 			}
-			mn.shardCount = 1
+			mn.nonGlobalCnt = 1
 		}
 
 		tn.parent = mn
@@ -203,7 +209,7 @@ func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, r
 	if lmn, ok := lpn.(*MergeNode); ok {
 		if rmn, ok := rpn.(*MergeNode); ok {
 			// if all of left's or right's tables are global tables.
-			if lmn.shardCount == 0 || rmn.shardCount == 0 {
+			if lmn.nonGlobalCnt == 0 || rmn.nonGlobalCnt == 0 {
 				return mergeRoutes(lmn, rmn, joinExpr, otherJoinOn)
 			}
 			// if join on condition's cols are both shardkey, and the tables have same shards.
@@ -248,7 +254,7 @@ func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJo
 		lmn.Sel.AddWhere(rmn.Sel.Where.Expr)
 	}
 
-	lmn.shardCount += rmn.shardCount
+	lmn.nonGlobalCnt += rmn.nonGlobalCnt
 	if joinExpr == nil || joinExpr.Join != sqlparser.LeftJoinStr {
 		err = lmn.pushFilter(otherJoinOn)
 	}
@@ -258,12 +264,12 @@ func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJo
 // isSameShard used to judge lcn|rcn contain shardkey and have same shards.
 func isSameShard(ltb, rtb map[string]*TableInfo, lcn, rcn *sqlparser.ColName) bool {
 	lt := ltb[lcn.Qualifier.Name.String()]
-	if lt.shardKey != lcn.Name.String() {
+	if lt.shardKey == "" || lt.shardKey != lcn.Name.String() {
 		return false
 	}
 	ltp := lt.tableConfig.Partitions
 	rt := rtb[rcn.Qualifier.Name.String()]
-	if rt.shardKey != rcn.Name.String() {
+	if rt.shardKey == "" || lt.shardKey != rcn.Name.String() {
 		return false
 	}
 	rtp := rt.tableConfig.Partitions
