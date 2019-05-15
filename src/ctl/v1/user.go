@@ -21,7 +21,7 @@ import (
 )
 
 type userParams struct {
-	Databases string `json:"database"`
+	Databases string `json:"databases"`
 	User      string `json:"user"`
 	Password  string `json:"password"`
 }

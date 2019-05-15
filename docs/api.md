@@ -779,12 +779,11 @@ The normal users that can connect to radon with password.
 
 ### create user
 
-The api is used to create users for radon while creating the same user at the backends. In the backends, the created user is a localhost user only has select privileges. It is used to obtain authentication credentials for connecting to Radon Server. The user for handling business logic is in the `$meta-dir\backend.json` file, not the user created by api.
-
 ```
 Path:    /v1/user/add
 Method:  POST
 Request: {
+			"databases": "database1,database2", [required]
 			"user": "user name",	[required]
 			"password": "password",	[required]
          }
@@ -796,27 +795,39 @@ Request: {
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
+	503: StatusServiceUnavailable, backend(s) MySQL seems to be down
 ```
 
 `Example: `
+
+"databases" is array about database, if it is empty, we will set it to * .
 
 ```
 ---backend should not be null---
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend1", "address": "127.0.0.1:3306", "user": "root", "password": "318831", "max-connections":1024}' \
  http://127.0.0.1:8080/v1/radon/backend
- 
 HTTP/1.1 200 OK
 Date: Tue, 10 Apr 2018 03:35:22 GMT
 Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"user": "test", "password": "test"}' \
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"databases":"db1,db2", "user": "test", "password": "test"}' \
 		 http://127.0.0.1:8080/v1/user/add
-
 HTTP/1.1 200 OK
 Date: Tue, 10 Apr 2018 03:35:27 GMT
 Content-Length: 0
 Content-Type: text/plain; charset=utf-8
+
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"databases":"", "user": "u2", "password": "111111"}' http://127.0.0.1:8080/v1/user/add
+HTTP/1.1 200 OK
+Date: Wed, 15 May 2019 02:46:42 GMT
+Content-Length: 0
+
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"user": "u3", "password": "111111"}' http://127.0.0.1:8080/v1/user/add
+HTTP/1.1 200 OK
+Date: Wed, 15 May 2019 02:49:30 GMT
+Content-Length: 0
+
 ```
 
 
