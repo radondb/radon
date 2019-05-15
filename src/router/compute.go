@@ -99,3 +99,24 @@ func (r *Router) GlobalUniform(table string, backends []string) (*config.TableCo
 	}
 	return tableConf, nil
 }
+
+// SingleUniform used to uniform the single table to backends.
+func (r *Router) SingleUniform(table string, backends []string) (*config.TableConfig, error) {
+	if table == "" {
+		return nil, errors.New("table.cant.be.null")
+	}
+	nums := len(backends)
+	if nums == 0 {
+		return nil, errors.New("router.compute.backends.is.null")
+	}
+
+	return &config.TableConfig{
+		Name:      table,
+		ShardType: methodTypeSingle,
+		ShardKey:  "",
+		Partitions: []*config.PartitionConfig{&config.PartitionConfig{
+			Table:   table,
+			Backend: backends[0],
+		}},
+	}, nil
+}

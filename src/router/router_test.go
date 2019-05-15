@@ -148,6 +148,44 @@ func TestRouteraddGlobal(t *testing.T) {
 	}
 }
 
+func TestRouteraddSingle(t *testing.T) {
+	results := []string{`{
+	"Schemas": {
+		"sbtest": {
+			"DB": "sbtest",
+			"Tables": {
+				"S": {
+					"Name": "S",
+					"Partition": {
+						"Segments": [
+							{
+								"Table": "S",
+								"Backend": "backend1",
+								"Range": {}
+							}
+						]
+					}
+				}
+			}
+		}
+	}
+}`}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+	assert.NotNil(t, router)
+
+	// router
+	{
+		err := router.addTable("sbtest", MockTableSConfig())
+		assert.Nil(t, err)
+		want := results[0]
+		got := router.JSON()
+		log.Debug(got)
+		assert.Equal(t, want, got)
+	}
+}
+
 func TestRouterRemove(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)
@@ -375,7 +413,7 @@ func TestRouterGetIndex(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
-	err := router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig())
+	err := router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig(), MockTableSConfig())
 	assert.Nil(t, err)
 	// hash.
 	{
@@ -390,6 +428,13 @@ func TestRouterGetIndex(t *testing.T) {
 		idx, err := router.GetIndex("sbtest", "G", intVal)
 		assert.Nil(t, err)
 		assert.Equal(t, -1, idx)
+	}
+	//single.
+	{
+		intVal := sqlparser.NewIntVal([]byte("1"))
+		idx, err := router.GetIndex("sbtest", "S", intVal)
+		assert.Nil(t, err)
+		assert.Equal(t, 0, idx)
 	}
 }
 
@@ -434,7 +479,7 @@ func TestRouterGetSegments(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
-	err := router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig())
+	err := router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig(), MockTableSConfig())
 	assert.Nil(t, err)
 	// hash.
 	{
@@ -459,6 +504,12 @@ func TestRouterGetSegments(t *testing.T) {
 		segments, err := router.GetSegments("sbtest", "G", 3)
 		assert.Nil(t, err)
 		assert.Equal(t, 2, len(segments))
+	}
+	//single.
+	{
+		segments, err := router.GetSegments("sbtest", "S", 0)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(segments))
 	}
 }
 

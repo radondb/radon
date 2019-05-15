@@ -15,4 +15,5 @@ const (
 	// methodTypeHash type.
 	methodTypeHash   = "HASH"
 	methodTypeGlobal = "GLOBAL"
+	methodTypeSingle = "SINGLE"
 )

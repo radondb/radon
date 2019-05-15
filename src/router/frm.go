@@ -175,8 +175,9 @@ func (r *Router) CreateTable(db, table, shardKey string, tableType string, backe
 			return err
 		}
 	case TableTypeSingle:
-		// TODO(BohuTANG): single table
-		return fmt.Errorf("single.table.not.impl.yet")
+		if tableConf, err = r.SingleUniform(table, backends); err != nil {
+			return err
+		}
 	case TableTypePartition:
 		if tableConf, err = r.HashUniform(table, shardKey, backends); err != nil {
 			return err
