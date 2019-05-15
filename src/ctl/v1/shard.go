@@ -182,10 +182,10 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 
 		// Make sure the table is small enough.
 		if (min.size + tblSize) < (max.size - tblSize) {
-			// Filter the global table.
+			// Filter the global and single table.
 			shardKey, err := router.ShardKey(db, tbl)
 			if err == nil && shardKey == "" {
-				log.Warning("api.v1.balance.advice.skip.the.global.table")
+				log.Warning("api.v1.balance.advice.skip.global.and.single.table")
 				continue
 			}
 			// Find the advice table.
