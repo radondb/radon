@@ -274,6 +274,36 @@ func TestAggregateNotPush(t *testing.T) {
 		Rows: [][]sqltypes.Value{},
 	}
 
+	r2 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "a",
+				Type: querypb.Type_FLOAT32,
+			},
+			{
+				Name: "a",
+				Type: querypb.Type_FLOAT32,
+			},
+			{
+				Name: "b",
+				Type: querypb.Type_INT32,
+			},
+			{
+				Name: "c",
+				Type: querypb.Type_FLOAT32,
+			},
+			{
+				Name: "d",
+				Type: querypb.Type_INT32,
+			},
+			{
+				Name: "e",
+				Type: querypb.Type_INT32,
+			},
+		},
+		Rows: [][]sqltypes.Value{},
+	}
+
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
 
@@ -286,16 +316,24 @@ func TestAggregateNotPush(t *testing.T) {
 	// Create scatter and query handler.
 	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
-	// avg.
-	fakedbs.AddQueryPattern("select.*", r1)
+
 	querys := []string{
 		"select sum(distinct a) as a, count(b) as b, avg(c) as c, max(d) as d, min(e) as e from A",
+		"select a, sum(distinct a) as a, count(b) as b, avg(c) as c, max(d) as d, min(e) as e from A",
 	}
-	results := []string{
+	rss := []*sqltypes.Result{
+		r1,
+		r2,
+	}
+	wantResults := []string{
 		"[[ 0   ]]",
+		"[[  0   ]]",
 	}
 
 	for i, query := range querys {
+		fakedbs.ResetAll()
+		fakedbs.AddQueryPattern("select.*", rss[i])
+
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
@@ -312,7 +350,7 @@ func TestAggregateNotPush(t *testing.T) {
 			ctx := xcontext.NewResultContext()
 			err := executor.Execute(ctx)
 			assert.Nil(t, err)
-			want := results[i]
+			want := wantResults[i]
 			got := fmt.Sprintf("%v", ctx.Results.Rows)
 			assert.Equal(t, want, got)
 			log.Debug("%+v", ctx.Results)
