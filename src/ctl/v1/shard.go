@@ -342,7 +342,7 @@ func globalsHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r 
 	for _, schema := range router.Schemas {
 		var tables []string
 		for _, tb := range schema.Tables {
-			if tb.ShardKey == "" {
+			if tb.TableConfig.ShardType == "GLOBAL" {
 				tables = append(tables, tb.Name)
 			}
 		}
