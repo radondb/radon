@@ -81,7 +81,7 @@ func (p *OthersPlan) Build() error {
 			return err
 		}
 
-		// Global table.
+		// Global table or Single table.
 		if route.ShardKey == "" {
 			segment := route.Partitions[0]
 			tuple := xcontext.QueryTuple{

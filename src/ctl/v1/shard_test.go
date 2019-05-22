@@ -1257,7 +1257,7 @@ func TestCtlV1Globals(t *testing.T) {
 	}
 
 	{
-		err := proxy.Router().AddForTest("sbtest", router.MockTableGConfig())
+		err := proxy.Router().AddForTest("sbtest", router.MockTableGConfig(), router.MockTableSConfig())
 		assert.Nil(t, err)
 		api := rest.NewApi()
 		router, _ := rest.MakeRouter(
