@@ -9,6 +9,7 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 
 	"config"
@@ -32,6 +33,23 @@ func AddBackendHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFunc {
 		addBackendHandler(log, proxy, w, r)
 	}
 	return f
+}
+
+func initBackend(proxy *proxy.Proxy, backend string, log *xlog.Log) error {
+	spanner := proxy.Spanner()
+	router := proxy.Router()
+
+	// create db from router on the new backend, make sure the db not exists, or else return err.
+	tblList := router.Tables()
+	for db, _ := range tblList {
+		query := fmt.Sprintf("create database %s", db)
+		_, err := spanner.ExecuteOnThisBackend(backend, query)
+		if err != nil {
+			log.Error("api.v1.add.backend.initBackend.error:%v", err)
+			return err
+		}
+	}
+	return nil
 }
 
 func addBackendHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Request) {
@@ -62,6 +80,12 @@ func addBackendHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter,
 
 	if err := scatter.FlushConfig(); err != nil {
 		log.Error("api.v1.add.backend.flush.config.error:%+v", err)
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := initBackend(proxy, conf.Name, log); err != nil {
+		log.Error("api.v1.add.backend.Init.error:%+v", err)
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

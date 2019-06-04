@@ -9,7 +9,6 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -44,13 +43,12 @@ func ShardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFu
 
 // shardBalanceAdviceHandler used to get the advice who will be transfered.
 // The Find algothm as follows:
-// 1. first to sync all 'from.databases' to 'to.databases'
 //
-// 2. find the max datasize backend and min datasize backend.
+// 1. find the max datasize backend and min datasize backend.
 //    1.1 max-datasize - min.datasize > 1GB
 //    1.2 transfer path is: max --> min
 //
-// 3. find the best table(advice-table) to tansfer:
+// 2. find the best table(advice-table) to tansfer:
 //    2.1 max.datasize - advice-table-size > min.datasize + advice-table-size
 //
 // Returns:
@@ -70,7 +68,7 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 		passwd  string
 	}
 
-	// 1.Find the max and min backend.
+	// 1. Find the max and min backend.
 	var max, min backendSize
 	for _, backend := range backends {
 		query := "select round((sum(data_length) + sum(index_length)) / 1024/ 1024, 0)  as SizeInMB from information_schema.tables"
@@ -107,34 +105,6 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 	}
 	log.Warning("api.v1.balance.advice.max:[%+v], min:[%+v]", max, min)
 
-	// 2. Try to sync all databases from max.databases to min.databases.
-	query := "show databases"
-	qr, err := spanner.ExecuteOnThisBackend(max.name, query)
-	if err != nil {
-		log.Error("api.v1.balance.advice.show.databases.from[%+v].error:%+v", max, err)
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	var sysDatabases = map[string]bool{
-		"sys":                true,
-		"mysql":              true,
-		"information_schema": true,
-		"performance_schema": true,
-	}
-	for _, row := range qr.Rows {
-		db := string(row[0].Raw())
-		if _, isSystem := sysDatabases[strings.ToLower(db)]; !isSystem {
-			query1 := fmt.Sprintf("create database if not exists `%s`", db)
-			if _, err := spanner.ExecuteOnThisBackend(min.name, query1); err != nil {
-				log.Error("api.v1.balance.advice.create.database[%s].on[%+v].error:%+v", query1, min, err)
-				rest.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-			log.Warning("api.v1.balance.advice.create.database[%s].on[%+v].done", query1, min)
-		}
-	}
-	log.Warning("api.v1.balance.advice.sync.database.done")
-
 	// The differ must big than 256MB.
 	delta := float64(256)
 	differ := (max.size - min.size)
@@ -157,9 +127,9 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 		}
 	}
 
-	// 3. Find the best table.
-	query = "SELECT table_schema, table_name, ROUND((SUM(data_length+index_length)) / 1024/ 1024, 0) AS sizeMB FROM information_schema.TABLES GROUP BY table_name HAVING SUM(data_length + index_length)>10485760 ORDER BY (data_length + index_length) DESC"
-	qr, err = spanner.ExecuteOnThisBackend(max.name, query)
+	// 2. Find the best table.
+	query := "SELECT table_schema, table_name, ROUND((SUM(data_length+index_length)) / 1024/ 1024, 0) AS sizeMB FROM information_schema.TABLES GROUP BY table_name HAVING SUM(data_length + index_length)>10485760 ORDER BY (data_length + index_length) DESC"
+	qr, err := spanner.ExecuteOnThisBackend(max.name, query)
 	if err != nil {
 		log.Error("api.v1.balance.advice.get.max[%+v].tables.error:%+v", max, err)
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
