@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	mysqlVer = "5.7.25"  // the backend MySQL version
 	tag      = "unknown" // tag of this build
 	git      string      // git hash
 	time     string      // build time
@@ -33,7 +34,7 @@ type Info struct {
 func GetInfo() Info {
 	return Info{
 		GoVersion: runtime.Version(),
-		Tag:       "8.0.0-" + tag,
+		Tag:       mysqlVer + "-" + tag,
 		Time:      time,
 		Git:       git,
 		Platform:  platform,
