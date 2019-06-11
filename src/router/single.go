@@ -90,6 +90,13 @@ func (s *Single) GetIndex(sqlval *sqlparser.SQLVal) (int, error) {
 }
 
 // GetSegments returns Segments based on index.
-func (s *Single) GetSegments(index int) []Segment {
+func (s *Single) GetSegments() []Segment {
 	return s.Segments
+}
+
+func (s *Single) GetSegment(index int) (Segment, error) {
+	if index >= len(s.Segments) {
+		return Segment{}, errors.Errorf("single.getsegment.index.[%d].out.of.range", index)
+	}
+	return s.Segments[index], nil
 }

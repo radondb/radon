@@ -186,9 +186,13 @@ func (h *Hash) GetIndex(sqlval *sqlparser.SQLVal) (int, error) {
 }
 
 // GetSegments returns Segments based on index.
-func (h *Hash) GetSegments(index int) []Segment {
-	if index < 0 || index > h.slots {
-		return h.Segments
+func (h *Hash) GetSegments() []Segment {
+	return h.Segments
+}
+
+func (h *Hash) GetSegment(index int) (Segment, error) {
+	if index < 0 || index >= h.slots {
+		return Segment{}, errors.Errorf("hash.getsegment.index.[%d].out.of.range", index)
 	}
-	return []Segment{h.partitions[index]}
+	return h.partitions[index], nil
 }
