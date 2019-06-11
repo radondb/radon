@@ -112,7 +112,7 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 		case "GLOBAL":
 			mn.nonGlobalCnt = 0
 		case "SINGLE":
-			mn.index = 0
+			mn.index = append(mn.index, 0)
 			mn.nonGlobalCnt = 1
 		case "HASH":
 			// if a shard table hasn't alias, create one in order to push.
@@ -170,6 +170,9 @@ func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, r
 		referredTables[k] = v
 	}
 	for k, v := range rpn.getReferredTables() {
+		if _, ok := referredTables[k]; ok {
+			return nil, errors.Errorf("unsupported: not.unique.table.or.alias:'%s'", k)
+		}
 		referredTables[k] = v
 	}
 	if joinExpr != nil {

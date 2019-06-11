@@ -31,8 +31,8 @@ type MergeNode struct {
 	nonGlobalCnt int
 	// if the query can be pushed down a backend, record.
 	backend string
-	// the shard index, default is -1.
-	index int
+	// the shard index slice.
+	index []int
 	// length of the route.
 	routeLen int
 	// referred tables' tableInfo map.
@@ -64,7 +64,6 @@ func newMergeNode(log *xlog.Log, database string, router *router.Router) *MergeN
 		router:         router,
 		referredTables: make(map[string]*TableInfo),
 		filters:        make(map[sqlparser.Expr]int),
-		index:          -1,
 		children:       NewPlanTree(),
 	}
 }
@@ -91,10 +90,12 @@ func (m *MergeNode) pushFilter(filters []filterTuple) error {
 		m.Sel.AddWhere(filter.expr)
 		if len(filter.referTables) == 1 {
 			tbInfo := m.referredTables[filter.referTables[0]]
-			if tbInfo.shardKey != "" && tbInfo.parent.index == -1 && filter.val != nil {
+			if tbInfo.shardKey != "" && len(filter.vals) > 0 {
 				if nameMatch(filter.col, filter.referTables[0], tbInfo.shardKey) {
-					if tbInfo.parent.index, err = m.router.GetIndex(tbInfo.database, tbInfo.tableName, filter.val); err != nil {
-						return err
+					for _, val := range filter.vals {
+						if err = getIndex(m.router, tbInfo, val); err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -138,8 +139,9 @@ func (m *MergeNode) calcRoute() (PlanNode, error) {
 				return nil, err
 			}
 			rand := rand.New(rand.NewSource(time.Now().UnixNano()))
-			m.index = rand.Intn(len(segments))
-			m.backend = segments[m.index].Backend
+			idx := rand.Intn(len(segments))
+			m.backend = segments[idx].Backend
+			m.index = append(m.index, idx)
 			m.routeLen = 1
 			break
 		}

@@ -116,6 +116,90 @@ func skipParenthesis(node sqlparser.Expr) sqlparser.Expr {
 	return node
 }
 
+// splitOrExpression breaks up the OrExpr into OR-separated conditions.
+// Split the Equal conditions into inMap, return the orter conditions.
+func splitOrExpression(node sqlparser.Expr, inMap map[*sqlparser.ColName][]sqlparser.Expr) []sqlparser.Expr {
+	var subExprs []sqlparser.Expr
+	switch expr := node.(type) {
+	case *sqlparser.OrExpr:
+		subExprs = append(subExprs, splitOrExpression(expr.Left, inMap)...)
+		subExprs = append(subExprs, splitOrExpression(expr.Right, inMap)...)
+	case *sqlparser.ComparisonExpr:
+		canSplit := false
+		if expr.Operator == sqlparser.EqualStr {
+			if lc, ok := expr.Left.(*sqlparser.ColName); ok {
+				if val, ok := expr.Right.(*sqlparser.SQLVal); ok {
+					col := checkColInMap(inMap, lc)
+					inMap[col] = append(inMap[col], val)
+					canSplit = true
+				}
+			} else {
+				if rc, ok := expr.Right.(*sqlparser.ColName); ok {
+					if val, ok := expr.Left.(*sqlparser.SQLVal); ok {
+						col := checkColInMap(inMap, rc)
+						inMap[col] = append(inMap[col], val)
+						canSplit = true
+					}
+				}
+			}
+		}
+
+		if !canSplit {
+			subExprs = append(subExprs, expr)
+		}
+	case *sqlparser.ParenExpr:
+		subExprs = append(subExprs, splitOrExpression(skipParenthesis(expr), inMap)...)
+	default:
+		subExprs = append(subExprs, expr)
+	}
+	return subExprs
+}
+
+// checkColInMap used to check if the colname is in the map.
+func checkColInMap(inMap map[*sqlparser.ColName][]sqlparser.Expr, col *sqlparser.ColName) *sqlparser.ColName {
+	for k := range inMap {
+		if col.Equal(k) {
+			return k
+		}
+	}
+	return col
+}
+
+// rebuildOr used to rebuild the OrExpr.
+func rebuildOr(node, expr sqlparser.Expr) sqlparser.Expr {
+	if node == nil {
+		return expr
+	}
+	return &sqlparser.OrExpr{
+		Left:  node,
+		Right: expr,
+	}
+}
+
+// convertOrToIn used to change the EqualStr to InStr.
+func convertOrToIn(node sqlparser.Expr) sqlparser.Expr {
+	expr, ok := node.(*sqlparser.OrExpr)
+	if !ok {
+		return node
+	}
+
+	inMap := make(map[*sqlparser.ColName][]sqlparser.Expr)
+	var result sqlparser.Expr
+	subExprs := splitOrExpression(expr, inMap)
+	for _, subExpr := range subExprs {
+		result = rebuildOr(result, subExpr)
+	}
+	for k, v := range inMap {
+		subExpr := &sqlparser.ComparisonExpr{
+			Operator: sqlparser.InStr,
+			Left:     k,
+			Right:    sqlparser.ValTuple(v),
+		}
+		result = rebuildOr(result, subExpr)
+	}
+	return result
+}
+
 // checkComparison checks the WHERE or JOIN-ON clause contains non-sqlval comparison(t1.id=t2.id).
 func checkComparison(expr sqlparser.Expr) error {
 	filters := splitAndExpression(nil, expr)
@@ -404,7 +488,7 @@ type filterTuple struct {
 	// colname in the filter expr.
 	col *sqlparser.ColName
 	// val in the filter expr.
-	val *sqlparser.SQLVal
+	vals []*sqlparser.SQLVal
 }
 
 type joinTuple struct {
@@ -426,9 +510,10 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 
 	for _, filter := range filters {
 		var col *sqlparser.ColName
-		var val *sqlparser.SQLVal
+		var vals []*sqlparser.SQLVal
 		count := 0
 		filter = skipParenthesis(filter)
+		filter = convertOrToIn(filter)
 		referTables := make([]string, 0, 4)
 		err := sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
 			switch node := node.(type) {
@@ -466,9 +551,10 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 		}
 		condition, ok := filter.(*sqlparser.ComparisonExpr)
 		if ok {
-			if condition.Operator == sqlparser.EqualStr {
-				lc, lok := condition.Left.(*sqlparser.ColName)
-				rc, rok := condition.Right.(*sqlparser.ColName)
+			lc, lok := condition.Left.(*sqlparser.ColName)
+			rc, rok := condition.Right.(*sqlparser.ColName)
+			switch condition.Operator {
+			case sqlparser.EqualStr:
 				if lok && rok && lc.Qualifier != rc.Qualifier {
 					tuple := joinTuple{condition, referTables, lc, rc}
 					joins = append(joins, tuple)
@@ -477,17 +563,35 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 
 				if lok {
 					if sqlVal, ok := condition.Right.(*sqlparser.SQLVal); ok {
-						val = sqlVal
+						vals = append(vals, sqlVal)
 					}
 				}
 				if rok {
 					if sqlVal, ok := condition.Left.(*sqlparser.SQLVal); ok {
-						val = sqlVal
+						vals = append(vals, sqlVal)
+					}
+				}
+			case sqlparser.InStr:
+				if lok {
+					if valTuple, ok := condition.Right.(sqlparser.ValTuple); ok {
+						var sqlVals []*sqlparser.SQLVal
+						isVal := true
+						for _, val := range valTuple {
+							if sqlVal, ok := val.(*sqlparser.SQLVal); ok {
+								sqlVals = append(sqlVals, sqlVal)
+							} else {
+								isVal = false
+								break
+							}
+						}
+						if isVal {
+							vals = sqlVals
+						}
 					}
 				}
 			}
 		}
-		tuple := filterTuple{filter, referTables, col, val}
+		tuple := filterTuple{filter, referTables, col, vals}
 		wheres = append(wheres, tuple)
 	}
 
@@ -721,4 +825,15 @@ func checkShard(table, col string, tbInfos map[string]*TableInfo, router *router
 		return true, nil
 	}
 	return false, nil
+}
+
+// getIndex used to get index from router.
+func getIndex(router *router.Router, tbInfo *TableInfo, val *sqlparser.SQLVal) error {
+	idx, err := router.GetIndex(tbInfo.database, tbInfo.tableName, val)
+	if err != nil {
+		return err
+	}
+
+	tbInfo.parent.index = append(tbInfo.parent.index, idx)
+	return nil
 }

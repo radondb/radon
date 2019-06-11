@@ -172,10 +172,12 @@ func (j *JoinNode) pushFilter(filters []filterTuple) error {
 				tbInfo.parent.setWhereFilter(filter)
 			} else {
 				j.tableFilter = append(j.tableFilter, filter)
-				if tbInfo.parent.index == -1 && filter.val != nil && tbInfo.shardKey != "" {
+				if len(filter.vals) > 0 && tbInfo.shardKey != "" {
 					if nameMatch(filter.col, tb, tbInfo.shardKey) {
-						if tbInfo.parent.index, err = j.router.GetIndex(tbInfo.database, tbInfo.tableName, filter.val); err != nil {
-							return err
+						for _, val := range filter.vals {
+							if err = getIndex(j.router, tbInfo, val); err != nil {
+								return err
+							}
 						}
 					}
 				}
@@ -454,12 +456,16 @@ func (j *JoinNode) buildKeyFilter(filter filterTuple, isFind bool) bool {
 			lc := join.left.Name.String()
 			if lt == table && lc == field {
 				j.keyFilters[i] = append(j.keyFilters[i], filter)
-				if filter.val != nil {
+				if len(filter.vals) > 0 {
 					rt := join.right.Qualifier.Name.String()
 					rc := join.right.Name.String()
 					tbInfo := j.referredTables[rt]
-					if tbInfo.parent.index == -1 && tbInfo.shardKey == rc {
-						tbInfo.parent.index, _ = j.router.GetIndex(tbInfo.database, tbInfo.tableName, filter.val)
+					if tbInfo.shardKey == rc {
+						for _, val := range filter.vals {
+							if err := getIndex(j.router, tbInfo, val); err != nil {
+								panic(err)
+							}
+						}
 					}
 				}
 				find = true
@@ -475,12 +481,16 @@ func (j *JoinNode) buildKeyFilter(filter filterTuple, isFind bool) bool {
 			rc := join.right.Name.String()
 			if rt == table && rc == field {
 				j.keyFilters[i] = append(j.keyFilters[i], filter)
-				if filter.val != nil {
+				if len(filter.vals) > 0 {
 					lt := join.left.Qualifier.Name.String()
 					lc := join.left.Name.String()
 					tbInfo := j.referredTables[lt]
-					if tbInfo.parent.index == -1 && tbInfo.shardKey == lc {
-						tbInfo.parent.index, _ = j.router.GetIndex(tbInfo.database, tbInfo.tableName, filter.val)
+					if tbInfo.shardKey == lc {
+						for _, val := range filter.vals {
+							if err := getIndex(j.router, tbInfo, val); err != nil {
+								panic(err)
+							}
+						}
 					}
 				}
 				find = true

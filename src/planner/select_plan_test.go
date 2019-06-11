@@ -342,6 +342,59 @@ func TestSelectPlan(t *testing.T) {
 		"b"
 	]
 }`,
+`{
+	"RawQuery": "select * from A where id=1 or 2=id",
+	"Project": "*",
+	"Partitions": [
+		{
+			"Query": "select * from sbtest.A6 as A where id in (1, 2)",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+`{
+	"RawQuery": "select * from B where B.id=1 or B.id=2 or (B.id=0 and B.name='a')",
+	"Project": "*",
+	"Partitions": [
+		{
+			"Query": "select * from sbtest.B0 as B where (B.id = 0 and B.name = 'a' or B.id in (1, 2))",
+			"Backend": "backend1",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "select * from sbtest.B1 as B where (B.id = 0 and B.name = 'a' or B.id in (1, 2))",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+`{
+	"RawQuery": "select A.id,B.id from A join B on A.id=B.id where A.id=0 or A.id=1 or A.id=2",
+	"Project": "A.id, B.id",
+	"Partitions": [
+		{
+			"Query": "select A.id from sbtest.A1 as A where A.id in (0, 1, 2) order by A.id asc",
+			"Backend": "backend1",
+			"Range": "[0-32)"
+		},
+		{
+			"Query": "select A.id from sbtest.A6 as A where A.id in (0, 1, 2) order by A.id asc",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		},
+		{
+			"Query": "select B.id from sbtest.B0 as B where B.id in (0, 1, 2) order by B.id asc",
+			"Backend": "backend1",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "select B.id from sbtest.B1 as B where B.id in (0, 1, 2) order by B.id asc",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
 	}
 	querys := []string{
 		"select 1, sum(a),avg(a),a,b from sbtest.A where id>1 group by a,b order by a desc limit 10 offset 100",
@@ -359,6 +412,9 @@ func TestSelectPlan(t *testing.T) {
 		"select sum(G.a), S.b from G join S on G.id=S.id where G.id>1 group by S.b",
 		"select sum(A.a), S.b from A join S on A.id=S.id where A.id=0 group by S.b",
 		"select sum(A.a), S.b from A join S on A.id=S.id where A.id=1 group by S.b",
+		"select * from A where id=1 or 2=id",
+		"select * from B where B.id=1 or B.id=2 or (B.id=0 and B.name='a')",
+		"select A.id,B.id from A join B on A.id=B.id where A.id=0 or A.id=1 or A.id=2",
 	}
 
 	// Database not null.
@@ -557,6 +613,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select a+1 from A group by a+1",
 		"select count(distinct *) from A",
 		"select t1.a from G",
+		"select A.id from A join B on A.id=B.id where A.id in (1,2) or B.a=1",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
@@ -594,6 +651,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: group.by.[a + 1].type.should.be.colname",
 		"unsupported: syntax.error.at.'count(distinct *)'",
 		"unsupported: unknown.column.'t1.a'.in.exprs",
+		"unsupported: clause.'A.id in (1, 2) or B.a in (1)'.in.cross-shard.join",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))

@@ -70,7 +70,7 @@ func TestScanTableExprs(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, 2323, m.index)
+		assert.Equal(t, []int{2323}, m.index)
 	}
 	// left join.
 	{
@@ -97,7 +97,7 @@ func TestScanTableExprs(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, -1, m.index)
+		assert.Equal(t, 0, len(m.index))
 		assert.NotNil(t, j.otherJoinOn)
 
 		i := 0
@@ -153,7 +153,7 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, m, tbInfo.parent)
 		assert.Equal(t, 2, len(m.getReferredTables()))
-		assert.Equal(t, -1, m.index)
+		assert.Equal(t, 0, len(m.index))
 		assert.True(t, m.hasParen)
 		assert.NotNil(t, j.otherJoinOn)
 
@@ -178,7 +178,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, 2, len(tbMaps))
 		tbInfo := tbMaps["A"]
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, 2323, m.index)
+		assert.Equal(t, []int{2323}, m.index)
 		assert.NotNil(t, m.Sel.Where)
 	}
 	// with parenthese query.
@@ -221,7 +221,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, 3, len(tbMaps))
 		tbInfo := tbMaps["B"]
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, 2323, m.index)
+		assert.Equal(t, []int{2323}, m.index)
 		assert.NotNil(t, m.Sel.Where)
 	}
 	// two join on conditions.
@@ -249,7 +249,7 @@ func TestScanTableExprs(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, 2323, m.index)
+		assert.Equal(t, []int{2323}, m.index)
 	}
 	// without on conditions.
 	{
@@ -266,7 +266,7 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		tbMaps := m.getReferredTables()
 		assert.Equal(t, 2, len(tbMaps))
-		assert.Equal(t, 2323, m.index)
+		assert.Equal(t, []int{2323}, m.index)
 		assert.Equal(t, 2, len(m.Sel.From))
 		assert.NotNil(t, m.Sel.Where)
 	}
@@ -348,6 +348,7 @@ func TestScanTableExprsError(t *testing.T) {
 		"select * from A join C on A.id=C.id",
 		"select * from G join A on G.id=A.id join B on A.a=G.a",
 		"select * from G join (A,B) on G.id=A.id and A.a=B.a",
+		"select * from G join A as G where G.id=1",
 	}
 	wants := []string{
 		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
@@ -362,6 +363,7 @@ func TestScanTableExprsError(t *testing.T) {
 		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
 		"unsupported: join.on.condition.should.cross.left-right.tables",
 		"unsupported: join.on.condition.should.cross.left-right.tables",
+		"unsupported: not.unique.table.or.alias:'G'",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"

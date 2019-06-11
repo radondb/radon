@@ -483,31 +483,43 @@ func TestRouterGetSegments(t *testing.T) {
 	assert.Nil(t, err)
 	// hash.
 	{
-		segments, err := router.GetSegments("sbtest", "A", 1)
+		segments, err := router.GetSegments("sbtest", "A", []int{1})
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(segments))
 	}
-	// hash overrange.
+	// hash repeat segments.
 	{
-		segments, err := router.GetSegments("sbtest", "A", -1)
+		segments, err := router.GetSegments("sbtest", "A", []int{0, 1})
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(segments))
+	}
+	// hash all segments.
+	{
+		segments, err := router.GetSegments("sbtest", "A", []int{})
 		assert.Nil(t, err)
 		assert.Equal(t, 6, len(segments))
 	}
 	//global.
 	{
-		segments, err := router.GetSegments("sbtest", "G", 1)
+		segments, err := router.GetSegments("sbtest", "G", []int{1})
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(segments))
 	}
-	//global overrange.
+	//global all segments.
 	{
-		segments, err := router.GetSegments("sbtest", "G", 3)
+		segments, err := router.GetSegments("sbtest", "G", []int{})
 		assert.Nil(t, err)
 		assert.Equal(t, 2, len(segments))
 	}
 	//single.
 	{
-		segments, err := router.GetSegments("sbtest", "S", 0)
+		segments, err := router.GetSegments("sbtest", "S", []int{0})
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(segments))
+	}
+	//single all segments.
+	{
+		segments, err := router.GetSegments("sbtest", "S", []int{})
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(segments))
 	}
@@ -518,11 +530,11 @@ func TestRouterGetSegmentsError(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
-	err := router.AddForTest("sbtest", MockTableMConfig())
+	err := router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig(), MockTableSConfig())
 	assert.Nil(t, err)
 	// no database.
 	{
-		segments, err := router.GetSegments("", "A", 1)
+		segments, err := router.GetSegments("", "A", []int{1})
 		assert.Nil(t, segments)
 		want := "No database selected (errno 1046) (sqlstate 3D000)"
 		got := err.Error()
@@ -530,9 +542,33 @@ func TestRouterGetSegmentsError(t *testing.T) {
 	}
 	// table not exists.
 	{
-		segments, err := router.GetSegments("sbtest", "B", 1)
+		segments, err := router.GetSegments("sbtest", "B", []int{1})
 		assert.Nil(t, segments)
 		want := "Table 'B' doesn't exist (errno 1146) (sqlstate 42S02)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	// hash out of range.
+	{
+		segments, err := router.GetSegments("sbtest", "A", []int{4096})
+		assert.Nil(t, segments)
+		want := "hash.getsegment.index.[4096].out.of.range"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	// global out of range.
+	{
+		segments, err := router.GetSegments("sbtest", "G", []int{2})
+		assert.Nil(t, segments)
+		want := "global.getsegment.index.[2].out.of.range"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	// single out of range.
+	{
+		segments, err := router.GetSegments("sbtest", "S", []int{1})
+		assert.Nil(t, segments)
+		want := "single.getsegment.index.[1].out.of.range"
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}
