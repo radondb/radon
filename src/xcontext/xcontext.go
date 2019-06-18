@@ -23,7 +23,8 @@ const (
 	// ReqScatter mode will send the RawQuery to all backends.
 	ReqScatter
 
-	// ReqSingle mode will send the RawQuery to the first backend which computed by the scatter.
+	// ReqSingle mode will send the RawQuery to the first normal backend which computed by the scatter,
+	// it is random sometimes.
 	ReqSingle
 )
 

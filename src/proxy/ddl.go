@@ -210,7 +210,7 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 	case sqlparser.CreateTableStr:
 		var err error
 		table := ddl.Table.Name.String()
-		backends := scatter.Backends()
+		backends := scatter.NormalBackends()
 		shardKey := ddl.PartitionName
 		tableType := router.TableTypeUnknow
 

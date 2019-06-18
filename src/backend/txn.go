@@ -14,6 +14,7 @@ import (
 	"time"
 	"xcontext"
 
+	"config"
 	"xbase/sync2"
 
 	"github.com/pkg/errors"
@@ -433,7 +434,11 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 	// it is random sometimes, be careful.
 	case xcontext.ReqSingle:
 		qs := []string{req.RawQuery}
-		for back := range txn.backends {
+		for back, pool := range txn.backends {
+			if pool.conf.Role != config.NormalBackend {
+				continue
+			}
+
 			wg.Add(1)
 			oneShard(back, txn, qs)
 			break
@@ -442,7 +447,11 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 	case xcontext.ReqScatter:
 		qs := []string{req.RawQuery}
 		beLen := len(txn.backends)
-		for back := range txn.backends {
+		for back, pool := range txn.backends {
+			if pool.conf.Role != config.NormalBackend {
+				continue
+			}
+
 			wg.Add(1)
 			if beLen > 1 {
 				go oneShard(back, txn, qs)

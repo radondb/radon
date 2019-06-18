@@ -190,6 +190,22 @@ func (scatter *Scatter) Backends() []string {
 	return backends
 }
 
+// NormalBackends returns all normal backends.
+func (scatter *Scatter) NormalBackends() []string {
+	var backends []string
+	scatter.mu.RLock()
+	defer scatter.mu.RUnlock()
+	for k, pool := range scatter.backends {
+		if pool.conf.Role != config.NormalBackend {
+			continue
+		}
+
+		backends = append(backends, k)
+	}
+	sort.Strings(backends)
+	return backends
+}
+
 // PoolClone used to copy backends to new map.
 func (scatter *Scatter) PoolClone() map[string]*Pool {
 	poolMap := make(map[string]*Pool)
