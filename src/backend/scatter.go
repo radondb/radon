@@ -178,12 +178,28 @@ func (scatter *Scatter) LoadConfig() error {
 	return nil
 }
 
-// Backends returns all backends.
-func (scatter *Scatter) Backends() []string {
+// AllBackends returns all backends.
+func (scatter *Scatter) AllBackends() []string {
 	var backends []string
 	scatter.mu.RLock()
 	defer scatter.mu.RUnlock()
 	for k := range scatter.backends {
+		backends = append(backends, k)
+	}
+	sort.Strings(backends)
+	return backends
+}
+
+// Backends returns all normal backends.
+func (scatter *Scatter) Backends() []string {
+	var backends []string
+	scatter.mu.RLock()
+	defer scatter.mu.RUnlock()
+	for k, pool := range scatter.backends {
+		if pool.conf.Role != config.NormalBackend {
+			continue
+		}
+
 		backends = append(backends, k)
 	}
 	sort.Strings(backends)

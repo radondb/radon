@@ -518,7 +518,7 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 	}
 
 	sql := "select count(0), round((sum(data_length) + sum(index_length)) / 1024/ 1024, 0)  from information_schema.TABLES  where table_schema not in ('sys', 'information_schema', 'mysql', 'performance_schema')"
-	backends := spanner.scatter.Backends()
+	backends := spanner.scatter.AllBackends()
 	for _, backend := range backends {
 		qr, err := spanner.ExecuteOnThisBackend(backend, sql)
 		if err != nil {

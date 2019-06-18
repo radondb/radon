@@ -69,7 +69,7 @@ var (
 	}
 )
 
-// MockBackendConfigDefault mocks new backend config.
+// MockBackendConfigDefault mocks new normal backend config.
 func MockBackendConfigDefault(name, addr string) *config.BackendConfig {
 	return &config.BackendConfig{
 		Name:           name,
@@ -79,6 +79,21 @@ func MockBackendConfigDefault(name, addr string) *config.BackendConfig {
 		DBName:         "sbtest",
 		Charset:        "utf8",
 		MaxConnections: 1024,
+		Role:           0,
+	}
+}
+
+// MockBackendConfigAttach mocks new attach backend config.
+func MockBackendConfigAttach(name, addr string) *config.BackendConfig {
+	return &config.BackendConfig{
+		Name:           name,
+		Address:        addr,
+		User:           "mock",
+		Password:       "pwd",
+		DBName:         "sbtest",
+		Charset:        "utf8",
+		MaxConnections: 1024,
+		Role:           1,
 	}
 }
 
@@ -148,6 +163,35 @@ func MockTxnMgr(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool
 		conf := MockBackendConfigDefault(addr, addr)
 		pool := NewPool(log, conf)
 		backends[addr] = pool
+	}
+
+	txnMgr := NewTxnManager(log)
+	return fakedb, txnMgr, backends, addrs, func() {
+		time.Sleep(time.Millisecond * 10)
+		for _, v := range backends {
+			v.Close()
+		}
+		fakedb.Close()
+	}
+}
+
+// MockTxnMgrWithAttach mocks txn manager with attach backend.
+func MockTxnMgrWithAttach(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool, []string, func()) {
+	fakedb := fakedb.New(log, n+1)
+	backends := make(map[string]*Pool)
+	addrs := fakedb.Addrs()
+	for i := 0; i < len(addrs)-1; i++ {
+		if i == len(addrs)-2 {
+			addr := addrs[i]
+			conf := MockBackendConfigAttach(addr, addr)
+			pool := NewPool(log, conf)
+			backends[addr] = pool
+		} else {
+			addr := addrs[i]
+			conf := MockBackendConfigDefault(addr, addr)
+			pool := NewPool(log, conf)
+			backends[addr] = pool
+		}
 	}
 
 	txnMgr := NewTxnManager(log)

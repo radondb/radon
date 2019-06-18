@@ -95,6 +95,58 @@ func TestTxnNormalExecute(t *testing.T) {
 	}
 }
 
+func TestTxnNormalExecuteWithAttach(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgrWithAttach(log, 2)
+	defer cleanup()
+
+	querys := []xcontext.QueryTuple{
+		xcontext.QueryTuple{Query: "select * from node1", Backend: addrs[0]},
+		xcontext.QueryTuple{Query: "select * from node2", Backend: addrs[1]},
+		xcontext.QueryTuple{Query: "select * from node3", Backend: addrs[1]},
+	}
+
+	fakedb.AddQuery(querys[0].Query, result1)
+	fakedb.AddQueryDelay(querys[1].Query, result2, 100)
+	fakedb.AddQueryDelay(querys[2].Query, result2, 110)
+
+	// single execute.
+	{
+		rctx := &xcontext.RequestContext{
+			Mode:     xcontext.ReqSingle,
+			RawQuery: querys[1].Query,
+		}
+
+		txn, err := txnMgr.CreateTxn(backends)
+		assert.Nil(t, err)
+		defer txn.Finish()
+		got, err := txn.Execute(rctx)
+		assert.Nil(t, err)
+
+		assert.Equal(t, result2, got)
+	}
+
+	// scatter execute.
+	{
+		rctx := &xcontext.RequestContext{
+			Mode:     xcontext.ReqScatter,
+			RawQuery: querys[1].Query,
+		}
+
+		txn, err := txnMgr.CreateTxn(backends)
+		assert.Nil(t, err)
+		defer txn.Finish()
+		got, err := txn.Execute(rctx)
+		assert.Nil(t, err)
+
+		want := &sqltypes.Result{}
+		want.AppendResult(result2)
+		assert.Equal(t, want, got)
+	}
+}
+
 func TestTxnExecuteStreamFetch(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
