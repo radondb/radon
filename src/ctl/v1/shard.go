@@ -42,7 +42,7 @@ func ShardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFu
 }
 
 // shardBalanceAdviceHandler used to get the advice who will be transfered.
-// The Find algothm as follows:
+// The Find algorithm as follows:
 //
 // 1. find the max datasize backend and min datasize backend.
 //    1.1 max-datasize - min.datasize > 1GB

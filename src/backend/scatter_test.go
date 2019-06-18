@@ -167,3 +167,40 @@ func TestScatterLoadNotExists(t *testing.T) {
 	err := scatter.LoadConfig()
 	assert.Nil(t, err)
 }
+
+func TestScatterNormalBackends(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	tmpDir := fakedb.GetTmpDir("", "radon_backend_", log)
+	defer os.RemoveAll(tmpDir)
+
+	scatter := NewScatter(log, tmpDir)
+	defer scatter.Close()
+
+	fakedb := fakedb.New(log, 2)
+	defer fakedb.Close()
+	addrs := fakedb.Addrs()
+
+	// add
+	{
+		config1 := MockBackendConfigDefault("node1", addrs[0])
+		err := scatter.add(config1)
+		assert.Nil(t, err)
+	}
+	// backends
+	{
+		backends := scatter.Backends()
+		assert.Equal(t, "node1", backends[0])
+	}
+
+	// add
+	{
+		config1 := MockBackendConfigAttach("node2", addrs[1])
+		err := scatter.add(config1)
+		assert.Nil(t, err)
+	}
+	// backends
+	{
+		backends := scatter.Backends()
+		assert.Equal(t, "node1", backends[0])
+	}
+}

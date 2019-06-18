@@ -181,7 +181,7 @@ func (xc *XaCheck) WriteXaCommitErrLog(txn *Txn, state string) error {
 //	2. check the xid is valid to some backends which need the 2nd command, and set needCommitBackends
 // 2nd. xa commit/rollback 'xaid' to the Backends which need commit
 func (xc *XaCheck) commitRetryBackends(retry *XaCommitErr, scatter *Scatter) (bool, error) {
-	backends := scatter.Backends()
+	backends := scatter.AllBackends()
 	log := xc.log
 
 	// if the backend is empty, output error log.
