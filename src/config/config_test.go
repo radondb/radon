@@ -167,7 +167,8 @@ func TestReadBackendsConfig(t *testing.T) {
                        "address": "127.0.0.1:3304",
                        "user": "root",
                        "password": "",
-                       "max-connections": 1024
+                       "max-connections": 1024,
+                       "role": 0
                }
        ]
 }`
@@ -285,4 +286,25 @@ func TestRouterConfigUnmarshalJSON(t *testing.T) {
 		}
 		assert.Equal(t, want, got)
 	}
+}
+
+func TestReadBackendsConfigAttach(t *testing.T) {
+	data := `{
+       "backends": [
+               {
+                       "name": "backend1",
+                       "address": "127.0.0.1:3304",
+                       "user": "root",
+                       "password": "",
+                       "max-connections": 1024,
+                       "role": 1
+               }
+       ]
+}`
+
+	backends, err := ReadBackendsConfig(data)
+	assert.Nil(t, err)
+	want := &BackendsConfig{Backends: MockBackends}
+	got := backends
+	assert.NotEqual(t, want.Backends[0].Role, got.Backends[0].Role)
 }
