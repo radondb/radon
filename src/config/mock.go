@@ -86,6 +86,7 @@ var (
 			User:           "root",
 			Password:       "",
 			MaxConnections: 1024,
+			Role:           0,
 		},
 	}
 

@@ -17,6 +17,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	NormalBackend = 0
+	AttachBackend = 1
+)
+
 // ProxyConfig tuple.
 type ProxyConfig struct {
 	IPS         []string `json:"allowip,omitempty"`
@@ -145,6 +150,7 @@ type BackendConfig struct {
 	DBName         string `json:"database"`
 	Charset        string `json:"charset"`
 	MaxConnections int    `json:"max-connections"`
+	Role           int    `json:"role"`
 }
 
 // BackendsConfig tuple.
