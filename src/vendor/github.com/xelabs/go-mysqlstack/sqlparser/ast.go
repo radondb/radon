@@ -2828,3 +2828,38 @@ func compliantName(in string) string {
 	}
 	return buf.String()
 }
+
+// Radon represents the radon statement.
+type Radon struct {
+	Action string
+	Row    ValTuple
+}
+
+const (
+	AttachStr     = "attach"
+	DetachStr     = "detach"
+	ListAttachStr = "list_attach"
+)
+
+func (*Radon) iStatement() {}
+
+// Format formats the node.
+func (node *Radon) Format(buf *TrackedBuffer) {
+	switch node.Action {
+	case ListAttachStr:
+		buf.Myprintf("radon %s", node.Action)
+	default:
+		buf.Myprintf("radon %s %v", node.Action, node.Row)
+	}
+}
+
+// WalkSubtree walks the nodes of the subtree.
+func (node *Radon) WalkSubtree(visit Visit) error {
+	if node == nil {
+		return nil
+	}
+	return Walk(
+		visit,
+		node.Row,
+	)
+}
