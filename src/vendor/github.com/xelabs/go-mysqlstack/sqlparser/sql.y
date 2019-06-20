@@ -177,12 +177,14 @@ func forceEOF(yylex interface{}) {
 
 // RadonDB
 %token <empty> PARTITION PARTITIONS HASH XA
-%type <statement> truncate_statement xa_statement explain_statement kill_statement transaction_statement
+%type <statement> truncate_statement xa_statement explain_statement kill_statement transaction_statement radon_statement
 %token <bytes> ENGINES VERSIONS PROCESSLIST QUERYZ TXNZ KILL ENGINE SINGLE
 // Transaction Tokens
 %token <bytes> BEGIN START TRANSACTION COMMIT ROLLBACK
 // SET tokens
 %token <bytes> GLOBAL SESSION NAMES
+// Radon Tokens
+%token <bytes> RADON ATTACH LIST_ATTACH DETACH
 
 %type <statement> command
 %type <selStmt> select_statement base_select union_lhs union_rhs
@@ -304,6 +306,7 @@ command:
 | explain_statement
 | kill_statement
 | transaction_statement
+| radon_statement
 | other_statement
 
 select_statement:
@@ -1058,6 +1061,20 @@ transaction_statement:
 | COMMIT force_eof
   {
     $$ = &Transaction{ Action: CommitTxnStr}
+  }
+
+radon_statement:
+  RADON ATTACH row_tuple force_eof
+  {
+    $$ = &Radon{ Action: AttachStr, Row: $3}
+  }
+| RADON DETACH row_tuple force_eof
+  {
+    $$ = &Radon{ Action: DetachStr, Row: $3}
+  }
+| RADON LIST_ATTACH force_eof
+  {
+    $$ = &Radon{ Action: ListAttachStr}
   }
 
 show_statement_type:
@@ -2643,6 +2660,10 @@ non_reserved_keyword:
 | WITH
 | YEAR
 | ZEROFILL
+| RADON
+| ATTACH
+| DETACH
+| LIST_ATTACH
 
 openb:
   '('
