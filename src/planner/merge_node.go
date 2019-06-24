@@ -75,6 +75,16 @@ func (m *MergeNode) getReferredTables() map[string]*TableInfo {
 
 // getFields get the fields.
 func (m *MergeNode) getFields() []selectTuple {
+	if len(m.fields) == 0 {
+		exprs := m.Sel.SelectExprs
+		if len(exprs) > 0 {
+			var err error
+			m.fields, _, err = parserSelectExprs(exprs, m)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
 	return m.fields
 }
 
@@ -167,6 +177,7 @@ func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser
 	m.Sel.SelectExprs = sel.SelectExprs
 	m.Sel.GroupBy = sel.GroupBy
 	m.Sel.Distinct = sel.Distinct
+	m.fields = fields
 
 	if len(groups) == 0 && len(sel.GroupBy) > 0 {
 		return nil

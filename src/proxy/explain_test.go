@@ -57,7 +57,7 @@ func TestProxyExplain(t *testing.T) {
 		assert.Nil(t, err)
 		want := `{
 	"RawQuery": " select 1, sum(a),avg(a),a,b from test.t1 as t1 where id\u003e1 group by a,b order by a desc limit 10 offset 100",
-	"Project": "1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b",
+	"Project": "1, sum(a), avg(a), a, b",
 	"Partitions": [
 		{
 			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from test.t1_0000 as t1 where id \u003e 1 group by a, b order by a desc",
