@@ -10,6 +10,7 @@ package planner
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"router"
@@ -47,9 +48,6 @@ type SelectPlan struct {
 	// mode
 	ReqMode xcontext.RequestMode
 
-	// children plans in select(such as: orderby, limit or join).
-	children *PlanTree
-
 	Root PlanNode
 }
 
@@ -62,7 +60,6 @@ func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser
 		database: database,
 		RawQuery: query,
 		typ:      PlanTypeSelect,
-		children: NewPlanTree(),
 	}
 }
 
@@ -175,10 +172,16 @@ func (p *SelectPlan) JSON() string {
 		Limit  int
 	}
 
+	type join struct {
+		Type     string
+		Strategy string
+	}
+
 	type explain struct {
 		RawQuery    string                `json:",omitempty"`
 		Project     string                `json:",omitempty"`
 		Partitions  []xcontext.QueryTuple `json:",omitempty"`
+		Join        *join                 `json:",omitempty"`
 		Aggregate   []string              `json:",omitempty"`
 		GatherMerge []string              `json:",omitempty"`
 		HashGroupBy []string              `json:",omitempty"`
@@ -186,13 +189,38 @@ func (p *SelectPlan) JSON() string {
 	}
 
 	// Project.
-	exprs := p.node.SelectExprs
-	if m, ok := p.Root.(*MergeNode); ok {
-		exprs = m.Sel.SelectExprs
+	var prefix, project string
+	tuples := p.Root.getFields()
+	for _, tuple := range tuples {
+		field := tuple.field
+		if tuple.alias != "" {
+			field = tuple.alias
+		}
+		project = fmt.Sprintf("%s%s%s", project, prefix, field)
+		prefix = ", "
 	}
-	buf := sqlparser.NewTrackedBuffer(nil)
-	buf.Myprintf("%v", exprs)
-	project := buf.String()
+
+	var joins *join
+	if j, ok := p.Root.(*JoinNode); ok {
+		joins = &join{}
+		switch j.Strategy {
+		case Cartesian:
+			joins.Strategy = "Cartesian Join"
+		case SortMerge:
+			joins.Strategy = "Sort Merge Join"
+		case NestedLoop:
+			joins.Strategy = "Nested Loop Join"
+		}
+		if j.IsLeftJoin {
+			joins.Type = "LEFT JOIN"
+		} else {
+			if j.Strategy == Cartesian {
+				joins.Type = "CROSS JOIN"
+			} else {
+				joins.Type = "INNER JOIN"
+			}
+		}
+	}
 
 	// Aggregate.
 	var aggregate []string
@@ -227,6 +255,7 @@ func (p *SelectPlan) JSON() string {
 	exp := &explain{Project: project,
 		RawQuery:    p.RawQuery,
 		Partitions:  p.Root.GetQuery(),
+		Join:        joins,
 		Aggregate:   aggregate,
 		GatherMerge: gatherMerge,
 		HashGroupBy: hashGroup,
@@ -241,7 +270,7 @@ func (p *SelectPlan) JSON() string {
 
 // Children returns the children of the plan.
 func (p *SelectPlan) Children() *PlanTree {
-	return p.children
+	return p.Root.Children()
 }
 
 // Size returns the memory size.
