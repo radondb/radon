@@ -272,9 +272,6 @@ func TestSelectPlan(t *testing.T) {
 		"sum(id)",
 		"count(id)"
 	],
-	"GatherMerge": [
-		"b"
-	],
 	"HashGroupBy": [
 		"b"
 	]
@@ -300,9 +297,6 @@ func TestSelectPlan(t *testing.T) {
 	},
 	"Aggregate": [
 		"sum(A.a)"
-	],
-	"GatherMerge": [
-		"B.b"
 	],
 	"HashGroupBy": [
 		"b"
@@ -362,9 +356,6 @@ func TestSelectPlan(t *testing.T) {
 	},
 	"Aggregate": [
 		"sum(A.a)"
-	],
-	"GatherMerge": [
-		"S.b"
 	],
 	"HashGroupBy": [
 		"b"

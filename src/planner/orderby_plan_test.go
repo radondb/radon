@@ -45,7 +45,7 @@ func TestOrderByPlan(t *testing.T) {
 		assert.Nil(t, err)
 		tuples, _, err := parserSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
-		plan := NewOrderByPlan(log, node, tuples, p.getReferredTables())
+		plan := NewOrderByPlan(log, node.OrderBy, tuples, p.getReferredTables())
 		// plan build
 		{
 			err := plan.Build()
@@ -81,7 +81,7 @@ func TestOrderByPlanError(t *testing.T) {
 		assert.Nil(t, err)
 		tuples, _, err := parserSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
-		plan := NewOrderByPlan(log, node, tuples, p.getReferredTables())
+		plan := NewOrderByPlan(log, node.OrderBy, tuples, p.getReferredTables())
 		// plan build
 		{
 			err := plan.Build()

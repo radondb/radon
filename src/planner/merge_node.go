@@ -10,8 +10,9 @@ package planner
 
 import (
 	"math/rand"
-	"router"
 	"time"
+
+	"router"
 	"xcontext"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -174,13 +175,32 @@ func (m *MergeNode) calcRoute() (PlanNode, error) {
 
 // pushSelectExprs used to push the select fields.
 func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, aggTyp aggrType) error {
-	m.Sel.SelectExprs = sel.SelectExprs
-	m.Sel.GroupBy = sel.GroupBy
-	m.Sel.Distinct = sel.Distinct
+	node := m.Sel
+	node.SelectExprs = sel.SelectExprs
+	node.GroupBy = sel.GroupBy
+	node.Distinct = sel.Distinct
 	m.fields = fields
 
-	if len(groups) == 0 && len(sel.GroupBy) > 0 {
-		return nil
+	if len(sel.GroupBy) > 0 {
+		// group by implicitly contains order by.
+		if len(sel.OrderBy) == 0 {
+			for _, by := range sel.GroupBy {
+				node.OrderBy = append(node.OrderBy, &sqlparser.Order{
+					Expr:      by,
+					Direction: sqlparser.AscScr,
+				})
+			}
+		}
+		if len(groups) == 0 {
+			if len(node.OrderBy) > 0 {
+				orderPlan := NewOrderByPlan(m.log, node.OrderBy, m.fields, m.referredTables)
+				if err := orderPlan.Build(); err != nil {
+					return err
+				}
+				m.children.Add(orderPlan)
+			}
+			return nil
+		}
 	}
 
 	if aggTyp != nullAgg || len(groups) > 0 {
@@ -213,18 +233,7 @@ func (m *MergeNode) pushHaving(havings []filterTuple) error {
 func (m *MergeNode) pushOrderBy(sel *sqlparser.Select, fields []selectTuple) error {
 	if len(sel.OrderBy) > 0 {
 		m.Sel.OrderBy = sel.OrderBy
-	} else {
-		// group by implicitly contains order by.
-		for _, by := range m.Sel.GroupBy {
-			m.Sel.OrderBy = append(m.Sel.OrderBy, &sqlparser.Order{
-				Expr:      by,
-				Direction: sqlparser.AscScr,
-			})
-		}
-	}
-
-	if len(m.Sel.OrderBy) > 0 {
-		orderPlan := NewOrderByPlan(m.log, m.Sel, fields, m.referredTables)
+		orderPlan := NewOrderByPlan(m.log, m.Sel.OrderBy, fields, m.referredTables)
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}

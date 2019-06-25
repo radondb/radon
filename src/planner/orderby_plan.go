@@ -42,7 +42,7 @@ type OrderBy struct {
 // OrderByPlan represents order-by plan.
 type OrderByPlan struct {
 	log      *xlog.Log
-	node     *sqlparser.Select
+	node     sqlparser.OrderBy
 	tuples   []selectTuple
 	tbInfos  map[string]*TableInfo
 	OrderBys []OrderBy `json:"OrderBy(s)"`
@@ -50,7 +50,7 @@ type OrderByPlan struct {
 }
 
 // NewOrderByPlan used to create OrderByPlan.
-func NewOrderByPlan(log *xlog.Log, node *sqlparser.Select, tuples []selectTuple, tbInfos map[string]*TableInfo) *OrderByPlan {
+func NewOrderByPlan(log *xlog.Log, node sqlparser.OrderBy, tuples []selectTuple, tbInfos map[string]*TableInfo) *OrderByPlan {
 	return &OrderByPlan{
 		log:     log,
 		node:    node,
@@ -67,8 +67,7 @@ func NewOrderByPlan(log *xlog.Log, node *sqlparser.Select, tuples []selectTuple,
 // Unsupported(orderby field must be in select list):
 // 1. 'select a from t order by b'
 func (p *OrderByPlan) analyze() error {
-	order := p.node.OrderBy
-	for _, o := range order {
+	for _, o := range p.node {
 		switch e := o.Expr.(type) {
 		case *sqlparser.ColName:
 			orderBy := OrderBy{}

@@ -9,9 +9,10 @@
 package executor
 
 import (
-	"planner"
 	"sort"
 	"sync"
+
+	"planner"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"

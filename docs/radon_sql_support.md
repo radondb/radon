@@ -508,6 +508,7 @@ join_condition:
 
  * Support cross-partition count, sum, avg, max, min and other aggregate functions, Aggregate functions only support for numeric values
  * Support cross-partition order by, group by, limit and other operations, *field must be in select_expr*
+ * Group by suggest to be used with aggregation function, avoid using group by alone when returning non-`group by` fields.
  * Support complex queries such as joins.
  * Support where and having clause, having doesn't support aggregate function temporarily.
  * Support retrieving rows computed without reference to any table or specify `DUAL` as a dummy table name in situations where no tables are referenced. 

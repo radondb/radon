@@ -10,6 +10,7 @@ package planner
 
 import (
 	"fmt"
+
 	"router"
 	"xcontext"
 
@@ -846,17 +847,8 @@ func (j *JoinNode) pushHaving(havings []filterTuple) error {
 
 // pushOrderBy used to push the order by exprs.
 func (j *JoinNode) pushOrderBy(sel *sqlparser.Select, fields []selectTuple) error {
-	if len(sel.OrderBy) == 0 {
-		for _, by := range sel.GroupBy {
-			sel.OrderBy = append(sel.OrderBy, &sqlparser.Order{
-				Expr:      by,
-				Direction: sqlparser.AscScr,
-			})
-		}
-	}
-
 	if len(sel.OrderBy) > 0 {
-		orderPlan := NewOrderByPlan(j.log, sel, fields, j.referredTables)
+		orderPlan := NewOrderByPlan(j.log, sel.OrderBy, fields, j.referredTables)
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}

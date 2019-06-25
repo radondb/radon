@@ -9,9 +9,10 @@
 package executor
 
 import (
+	"sync"
+
 	"backend"
 	"planner"
-	"sync"
 	"xcontext"
 
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
