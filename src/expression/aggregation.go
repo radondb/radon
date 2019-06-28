@@ -31,8 +31,8 @@ type Aggregation struct {
 type AggEvaluateContext struct {
 	count int64
 	val   sqltypes.Value
-	// buffer used to store the value maps when Aggregation.distinct is true.
-	buffer map[string]sqltypes.Value
+	// buffer used to store the values when Aggregation.distinct is true.
+	buffer *common.HashTable
 }
 
 // NewAggregation new an Aggregetion.
@@ -54,15 +54,12 @@ func (aggr *Aggregation) InitEvalCtx(x []sqltypes.Value) *AggEvaluateContext {
 		v = x[aggr.index]
 	}
 
-	buffer := make(map[string]sqltypes.Value)
+	buffer := common.NewHashTable()
 	if !aggr.isPushDown && v.Type() != sqltypes.Null {
 		count = 1
 		if aggr.distinct {
-			keySlice := []byte{0x01}
-			keySlice = append(keySlice, v.Raw()...)
-			keySlice = append(keySlice, 0x02)
-			key := common.BytesToString(keySlice)
-			buffer[key] = v
+			key := v.Raw()
+			buffer.Put(key, []byte{})
 		}
 	}
 	return &AggEvaluateContext{
@@ -141,12 +138,9 @@ func (aggr *Aggregation) Update(x []sqltypes.Value, evalCtx *AggEvaluateContext)
 	}
 
 	if !aggr.isPushDown && aggr.distinct {
-		keySlice := []byte{0x01}
-		keySlice = append(keySlice, v.Raw()...)
-		keySlice = append(keySlice, 0x02)
-		key := common.BytesToString(keySlice)
-		if _, ok := evalCtx.buffer[key]; !ok {
-			evalCtx.buffer[key] = v
+		key := v.Raw()
+		if has, _ := evalCtx.buffer.Get(key); !has {
+			evalCtx.buffer.Put(key, []byte{})
 		} else {
 			return
 		}
