@@ -383,7 +383,7 @@ func TestSelectExprs(t *testing.T) {
 		err = p.pushSelectExprs(fields, groups, sel, aggTyp)
 		assert.Nil(t, err)
 
-		err = p.pushOrderBy(sel, fields)
+		err = p.pushOrderBy(sel)
 		assert.Nil(t, err)
 	}
 }
@@ -529,8 +529,14 @@ func TestPushOrderBy(t *testing.T) {
 
 		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
+		switch p:=p.(type){
+		case *MergeNode:
+			p.fields = fields
+		case *JoinNode:
+			p.fields = fields
+		}
 
-		err = p.pushOrderBy(sel, fields)
+		err = p.pushOrderBy(sel)
 		assert.Nil(t, err)
 	}
 }
@@ -565,8 +571,14 @@ func TestPushOrderByError(t *testing.T) {
 
 		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
-
-		err = p.pushOrderBy(sel, fields)
+		switch p:=p.(type){
+		case *MergeNode:
+			p.fields = fields
+		case *JoinNode:
+			p.fields = fields
+		}
+		
+		err = p.pushOrderBy(sel)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}

@@ -45,10 +45,7 @@ type SelectPlan struct {
 	// type
 	typ PlanType
 
-	// mode
-	ReqMode xcontext.RequestMode
-
-	Root PlanNode
+	Root SelectNode
 }
 
 // NewSelectPlan used to create SelectPlan.
@@ -67,24 +64,15 @@ func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser
 // Unsupports:
 // 1. subquery.
 func (p *SelectPlan) analyze() error {
-	// Check subquery.
-	if hasSubquery(p.node) {
-		return errors.New("unsupported: subqueries.in.select")
-	}
-	return nil
-}
-
-// Build used to build distributed querys.
-// For now, we don't support subquery in select.
-func (p *SelectPlan) Build() error {
 	var err error
 	log := p.log
 	node := p.node
 
 	// Check subquery.
-	if err = p.analyze(); err != nil {
-		return err
+	if hasSubquery(node) {
+		return errors.New("unsupported: subqueries.in.select")
 	}
+
 	if p.Root, err = scanTableExprs(log, p.router, p.database, node.From); err != nil {
 		return err
 	}
@@ -106,13 +94,13 @@ func (p *SelectPlan) Build() error {
 
 	mn, ok := p.Root.(*MergeNode)
 	if ok && mn.routeLen == 1 {
-		node.From = mn.Sel.From
-		node.Where = mn.Sel.Where
+		sel := mn.Sel.(*sqlparser.Select)
+		node.From = sel.From
+		node.Where = sel.Where
 		if err = checkTbName(tbInfos, node); err != nil {
 			return err
 		}
 		mn.Sel = node
-		mn.buildQuery(tbInfos)
 		return nil
 	}
 
@@ -146,7 +134,7 @@ func (p *SelectPlan) Build() error {
 		}
 	}
 
-	if err = p.Root.pushOrderBy(node, fields); err != nil {
+	if err = p.Root.pushOrderBy(node); err != nil {
 		return err
 	}
 	// Limit SubPlan.
@@ -155,8 +143,18 @@ func (p *SelectPlan) Build() error {
 			return err
 		}
 	}
+	return nil
+}
 
-	p.Root.buildQuery(tbInfos)
+// Build used to build distributed querys.
+// For now, we don't support subquery in select.
+func (p *SelectPlan) Build() error {
+	// Check subquery.
+	if err := p.analyze(); err != nil {
+		return err
+	}
+
+	p.Root.buildQuery(p.Root.getReferredTables())
 	return nil
 }
 

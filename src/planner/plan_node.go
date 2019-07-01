@@ -16,30 +16,35 @@ import (
 
 // PlanNode interface.
 type PlanNode interface {
-	getReferredTables() map[string]*TableInfo
+	buildQuery(tbInfos map[string]*TableInfo)
+	Children() *PlanTree
 	getFields() []selectTuple
-	setParenthese(hasParen bool)
+	getReferredTables() map[string]*TableInfo
+	GetQuery() []xcontext.QueryTuple
+	pushOrderBy(sel sqlparser.SelectStatement) error
+	pushLimit(sel sqlparser.SelectStatement) error
+}
+
+// SelectNode interface.
+type SelectNode interface {
+	PlanNode
 	pushFilter(filters []filterTuple) error
-	setParent(p PlanNode)
+	setParent(p SelectNode)
 	setWhereFilter(filter filterTuple)
 	setNoTableFilter(exprs []sqlparser.Expr)
-	pushEqualCmpr(joins []joinTuple) PlanNode
-	calcRoute() (PlanNode, error)
+	setParenthese(hasParen bool)
+	pushEqualCmpr(joins []joinTuple) SelectNode
+	calcRoute() (SelectNode, error)
 	pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, aggTyp aggrType) error
 	pushSelectExpr(field selectTuple) (int, error)
 	pushHaving(havings []filterTuple) error
-	pushOrderBy(sel *sqlparser.Select, fields []selectTuple) error
-	pushLimit(sel *sqlparser.Select) error
 	pushMisc(sel *sqlparser.Select)
-	Children() *PlanTree
-	buildQuery(tbInfos map[string]*TableInfo)
-	GetQuery() []xcontext.QueryTuple
 	reOrder(int)
 	Order() int
 }
 
 // findLCA get the two plannode's lowest common ancestors node.
-func findLCA(h, p1, p2 PlanNode) PlanNode {
+func findLCA(h, p1, p2 SelectNode) SelectNode {
 	if p1 == h || p2 == h {
 		return h
 	}

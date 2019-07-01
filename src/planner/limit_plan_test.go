@@ -43,7 +43,7 @@ func TestLimitPlan(t *testing.T) {
 		assert.Nil(t, err)
 		node := tree.(*sqlparser.Select)
 		assert.Nil(t, err)
-		plan := NewLimitPlan(log, node)
+		plan := NewLimitPlan(log, node.Limit)
 		// plan build
 		{
 			err := plan.Build()
@@ -75,7 +75,7 @@ func TestLimitPlanReWritten(t *testing.T) {
 		assert.Nil(t, err)
 		node := tree.(*sqlparser.Select)
 		assert.Nil(t, err)
-		plan := NewLimitPlan(log, node)
+		plan := NewLimitPlan(log, node.Limit)
 		// plan build
 		{
 			err := plan.Build()
@@ -110,7 +110,7 @@ func TestLimitPlanError(t *testing.T) {
 		assert.Nil(t, err)
 		node := tree.(*sqlparser.Select)
 		assert.Nil(t, err)
-		plan := NewLimitPlan(log, node)
+		plan := NewLimitPlan(log, node.Limit)
 		// plan build
 		{
 			err := plan.Build()

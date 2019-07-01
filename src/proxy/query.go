@@ -251,6 +251,12 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 				return returnQuery(qr, callback, err)
 			}
 		}
+	case *sqlparser.Union:
+		if qr, err = spanner.handleSelect(session, query, node); err != nil {
+			log.Error("proxy.union[%s].from.session[%v].error:%+v", query, session.ID(), err)
+		}
+		spanner.auditLog(session, W, xbase.UPDATE, query, qr)
+		return returnQuery(qr, callback, err)
 	case *sqlparser.Kill:
 		if qr, err = spanner.handleKill(session, query, node); err != nil {
 			log.Error("proxy.kill[%s].from.session[%v].error:%+v", query, session.ID(), err)

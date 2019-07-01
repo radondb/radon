@@ -27,7 +27,7 @@ var (
 type LimitPlan struct {
 	log *xlog.Log
 
-	node      *sqlparser.Select
+	node      *sqlparser.Limit
 	rewritten *sqlparser.Limit
 	Offset    int
 	Limit     int
@@ -37,7 +37,7 @@ type LimitPlan struct {
 }
 
 // NewLimitPlan used to create LimitPlan.
-func NewLimitPlan(log *xlog.Log, node *sqlparser.Select) *LimitPlan {
+func NewLimitPlan(log *xlog.Log, node *sqlparser.Limit) *LimitPlan {
 	return &LimitPlan{
 		log:  log,
 		node: node,
@@ -47,11 +47,6 @@ func NewLimitPlan(log *xlog.Log, node *sqlparser.Select) *LimitPlan {
 
 // analyze used to analyze the 'order by' is at the support level.
 func (p *LimitPlan) analyze() error {
-	node := p.node.Limit
-	if node == nil {
-		return nil
-	}
-
 	ok := true
 	sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
 		switch node.(type) {
@@ -69,7 +64,7 @@ func (p *LimitPlan) analyze() error {
 			ok = false
 			return false, nil
 		}
-	}, node)
+	}, p.node)
 
 	if !ok {
 		return errors.New("unsupported: limit.offset.or.counts.must.be.IntVal")
@@ -79,17 +74,16 @@ func (p *LimitPlan) analyze() error {
 
 // Build used to build distributed querys.
 func (p *LimitPlan) Build() error {
+	if p.node == nil {
+		return nil
+	}
+
 	if err := p.analyze(); err != nil {
 		return err
 	}
 
-	node := p.node.Limit
-	if node == nil {
-		return nil
-	}
-
-	if node.Offset != nil {
-		val := node.Offset.(*sqlparser.SQLVal)
+	if p.node.Offset != nil {
+		val := p.node.Offset.(*sqlparser.SQLVal)
 		out, err := strconv.ParseInt(common.BytesToString(val.Val), 10, 64)
 		if err != nil {
 			return err
@@ -97,8 +91,8 @@ func (p *LimitPlan) Build() error {
 		p.Offset = int(out)
 	}
 
-	if node.Rowcount != nil {
-		val := node.Rowcount.(*sqlparser.SQLVal)
+	if p.node.Rowcount != nil {
+		val := p.node.Rowcount.(*sqlparser.SQLVal)
 		out, err := strconv.ParseInt(common.BytesToString(val.Val), 10, 64)
 		if err != nil {
 			return err

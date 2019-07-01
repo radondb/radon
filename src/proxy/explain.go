@@ -57,6 +57,7 @@ func (spanner *Spanner) handleExplain(session *driver.Session, query string, nod
 	// Explain only supports DML.
 	// see https://dev.mysql.com/doc/refman/5.7/en/explain.html
 	switch subNode.(type) {
+	case *sqlparser.Union:
 	case *sqlparser.Select:
 	case *sqlparser.Delete:
 	case *sqlparser.Insert:
@@ -67,7 +68,7 @@ func (spanner *Spanner) handleExplain(session *driver.Session, query string, nod
 	case *sqlparser.Update:
 	case *sqlparser.Checksum:
 	default:
-		return nil, sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, "explain only supports SELECT/DELETE/INSERT/UPDATE")
+		return nil, sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, "explain only supports SELECT/DELETE/INSERT/UNION")
 	}
 
 	simOptimizer := optimizer.NewSimpleOptimizer(log, database, cutQuery, subNode, router)
