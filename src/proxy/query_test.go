@@ -249,6 +249,17 @@ func TestProxyQuerys(t *testing.T) {
 		}
 	}
 
+	// union
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "select 1 union select a from test.t2"
+		_, err = client.FetchAll(query, -1)
+		want := "Table 't2' doesn't exist (errno 1146) (sqlstate 42S02)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+
 	// select * from systemdatabase.table
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")

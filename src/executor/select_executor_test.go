@@ -492,7 +492,7 @@ func TestExecutorErr(t *testing.T) {
 		{
 			plan := executor.plan.(*planner.SelectPlan)
 			reqCtx := xcontext.NewRequestContext()
-			reqCtx.Mode = plan.ReqMode
+			reqCtx.Mode = xcontext.ReqNormal
 			reqCtx.TxnMode = xcontext.TxnRead
 			reqCtx.RawQuery = plan.RawQuery
 			ctx := xcontext.NewResultContext()

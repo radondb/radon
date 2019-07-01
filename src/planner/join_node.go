@@ -57,7 +57,7 @@ type JoinNode struct {
 	// router.
 	router *router.Router
 	// Left and Right are the nodes for the join.
-	Left, Right PlanNode
+	Left, Right SelectNode
 	// join strategy.
 	Strategy JoinStrategy
 	// JoinTableExpr in FROM clause.
@@ -67,7 +67,7 @@ type JoinNode struct {
 	// whether has parenthese in FROM clause.
 	hasParen bool
 	// parent node in the plan tree.
-	parent PlanNode
+	parent SelectNode
 	// children plans in select(such as: orderby, limit..).
 	children *PlanTree
 	// Cols defines which columns from left or right results used to build the return result.
@@ -114,7 +114,7 @@ type JoinNode struct {
 }
 
 // newJoinNode used to create JoinNode.
-func newJoinNode(log *xlog.Log, Left, Right PlanNode, router *router.Router, joinExpr *sqlparser.JoinTableExpr,
+func newJoinNode(log *xlog.Log, Left, Right SelectNode, router *router.Router, joinExpr *sqlparser.JoinTableExpr,
 	joinOn []joinTuple, referredTables map[string]*TableInfo) *JoinNode {
 	isLeftJoin := false
 	if joinExpr != nil && joinExpr.Join == sqlparser.LeftJoinStr {
@@ -184,7 +184,7 @@ func (j *JoinNode) pushFilter(filters []filterTuple) error {
 				}
 			}
 		} else {
-			var parent PlanNode
+			var parent SelectNode
 			for _, tb := range filter.referTables {
 				tbInfo := j.referredTables[tb]
 				if parent == nil {
@@ -210,7 +210,7 @@ func (j *JoinNode) pushFilter(filters []filterTuple) error {
 }
 
 // setParent set the parent node.
-func (j *JoinNode) setParent(p PlanNode) {
+func (j *JoinNode) setParent(p SelectNode) {
 	j.parent = p
 }
 
@@ -292,7 +292,7 @@ func (j *JoinNode) pushOtherJoin(idx *int) error {
 		}
 		if len(j.otherJoinOn.right) > 0 {
 			for _, filter := range j.otherJoinOn.right {
-				var parent PlanNode
+				var parent SelectNode
 				for _, tb := range filter.referTables {
 					tbInfo := j.referredTables[tb]
 					if parent == nil {
@@ -326,16 +326,16 @@ func (j *JoinNode) pushOtherJoin(idx *int) error {
 // pushEqualCmpr used to push the equal Comparison type filters.
 // eg: 'select * from t1, t2 where t1.a=t2.a and t1.b=2'.
 // 't1.a=t2.a' is the 'join' type filters.
-func (j *JoinNode) pushEqualCmpr(joins []joinTuple) PlanNode {
+func (j *JoinNode) pushEqualCmpr(joins []joinTuple) SelectNode {
 	for i, joinFilter := range joins {
-		var parent PlanNode
+		var parent SelectNode
 		ltb := j.referredTables[joinFilter.referTables[0]]
 		rtb := j.referredTables[joinFilter.referTables[1]]
 		parent = findLCA(j, ltb.parent, rtb.parent)
 
 		switch node := parent.(type) {
 		case *MergeNode:
-			node.Sel.AddWhere(joinFilter.expr)
+			node.addWhere(joinFilter.expr)
 		case *JoinNode:
 			join, _ := checkJoinOn(node.Left, node.Right, joinFilter)
 			if lmn, ok := node.Left.(*MergeNode); ok {
@@ -351,16 +351,16 @@ func (j *JoinNode) pushEqualCmpr(joins []joinTuple) PlanNode {
 						for _, filter := range node.otherFilter {
 							mn.setWhereFilter(filter)
 						}
-						for _, exprs := range node.noTableFilter {
-							mn.Sel.AddWhere(exprs)
+						for _, expr := range node.noTableFilter {
+							mn.addWhere(expr)
 						}
 
 						if node.joinExpr == nil {
 							for _, joins := range node.joinOn {
-								mn.Sel.AddWhere(joins.expr)
+								mn.addWhere(joins.expr)
 							}
 						}
-						mn.Sel.AddWhere(join.expr)
+						mn.addWhere(join.expr)
 						if node.parent == nil {
 							return mn.pushEqualCmpr(joins[i+1:])
 						}
@@ -392,7 +392,7 @@ func (j *JoinNode) pushEqualCmpr(joins []joinTuple) PlanNode {
 }
 
 // calcRoute used to calc the route.
-func (j *JoinNode) calcRoute() (PlanNode, error) {
+func (j *JoinNode) calcRoute() (SelectNode, error) {
 	var err error
 	for _, filter := range j.tableFilter {
 		if !j.buildKeyFilter(filter, false) {
@@ -427,13 +427,9 @@ func (j *JoinNode) calcRoute() (PlanNode, error) {
 						mn.setWhereFilter(filter)
 					}
 				}
-				for _, exprs := range j.noTableFilter {
-					mn.Sel.AddWhere(exprs)
-				}
+				mn.setNoTableFilter(j.noTableFilter)
 				if j.joinExpr == nil && len(j.joinOn) > 0 {
-					for _, joins := range j.joinOn {
-						mn.Sel.AddWhere(joins.expr)
-					}
+					mn.pushEqualCmpr(j.joinOn)
 				}
 				return mn, nil
 			}
@@ -637,7 +633,7 @@ func (j *JoinNode) pushOtherFilters(filters []filterTuple, idx *int, isOtherJoin
 }
 
 // pushOtherFilter used to push otherFilter.
-func (j *JoinNode) pushOtherFilter(expr sqlparser.Expr, node PlanNode, tbs []string, idx *int) (int, error) {
+func (j *JoinNode) pushOtherFilter(expr sqlparser.Expr, node SelectNode, tbs []string, idx *int) (int, error) {
 	var err error
 	var field, alias string
 	index := -1
@@ -737,7 +733,7 @@ func (j *JoinNode) handleJoinOn() {
 			if m.Order() < rtb.parent.Order() {
 				m = rtb.parent
 			}
-			m.Sel.AddWhere(join.expr)
+			m.addWhere(join.expr)
 			leftKey = JoinKey{Field: join.left.Name.String(),
 				Table: lt,
 			}
@@ -753,7 +749,7 @@ func (j *JoinNode) handleJoinOn() {
 	}
 }
 
-func (j *JoinNode) buildOrderBy(expr sqlparser.Expr, node PlanNode, idx *int) JoinKey {
+func (j *JoinNode) buildOrderBy(expr sqlparser.Expr, node SelectNode, idx *int) JoinKey {
 	var field, table, alias string
 	var col *sqlparser.ColName
 	index := -1
@@ -797,7 +793,7 @@ func (j *JoinNode) buildOrderBy(expr sqlparser.Expr, node PlanNode, idx *int) Jo
 	}
 
 	if m, ok := node.(*MergeNode); ok {
-		m.Sel.OrderBy = append(m.Sel.OrderBy, &sqlparser.Order{
+		m.Sel.(*sqlparser.Select).OrderBy = append(m.Sel.(*sqlparser.Select).OrderBy, &sqlparser.Order{
 			Expr:      col,
 			Direction: sqlparser.AscScr,
 		})
@@ -814,9 +810,9 @@ func (j *JoinNode) pushHaving(havings []filterTuple) error {
 			j.Right.pushHaving([]filterTuple{filter})
 		} else if len(filter.referTables) == 1 {
 			tbInfo := j.referredTables[filter.referTables[0]]
-			tbInfo.parent.Sel.AddHaving(filter.expr)
+			tbInfo.parent.addHaving(filter.expr)
 		} else {
-			var parent PlanNode
+			var parent SelectNode
 			for _, tb := range filter.referTables {
 				tbInfo := j.referredTables[tb]
 				if parent == nil {
@@ -834,7 +830,7 @@ func (j *JoinNode) pushHaving(havings []filterTuple) error {
 				}
 			}
 			if mn, ok := parent.(*MergeNode); ok {
-				mn.Sel.AddHaving(filter.expr)
+				mn.addHaving(filter.expr)
 			} else {
 				buf := sqlparser.NewTrackedBuffer(nil)
 				filter.expr.Format(buf)
@@ -846,9 +842,10 @@ func (j *JoinNode) pushHaving(havings []filterTuple) error {
 }
 
 // pushOrderBy used to push the order by exprs.
-func (j *JoinNode) pushOrderBy(sel *sqlparser.Select, fields []selectTuple) error {
-	if len(sel.OrderBy) > 0 {
-		orderPlan := NewOrderByPlan(j.log, sel.OrderBy, fields, j.referredTables)
+func (j *JoinNode) pushOrderBy(sel sqlparser.SelectStatement) error {
+	node := sel.(*sqlparser.Select)
+	if len(node.OrderBy) > 0 {
+		orderPlan := NewOrderByPlan(j.log, node.OrderBy, j.fields, j.referredTables)
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}
@@ -859,8 +856,8 @@ func (j *JoinNode) pushOrderBy(sel *sqlparser.Select, fields []selectTuple) erro
 }
 
 // pushLimit used to push limit.
-func (j *JoinNode) pushLimit(sel *sqlparser.Select) error {
-	limitPlan := NewLimitPlan(j.log, sel)
+func (j *JoinNode) pushLimit(sel sqlparser.SelectStatement) error {
+	limitPlan := NewLimitPlan(j.log, sel.(*sqlparser.Select).Limit)
 	if err := limitPlan.Build(); err != nil {
 		return err
 	}

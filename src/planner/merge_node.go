@@ -22,10 +22,8 @@ import (
 // MergeNode can be pushed down.
 type MergeNode struct {
 	log *xlog.Log
-	// database.
-	database string
 	// select ast.
-	Sel *sqlparser.Select
+	Sel sqlparser.SelectStatement
 	// router.
 	router *router.Router
 	// non-global tables' count in the MergeNode.
@@ -41,7 +39,7 @@ type MergeNode struct {
 	// whether has parenthese in FROM clause.
 	hasParen bool
 	// parent node in the plan tree.
-	parent PlanNode
+	parent SelectNode
 	// children plans in select(such as: orderby, limit..).
 	children *PlanTree
 	// query and backend tuple
@@ -55,17 +53,19 @@ type MergeNode struct {
 	// need avoid the duplicate filter `t2.a=1`.
 	filters map[sqlparser.Expr]int
 	order   int
+	// Mode.
+	ReqMode xcontext.RequestMode
 }
 
 // newMergeNode used to create MergeNode.
-func newMergeNode(log *xlog.Log, database string, router *router.Router) *MergeNode {
+func newMergeNode(log *xlog.Log, router *router.Router) *MergeNode {
 	return &MergeNode{
 		log:            log,
-		database:       database,
 		router:         router,
 		referredTables: make(map[string]*TableInfo),
 		filters:        make(map[sqlparser.Expr]int),
 		children:       NewPlanTree(),
+		ReqMode:        xcontext.ReqNormal,
 	}
 }
 
@@ -77,7 +77,7 @@ func (m *MergeNode) getReferredTables() map[string]*TableInfo {
 // getFields get the fields.
 func (m *MergeNode) getFields() []selectTuple {
 	if len(m.fields) == 0 {
-		exprs := m.Sel.SelectExprs
+		exprs := getSelectExprs(m.Sel)
 		if len(exprs) > 0 {
 			var err error
 			m.fields, _, err = parserSelectExprs(exprs, m)
@@ -98,7 +98,7 @@ func (m *MergeNode) setParenthese(hasParen bool) {
 func (m *MergeNode) pushFilter(filters []filterTuple) error {
 	var err error
 	for _, filter := range filters {
-		m.Sel.AddWhere(filter.expr)
+		m.addWhere(filter.expr)
 		if len(filter.referTables) == 1 {
 			tbInfo := m.referredTables[filter.referTables[0]]
 			if tbInfo.shardKey != "" && len(filter.vals) > 0 {
@@ -116,32 +116,40 @@ func (m *MergeNode) pushFilter(filters []filterTuple) error {
 }
 
 // setParent set the parent node.
-func (m *MergeNode) setParent(p PlanNode) {
+func (m *MergeNode) setParent(p SelectNode) {
 	m.parent = p
+}
+
+func (m *MergeNode) addWhere(expr sqlparser.Expr) {
+	m.Sel.(*sqlparser.Select).AddWhere(expr)
+}
+
+func (m *MergeNode) addHaving(expr sqlparser.Expr) {
+	m.Sel.(*sqlparser.Select).AddHaving(expr)
 }
 
 // setWhereFilter used to push the where filters.
 func (m *MergeNode) setWhereFilter(filter filterTuple) {
-	m.Sel.AddWhere(filter.expr)
+	m.addWhere(filter.expr)
 }
 
 // setNoTableFilter used to push the no table filters.
 func (m *MergeNode) setNoTableFilter(exprs []sqlparser.Expr) {
 	for _, expr := range exprs {
-		m.Sel.AddWhere(expr)
+		m.addWhere(expr)
 	}
 }
 
 // pushEqualCmpr used to push the 'join' type filters.
-func (m *MergeNode) pushEqualCmpr(joins []joinTuple) PlanNode {
+func (m *MergeNode) pushEqualCmpr(joins []joinTuple) SelectNode {
 	for _, joinFilter := range joins {
-		m.Sel.AddWhere(joinFilter.expr)
+		m.addWhere(joinFilter.expr)
 	}
 	return m
 }
 
 // calcRoute used to calc the route.
-func (m *MergeNode) calcRoute() (PlanNode, error) {
+func (m *MergeNode) calcRoute() (SelectNode, error) {
 	var err error
 	for _, tbInfo := range m.referredTables {
 		if m.nonGlobalCnt == 0 {
@@ -175,7 +183,7 @@ func (m *MergeNode) calcRoute() (PlanNode, error) {
 
 // pushSelectExprs used to push the select fields.
 func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, aggTyp aggrType) error {
-	node := m.Sel
+	node := m.Sel.(*sqlparser.Select)
 	node.SelectExprs = sel.SelectExprs
 	node.GroupBy = sel.GroupBy
 	node.Distinct = sel.Distinct
@@ -204,19 +212,20 @@ func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser
 	}
 
 	if aggTyp != nullAgg || len(groups) > 0 {
-		aggrPlan := NewAggregatePlan(m.log, m.Sel.SelectExprs, fields, groups, aggTyp == canPush)
+		aggrPlan := NewAggregatePlan(m.log, node.SelectExprs, fields, groups, aggTyp == canPush)
 		if err := aggrPlan.Build(); err != nil {
 			return err
 		}
 		m.children.Add(aggrPlan)
-		m.Sel.SelectExprs = aggrPlan.ReWritten()
+		node.SelectExprs = aggrPlan.ReWritten()
 	}
 	return nil
 }
 
 // pushSelectExpr used to push the select field, called by JoinNode.pushSelectExpr.
 func (m *MergeNode) pushSelectExpr(field selectTuple) (int, error) {
-	m.Sel.SelectExprs = append(m.Sel.SelectExprs, field.expr)
+	node := m.Sel.(*sqlparser.Select)
+	node.SelectExprs = append(node.SelectExprs, field.expr)
 	m.fields = append(m.fields, field)
 	return len(m.fields) - 1, nil
 }
@@ -224,16 +233,17 @@ func (m *MergeNode) pushSelectExpr(field selectTuple) (int, error) {
 // pushHaving used to push having exprs.
 func (m *MergeNode) pushHaving(havings []filterTuple) error {
 	for _, filter := range havings {
-		m.Sel.AddHaving(filter.expr)
+		m.addHaving(filter.expr)
 	}
 	return nil
 }
 
 // pushOrderBy used to push the order by exprs.
-func (m *MergeNode) pushOrderBy(sel *sqlparser.Select, fields []selectTuple) error {
-	if len(sel.OrderBy) > 0 {
-		m.Sel.OrderBy = sel.OrderBy
-		orderPlan := NewOrderByPlan(m.log, m.Sel.OrderBy, fields, m.referredTables)
+func (m *MergeNode) pushOrderBy(sel sqlparser.SelectStatement) error {
+	node := m.Sel.(*sqlparser.Select)
+	if len(sel.(*sqlparser.Select).OrderBy) > 0 {
+		node.OrderBy = sel.(*sqlparser.Select).OrderBy
+		orderPlan := NewOrderByPlan(m.log, node.OrderBy, m.fields, m.referredTables)
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}
@@ -243,23 +253,24 @@ func (m *MergeNode) pushOrderBy(sel *sqlparser.Select, fields []selectTuple) err
 }
 
 // pushLimit used to push limit.
-func (m *MergeNode) pushLimit(sel *sqlparser.Select) error {
-	limitPlan := NewLimitPlan(m.log, sel)
+func (m *MergeNode) pushLimit(sel sqlparser.SelectStatement) error {
+	limitPlan := NewLimitPlan(m.log, sel.(*sqlparser.Select).Limit)
 	if err := limitPlan.Build(); err != nil {
 		return err
 	}
 	m.children.Add(limitPlan)
-	if len(m.Sel.GroupBy) == 0 {
+	if len(m.Sel.(*sqlparser.Select).GroupBy) == 0 {
 		// Rewrite the limit clause.
-		m.Sel.Limit = limitPlan.ReWritten()
+		m.Sel.SetLimit(limitPlan.ReWritten())
 	}
 	return nil
 }
 
 // pushMisc used tp push miscelleaneous constructs.
 func (m *MergeNode) pushMisc(sel *sqlparser.Select) {
-	m.Sel.Comments = sel.Comments
-	m.Sel.Lock = sel.Lock
+	node := m.Sel.(*sqlparser.Select)
+	node.Comments = sel.Comments
+	node.Lock = sel.Lock
 }
 
 // Children returns the children of the plan.
@@ -280,12 +291,15 @@ func (m *MergeNode) Order() int {
 // buildQuery used to build the QueryTuple.
 func (m *MergeNode) buildQuery(tbInfos map[string]*TableInfo) {
 	var Range string
-	for expr := range m.filters {
-		m.Sel.AddWhere(expr)
-	}
-	if len(m.Sel.SelectExprs) == 0 {
-		m.Sel.SelectExprs = append(m.Sel.SelectExprs, &sqlparser.AliasedExpr{
-			Expr: sqlparser.NewIntVal([]byte("1"))})
+	if sel, ok := m.Sel.(*sqlparser.Select); ok {
+		for expr := range m.filters {
+			m.addWhere(expr)
+		}
+
+		if len(sel.SelectExprs) == 0 {
+			sel.SelectExprs = append(sel.SelectExprs, &sqlparser.AliasedExpr{
+				Expr: sqlparser.NewIntVal([]byte("1"))})
+		}
 	}
 
 	varFormatter := func(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {

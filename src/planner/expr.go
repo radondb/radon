@@ -313,7 +313,7 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*TableInfo
 	return &selectTuple{expr, field, alias, referTables, funcName, aggrField, distinct, isCol}, hasAggregates, nil
 }
 
-func parserSelectExprs(exprs sqlparser.SelectExprs, root PlanNode) ([]selectTuple, aggrType, error) {
+func parserSelectExprs(exprs sqlparser.SelectExprs, root SelectNode) ([]selectTuple, aggrType, error) {
 	var tuples []selectTuple
 	hasAggs := false
 	hasDist := false
@@ -601,7 +601,7 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 
 // checkJoinOn use to check the join on conditions, according to lpn|rpn to  determine join.left|right.
 // eg: select * from t1 join t2 on t1.a=t2.a join t3 on t2.b=t1.b. 't2.b=t1.b' is forbidden.
-func checkJoinOn(lpn, rpn PlanNode, join joinTuple) (joinTuple, error) {
+func checkJoinOn(lpn, rpn SelectNode, join joinTuple) (joinTuple, error) {
 	lt := join.left.Qualifier.Name.String()
 	rt := join.right.Qualifier.Name.String()
 	if _, ok := lpn.getReferredTables()[lt]; ok {
@@ -837,4 +837,15 @@ func getIndex(router *router.Router, tbInfo *TableInfo, val *sqlparser.SQLVal) e
 
 	tbInfo.parent.index = append(tbInfo.parent.index, idx)
 	return nil
+}
+
+func getSelectExprs(node sqlparser.SelectStatement) sqlparser.SelectExprs {
+	var exprs sqlparser.SelectExprs
+	switch node := node.(type) {
+	case *sqlparser.Select:
+		exprs = node.SelectExprs
+	case *sqlparser.Union:
+		exprs = getSelectExprs(node.Left)
+	}
+	return exprs
 }

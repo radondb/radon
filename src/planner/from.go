@@ -49,12 +49,12 @@ type TableInfo struct {
  *         /    \
  *  MergeNode  MergeNode
  */
-func scanTableExprs(log *xlog.Log, router *router.Router, database string, tableExprs sqlparser.TableExprs) (PlanNode, error) {
+func scanTableExprs(log *xlog.Log, router *router.Router, database string, tableExprs sqlparser.TableExprs) (SelectNode, error) {
 	if len(tableExprs) == 1 {
 		return scanTableExpr(log, router, database, tableExprs[0])
 	}
 
-	var lpn, rpn PlanNode
+	var lpn, rpn SelectNode
 	var err error
 	if lpn, err = scanTableExpr(log, router, database, tableExprs[0]); err != nil {
 		return nil, err
@@ -66,9 +66,9 @@ func scanTableExprs(log *xlog.Log, router *router.Router, database string, table
 }
 
 // scanTableExpr produces a plannode subtree by the TableExpr.
-func scanTableExpr(log *xlog.Log, router *router.Router, database string, tableExpr sqlparser.TableExpr) (PlanNode, error) {
+func scanTableExpr(log *xlog.Log, router *router.Router, database string, tableExpr sqlparser.TableExpr) (SelectNode, error) {
 	var err error
-	var p PlanNode
+	var p SelectNode
 	switch tableExpr := tableExpr.(type) {
 	case *sqlparser.AliasedTableExpr:
 		p, err = scanAliasedTableExpr(log, router, database, tableExpr)
@@ -83,9 +83,9 @@ func scanTableExpr(log *xlog.Log, router *router.Router, database string, tableE
 }
 
 // scanAliasedTableExpr produces the table's TableInfo by the AliasedTableExpr, and build a MergeNode subtree.
-func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tableExpr *sqlparser.AliasedTableExpr) (PlanNode, error) {
+func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tableExpr *sqlparser.AliasedTableExpr) (SelectNode, error) {
 	var err error
-	mn := newMergeNode(log, database, r)
+	mn := newMergeNode(log, r)
 	switch expr := tableExpr.Expr.(type) {
 	case sqlparser.TableName:
 		if expr.Qualifier.IsEmpty() {
@@ -136,8 +136,8 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 	return mn, err
 }
 
-// scanJoinTableExpr produces a PlanNode subtree by the JoinTableExpr.
-func scanJoinTableExpr(log *xlog.Log, router *router.Router, database string, joinExpr *sqlparser.JoinTableExpr) (PlanNode, error) {
+// scanJoinTableExpr produces a SelectNode subtree by the JoinTableExpr.
+func scanJoinTableExpr(log *xlog.Log, router *router.Router, database string, joinExpr *sqlparser.JoinTableExpr) (SelectNode, error) {
 	switch joinExpr.Join {
 	case sqlparser.JoinStr, sqlparser.StraightJoinStr, sqlparser.LeftJoinStr:
 	case sqlparser.RightJoinStr:
@@ -157,10 +157,10 @@ func scanJoinTableExpr(log *xlog.Log, router *router.Router, database string, jo
 	return join(log, lpn, rpn, joinExpr, router)
 }
 
-// join build a PlanNode subtree by judging whether left and right can be merged.
+// join build a SelectNode subtree by judging whether left and right can be merged.
 // If can be merged, left and right merge into one MergeNode.
 // else build a JoinNode, the two nodes become new joinnode's Left and Right.
-func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, router *router.Router) (PlanNode, error) {
+func join(log *xlog.Log, lpn, rpn SelectNode, joinExpr *sqlparser.JoinTableExpr, router *router.Router) (SelectNode, error) {
 	var joinOn []joinTuple
 	var otherJoinOn []filterTuple
 	var err error
@@ -237,24 +237,26 @@ func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, r
 // mergeRoutes merges two MergeNode.
 func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJoinOn []filterTuple) (*MergeNode, error) {
 	var err error
+	lSel := lmn.Sel.(*sqlparser.Select)
+	rSel := rmn.Sel.(*sqlparser.Select)
 	if lmn.hasParen {
-		lmn.Sel.From = sqlparser.TableExprs{&sqlparser.ParenTableExpr{Exprs: lmn.Sel.From}}
+		lSel.From = sqlparser.TableExprs{&sqlparser.ParenTableExpr{Exprs: lSel.From}}
 	}
 	if rmn.hasParen {
-		rmn.Sel.From = sqlparser.TableExprs{&sqlparser.ParenTableExpr{Exprs: rmn.Sel.From}}
+		rSel.From = sqlparser.TableExprs{&sqlparser.ParenTableExpr{Exprs: rSel.From}}
 	}
 	if joinExpr == nil {
-		lmn.Sel.From = append(lmn.Sel.From, rmn.Sel.From...)
+		lSel.From = append(lSel.From, rSel.From...)
 	} else {
-		lmn.Sel.From = sqlparser.TableExprs{joinExpr}
+		lSel.From = sqlparser.TableExprs{joinExpr}
 	}
 
 	for k, v := range rmn.getReferredTables() {
 		v.parent = lmn
 		lmn.referredTables[k] = v
 	}
-	if rmn.Sel.Where != nil {
-		lmn.Sel.AddWhere(rmn.Sel.Where.Expr)
+	if rSel.Where != nil {
+		lSel.AddWhere(rSel.Where.Expr)
 	}
 
 	lmn.nonGlobalCnt += rmn.nonGlobalCnt

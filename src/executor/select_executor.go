@@ -41,7 +41,7 @@ func (executor *SelectExecutor) Execute(ctx *xcontext.ResultContext) error {
 	log := executor.log
 	plan := executor.plan.(*planner.SelectPlan)
 	reqCtx := xcontext.NewRequestContext()
-	reqCtx.Mode = plan.ReqMode
+	reqCtx.Mode = xcontext.ReqNormal
 	reqCtx.TxnMode = xcontext.TxnRead
 	reqCtx.RawQuery = plan.RawQuery
 
