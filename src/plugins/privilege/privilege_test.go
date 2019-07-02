@@ -371,3 +371,65 @@ func TestBackendNull(t *testing.T) {
 	assert.Nil(t, err)
 	defer handler.Close()
 }
+
+func TestCheckPrivilegeUnionChecksumDefault_421(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+
+	// Create scatter and query handler.
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 3)
+	defer cleanup()
+
+	MockInitPrivilegeNotSuper(fakedbs)
+
+	handler := NewPrivilege(log, nil, scatter)
+	err := handler.Init()
+	assert.Nil(t, err)
+	defer handler.Close()
+
+	tests := []struct {
+		name string
+		db   string
+		user string
+		sql  string
+		err  string
+	}{
+		{
+			name: "select.ok",
+			db:   "",
+			user: "mock",
+			sql:  "select a from test.t1 union select a from test.t2",
+			err:  "",
+		},
+		{
+			name: "select.ok",
+			db:   "",
+			user: "mock",
+			sql:  "checksum table test.t1",
+			err:  "",
+		},
+		{
+			name: "select.ok",
+			db:   "",
+			user: "mock",
+			sql:  "SET autocommit=0",
+			err:  "Access denied for user 'mock'@'%' to database '' (errno 1045) (sqlstate 28000)",
+		},
+	}
+
+	for i, test := range tests {
+		var err error
+		var errmsg string
+		var node sqlparser.Statement
+
+		if test.sql != "" {
+			node, err = sqlparser.Parse(test.sql)
+			assert.Nil(t, err)
+		}
+		err = handler.Check(test.db, test.user, node)
+		log.Warning("err:%v, i:%d", err, i)
+		if err != nil {
+			errmsg = err.Error()
+		}
+		assert.EqualValues(t, test.err, errmsg)
+	}
+}
