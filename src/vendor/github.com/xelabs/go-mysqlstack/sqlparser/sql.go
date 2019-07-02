@@ -301,7 +301,7 @@ const SESSION = 57555
 const NAMES = 57556
 const RADON = 57557
 const ATTACH = 57558
-const LIST_ATTACH = 57559
+const ATTACHLIST = 57559
 const DETACH = 57560
 
 var yyToknames = [...]string{
@@ -538,7 +538,7 @@ var yyToknames = [...]string{
 	"NAMES",
 	"RADON",
 	"ATTACH",
-	"LIST_ATTACH",
+	"ATTACHLIST",
 	"DETACH",
 	"';'",
 }
@@ -3189,7 +3189,7 @@ yydefault:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		//line sql.y:1076
 		{
-			yyVAL.statement = &Radon{Action: ListAttachStr}
+			yyVAL.statement = &Radon{Action: AttachListStr}
 		}
 	case 173:
 		yyDollar = yyS[yypt-1 : yypt+1]

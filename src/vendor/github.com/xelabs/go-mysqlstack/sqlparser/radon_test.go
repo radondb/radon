@@ -16,8 +16,8 @@ func TestRadonAttach(t *testing.T) {
 			output: "radon attach ('attach1', '127.0.0.1:6000', 'root', '123456')",
 		},
 		{
-			input:  "radon list_attach",
-			output: "radon list_attach",
+			input:  "radon attachlist",
+			output: "radon attachlist",
 		},
 		{
 			input:  "radon detach('attach1')",
