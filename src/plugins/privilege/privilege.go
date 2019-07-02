@@ -107,6 +107,7 @@ func (p *Privilege) Init() error {
 
 // https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html
 func (p *Privilege) CheckPrivilege(db string, user string, node sqlparser.Statement) bool {
+	log := p.log
 	p.mu.RLock()
 	userpriv := p.userPrivs[user]
 	dbpriv := userpriv.dbPrivs[db]
@@ -114,6 +115,10 @@ func (p *Privilege) CheckPrivilege(db string, user string, node sqlparser.Statem
 
 	if node != nil {
 		switch node.(type) {
+		case *sqlparser.Checksum:
+			return (userpriv.priv.superPriv || userpriv.priv.selectPriv || dbpriv.priv.selectPriv)
+		case *sqlparser.Union:
+			return (userpriv.priv.superPriv || userpriv.priv.selectPriv || dbpriv.priv.selectPriv)
 		case *sqlparser.Select:
 			return (userpriv.priv.superPriv || userpriv.priv.selectPriv || dbpriv.priv.selectPriv)
 		case *sqlparser.Insert:
@@ -129,6 +134,9 @@ func (p *Privilege) CheckPrivilege(db string, user string, node sqlparser.Statem
 			//TODO: just grant part of the oprations and support
 			db := (dbpriv.priv.createPriv && dbpriv.priv.dropPriv && dbpriv.priv.alterPriv && dbpriv.priv.indexPriv)
 			return (userpriv.priv.superPriv || user || db)
+		default:
+			log.Error("plugin.privileges.unsupported[%T]", node)
+			return false
 		}
 	}
 	// If node is nil, we must the super privilege.
