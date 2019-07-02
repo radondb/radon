@@ -2838,7 +2838,7 @@ type Radon struct {
 const (
 	AttachStr     = "attach"
 	DetachStr     = "detach"
-	ListAttachStr = "list_attach"
+	AttachListStr = "attachlist"
 )
 
 func (*Radon) iStatement() {}
@@ -2846,7 +2846,7 @@ func (*Radon) iStatement() {}
 // Format formats the node.
 func (node *Radon) Format(buf *TrackedBuffer) {
 	switch node.Action {
-	case ListAttachStr:
+	case AttachListStr:
 		buf.Myprintf("radon %s", node.Action)
 	default:
 		buf.Myprintf("radon %s %v", node.Action, node.Row)

@@ -184,7 +184,7 @@ func forceEOF(yylex interface{}) {
 // SET tokens
 %token <bytes> GLOBAL SESSION NAMES
 // Radon Tokens
-%token <bytes> RADON ATTACH LIST_ATTACH DETACH
+%token <bytes> RADON ATTACH ATTACHLIST DETACH
 
 %type <statement> command
 %type <selStmt> select_statement base_select union_lhs union_rhs
@@ -1072,9 +1072,9 @@ radon_statement:
   {
     $$ = &Radon{ Action: DetachStr, Row: $3}
   }
-| RADON LIST_ATTACH force_eof
+| RADON ATTACHLIST force_eof
   {
-    $$ = &Radon{ Action: ListAttachStr}
+    $$ = &Radon{ Action: AttachListStr}
   }
 
 show_statement_type:
@@ -2663,7 +2663,7 @@ non_reserved_keyword:
 | RADON
 | ATTACH
 | DETACH
-| LIST_ATTACH
+| ATTACHLIST
 
 openb:
   '('
