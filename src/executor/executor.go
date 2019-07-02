@@ -77,6 +77,11 @@ func (et *Tree) Execute() (*sqltypes.Result, error) {
 			if err := et.Add(executor); err != nil {
 				return nil, err
 			}
+		case planner.PlanTypeUnion:
+			executor := NewUnionExecutor(et.log, plan, et.txn)
+			if err := et.Add(executor); err != nil {
+				return nil, err
+			}
 		case planner.PlanTypeOthers:
 			executor := NewOthersExecutor(et.log, plan, et.txn)
 			if err := et.Add(executor); err != nil {
