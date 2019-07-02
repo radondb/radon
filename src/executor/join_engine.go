@@ -21,20 +21,20 @@ import (
 )
 
 var (
-	_ PlanExecutor = &JoinExecutor{}
+	_ PlanEngine = &JoinEngine{}
 )
 
-// JoinExecutor represents join executor.
-type JoinExecutor struct {
+// JoinEngine represents join executor.
+type JoinEngine struct {
 	log         *xlog.Log
 	node        *planner.JoinNode
-	left, right PlanExecutor
+	left, right PlanEngine
 	txn         backend.Transaction
 }
 
-// NewJoinExecutor creates the new join executor.
-func NewJoinExecutor(log *xlog.Log, node *planner.JoinNode, txn backend.Transaction) *JoinExecutor {
-	return &JoinExecutor{
+// NewJoinEngine creates the new join executor.
+func NewJoinEngine(log *xlog.Log, node *planner.JoinNode, txn backend.Transaction) *JoinEngine {
+	return &JoinEngine{
 		log:  log,
 		node: node,
 		txn:  txn,
@@ -42,18 +42,13 @@ func NewJoinExecutor(log *xlog.Log, node *planner.JoinNode, txn backend.Transact
 }
 
 // execute used to execute the executor.
-func (j *JoinExecutor) execute(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext) error {
+func (j *JoinEngine) execute(ctx *xcontext.ResultContext) error {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	allErrors := make([]error, 0, 8)
-	oneExec := func(exec PlanExecutor, ctx *xcontext.ResultContext) {
+	oneExec := func(exec PlanEngine, ctx *xcontext.ResultContext) {
 		defer wg.Done()
-		req := xcontext.NewRequestContext()
-		req.Mode = reqCtx.Mode
-		req.TxnMode = reqCtx.TxnMode
-		req.RawQuery = reqCtx.RawQuery
-
-		if err := exec.execute(req, ctx); err != nil {
+		if err := exec.execute(ctx); err != nil {
 			mu.Lock()
 			allErrors = append(allErrors, err)
 			mu.Unlock()
@@ -62,7 +57,7 @@ func (j *JoinExecutor) execute(reqCtx *xcontext.RequestContext, ctx *xcontext.Re
 
 	if j.node.Strategy == planner.NestedLoop {
 		joinVars := make(map[string]*querypb.BindVariable)
-		if err := j.execBindVars(reqCtx, ctx, joinVars, true); err != nil {
+		if err := j.execBindVars(ctx, joinVars, true); err != nil {
 			return err
 		}
 	} else {
@@ -99,14 +94,14 @@ func (j *JoinExecutor) execute(reqCtx *xcontext.RequestContext, ctx *xcontext.Re
 }
 
 // execBindVars used to execute querys with bindvas.
-func (j *JoinExecutor) execBindVars(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable, wantfields bool) error {
+func (j *JoinEngine) execBindVars(ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable, wantfields bool) error {
 	var err error
 	lctx := xcontext.NewResultContext()
 	rctx := xcontext.NewResultContext()
 	ctx.Results = &sqltypes.Result{}
 
 	joinVars := make(map[string]*querypb.BindVariable)
-	if err = j.left.execBindVars(reqCtx, lctx, bindVars, wantfields); err != nil {
+	if err = j.left.execBindVars(lctx, bindVars, wantfields); err != nil {
 		return err
 	}
 
@@ -124,7 +119,7 @@ func (j *JoinExecutor) execBindVars(reqCtx *xcontext.RequestContext, ctx *xconte
 			for k, col := range j.node.Vars {
 				joinVars[k] = sqltypes.ValueBindVariable(lrow[col])
 			}
-			if err = j.right.execBindVars(reqCtx, rctx, combineVars(bindVars, joinVars), wantfields); err != nil {
+			if err = j.right.execBindVars(rctx, combineVars(bindVars, joinVars), wantfields); err != nil {
 				return err
 			}
 			if wantfields {
@@ -156,7 +151,7 @@ func (j *JoinExecutor) execBindVars(reqCtx *xcontext.RequestContext, ctx *xconte
 		for k := range j.node.Vars {
 			joinVars[k] = sqltypes.NullBindVariable
 		}
-		if err = j.right.getFields(reqCtx, rctx, combineVars(bindVars, joinVars)); err != nil {
+		if err = j.right.getFields(rctx, combineVars(bindVars, joinVars)); err != nil {
 			return err
 		}
 		ctx.Results.Fields = joinFields(lctx.Results.Fields, rctx.Results.Fields, j.node.Cols)
@@ -165,20 +160,20 @@ func (j *JoinExecutor) execBindVars(reqCtx *xcontext.RequestContext, ctx *xconte
 }
 
 // getFields fetches the field info.
-func (j *JoinExecutor) getFields(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable) error {
+func (j *JoinEngine) getFields(ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable) error {
 	var err error
 	lctx := xcontext.NewResultContext()
 	rctx := xcontext.NewResultContext()
 
 	joinVars := make(map[string]*querypb.BindVariable)
-	if err = j.left.getFields(reqCtx, lctx, bindVars); err != nil {
+	if err = j.left.getFields(lctx, bindVars); err != nil {
 		return err
 	}
 
 	for k := range j.node.Vars {
 		joinVars[k] = sqltypes.NullBindVariable
 	}
-	if err = j.right.getFields(reqCtx, rctx, bindVars); err != nil {
+	if err = j.right.getFields(rctx, bindVars); err != nil {
 		return err
 	}
 

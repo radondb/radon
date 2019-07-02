@@ -17,19 +17,19 @@ import (
 )
 
 var (
-	_ Executor = &SelectExecutor{}
+	_ Executor = &UnionExecutor{}
 )
 
-// SelectExecutor represents select executor
-type SelectExecutor struct {
+// UnionExecutor represents select executor
+type UnionExecutor struct {
 	log  *xlog.Log
 	plan planner.Plan
 	txn  backend.Transaction
 }
 
-// NewSelectExecutor creates the new select executor.
-func NewSelectExecutor(log *xlog.Log, plan planner.Plan, txn backend.Transaction) *SelectExecutor {
-	return &SelectExecutor{
+// NewUnionExecutor creates the new select executor.
+func NewUnionExecutor(log *xlog.Log, plan planner.Plan, txn backend.Transaction) *UnionExecutor {
+	return &UnionExecutor{
 		log:  log,
 		plan: plan,
 		txn:  txn,
@@ -37,9 +37,9 @@ func NewSelectExecutor(log *xlog.Log, plan planner.Plan, txn backend.Transaction
 }
 
 // Execute used to execute the executor.
-func (executor *SelectExecutor) Execute(ctx *xcontext.ResultContext) error {
+func (executor *UnionExecutor) Execute(ctx *xcontext.ResultContext) error {
 	log := executor.log
-	plan := executor.plan.(*planner.SelectPlan)
+	plan := executor.plan.(*planner.UnionPlan)
 	planEngine := buildEngine(log, plan.Root, executor.txn)
 	if err := planEngine.execute(ctx); err != nil {
 		return err

@@ -17,26 +17,31 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
-// PlanExecutor interface.
-type PlanExecutor interface {
-	execute(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext) error
-	execBindVars(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable, wantfields bool) error
-	getFields(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable) error
+// PlanEngine interface.
+type PlanEngine interface {
+	execute(ctx *xcontext.ResultContext) error
+	execBindVars(ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable, wantfields bool) error
+	getFields(ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable) error
 }
 
-// buildExecutor used to build the executor tree.
-func buildExecutor(log *xlog.Log, plan planner.PlanNode, txn backend.Transaction) PlanExecutor {
-	var exec PlanExecutor
+// buildEngine used to build the executor tree.
+func buildEngine(log *xlog.Log, plan planner.PlanNode, txn backend.Transaction) PlanEngine {
+	var engine PlanEngine
 	switch node := plan.(type) {
 	case *planner.MergeNode:
-		exec = NewMergeExecutor(log, node, txn)
+		engine = NewMergeEngine(log, node, txn)
 	case *planner.JoinNode:
-		joinExec := NewJoinExecutor(log, node, txn)
-		joinExec.left = buildExecutor(log, node.Left, txn)
-		joinExec.right = buildExecutor(log, node.Right, txn)
-		exec = joinExec
+		joinEngine := NewJoinEngine(log, node, txn)
+		joinEngine.left = buildEngine(log, node.Left, txn)
+		joinEngine.right = buildEngine(log, node.Right, txn)
+		engine = joinEngine
+	case *planner.UnionNode:
+		unionEngine := NewUnionEngine(log, node, txn)
+		unionEngine.left = buildEngine(log, node.Left, txn)
+		unionEngine.right = buildEngine(log, node.Right, txn)
+		engine = unionEngine
 	}
-	return exec
+	return engine
 }
 
 // execSubPlan used to execute all the children plan.

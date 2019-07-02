@@ -183,12 +183,13 @@ func (spanner *Spanner) ExecuteStreamFetch(session *driver.Session, database str
 	if err := plan.Build(); err != nil {
 		return err
 	}
-	if _, ok := plan.Root.(*planner.MergeNode); !ok {
+	m, ok := plan.Root.(*planner.MergeNode)
+	if !ok {
 		return errors.New("ExecuteStreamFetch.unsupport.cross-shard.join")
 	}
 	reqCtx := xcontext.NewRequestContext()
-	reqCtx.Mode = xcontext.ReqNormal
-	reqCtx.Querys = plan.Root.GetQuery()
+	reqCtx.Mode = m.ReqMode
+	reqCtx.Querys = m.GetQuery()
 	reqCtx.RawQuery = plan.RawQuery
 	streamBufferSize := spanner.conf.Proxy.StreamBufferSize
 	return txn.ExecuteStreamFetch(reqCtx, callback, streamBufferSize)

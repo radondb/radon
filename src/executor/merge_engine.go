@@ -19,19 +19,19 @@ import (
 )
 
 var (
-	_ PlanExecutor = &MergeExecutor{}
+	_ PlanEngine = &MergeEngine{}
 )
 
-// MergeExecutor represents merge executor.
-type MergeExecutor struct {
+// MergeEngine represents merge executor.
+type MergeEngine struct {
 	log  *xlog.Log
 	node *planner.MergeNode
 	txn  backend.Transaction
 }
 
-// NewMergeExecutor creates the new merge executor.
-func NewMergeExecutor(log *xlog.Log, node *planner.MergeNode, txn backend.Transaction) *MergeExecutor {
-	return &MergeExecutor{
+// NewMergeEngine creates the new merge executor.
+func NewMergeEngine(log *xlog.Log, node *planner.MergeNode, txn backend.Transaction) *MergeEngine {
+	return &MergeEngine{
 		log:  log,
 		node: node,
 		txn:  txn,
@@ -39,20 +39,31 @@ func NewMergeExecutor(log *xlog.Log, node *planner.MergeNode, txn backend.Transa
 }
 
 // execute used to execute the executor.
-func (m *MergeExecutor) execute(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext) error {
+func (m *MergeEngine) execute(ctx *xcontext.ResultContext) error {
 	var err error
-	reqCtx.Querys = m.node.Querys
+
+	reqCtx := xcontext.NewRequestContext()
+	reqCtx.Mode = m.node.ReqMode
+	reqCtx.TxnMode = xcontext.TxnRead
+	if reqCtx.Mode == xcontext.ReqNormal {
+		reqCtx.Querys = m.node.Querys
+	} else {
+		buf := sqlparser.NewTrackedBuffer(nil)
+		m.node.Sel.Format(buf)
+		reqCtx.RawQuery = buf.String()
+	}
+
 	if ctx.Results, err = m.txn.Execute(reqCtx); err != nil {
 		return err
 	}
-
 	return execSubPlan(m.log, m.node, ctx)
 }
 
 // execBindVars used to execute querys with bindvas.
-func (m *MergeExecutor) execBindVars(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable, wantfields bool) error {
+func (m *MergeEngine) execBindVars(ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable, wantfields bool) error {
 	var query string
 	var err error
+
 	querys := m.node.Querys
 	for i, p := range m.node.ParsedQuerys {
 		query, err = p.GenerateQuery(bindVars, nil)
@@ -62,7 +73,11 @@ func (m *MergeExecutor) execBindVars(reqCtx *xcontext.RequestContext, ctx *xcont
 		querys[i].Query = query
 	}
 
+	reqCtx := xcontext.NewRequestContext()
+	reqCtx.Mode = xcontext.ReqNormal
+	reqCtx.TxnMode = xcontext.TxnRead
 	reqCtx.Querys = querys
+
 	if ctx.Results, err = m.txn.Execute(reqCtx); err != nil {
 		return err
 	}
@@ -70,13 +85,19 @@ func (m *MergeExecutor) execBindVars(reqCtx *xcontext.RequestContext, ctx *xcont
 }
 
 // getFields fetches the field info.
-func (m *MergeExecutor) getFields(reqCtx *xcontext.RequestContext, ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable) error {
+func (m *MergeEngine) getFields(ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable) error {
 	var err error
+
 	query := m.node.Querys[len(m.node.Querys)-1]
 	buf := sqlparser.NewTrackedBuffer(nil)
 	sqlparser.FormatImpossibleQuery(buf, m.node.Sel)
 	query.Query = buf.String()
+
+	reqCtx := xcontext.NewRequestContext()
+	reqCtx.Mode = xcontext.ReqNormal
+	reqCtx.TxnMode = xcontext.TxnRead
 	reqCtx.Querys = []xcontext.QueryTuple{query}
+
 	if ctx.Results, err = m.txn.Execute(reqCtx); err != nil {
 		return err
 	}
