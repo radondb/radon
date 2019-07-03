@@ -23,7 +23,7 @@ func TestScatterAddRemove(t *testing.T) {
 	tmpDir := fakedb.GetTmpDir("", "radon_backend_", log)
 	defer os.RemoveAll(tmpDir)
 
-	scatter := NewScatter(log, tmpDir)
+	scatter := NewScatter(log, tmpDir, 0)
 	fakedb := fakedb.New(log, 2)
 	defer fakedb.Close()
 	addrs := fakedb.Addrs()
@@ -71,7 +71,7 @@ func TestScatterLoadConfig(t *testing.T) {
 	tmpDir := fakedb.GetTmpDir("", "radon_backend_", log)
 	defer os.RemoveAll(tmpDir)
 
-	scatter := NewScatter(log, tmpDir)
+	scatter := NewScatter(log, tmpDir, 0)
 	fakedb := fakedb.New(log, 2)
 	defer fakedb.Close()
 	addrs := fakedb.Addrs()
@@ -120,7 +120,7 @@ func TestScatter(t *testing.T) {
 	tmpDir := fakedb.GetTmpDir("", "radon_backend_", log)
 	defer os.RemoveAll(tmpDir)
 
-	scatter := NewScatter(log, tmpDir)
+	scatter := NewScatter(log, tmpDir, 0)
 	defer scatter.Close()
 
 	fakedb := fakedb.New(log, 2)
@@ -163,7 +163,7 @@ func TestScatterLoadNotExists(t *testing.T) {
 	tmpDir := fakedb.GetTmpDir("", "radon_backend_", log)
 	defer os.RemoveAll(tmpDir)
 
-	scatter := NewScatter(log, tmpDir)
+	scatter := NewScatter(log, tmpDir, 0)
 	err := scatter.LoadConfig()
 	assert.Nil(t, err)
 }
@@ -173,7 +173,7 @@ func TestScatterNormalBackends(t *testing.T) {
 	tmpDir := fakedb.GetTmpDir("", "radon_backend_", log)
 	defer os.RemoveAll(tmpDir)
 
-	scatter := NewScatter(log, tmpDir)
+	scatter := NewScatter(log, tmpDir, 0)
 	defer scatter.Close()
 
 	fakedb := fakedb.New(log, 2)

@@ -20,18 +20,20 @@ import (
 
 // TxnManager tuple.
 type TxnManager struct {
-	log        *xlog.Log
-	xaCheck    *XaCheck
-	txnid      uint64
-	txnNums    int64
-	commitLock sync.RWMutex
+	log           *xlog.Log
+	xaCheck       *XaCheck
+	txnid         uint64
+	txnNums       int64
+	maxResultSize int
+	commitLock    sync.RWMutex
 }
 
 // NewTxnManager creates new TxnManager.
-func NewTxnManager(log *xlog.Log) *TxnManager {
+func NewTxnManager(log *xlog.Log, maxResultSize int) *TxnManager {
 	return &TxnManager{
-		log:   log,
-		txnid: 0,
+		log:           log,
+		txnid:         0,
+		maxResultSize: maxResultSize,
 	}
 }
 
@@ -77,7 +79,7 @@ func (mgr *TxnManager) CreateTxn(backends map[string]*Pool) (*Txn, error) {
 	}
 
 	txid := mgr.GetID()
-	txn, err := NewTxn(mgr.log, txid, mgr, backends)
+	txn, err := NewTxn(mgr.log, txid, mgr, backends, mgr.maxResultSize)
 	if err != nil {
 		return nil, err
 	}

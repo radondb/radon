@@ -36,10 +36,10 @@ type Scatter struct {
 }
 
 // NewScatter creates a new scatter.
-func NewScatter(log *xlog.Log, metadir string) *Scatter {
+func NewScatter(log *xlog.Log, metadir string, maxResultSize int) *Scatter {
 	return &Scatter{
 		log:      log,
-		txnMgr:   NewTxnManager(log),
+		txnMgr:   NewTxnManager(log, maxResultSize),
 		metadir:  metadir,
 		backends: make(map[string]*Pool),
 	}

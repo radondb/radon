@@ -171,7 +171,7 @@ func TestReadXaCommitErrorLogsWithoutBackend(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(file)
 
-	scatter := NewScatter(log, "")
+	scatter := NewScatter(log, "", 0)
 	err = scatter.Init(MockScatterDefault2(dir))
 	assert.Nil(t, err)
 
@@ -702,7 +702,7 @@ func TestLoadXaCommitRrrLogs(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	scatter := NewScatter(log, "")
+	scatter := NewScatter(log, "", 0)
 
 	xaChecker := NewXaCheck(scatter, MockScatterDefault(log))
 	defer os.RemoveAll(xaChecker.dir)
@@ -739,7 +739,7 @@ func TestReadXaCommitRrrLogs1(t *testing.T) {
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	scatter := NewScatter(log, "")
+	scatter := NewScatter(log, "", 0)
 
 	xaChecker := NewXaCheck(scatter, MockScatterDefault(log))
 	err := xaChecker.Init()
@@ -759,7 +759,7 @@ func TestReadXaCommitRrrLogsError2(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	scatter := NewScatter(log, "")
+	scatter := NewScatter(log, "", 0)
 
 	xaChecker := NewXaCheck(scatter, MockScatterDefault(log))
 
@@ -787,7 +787,7 @@ func TestReadXaCommitRrrLogsInit(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	scatter := NewScatter(log, "")
+	scatter := NewScatter(log, "", 0)
 
 	MockXaredologs := []*XaCommitErr{
 		&XaCommitErr{

@@ -17,7 +17,7 @@ import (
 
 func TestStats(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	scatter := NewScatter(log, "")
+	scatter := NewScatter(log, "", 0)
 	// Others.
 	{
 		assert.NotNil(t, scatter.Queryz())

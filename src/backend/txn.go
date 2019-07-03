@@ -98,7 +98,7 @@ type Txn struct {
 }
 
 // NewTxn creates the new Txn.
-func NewTxn(log *xlog.Log, txid uint64, mgr *TxnManager, backends map[string]*Pool) (*Txn, error) {
+func NewTxn(log *xlog.Log, txid uint64, mgr *TxnManager, backends map[string]*Pool, maxResultSize int) (*Txn, error) {
 	txn := &Txn{
 		log:               log,
 		id:                txid,
@@ -108,6 +108,7 @@ func NewTxn(log *xlog.Log, txid uint64, mgr *TxnManager, backends map[string]*Po
 		twopcConnections:  make(map[string]Connection),
 		normalConnections: make([]Connection, 0, 8),
 		state:             sync2.NewAtomicInt32(int32(txnStateLive)),
+		maxResult:         maxResultSize,
 	}
 	txnd := NewTxnDetail(txn)
 	txn.txnd = txnd

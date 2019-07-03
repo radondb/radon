@@ -28,7 +28,7 @@ func TestTxnManager(t *testing.T) {
 		pool := NewPool(log, conf)
 		backends[addr] = pool
 	}
-	txnmgr := NewTxnManager(log)
+	txnmgr := NewTxnManager(log, 0)
 
 	{
 		txn, err := txnmgr.CreateTxn(backends)

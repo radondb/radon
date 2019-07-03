@@ -46,7 +46,7 @@ type Proxy struct {
 func NewProxy(log *xlog.Log, path string, serverVersion string, conf *config.Config) *Proxy {
 	audit := audit.NewAudit(log, conf.Audit)
 	router := router.NewRouter(log, conf.Proxy.MetaDir, conf.Router)
-	scatter := backend.NewScatter(log, conf.Proxy.MetaDir)
+	scatter := backend.NewScatter(log, conf.Proxy.MetaDir, conf.Proxy.MaxResultSize)
 	syncer := syncer.NewSyncer(log, conf.Proxy.MetaDir, conf.Proxy.PeerAddress, router, scatter)
 	plugins := plugins.NewPlugin(log, conf, router, scatter)
 	return &Proxy{

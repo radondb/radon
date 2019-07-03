@@ -40,7 +40,7 @@ func mockSyncer(log *xlog.Log, n int) ([]*Syncer, func()) {
 
 		// scatter.
 		conf1 := backend.MockBackendConfigDefault(fmt.Sprintf("node%d", i), peerAddr)
-		scatter := backend.NewScatter(log, metadir)
+		scatter := backend.NewScatter(log, metadir, 0)
 		if err := scatter.Add(conf1); err != nil {
 			log.Panicf("mock.syncer.error:%+v", err)
 		}

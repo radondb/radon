@@ -118,7 +118,7 @@ func MockScatterDefault2(dir string) *config.ScatterConfig {
 
 // MockScatter used to mock a scatter.
 func MockScatter(log *xlog.Log, n int) (*Scatter, *fakedb.DB, func()) {
-	scatter := NewScatter(log, "")
+	scatter := NewScatter(log, "", 0)
 	fakedb := fakedb.New(log, n)
 	backends := make(map[string]*Pool)
 	addrs := fakedb.Addrs()
@@ -165,7 +165,7 @@ func MockTxnMgr(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool
 		backends[addr] = pool
 	}
 
-	txnMgr := NewTxnManager(log)
+	txnMgr := NewTxnManager(log, 0)
 	return fakedb, txnMgr, backends, addrs, func() {
 		time.Sleep(time.Millisecond * 10)
 		for _, v := range backends {
@@ -194,7 +194,7 @@ func MockTxnMgrWithAttach(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[st
 		}
 	}
 
-	txnMgr := NewTxnManager(log)
+	txnMgr := NewTxnManager(log, 0)
 	return fakedb, txnMgr, backends, addrs, func() {
 		time.Sleep(time.Millisecond * 10)
 		for _, v := range backends {
@@ -207,7 +207,7 @@ func MockTxnMgrWithAttach(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[st
 // MockTxnMgrScatter used to mock a txnMgr and a scatter.
 // commit err and rollback err will WriteXaCommitErrLog, need the scatter
 func MockTxnMgrScatter(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool, []string, *Scatter, func()) {
-	scatter := NewScatter(log, "")
+	scatter := NewScatter(log, "", 0)
 	fakedb := fakedb.New(log, n)
 	backends := make(map[string]*Pool)
 	addrs := fakedb.Addrs()
