@@ -20,6 +20,7 @@ import (
 type radonParams struct {
 	MaxConnections   *int     `json:"max-connections"`
 	MaxResultSize    *int     `json:"max-result-size"`
+	MaxJoinRows      *int     `json:"max-join-rows"`
 	DDLTimeout       *int     `json:"ddl-timeout"`
 	QueryTimeout     *int     `json:"query-timeout"`
 	TwoPCEnable      *bool    `json:"twopc-enable"`
@@ -51,6 +52,9 @@ func radonConfigHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter
 	}
 	if p.MaxResultSize != nil {
 		proxy.SetMaxResultSize(*p.MaxResultSize)
+	}
+	if p.MaxJoinRows != nil {
+		proxy.SetMaxJoinRows(*p.MaxJoinRows)
 	}
 	if p.DDLTimeout != nil {
 		proxy.SetDDLTimeout(*p.DDLTimeout)

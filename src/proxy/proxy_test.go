@@ -39,6 +39,12 @@ func TestProxy1(t *testing.T) {
 		assert.Equal(t, 6666, proxy.conf.Proxy.MaxResultSize)
 	}
 
+	// SetMaxJoinRows
+	{
+		proxy.SetMaxJoinRows(6666)
+		assert.Equal(t, 6666, proxy.conf.Proxy.MaxJoinRows)
+	}
+
 	// SetDDLTimeout
 	{
 		proxy.SetDDLTimeout(6666)

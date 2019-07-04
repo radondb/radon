@@ -95,8 +95,9 @@ func MockConfigMax16() *config.Config {
 	conf.Proxy.Endpoint = "127.0.0.1:3306"
 	conf.Proxy.MaxConnections = 16
 	conf.Proxy.MaxResultSize = 1024 * 1024 * 1024 // 1GB
-	conf.Proxy.DDLTimeout = 10 * 3600 * 1000      // 10 hours
-	conf.Proxy.QueryTimeout = 5 * 60 * 1000       // 5 minutes
+	conf.Proxy.MaxJoinRows = 32768
+	conf.Proxy.DDLTimeout = 10 * 3600 * 1000 // 10 hours
+	conf.Proxy.QueryTimeout = 5 * 60 * 1000  // 5 minutes
 	conf.Log = &config.LogConfig{
 		Level: "ERROR",
 	}

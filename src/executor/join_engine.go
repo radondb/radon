@@ -15,6 +15,7 @@ import (
 	"planner"
 	"xcontext"
 
+	"github.com/pkg/errors"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
@@ -45,7 +46,7 @@ func NewJoinEngine(log *xlog.Log, node *planner.JoinNode, txn backend.Transactio
 func (j *JoinEngine) execute(ctx *xcontext.ResultContext) error {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	allErrors := make([]error, 0, 8)
+	allErrors := make([]error, 0, 2)
 	oneExec := func(exec PlanEngine, ctx *xcontext.ResultContext) {
 		defer wg.Done()
 		if err := exec.execute(ctx); err != nil {
@@ -55,6 +56,7 @@ func (j *JoinEngine) execute(ctx *xcontext.ResultContext) error {
 		}
 	}
 
+	maxrow := j.txn.MaxJoinRows()
 	if j.node.Strategy == planner.NestedLoop {
 		joinVars := make(map[string]*querypb.BindVariable)
 		if err := j.execBindVars(ctx, joinVars, true); err != nil {
@@ -78,15 +80,20 @@ func (j *JoinEngine) execute(ctx *xcontext.ResultContext) error {
 			return nil
 		}
 
+		var err error
 		if len(rctx.Results.Rows) == 0 {
-			concatLeftAndNil(lctx.Results.Rows, j.node, ctx.Results)
+			err = concatLeftAndNil(lctx.Results.Rows, j.node, ctx.Results, maxrow)
 		} else {
 			switch j.node.Strategy {
 			case planner.SortMerge:
-				sortMergeJoin(lctx.Results, rctx.Results, ctx.Results, j.node)
+				err = sortMergeJoin(lctx.Results, rctx.Results, ctx.Results, j.node, maxrow)
 			case planner.Cartesian:
-				cartesianProduct(lctx.Results, rctx.Results, ctx.Results, j.node)
+				err = cartesianProduct(lctx.Results, rctx.Results, ctx.Results, j.node, maxrow)
 			}
+		}
+
+		if err != nil {
+			return err
 		}
 	}
 
@@ -98,6 +105,7 @@ func (j *JoinEngine) execBindVars(ctx *xcontext.ResultContext, bindVars map[stri
 	var err error
 	lctx := xcontext.NewResultContext()
 	rctx := xcontext.NewResultContext()
+	maxrow := j.txn.MaxJoinRows()
 	ctx.Results = &sqltypes.Result{}
 
 	joinVars := make(map[string]*querypb.BindVariable)
@@ -138,11 +146,16 @@ func (j *JoinEngine) execBindVars(ctx *xcontext.ResultContext, bindVars map[stri
 				if ok {
 					ctx.Results.Rows = append(ctx.Results.Rows, joinRows(lrow, rrow, j.node.Cols))
 					ctx.Results.RowsAffected++
+					if len(ctx.Results.Rows) > maxrow {
+						return errors.Errorf("unsupported: join.row.count.exceeded.allowed.limit.of.'%d'", maxrow)
+					}
 				}
 			}
 		}
 		if matchCnt == 0 {
-			concatLeftAndNil([][]sqltypes.Value{lrow}, j.node, ctx.Results)
+			if err = concatLeftAndNil([][]sqltypes.Value{lrow}, j.node, ctx.Results, maxrow); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -223,11 +236,16 @@ func combineVars(bv1, bv2 map[string]*querypb.BindVariable) map[string]*querypb.
 }
 
 // cartesianProduct used to produce cartesian product.
-func cartesianProduct(lres, rres, res *sqltypes.Result, node *planner.JoinNode) {
+func cartesianProduct(lres, rres, res *sqltypes.Result, node *planner.JoinNode, maxrow int) error {
+	res.Rows = make([][]sqltypes.Value, 0, len(lres.Rows)*len(rres.Rows))
 	for _, lrow := range lres.Rows {
 		for _, rrow := range rres.Rows {
 			res.Rows = append(res.Rows, joinRows(lrow, rrow, node.Cols))
 			res.RowsAffected++
+			if len(res.Rows) > maxrow {
+				return errors.Errorf("unsupported: join.row.count.exceeded.allowed.limit.of.'%d'", maxrow)
+			}
 		}
 	}
+	return nil
 }

@@ -442,6 +442,7 @@ func TestJoinEngine(t *testing.T) {
 		txn, err := scatter.CreateTransaction()
 		assert.Nil(t, err)
 		defer txn.Finish()
+		txn.SetMaxJoinRows(32768)
 		executor := NewSelectExecutor(log, plan, txn)
 		{
 			ctx := xcontext.NewResultContext()
@@ -451,6 +452,123 @@ func TestJoinEngine(t *testing.T) {
 			got := fmt.Sprintf("%v", ctx.Results.Rows)
 			assert.Equal(t, want, got)
 			log.Debug("%+v", ctx.Results)
+		}
+	}
+}
+
+func TestJoinEngineErr(t *testing.T) {
+	r1 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "id",
+				Type: querypb.Type_INT32,
+			},
+			{
+				Name: "name",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("go")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("4")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("lang")),
+			},		
+			{
+				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("5")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("lang")),
+			},
+		},
+	}
+
+	r2 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "id",
+				Type: querypb.Type_INT32,
+			},
+			{
+				Name: "name",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+	}
+
+	r3 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "name",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "id",
+				Type: querypb.Type_INT32,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("go")),
+				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("lang")),
+				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("5")),
+			},
+		},
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig(),router.MockTableSConfig())
+	assert.Nil(t, err)
+
+	// Create scatter and query handler.
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	// desc
+	fakedbs.AddQuery("select a.id, a.name from sbtest.a8 as a where a.id = 3 order by a.id asc", r1)
+	fakedbs.AddQuery("select /*+nested+*/ a.id, a.name from sbtest.a8 as a where a.id = 3", r1)
+	fakedbs.AddQuery("select /*+nested+*/ b.id, b.name from sbtest.b1 as b where 3 = b.id and b.id = 3", r1)
+	fakedbs.AddQuery("select /*+nested+*/ b.id, b.name from sbtest.b1 as b where 3 = b.id and b.id = 5", r1)
+	fakedbs.AddQueryPattern("select b.id, b.name from .*", r2)
+	fakedbs.AddQueryPattern("select b.name, b.id from .*", r3)
+	fakedbs.AddQueryPattern("select s.id, s.name from .*", r1)
+
+	querys := []string{
+		"select A.id, A.name, B.name, B.id from A join B on A.id = B.id where A.id = 3",
+		"select S.id, S.name, B.id, B.name from S left join B on S.id = B.id and B.id = 2",
+		"select /*+nested+*/ A.id, A.name, B.id, B.name from A join B on A.id = B.id where A.id = 3",
+		"select S.id, S.name, B.name, B.id from S, B where B.id = 2",
+		"select S.id, S.name, B.name, B.id from S left join B on S.id > B.id",
+	}
+	wants := "unsupported: join.row.count.exceeded.allowed.limit.of.'1'"
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+
+		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		err = plan.Build()
+		assert.Nil(t, err)
+		log.Debug("plan:%+v", plan.JSON())
+
+		txn, err := scatter.CreateTransaction()
+		assert.Nil(t, err)
+		defer txn.Finish()
+		txn.SetMaxJoinRows(1)
+		executor := NewSelectExecutor(log, plan, txn)
+		{
+			ctx := xcontext.NewResultContext()
+			err := executor.Execute(ctx)
+			assert.NotNil(t, err)
+			got := err.Error()
+			assert.Equal(t, wants, got)
 		}
 	}
 }

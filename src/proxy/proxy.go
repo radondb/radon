@@ -177,7 +177,7 @@ func (p *Proxy) Spanner() *Spanner {
 func (p *Proxy) SetMaxConnections(connections int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.log.Info("proxy.SetMaxResultSize:[%d->%d]", p.conf.Proxy.MaxConnections, connections)
+	p.log.Info("proxy.SetMaxConnections:[%d->%d]", p.conf.Proxy.MaxConnections, connections)
 	p.conf.Proxy.MaxConnections = connections
 }
 
@@ -187,6 +187,14 @@ func (p *Proxy) SetMaxResultSize(size int) {
 	defer p.mu.Unlock()
 	p.log.Info("proxy.SetMaxResultSize:[%d->%d]", p.conf.Proxy.MaxResultSize, size)
 	p.conf.Proxy.MaxResultSize = size
+}
+
+// SetMaxJoinRows used to set the max result size.
+func (p *Proxy) SetMaxJoinRows(size int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.log.Info("proxy.SetMaxJoinRows:[%d->%d]", p.conf.Proxy.MaxJoinRows, size)
+	p.conf.Proxy.MaxJoinRows = size
 }
 
 // SetDDLTimeout used to set the ddl timeout.
