@@ -434,6 +434,7 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 	type confShow struct {
 		MaxConnections int      `json:"max-connections"`
 		MaxResultSize  int      `json:"max-result-size"`
+		MaxJoinRows    int      `json:"max-join-rows"`
 		DDLTimeout     int      `json:"ddl-timeout"`
 		QueryTimeout   int      `json:"query-timeout"`
 		TwopcEnable    bool     `json:"twopc-enable"`
@@ -445,6 +446,7 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 	conf := confShow{
 		MaxConnections: spanner.conf.Proxy.MaxConnections,
 		MaxResultSize:  spanner.conf.Proxy.MaxResultSize,
+		MaxJoinRows:    spanner.conf.Proxy.MaxJoinRows,
 		DDLTimeout:     spanner.conf.Proxy.DDLTimeout,
 		QueryTimeout:   spanner.conf.Proxy.QueryTimeout,
 		TwopcEnable:    spanner.conf.Proxy.TwopcEnable,

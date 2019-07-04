@@ -67,6 +67,8 @@ type Transaction interface {
 
 	SetTimeout(timeout int)
 	SetMaxResult(max int)
+	SetMaxJoinRows(max int)
+	MaxJoinRows() int
 
 	Execute(req *xcontext.RequestContext) (*sqltypes.Result, error)
 	ExecuteRaw(database string, query string) (*sqltypes.Result, error)
@@ -90,6 +92,7 @@ type Txn struct {
 	backends          map[string]*Pool
 	timeout           int
 	maxResult         int
+	maxJoinRows       int
 	errors            int
 	twopcConnections  map[string]Connection
 	normalConnections []Connection
@@ -124,6 +127,16 @@ func (txn *Txn) SetTimeout(timeout int) {
 // SetMaxResult used to set the txn max result.
 func (txn *Txn) SetMaxResult(max int) {
 	txn.maxResult = max
+}
+
+// SetMaxJoinRows used to set the txn max join rows.
+func (txn *Txn) SetMaxJoinRows(max int) {
+	txn.maxJoinRows = max
+}
+
+// MaxJoinRows returns txn maxJoinRows.
+func (txn *Txn) MaxJoinRows() int {
+	return txn.maxJoinRows
 }
 
 // TxID returns txn id.

@@ -47,7 +47,7 @@ func NewUnionEngine(log *xlog.Log, node *planner.UnionNode, txn backend.Transact
 func (u *UnionEngine) execute(ctx *xcontext.ResultContext) error {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	allErrors := make([]error, 0, 8)
+	allErrors := make([]error, 0, 2)
 	oneExec := func(exec PlanEngine, ctx *xcontext.ResultContext) {
 		defer wg.Done()
 		if err := exec.execute(ctx); err != nil {

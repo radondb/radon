@@ -14,12 +14,13 @@ import (
 
 	"planner"
 
+	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
 // sortMergeJoin used to join `lres` and `rres` to `res`.
-func sortMergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode) {
+func sortMergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode, maxrow int) error {
 	var wg sync.WaitGroup
 	sort := func(keys []planner.JoinKey, res *sqltypes.Result) {
 		defer wg.Done()
@@ -40,16 +41,17 @@ func sortMergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode) {
 	go sort(node.RightKeys, rres)
 	wg.Wait()
 
-	mergeJoin(lres, rres, res, node)
+	return mergeJoin(lres, rres, res, node, maxrow)
 }
 
 // mergeJoin used to join the sorted results.
-func mergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode) {
+func mergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode, maxrow int) error {
+	var err error
 	lrows, lidx := fetchSameKeyRows(lres.Rows, node.LeftKeys, 0)
 	rrows, ridx := fetchSameKeyRows(rres.Rows, node.RightKeys, 0)
 	for lrows != nil {
 		if rrows == nil {
-			concatLeftAndNil(lres.Rows[lidx-len(lrows):], node, res)
+			err = concatLeftAndNil(lres.Rows[lidx-len(lrows):], node, res, maxrow)
 			break
 		}
 
@@ -68,19 +70,25 @@ func mergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode) {
 
 		if cmp == 0 {
 			if isNull {
-				concatLeftAndNil(lrows, node, res)
+				err = concatLeftAndNil(lrows, node, res, maxrow)
 			} else {
-				concatLeftAndRight(lrows, rrows, node, res)
+				err = concatLeftAndRight(lrows, rrows, node, res, maxrow)
 			}
+
 			lrows, lidx = fetchSameKeyRows(lres.Rows, node.LeftKeys, lidx)
 			rrows, ridx = fetchSameKeyRows(rres.Rows, node.RightKeys, ridx)
 		} else if cmp > 0 {
 			rrows, ridx = fetchSameKeyRows(rres.Rows, node.RightKeys, ridx)
 		} else {
-			concatLeftAndNil(lrows, node, res)
+			err = concatLeftAndNil(lrows, node, res, maxrow)
 			lrows, lidx = fetchSameKeyRows(lres.Rows, node.LeftKeys, lidx)
 		}
+
+		if err != nil {
+			return err
+		}
 	}
+	return err
 }
 
 // fetchSameKeyRows used to fetch the same joinkey values' rows.
@@ -120,11 +128,16 @@ func keysEqual(row1, row2 []sqltypes.Value, joins []planner.JoinKey) bool {
 }
 
 // concatLeftAndRight used to concat thle left and right results, handle otherJoinOn|rightNull|OtherFilter.
-func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *planner.JoinNode, res *sqltypes.Result) {
+func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *planner.JoinNode, res *sqltypes.Result, maxrow int) error {
+	var err error
 	var mu sync.Mutex
 	p := newCalcPool(joinWorkers)
 	mathOps := func(lrow []sqltypes.Value) {
 		defer p.done()
+		if err != nil {
+			return
+		}
+
 		blend := true
 		matchCnt := 0
 		for _, idx := range node.LeftTmpCols {
@@ -194,8 +207,15 @@ func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *planner.JoinNode,
 					}
 					if ok {
 						mu.Lock()
-						res.Rows = append(res.Rows, joinRows(lrow, rrow, node.Cols))
-						res.RowsAffected++
+						if err == nil {
+							res.Rows = append(res.Rows, joinRows(lrow, rrow, node.Cols))
+							res.RowsAffected++
+							if len(res.Rows) > maxrow {
+								err = errors.Errorf("unsupported: join.row.count.exceeded.allowed.limit.of.'%d'", maxrow)
+								mu.Unlock()
+								break
+							}
+						}
 						mu.Unlock()
 					}
 				}
@@ -203,8 +223,13 @@ func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *planner.JoinNode,
 		}
 		if matchCnt == 0 && node.IsLeftJoin && !node.HasRightFilter {
 			mu.Lock()
-			res.Rows = append(res.Rows, joinRows(lrow, nil, node.Cols))
-			res.RowsAffected++
+			if err == nil {
+				res.Rows = append(res.Rows, joinRows(lrow, nil, node.Cols))
+				res.RowsAffected++
+				if len(res.Rows) > maxrow {
+					err = errors.Errorf("unsupported: join.row.count.exceeded.allowed.limit.of.'%d'", maxrow)
+				}
+			}
 			mu.Unlock()
 		}
 	}
@@ -214,15 +239,21 @@ func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *planner.JoinNode,
 		go mathOps(lrow)
 	}
 	p.wait()
+
+	return err
 }
 
-func concatLeftAndNil(lrows [][]sqltypes.Value, node *planner.JoinNode, res *sqltypes.Result) {
+func concatLeftAndNil(lrows [][]sqltypes.Value, node *planner.JoinNode, res *sqltypes.Result, maxrow int) error {
 	if node.IsLeftJoin && !node.HasRightFilter {
 		for _, row := range lrows {
 			res.Rows = append(res.Rows, joinRows(row, nil, node.Cols))
 			res.RowsAffected++
+			if len(res.Rows) > maxrow {
+				return errors.Errorf("unsupported: join.row.count.exceeded.allowed.limit.of.'%d'", maxrow)
+			}
 		}
 	}
+	return nil
 }
 
 // calcPool used to the merge join calc.

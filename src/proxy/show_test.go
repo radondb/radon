@@ -988,7 +988,7 @@ func TestProxyShowStatus(t *testing.T) {
 		assert.Nil(t, err)
 		qr, err := show.FetchAll("show status", -1)
 		assert.Nil(t, err)
-		want := `{"max-connections":1024,"max-result-size":1073741824,"ddl-timeout":36000000,"query-timeout":300000,"twopc-enable":false,"allow-ip":null,"audit-log-mode":"N","readonly":false,"throttle":0}`
+		want := `{"max-connections":1024,"max-result-size":1073741824,"max-join-rows":32768,"ddl-timeout":36000000,"query-timeout":300000,"twopc-enable":false,"allow-ip":null,"audit-log-mode":"N","readonly":false,"throttle":0}`
 		got := string(qr.Rows[1][1].Raw())
 		assert.Equal(t, want, got)
 	}

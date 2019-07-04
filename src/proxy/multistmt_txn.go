@@ -91,6 +91,7 @@ func (spanner *Spanner) ExecuteBegin(session *driver.Session, query string, node
 	}
 	txn.SetTimeout(conf.Proxy.QueryTimeout)
 	txn.SetMaxResult(conf.Proxy.MaxResultSize)
+	txn.SetMaxJoinRows(conf.Proxy.MaxJoinRows)
 	txn.SetMultiStmtTxn()
 
 	sessions.MultiStmtTxnBinding(session, txn, node, query)

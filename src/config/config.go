@@ -31,6 +31,7 @@ type ProxyConfig struct {
 
 	MaxConnections   int    `json:"max-connections"`
 	MaxResultSize    int    `json:"max-result-size"`
+	MaxJoinRows      int    `json:"max-join-rows"`
 	DDLTimeout       int    `json:"ddl-timeout"`
 	QueryTimeout     int    `json:"query-timeout"`
 	PeerAddress      string `json:"peer-address,omitempty"`
@@ -46,8 +47,9 @@ func DefaultProxyConfig() *ProxyConfig {
 		Endpoint:         "127.0.0.1:3308",
 		MaxConnections:   1024,
 		MaxResultSize:    1024 * 1024 * 1024, // 1GB
-		DDLTimeout:       10 * 3600 * 1000,   // 10hours
-		QueryTimeout:     5 * 60 * 1000,      // 5minutes
+		MaxJoinRows:      32768,
+		DDLTimeout:       10 * 3600 * 1000, // 10hours
+		QueryTimeout:     5 * 60 * 1000,    // 5minutes
 		PeerAddress:      "127.0.0.1:8080",
 		LongQueryTime:    5,                // 5 seconds
 		StreamBufferSize: 1024 * 1024 * 32, // 32MB
