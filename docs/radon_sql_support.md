@@ -504,6 +504,15 @@ join_condition:
     ON conditional_expr
 ```
 
+`UNION`
+``` 
+SELECT ...
+UNION [ALL | DISTINCT]
+SELECT ...
+[UNION [ALL | DISTINCT]
+SELECT ...]
+```
+
 `Instructions`
 
  * Support cross-partition count, sum, avg, max, min and other aggregate functions, Aggregate functions only support for numeric values
@@ -515,6 +524,7 @@ join_condition:
  * Support alias_name for column like `SELECT columna [[AS] alias] FROM mytable;`.
  * Support alias_name for table like `SELECT columna FROM tbl_name [[AS] alias];`.
  * Support LEFT|RIGHT OUTER and INNER|CROSS join.
+ * Support UNION [ALL | DISTINCT].
  
 
 `Example: `
@@ -639,6 +649,14 @@ mysql> select t1.id, t1.age,t2.id from t1 join t2 on t1.age=t2.age where t2.id >
 
 mysql> select * from t1 join t2 on t1.age=t2.age where t2.id > 10 order by t1.id;
 ERROR 1105 (HY000): unsupported: '*'.expression.in.cross-shard.query
+
+mysql> select * from t1 union select * from t2 order by id limit 1;
++------+------+
+| id   | age  |
++------+------+
+|    1 |   25 |
++------+------+
+1 row in set (1.012 sec)
 ```
 
 ### INSERT
