@@ -332,13 +332,11 @@ func TestTxnExecuteSingle(t *testing.T) {
 func TestTxnExecuteScatter(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, _, cleanup := MockTxnMgr(log, 2)
 	defer cleanup()
 
-	querys := []xcontext.QueryTuple{
-		xcontext.QueryTuple{Query: "select * from node1", Backend: addrs[0]},
-	}
-	fakedb.AddQuery(querys[0].Query, result1)
+	querys := "select * from node1"
+	fakedb.AddQuery(querys, result1)
 
 	txn, err := txnMgr.CreateTxn(backends)
 	assert.Nil(t, err)
@@ -346,7 +344,7 @@ func TestTxnExecuteScatter(t *testing.T) {
 
 	// scatter execute.
 	{
-		qr, err := txn.ExecuteScatter(querys[0].Query)
+		qr, err := txn.ExecuteScatter(querys)
 		assert.Nil(t, err)
 		got := fmt.Sprintf("%+v", qr.Rows)
 		want := "[[11 1nice name] [12 12nice name] [11 1nice name] [12 12nice name]]"
@@ -417,5 +415,29 @@ func TestTxnSetting(t *testing.T) {
 
 	{
 		txn.SetSessionID(1)
+	}
+}
+
+func TestTxnExecuteTwopc(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedb, txnMgr, backends, _, cleanup := MockTxnMgr(log, 2)
+	defer cleanup()
+
+	query := "select * from node1"
+	fakedb.AddQuery(query, result1)
+
+	txn, err := txnMgr.CreateTxn(backends)
+	assert.Nil(t, err)
+	defer txn.Finish()
+
+	txn.twopc = true
+	// scatter execute.
+	{
+		qr, err := txn.ExecuteScatter(query)
+		assert.Nil(t, err)
+		got := fmt.Sprintf("%+v", qr.Rows)
+		want := "[[11 1nice name] [12 12nice name] [11 1nice name] [12 12nice name]]"
+		assert.Equal(t, want, got)
 	}
 }
