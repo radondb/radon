@@ -302,7 +302,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 // IsDML returns the DML query or not.
 func (spanner *Spanner) IsDML(node sqlparser.Statement) bool {
 	switch node.(type) {
-	case *sqlparser.Select, *sqlparser.Insert, *sqlparser.Delete, *sqlparser.Update:
+	case *sqlparser.Select, *sqlparser.Union, *sqlparser.Insert, *sqlparser.Delete, *sqlparser.Update:
 		return true
 	}
 	return false
@@ -343,6 +343,8 @@ func queryStat(node sqlparser.Statement, timeStart time.Time, slowQueryTime time
 		command = "Update"
 	case *sqlparser.Select:
 		command = "Select"
+	case *sqlparser.Union:
+		command = "Union"
 	case *sqlparser.Kill:
 		command = "Kill"
 	case *sqlparser.Explain:
