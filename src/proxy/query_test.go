@@ -578,3 +578,64 @@ func TestLongQuery2(t *testing.T) {
 		}
 	}
 }
+
+func TestProxyQueryTxnUnion_428(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+	querys := []string{
+		"begin",
+		"select id from test.a union select id from test.b",
+		"commit",
+	}
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("XA .*", result1)
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+		for _, query := range querys {
+			fakedbs.AddQueryPattern(query, &sqltypes.Result{})
+		}
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.a(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.b(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	proxy.SetTwoPC(true)
+	{
+		client, err := driver.NewConn("mock", "mock", address, "mock", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
+	}
+}
