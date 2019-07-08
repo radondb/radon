@@ -370,7 +370,11 @@ func (txn *Txn) ExecuteRaw(database string, query string) (*sqltypes.Result, err
 // If the txn is in twopc mode, we do the xaStart before the real query execute.
 func (txn *Txn) Execute(req *xcontext.RequestContext) (*sqltypes.Result, error) {
 	if txn.twopc {
+		// DATA RACE in the same txn e.g, UNION etc.
+		txn.mu.Lock()
 		txn.req = req
+		txn.mu.Unlock()
+
 		switch req.TxnMode {
 		case xcontext.TxnRead:
 			// read-txn acquires the commit read-lock.
