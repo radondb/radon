@@ -529,7 +529,7 @@ func TestPushOrderBy(t *testing.T) {
 
 		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
-		switch p:=p.(type){
+		switch p := p.(type) {
 		case *MergeNode:
 			p.fields = fields
 		case *JoinNode:
@@ -571,13 +571,13 @@ func TestPushOrderByError(t *testing.T) {
 
 		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
-		switch p:=p.(type){
+		switch p := p.(type) {
 		case *MergeNode:
 			p.fields = fields
 		case *JoinNode:
 			p.fields = fields
 		}
-		
+
 		err = p.pushOrderBy(sel)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
