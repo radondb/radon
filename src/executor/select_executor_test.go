@@ -476,7 +476,7 @@ func TestJoinEngineErr(t *testing.T) {
 			{
 				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("4")),
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("lang")),
-			},		
+			},
 			{
 				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("5")),
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("lang")),
@@ -526,7 +526,7 @@ func TestJoinEngineErr(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig(),router.MockTableSConfig())
+	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig(), router.MockTableSConfig())
 	assert.Nil(t, err)
 
 	// Create scatter and query handler.
