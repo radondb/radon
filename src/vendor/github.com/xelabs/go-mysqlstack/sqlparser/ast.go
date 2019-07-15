@@ -2833,12 +2833,14 @@ func compliantName(in string) string {
 type Radon struct {
 	Action string
 	Row    ValTuple
+	Table  TableName
 }
 
 const (
 	AttachStr     = "attach"
 	DetachStr     = "detach"
 	AttachListStr = "attachlist"
+	ReshardStr    = "reshard"
 )
 
 func (*Radon) iStatement() {}
@@ -2848,8 +2850,10 @@ func (node *Radon) Format(buf *TrackedBuffer) {
 	switch node.Action {
 	case AttachListStr:
 		buf.Myprintf("radon %s", node.Action)
-	default:
+	case AttachStr, DetachStr:
 		buf.Myprintf("radon %s %v", node.Action, node.Row)
+	case ReshardStr:
+		buf.Myprintf("radon %s %v", node.Action, node.Table)
 	}
 }
 
@@ -2861,5 +2865,6 @@ func (node *Radon) WalkSubtree(visit Visit) error {
 	return Walk(
 		visit,
 		node.Row,
+		node.Table,
 	)
 }

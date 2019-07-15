@@ -22,7 +22,7 @@ func TestErrorParams(t *testing.T) {
 	defer cleanup()
 	address := proxy.Address()
 
-	// create database.
+	// attach.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
@@ -31,11 +31,20 @@ func TestErrorParams(t *testing.T) {
 		assert.NotNil(t, err)
 	}
 
-	// create database.
+	// detach.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
 		query := "radon detach('attach1','127')"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// reshard.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "radon reshard db.tb"
 		_, err = client.FetchAll(query, -1)
 		assert.NotNil(t, err)
 	}

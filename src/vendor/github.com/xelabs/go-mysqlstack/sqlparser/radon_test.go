@@ -23,6 +23,10 @@ func TestRadonAttach(t *testing.T) {
 			input:  "radon detach('attach1')",
 			output: "radon detach ('attach1')",
 		},
+		{
+			input:  "radon reshard db.t",
+			output: "radon reshard db.t",
+		},
 	}
 
 	for _, exp := range validSQL {

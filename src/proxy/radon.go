@@ -14,6 +14,7 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
+	"github.com/xelabs/go-mysqlstack/sqldb"
 )
 
 // handleRadon used to handle the command: radon attach/detach/attachlist.
@@ -45,9 +46,21 @@ func (spanner *Spanner) handleRadon(session *driver.Session, query string, node 
 		qr, err = attach.Detach(attachName)
 	case sqlparser.AttachListStr:
 		qr, err = attach.ListAttach()
+	case sqlparser.ReshardStr:
+		table := snode.Table.Name.String()
+		database := session.Schema()
+		if !snode.Table.Qualifier.IsEmpty() {
+			database = snode.Table.Qualifier.String()
+		}
+		log.Error("proxy.radon.unsupported: %s %s.%s", snode.Action, database, table)
+		err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query: %s %s.%s", snode.Action, database, table)
+	default:
+		log.Error("proxy.radon.unsupported[%s]", query)
+		err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query: %v", query)
 	}
 	if err != nil {
-		log.Error("proxy.query.multistmt.txn.[%s].error:%s", query, err)
+		log.Error("proxy.query.radon.[%s].error:%s", query, err)
+		return nil, err
 	}
 	return qr, err
 }
