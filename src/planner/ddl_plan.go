@@ -132,19 +132,31 @@ func (p *DDLPlan) Build() error {
 			var query string
 
 			segTable := segment.Table
+			var rawQuery string
+			var re *regexp.Regexp
 			if node.Table.Qualifier.IsEmpty() {
 				segTable = fmt.Sprintf("`%s`.`%s`", database, segTable)
-				rawQuery := strings.Replace(p.RawQuery, "`", "", 2)
+				rawQuery = strings.Replace(p.RawQuery, "`", "", 2)
 				// \b: https://www.regular-expressions.info/wordboundaries.html
-				re, _ := regexp.Compile(fmt.Sprintf(`\b(%s)\b`, table))
-				query = re.ReplaceAllString(rawQuery, segTable)
+				re, _ = regexp.Compile(fmt.Sprintf(`\b(%s)\b`, table))
 			} else {
 				segTable = fmt.Sprintf("`%s`.`%s`", database, segTable)
 				newTable := fmt.Sprintf("%s.%s", database, table)
-				rawQuery := strings.Replace(p.RawQuery, "`", "", 4)
-				re, _ := regexp.Compile(fmt.Sprintf(`\b(%s)\b`, newTable))
-				query = re.ReplaceAllString(rawQuery, segTable)
+				rawQuery = strings.Replace(p.RawQuery, "`", "", 4)
+				re, _ = regexp.Compile(fmt.Sprintf(`\b(%s)\b`, newTable))
 			}
+
+			// avoid the name of the column is the same as the table name, eg, issues/438
+			// just replace the first place.
+			var count = 0
+			var occurrence = 1
+			query = re.ReplaceAllStringFunc(rawQuery, func(m string) string {
+				count = count + 1;
+				if (count == occurrence) {
+					return segTable
+				}
+				return m
+			})
 
 			tuple := xcontext.QueryTuple{
 				Query:   query,

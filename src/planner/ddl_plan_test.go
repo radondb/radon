@@ -327,3 +327,46 @@ func TestDDLPlanWithQuote(t *testing.T) {
 		}
 	}
 }
+
+func TestDDLPlanWithSameColumn(t *testing.T) {
+	results := []string{
+		"{\n\t\"RawQuery\": \"CREATE table A(A int)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"CREATE table `sbtest`.`A0`(A int)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"CREATE table `sbtest`.`A2`(A int)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"CREATE table `sbtest`.`A4`(A int)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"CREATE table `sbtest`.`A8`(A int)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"CREATE table `A`(A int)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"CREATE table `sbtest`.`A0`(A int)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"CREATE table `sbtest`.`A2`(A int)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"CREATE table `sbtest`.`A4`(A int)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"CREATE table `sbtest`.`A8`(A int)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"create table sbtest.A(A int)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create table `sbtest`.`A0`(A int)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table `sbtest`.`A2`(A int)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table `sbtest`.`A4`(A int)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table `sbtest`.`A8`(A int)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"alter table A add column(A int)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`A0` add column(A int)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`A2` add column(A int)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`A4` add column(A int)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`A8` add column(A int)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"alter table sbtest.A add column(A int)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`A0` add column(A int)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`A2` add column(A int)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`A4` add column(A int)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`A8` add column(A int)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
+	}
+
+	querys := []string{
+		"CREATE table A(A int)",
+		"CREATE table `A`(A int)",
+		"create table sbtest.A(A int)",
+		"alter table A add column(A int)",
+		"alter table sbtest.A add column(A int)",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableAConfig())
+	assert.Nil(t, err)
+	for i, query := range querys {
+		log.Debug("%v", query)
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewDDLPlan(log, database, query, node.(*sqlparser.DDL), route)
+
+		// plan build
+		{
+			err := plan.Build()
+			assert.Nil(t, err)
+			want := results[i]
+			got := plan.JSON()
+			assert.Equal(t, want, got)
+			assert.True(t, nil == plan.Children())
+		}
+	}
+}
