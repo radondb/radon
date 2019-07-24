@@ -1098,3 +1098,112 @@ func TestProxyDDLGlobalSingleNormal(t *testing.T) {
 		}
 	}
 }
+
+func TestProxyDDLAlterRename(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	querys := []string{
+		"create table t1(id int, b int) partition by hash(id)",
+		"alter table t1 rename t2",
+	}
+
+	queryerr := []string{
+		"alter table ttt.t3 rename t4",
+		"alter table t3 rename t4",
+		"alter table t2 rename t2",
+		"alter table t2 rename test2.t3",
+	}
+	wants := []string{
+		"Unknown database 'ttt' (errno 1049) (sqlstate 42000)",
+		"Table 't3' doesn't exist (errno 1146) (sqlstate 42S02)",
+		"Table 't2' already exists (errno 1050) (sqlstate 42S01)",
+		"unsupported: Database is not equal[test:test2] (errno 1105) (sqlstate HY000)",
+	}
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("alter table .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create test table, t1 hash t2 global.
+	// alter table rename.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
+	}
+
+	// alter table t1 rename test2.t2.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		for i, query := range queryerr {
+			_, err = client.FetchAll(query, -1)
+			got := err.Error()
+			assert.Equal(t, wants[i], got)
+		}
+	}
+}
+
+func TestProxyDDLAlterRename2(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		//fakedbs.AddQueryPattern("alter table .*", &sqltypes.Result{})
+	}
+
+	querys := []string{
+		"create table t1(id int, b int) partition by hash(id)",
+	}
+
+	// create sbtest table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
+	}
+
+	{
+		fakedbs.AddQueryErrorPattern("alter table .*", errors.New("mock.mysql.alter.table.error"))
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "alter table t1 rename t2"
+		_, err = client.FetchAll(query, -1)
+		want := "mock.mysql.alter.table.error (errno 1105) (sqlstate HY000)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+}

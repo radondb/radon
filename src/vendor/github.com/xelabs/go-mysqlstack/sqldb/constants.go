@@ -290,6 +290,9 @@ const (
 	// ER_BAD_DB_ERROR enum.
 	ER_BAD_DB_ERROR = 1049
 
+	// ER_BAD_DB_ERROR enum.
+	ER_TABLE_EXISTS_ERROR = 1050
+
 	// ER_KILL_DENIED_ERROR enum
 	ER_KILL_DENIED_ERROR = 1095
 
@@ -336,6 +339,7 @@ var SQLErrors = map[uint16]*SQLError{
 	ER_ACCESS_DENIED_ERROR:          &SQLError{Num: ER_ACCESS_DENIED_ERROR, State: "28000", Message: "Access denied for user '%-.48s'@'%-.64s' (using password: %s)"},
 	ER_NO_DB_ERROR:                  &SQLError{Num: ER_NO_DB_ERROR, State: "3D000", Message: "No database selected"},
 	ER_BAD_DB_ERROR:                 &SQLError{Num: ER_BAD_DB_ERROR, State: "42000", Message: "Unknown database '%-.192s'"},
+	ER_TABLE_EXISTS_ERROR:           &SQLError{Num: ER_TABLE_EXISTS_ERROR, State: "42S01", Message: "Table '%s' already exists"},
 	ER_KILL_DENIED_ERROR:            &SQLError{Num: ER_KILL_DENIED_ERROR, State: "HY000", Message: "You are not owner of thread '%-.192s'"},
 	ER_UNKNOWN_ERROR:                &SQLError{Num: ER_UNKNOWN_ERROR, State: "HY000", Message: "%v"},
 	ER_HOST_NOT_PRIVILEGED:          &SQLError{Num: ER_HOST_NOT_PRIVILEGED, State: "HY000", Message: "Host '%-.64s' is not allowed to connect to this MySQL server"},

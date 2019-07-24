@@ -10,6 +10,7 @@ package router
 
 import (
 	"encoding/json"
+	"strings"
 	"sync"
 
 	"config"
@@ -130,7 +131,7 @@ func (r *Router) addTable(db string, tbl *config.TableConfig) error {
 	return nil
 }
 
-// removeTable -- used to remvoe a table router from schema map.
+// removeTable -- used to remove a table router from schema map.
 func (r *Router) removeTable(db string, table string) error {
 	var ok bool
 	var schema *Schema
@@ -146,6 +147,30 @@ func (r *Router) removeTable(db string, table string) error {
 	// remove
 	delete(schema.Tables, table)
 	return nil
+}
+
+// getRenameTableConfig -- used to rename table config and return the new tableconfig.
+func (r *Router) getRenameTableConfig(db, fromTable, toTable string) (*config.TableConfig, error) {
+	var ok bool
+	var schema *Schema
+
+	if schema, ok = r.Schemas[db]; !ok {
+		return nil, errors.Errorf("router.can.not.find.db[%v]", db)
+	}
+	if _, ok = schema.Tables[fromTable]; !ok {
+		return nil, errors.Errorf("router.can.not.find.table[%v]", fromTable)
+	}
+	if _, ok = schema.Tables[toTable]; ok {
+		return nil, errors.Errorf("router.find.table[%v].exists", toTable)
+	}
+
+	table := schema.Tables[fromTable]
+	tableConfig := table.TableConfig
+	tableConfig.Name = toTable
+	for _, partition := range tableConfig.Partitions {
+		partition.Table = strings.Replace(partition.Table, fromTable, toTable, 1)
+	}
+	return tableConfig, nil
 }
 
 func (r *Router) addDatabase(db string) error {

@@ -131,18 +131,19 @@ func (p *DDLPlan) Build() error {
 		for _, segment := range segments {
 			var query string
 
-			segTable := segment.Table
+			orgSegTable := segment.Table
 			var rawQuery string
 			var re *regexp.Regexp
+			var segTable string
 			if node.Table.Qualifier.IsEmpty() {
-				segTable = fmt.Sprintf("`%s`.`%s`", database, segTable)
-				rawQuery = strings.Replace(p.RawQuery, "`", "", 2)
+				segTable = fmt.Sprintf("`%s`.`%s`", database, orgSegTable)
+				rawQuery = strings.Replace(p.RawQuery, "`", "", -1)
 				// \b: https://www.regular-expressions.info/wordboundaries.html
 				re, _ = regexp.Compile(fmt.Sprintf(`\b(%s)\b`, table))
 			} else {
-				segTable = fmt.Sprintf("`%s`.`%s`", database, segTable)
+				segTable = fmt.Sprintf("`%s`.`%s`", database, orgSegTable)
 				newTable := fmt.Sprintf("%s.%s", database, table)
-				rawQuery = strings.Replace(p.RawQuery, "`", "", 4)
+				rawQuery = strings.Replace(p.RawQuery, "`", "", -1)
 				re, _ = regexp.Compile(fmt.Sprintf(`\b(%s)\b`, newTable))
 			}
 
@@ -151,12 +152,64 @@ func (p *DDLPlan) Build() error {
 			var count = 0
 			var occurrence = 1
 			query = re.ReplaceAllStringFunc(rawQuery, func(m string) string {
-				count = count + 1;
-				if (count == occurrence) {
+				count = count + 1
+				if count == occurrence {
 					return segTable
 				}
 				return m
 			})
+
+			if node.Action == sqlparser.RenameStr {
+				var segQuery string
+				var segToTable string
+				var re *regexp.Regexp
+				pos := strings.Index(query, segTable)
+				pos += len(segTable)
+
+				if !node.NewName.Qualifier.IsEmpty() {
+					toDatabase := node.NewName.Qualifier.String()
+					if toDatabase != database {
+						err := fmt.Sprintf("unsupported: Database is not equal[%s:%s]", database, toDatabase)
+						return errors.New(err)
+					}
+				}
+
+				toTable := node.NewName.Name.String()
+				// just to the shardtable, the suffix with "_0001" is valid
+				if shardKey != "" {
+					splits := strings.SplitN(orgSegTable, "_", -1)
+					suffix := splits[len(splits)-1]
+					segToTable = toTable + "_" + suffix
+				} else {
+					segToTable = toTable
+				}
+
+				if node.NewName.Qualifier.IsEmpty() {
+					segToTable = fmt.Sprintf("`%s`.`%s`", database, segToTable)
+					segQuery = strings.Replace(query[pos:], "`", "", -1)
+					// \b: https://www.regular-expressions.info/wordboundaries.html
+					re, _ = regexp.Compile(fmt.Sprintf(`\b(%s)\b`, toTable))
+				} else {
+					segToTable = fmt.Sprintf("`%s`.`%s`", database, segToTable)
+					newToTable := fmt.Sprintf("%s.%s", database, toTable)
+					segQuery = strings.Replace(query[pos:], "`", "", -1)
+					re, _ = regexp.Compile(fmt.Sprintf(`\b(%s)\b`, newToTable))
+				}
+
+				// avoid the name of the column is the same as the table name, eg, issues/438
+				// just replace the first place.
+				var count = 0
+				var occurrence = 1
+				toQuery := re.ReplaceAllStringFunc(segQuery, func(m string) string {
+					count = count + 1
+					if count == occurrence {
+						return segToTable
+					}
+					return m
+				})
+
+				query = query[:pos] + toQuery
+			}
 
 			tuple := xcontext.QueryTuple{
 				Query:   query,

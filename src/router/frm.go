@@ -209,6 +209,26 @@ func (r *Router) CreateTable(db, table, shardKey string, tableType string, backe
 	return nil
 }
 
+func (r *Router) createTable(db, table string, tableConf *config.TableConfig) error {
+	var err error
+
+	// add config to router.
+	if err = r.addTable(db, tableConf); err != nil {
+		log.Error("frm.create.add.route.error:%v", err)
+		return err
+	}
+	if err = r.writeTableFrmData(db, table, tableConf); err != nil {
+		log.Error("frm.create.table[db:%v, table:%v].file.error:%+v", db, tableConf.Name, err)
+		return err
+	}
+
+	if err = config.UpdateVersion(r.metadir); err != nil {
+		log.Panicf("frm.create.table.update.version.error:%v", err)
+		return err
+	}
+	return nil
+}
+
 // DropTable used to remove a table from router and remove the schema file from disk.
 func (r *Router) DropTable(db, table string) error {
 	r.mu.Lock()
@@ -226,6 +246,49 @@ func (r *Router) DropTable(db, table string) error {
 
 	if err := config.UpdateVersion(r.metadir); err != nil {
 		log.Panicf("frm.drop.table.update.version.error:%v", err)
+		return err
+	}
+	return nil
+}
+
+func (r *Router) dropTable(db, table string) error {
+	log := r.log
+	if err := r.removeTable(db, table); err != nil {
+		log.Error("frm.drop.table[%s.%s].remove.route.error:%v", db, table, err)
+		return err
+	}
+	if err := r.removeTableFrmData(db, table); err != nil {
+		log.Error("frm.drop.table[%s.%s].remove.frmdata.error:%v", db, table, err)
+		return err
+	}
+
+	if err := config.UpdateVersion(r.metadir); err != nil {
+		log.Panicf("frm.drop.table.update.version.error:%v", err)
+		return err
+	}
+	return nil
+}
+
+// RenameTable used to rename a table from router and update the schema file on disk.
+func (r *Router) RenameTable(db, fromTable, toTable string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	log := r.log
+	var tableConfig *config.TableConfig
+	tableConfig, err := r.getRenameTableConfig(db, fromTable, toTable)
+	if err != nil {
+		log.Error("frm.get.rename.table.config[%s.%s->%s].error:%v", db, fromTable, toTable, err)
+		return err
+	}
+
+	if err := r.createTable(db, toTable, tableConfig); err != nil {
+		log.Error("frm.create.table[db:%v, table:%v].file.error:%+v", db, toTable, err)
+		return err
+	}
+
+	if err := r.dropTable(db, fromTable); err != nil {
+		log.Error("frm.dropTable.table[%s.%s].error:%v", db, fromTable, err)
 		return err
 	}
 	return nil
