@@ -338,3 +338,94 @@ func TestFrmDatabaseNoTables(t *testing.T) {
 	err := router.CreateDatabase("test2")
 	assert.NotNil(t, err)
 }
+
+func TestFrmTableRename(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+
+	router.CreateDatabase("test")
+
+	// Add 1.
+	{
+		tmpRouter := router
+		backends := []string{"backend1", "backend2", "backend3"}
+		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		assert.Nil(t, err)
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
+	}
+
+	// Add 2.
+	{
+		tmpRouter := router
+		backends := []string{"backend1", "backend2"}
+		err := router.CreateTable("test", "t2", "id", "", backends, nil)
+		assert.Nil(t, err)
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
+	}
+
+	// Rename 2.
+	{
+		tmpRouter := router
+		err := router.RenameTable("test", "t2", "t3")
+		assert.Nil(t, err)
+		assert.False(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t3"))
+	}
+}
+
+func TestFrmTableRenameError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+
+	router.CreateDatabase("test")
+
+	// Add 1.
+	{
+		tmpRouter := router
+		backends := []string{"backend1", "backend2", "backend3"}
+		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		assert.Nil(t, err)
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
+	}
+
+	// Add 2.
+	{
+		tmpRouter := router
+		backends := []string{"backend1", "backend2"}
+		err := router.CreateTable("test", "t2", "id", "", backends, nil)
+		assert.Nil(t, err)
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
+	}
+
+	// Rename t3.
+	{
+		err := router.RenameTable("test", "t3", "t3")
+		assert.NotNil(t, err)
+	}
+
+	{
+		db := "test"
+		fromTable := "t2"
+		toTable := "t3"
+		dir := path.Join(router.metadir, db)
+		file := path.Join(dir, fmt.Sprintf("%s.json", fromTable))
+		os.Remove(file)
+		err := router.RenameTable(db, fromTable, toTable)
+		assert.NotNil(t, err)
+	}
+
+	{
+		db := "test"
+		fromTable := "t1"
+		toTable := "t4"
+		dir := path.Join(router.metadir, db)
+		file := path.Join(dir, fmt.Sprintf("%s.json", toTable))
+		_, err := os.Create(file)
+		err = os.Chmod(file, 0400)
+		err = router.RenameTable("test", fromTable, toTable)
+		assert.NotNil(t, err)
+		err = os.Chmod(file, 0666)
+	}
+}

@@ -600,3 +600,25 @@ func TestRouterTables(t *testing.T) {
 	got := router.Tables()
 	assert.Equal(t, want, got)
 }
+
+func TestRouterGetRenameTableConfig(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+
+	// sbtest with tables.
+	err := router.AddForTest("sbtest", MockTableMConfig())
+	assert.Nil(t, err)
+
+	_, err = router.getRenameTableConfig("sbtest", "A", "B")
+	assert.Nil(t, err)
+
+	_, err = router.getRenameTableConfig("sbtest1", "A", "B")
+	assert.NotNil(t, err)
+
+	_, err = router.getRenameTableConfig("sbtest", "B", "B")
+	assert.NotNil(t, err)
+
+	_, err = router.getRenameTableConfig("sbtest", "A", "A")
+	assert.NotNil(t, err)
+}

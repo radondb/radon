@@ -10,12 +10,12 @@ package proxy
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"backend"
 	"router"
 
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"

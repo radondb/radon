@@ -583,7 +583,7 @@ const (
 	AlterAddColumnStr       = "alter table add column"
 	AlterDropColumnStr      = "alter table drop column"
 	AlterModifyColumnStr    = "alter table modify column"
-	RenameStr               = "rename"
+	RenameStr               = "rename table"
 	TruncateTableStr        = "truncate table"
 	SingleTableType         = "singletable"
 	GlobalTableType         = "globaltable"
@@ -627,7 +627,7 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 	case DropIndexStr:
 		buf.Myprintf("%s %s on %v", node.Action, node.IndexName, node.Table)
 	case RenameStr:
-		buf.Myprintf("%s %v %v", node.Action, node.Table, node.NewName)
+		buf.Myprintf("%s %v to %v", node.Action, node.Table, node.NewName)
 	case AlterStr:
 		buf.Myprintf("%s table %v", node.Action, node.NewName)
 	case AlterEngineStr:

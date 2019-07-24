@@ -370,3 +370,85 @@ func TestDDLPlanWithSameColumn(t *testing.T) {
 		}
 	}
 }
+
+func TestDDLPlanWithRename(t *testing.T) {
+	results := []string{
+		"{\n\t\"RawQuery\": \"alter table R rename RR\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0000` rename `sbtest`.`RR_0000`\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0008` rename `sbtest`.`RR_0008`\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[2-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"alter table sbtest.R rename sbtest.RR\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0000` rename `sbtest`.`RR_0000`\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0008` rename `sbtest`.`RR_0008`\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[2-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"alter table sbtest.R rename RR\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0000` rename `sbtest`.`RR_0000`\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0008` rename `sbtest`.`RR_0008`\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[2-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"alter table R rename sbtest.RR\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0000` rename `sbtest`.`RR_0000`\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0008` rename `sbtest`.`RR_0008`\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[2-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"alter table `R` rename `sbtest`.`RR`\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0000` rename `sbtest`.`RR_0000`\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0008` rename `sbtest`.`RR_0008`\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[2-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"alter table `R` rename `sbtest`.RR\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0000` rename `sbtest`.`RR_0000`\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0008` rename `sbtest`.`RR_0008`\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[2-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"alter table `R` rename sbtest.`RR`\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0000` rename `sbtest`.`RR_0000`\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`R_0008` rename `sbtest`.`RR_0008`\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[2-4096)\"\n\t\t}\n\t]\n}",
+	}
+
+	querys := []string{
+		"alter table R rename RR",
+		"alter table sbtest.R rename sbtest.RR",
+		"alter table sbtest.R rename RR",
+		"alter table R rename sbtest.RR",
+		"alter table `R` rename `sbtest`.`RR`",
+		"alter table `R` rename `sbtest`.RR",
+		"alter table `R` rename sbtest.`RR`",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableRConfig())
+	assert.Nil(t, err)
+	for i, query := range querys {
+		log.Debug("%v", query)
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewDDLPlan(log, database, query, node.(*sqlparser.DDL), route)
+
+		// plan build
+		{
+			err := plan.Build()
+			assert.Nil(t, err)
+			want := results[i]
+			got := plan.JSON()
+			assert.Equal(t, want, got)
+			assert.True(t, nil == plan.Children())
+		}
+	}
+}
+
+func TestDDLPlanWithRenameNoshard(t *testing.T) {
+	results := []string{
+		"{\n\t\"RawQuery\": \"alter table S rename S_S\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table `sbtest`.`S` rename `sbtest`.`S_S`\",\n\t\t\t\"Backend\": \"backend1\",\n\t\t\t\"Range\": \"\"\n\t\t}\n\t]\n}",
+	}
+
+	querys := []string{
+		"alter table S rename S_S",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableSConfig())
+	assert.Nil(t, err)
+	for i, query := range querys {
+		log.Debug("%v", query)
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewDDLPlan(log, database, query, node.(*sqlparser.DDL), route)
+
+		// plan build
+		{
+			err := plan.Build()
+			assert.Nil(t, err)
+			want := results[i]
+			got := plan.JSON()
+			assert.Equal(t, want, got)
+			assert.True(t, nil == plan.Children())
+		}
+	}
+}

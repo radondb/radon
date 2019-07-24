@@ -368,6 +368,29 @@ func MockTableSConfig() *config.TableConfig {
 	}
 }
 
+// MockTableAConfig config.
+func MockTableRConfig() *config.TableConfig {
+	mock := &config.TableConfig{
+		Name:       "R",
+		ShardType:  "HASH",
+		ShardKey:   "id",
+		Partitions: make([]*config.PartitionConfig, 0, 16),
+	}
+	S02 := &config.PartitionConfig{
+		Table:   "R_0000",
+		Segment: "0-2",
+		Backend: "backend0",
+	}
+	S81024 := &config.PartitionConfig{
+		Table:   "R_0008",
+		Segment: "2-4096",
+		Backend: "backend8",
+	}
+
+	mock.Partitions = append(mock.Partitions, S02, S81024)
+	return mock
+}
+
 // mockTmpDir is only used for MockNewRouter()
 var (
 	log        = xlog.NewStdLog(xlog.Level(xlog.PANIC))

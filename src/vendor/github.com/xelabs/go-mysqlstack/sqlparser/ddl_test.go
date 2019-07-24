@@ -335,6 +335,20 @@ func TestDDL1(t *testing.T) {
 			input:  "alter table test drop column name",
 			output: "alter table test drop column `name`",
 		},
+
+		// Rename table
+		{
+			input:  "alter table test rename newtest",
+			output: "rename table test to newtest",
+		},
+		{
+			input:  "alter table test rename to newtest",
+			output: "rename table test to newtest",
+		},
+		{
+			input:  "alter table test rename as newtest",
+			output: "rename table test to newtest",
+		},
 	}
 
 	for _, ddl := range validSQL {

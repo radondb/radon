@@ -316,6 +316,39 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 			log.Error("spanner.ddl[%v].error[%+v]", query, err)
 		}
 		return r, err
+	case sqlparser.RenameStr:
+		// TODO: support a list of TableName.
+		// TODO: support databases are not equal.
+		r := &sqltypes.Result{}
+		fromTable := ddl.Table.Name.String()
+		toTable := ddl.NewName.Name.String()
+
+		// Check the database, fromTable is exists, toTable is not exists.
+		if !checkDatabaseExists(database, route) {
+			return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, database)
+		}
+
+		if !checkTableExists(database, fromTable, route) {
+			return nil, sqldb.NewSQLError(sqldb.ER_NO_SUCH_TABLE, fromTable)
+		}
+
+		if checkTableExists(database, toTable, route) {
+			return nil, sqldb.NewSQLError(sqldb.ER_TABLE_EXISTS_ERROR, toTable)
+		}
+
+		// Execute.
+		r, err := spanner.ExecuteDDL(session, database, query, node)
+		if err != nil {
+			log.Error("spanner.ddl.execute[%v].error[%+v]", query, err)
+			return r, err
+		}
+
+		err = route.RenameTable(database, fromTable, toTable)
+		if err != nil {
+			log.Error("spanner.ddl.router.rename.fromtable[%s].totable[%s].error[%+v]", fromTable, toTable, err)
+			return r, err
+		}
+		return r, nil
 	default:
 		log.Error("spanner.ddl[%v, %+v].access.denied", query, node)
 		return nil, sqldb.NewSQLErrorf(sqldb.ER_SPECIFIC_ACCESS_DENIED_ERROR, "Access denied; you don't have the privilege for %v operation", ddl.Action)
