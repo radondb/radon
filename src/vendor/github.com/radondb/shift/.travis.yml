@@ -1,0 +1,18 @@
+language: go
+sudo: false
+dist: xenial
+go:
+  - 1.11.x
+
+before_script: 
+  - mysqld --defaults-file=.travis/my3306.cnf --initialize-insecure 
+  - mysqld --defaults-file=.travis/my3306.cnf &
+  - mysqld --defaults-file=.travis/my3307.cnf --initialize-insecure 
+  - mysqld --defaults-file=.travis/my3307.cnf &
+
+
+script:
+  #test is used for make testcanal
+  - mysql -uroot -P3306 -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS test;'
+  - make build
+  - make test

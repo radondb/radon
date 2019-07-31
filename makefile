@@ -78,6 +78,8 @@ testmysqlstack:
 
 testfuzz:
 	go test -v -race fuzz/sqlparser
+testshift:
+	cd src/vendor/github.com/radondb/shift&&make test
 
 # code coverage
 allpkgs =	xbase\
