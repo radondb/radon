@@ -274,7 +274,7 @@ func isSameShard(ltb, rtb map[string]*TableInfo, lcn, rcn *sqlparser.ColName) bo
 	}
 	ltp := lt.tableConfig.Partitions
 	rt := rtb[rcn.Qualifier.Name.String()]
-	if rt.shardKey == "" || lt.shardKey != rcn.Name.String() {
+	if rt.shardKey == "" || rt.shardKey != rcn.Name.String() {
 		return false
 	}
 	rtp := rt.tableConfig.Partitions
