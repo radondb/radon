@@ -24,7 +24,7 @@ func TestScanTableExprs(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableCConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 	// single table.
 	{
@@ -43,6 +43,25 @@ func TestScanTableExprs(t *testing.T) {
 		tbMaps := m.getReferredTables()
 		tbInfo := tbMaps["A"]
 		assert.Equal(t, 1, len(tbMaps))
+		assert.Equal(t, m, tbInfo.parent)
+	}
+	// can merge shard tables.
+	{
+		query := "select * from B join C on B.id=C.a"
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+
+		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		assert.Nil(t, err)
+
+		m, ok := planNode.(*MergeNode)
+		if !ok {
+			t.Errorf("scanTableExprs returned plannode error")
+		}
+
+		tbMaps := m.getReferredTables()
+		tbInfo := tbMaps["B"]
+		assert.Equal(t, 2, len(tbMaps))
 		assert.Equal(t, m, tbInfo.parent)
 	}
 	// cannot merge shard tables.

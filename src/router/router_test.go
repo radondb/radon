@@ -200,6 +200,14 @@ func TestRouterRemove(t *testing.T) {
 		assert.Equal(t, want, got)
 	}
 
+	// router
+	{
+		err := router.removeTable("", MockTableCConfig().Name)
+		want := "router.can.not.find.db[]"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+
 	// add router of sbtest.A
 	{
 		err := router.addTable("sbtest", MockTableMConfig())
