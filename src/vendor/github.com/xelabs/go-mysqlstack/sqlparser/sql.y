@@ -1076,9 +1076,9 @@ radon_statement:
   {
     $$ = &Radon{ Action: AttachListStr}
   }
-| RADON RESHARD table_name force_eof
+| RADON RESHARD table_name to_opt table_name force_eof
   {
-    $$ = &Radon{ Action: ReshardStr, Table: $3}
+    $$ = &Radon{ Action: ReshardStr, Table: $3, NewName: $5}
   }
 
 show_statement_type:

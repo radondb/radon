@@ -2831,9 +2831,10 @@ func compliantName(in string) string {
 
 // Radon represents the radon statement.
 type Radon struct {
-	Action string
-	Row    ValTuple
-	Table  TableName
+	Action  string
+	Row     ValTuple
+	Table   TableName
+	NewName TableName
 }
 
 const (
@@ -2853,7 +2854,7 @@ func (node *Radon) Format(buf *TrackedBuffer) {
 	case AttachStr, DetachStr:
 		buf.Myprintf("radon %s %v", node.Action, node.Row)
 	case ReshardStr:
-		buf.Myprintf("radon %s %v", node.Action, node.Table)
+		buf.Myprintf("radon %s %v to %v", node.Action, node.Table, node.NewName)
 	}
 }
 
@@ -2866,5 +2867,6 @@ func (node *Radon) WalkSubtree(visit Visit) error {
 		visit,
 		node.Row,
 		node.Table,
+		node.NewName,
 	)
 }
