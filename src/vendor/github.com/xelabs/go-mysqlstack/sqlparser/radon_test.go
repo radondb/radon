@@ -24,8 +24,16 @@ func TestRadonAttach(t *testing.T) {
 			output: "radon detach ('attach1')",
 		},
 		{
-			input:  "radon reshard db.t",
-			output: "radon reshard db.t",
+			input:  "radon reshard db.t db.tt",
+			output: "radon reshard db.t to db.tt",
+		},
+		{
+			input:  "radon reshard db.t to a.tt",
+			output: "radon reshard db.t to a.tt",
+		},
+		{
+			input:  "radon reshard db.t as b.tt",
+			output: "radon reshard db.t to b.tt",
 		},
 	}
 

@@ -44,7 +44,7 @@ func TestErrorParams(t *testing.T) {
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
-		query := "radon reshard db.tb"
+		query := "radon reshard db.tb to db2.t2"
 		_, err = client.FetchAll(query, -1)
 		assert.NotNil(t, err)
 	}

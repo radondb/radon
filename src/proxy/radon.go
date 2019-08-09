@@ -52,8 +52,16 @@ func (spanner *Spanner) handleRadon(session *driver.Session, query string, node 
 		if !snode.Table.Qualifier.IsEmpty() {
 			database = snode.Table.Qualifier.String()
 		}
-		log.Error("proxy.radon.unsupported: %s %s.%s", snode.Action, database, table)
-		err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query: %s %s.%s", snode.Action, database, table)
+
+		newTable := snode.NewName.Name.String()
+		newDatabase := session.Schema()
+		if !snode.NewName.Qualifier.IsEmpty() {
+			newDatabase = snode.NewName.Qualifier.String()
+		}
+
+		log.Error("proxy.radon.unsupported.%s: [%s.%s->%s.%s]", snode.Action, database, table, newDatabase, newTable)
+		err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query.%s: [%s.%s->%s.%s]", snode.Action,
+			database, table, newDatabase, newTable)
 	default:
 		log.Error("proxy.radon.unsupported[%s]", query)
 		err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query: %v", query)
