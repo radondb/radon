@@ -64,7 +64,7 @@ func (spanner *Spanner) handleSet(session *driver.Session, query string, node *s
 			case *sqlparser.SQLVal:
 				switch expr.Type {
 				case sqlparser.IntVal:
-					if expr.Val[0]=='0' {
+					if expr.Val[0] == '0' {
 						autocommit = false
 					}
 				}
