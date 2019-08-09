@@ -429,3 +429,47 @@ func TestFrmTableRenameError(t *testing.T) {
 		err = os.Chmod(file, 0666)
 	}
 }
+
+func TestFrmCheckDatabase(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+
+	router.CreateDatabase("test")
+
+	// Add 1.
+	{
+		tmpRouter := router
+		backends := []string{"backend1", "backend2", "backend3"}
+		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		assert.Nil(t, err)
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
+	}
+
+	router.CheckDatabase("test")
+	router.CheckDatabase("test1")
+}
+
+func TestFrmCheckTable(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+
+	router.CreateDatabase("test")
+
+	// Add 1.
+	{
+		tmpRouter := router
+		backends := []string{"backend1", "backend2", "backend3"}
+		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		assert.Nil(t, err)
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
+	}
+
+	router.CheckTable("", "t1")
+	router.CheckTable("test", "")
+	router.CheckTable("", "")
+	router.CheckTable("test", "t1")
+	router.CheckTable("test1", "t1")
+	router.CheckTable("test", "t3")
+}

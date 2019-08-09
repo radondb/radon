@@ -159,6 +159,45 @@ func (r *Router) DropDatabase(db string) error {
 	return nil
 }
 
+// CheckDatabase is used to check the Database exist.
+func (r *Router) CheckDatabase(db string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, ok := r.Schemas[db]; !ok {
+		return errors.Errorf("router.can.not.find.db[%v]", db)
+	}
+	return nil
+}
+
+// CheckTable is used to check the table exist.
+func (r *Router) CheckTable(database string, tableName string) (isExist bool, err error) {
+	var ok bool
+
+	// lock
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if database == "" {
+		return false, errors.Errorf("database.is.empty")
+	}
+	if tableName == "" {
+		return false, errors.Errorf("tableName.is.empty")
+	}
+
+	// schema
+	var schema *Schema
+	if schema, ok = r.Schemas[database]; !ok {
+		return false, errors.Errorf("router.can.not.find.db[%v]", database)
+	}
+
+	// table
+	if _, ok = schema.Tables[tableName]; !ok {
+		return false, nil
+	}
+	return true, nil
+}
+
 // CreateTable used to add a table to router and flush the schema to disk.
 // Lock.
 func (r *Router) CreateTable(db, table, shardKey string, tableType string, backends []string, extra *Extra) error {
