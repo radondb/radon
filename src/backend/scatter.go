@@ -206,6 +206,21 @@ func (scatter *Scatter) Backends() []string {
 	return backends
 }
 
+func (scatter *Scatter) CheckBackend(backenName string) bool {
+	scatter.mu.RLock()
+	defer scatter.mu.RUnlock()
+	for k, pool := range scatter.backends {
+		if pool.conf.Role != config.NormalBackend {
+			continue
+		}
+
+		if k == backenName {
+			return true
+		}
+	}
+	return false
+}
+
 // PoolClone used to copy backends to new map.
 func (scatter *Scatter) PoolClone() map[string]*Pool {
 	poolMap := make(map[string]*Pool)

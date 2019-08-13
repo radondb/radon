@@ -176,7 +176,7 @@ func forceEOF(yylex interface{}) {
 %token <bytes> UNUSED
 
 // RadonDB
-%token <empty> PARTITION PARTITIONS HASH XA
+%token <empty> PARTITION PARTITIONS HASH XA DISTRIBUTED
 %type <statement> truncate_statement xa_statement explain_statement kill_statement transaction_statement radon_statement
 %token <bytes> ENGINES VERSIONS PROCESSLIST QUERYZ TXNZ KILL ENGINE SINGLE
 // Transaction Tokens
@@ -434,6 +434,14 @@ create_statement:
     $1.TableSpec = $2
     $1.PartitionName = string($7)
     $1.TableSpec.Options.Type = PartitionTableType
+    $$ = $1
+  }
+| create_table_prefix table_spec DISTRIBUTED BY openb ID closeb ddl_force_eof
+  {
+    $1.Action = CreateTableStr
+    $1.TableSpec = $2
+    $1.BackendName = string($6)
+    $1.TableSpec.Options.Type = SingleTableType
     $$ = $1
   }
 | CREATE DATABASE not_exists_opt table_id

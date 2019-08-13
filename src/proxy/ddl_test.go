@@ -1207,3 +1207,47 @@ func TestProxyDDLAlterRename2(t *testing.T) {
 		assert.Equal(t, want, got)
 	}
 }
+
+func TestProxyDDLCreateTableDistributed(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	querys := []string{
+		"create table t1(a int, b int) distributed by (backend0)",
+	}
+
+	queryErrs := []string{
+		"create table t1(a int, b int) distributed by (node0)",
+	}
+
+	for _, query := range querys {
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	for _, query := range queryErrs {
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+}

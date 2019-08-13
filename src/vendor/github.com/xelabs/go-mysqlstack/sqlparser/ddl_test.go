@@ -150,6 +150,18 @@ func TestDDL1(t *testing.T) {
 				")",
 		},
 
+		// SINGLE DISTRIBUTED BY BACKEND
+		{
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") distributed by(node3)",
+			output: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
+
 		// NORMAL.
 		{
 			input: "create table test.t (\n" +
