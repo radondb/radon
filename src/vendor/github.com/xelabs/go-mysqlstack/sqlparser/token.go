@@ -129,6 +129,7 @@ var keywords = map[string]int{
 	"distinct":            DISTINCT,
 	"distinctrow":         UNUSED,
 	"div":                 DIV,
+	"distributed":         DISTRIBUTED,
 	"double":              DOUBLE,
 	"drop":                DROP,
 	"duplicate":           DUPLICATE,

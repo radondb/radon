@@ -553,6 +553,7 @@ type DDL struct {
 	Charset       string
 	IndexName     string
 	PartitionName string
+	BackendName   string
 	IfExists      bool
 	IfNotExists   bool
 	Table         TableName

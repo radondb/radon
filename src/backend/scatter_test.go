@@ -139,6 +139,15 @@ func TestScatter(t *testing.T) {
 		assert.Equal(t, "node1", backends[0])
 	}
 
+	// CheckBackend
+	{
+		isExist := scatter.CheckBackend("node1")
+		assert.Equal(t, true, isExist)
+
+		isExist = scatter.CheckBackend("node0")
+		assert.Equal(t, false, isExist)
+	}
+
 	// pool clone.
 	{
 		clone := scatter.PoolClone()
