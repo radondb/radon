@@ -10,6 +10,7 @@ package planner
 
 import (
 	"fmt"
+	"strings"
 
 	"router"
 	"xcontext"
@@ -166,6 +167,37 @@ func (j *JoinNode) pushFilter(filters []filterTuple) error {
 				continue
 			}
 		}
+
+		for i, tb := range filter.referTables {
+			tbInfo := j.referredTables[tb]
+			if tbInfo.inSubquery {
+				return errors.Errorf("unsupported: unknow.table.name.'%s'.", tbInfo.alias)
+			}
+			if tbInfo.tableName == "" {
+				var leftField, rightField selectTuple
+				var err1, err2 error
+				fromLeft := j.Left.getReferredTables()[tb] != nil
+				fromRight := j.Right.getReferredTables()[tb] != nil
+				if !fromRight {
+					leftField, err1 = getMatchedField(filter.col.Name.String(), j.Left.getFields())
+				}
+				if !fromLeft {
+					rightField, err2 = getMatchedField(filter.col.Name.String(), j.Right.getFields())
+				}
+				if !fromLeft && !fromRight && err1 == nil && err2 == nil {
+					return errors.Errorf("unsupported: column.name.'%s'.is.ambiguous", filter.col.Name.String())
+				}
+				if err1 != nil && err2 != nil {
+					return err1
+				}
+				if err1 != nil {
+					leftField = rightField
+				}
+				filter.referTables[i] = leftField.referTables[0]
+				filter.col.Name = sqlparser.NewColIdent(leftField.field)
+			}
+		}
+
 		if len(filter.referTables) == 1 {
 			tb := filter.referTables[0]
 			tbInfo := j.referredTables[tb]
@@ -326,11 +358,41 @@ func (j *JoinNode) pushOtherJoin(idx *int) error {
 // pushEqualCmpr used to push the equal Comparison type filters.
 // eg: 'select * from t1, t2 where t1.a=t2.a and t1.b=2'.
 // 't1.a=t2.a' is the 'join' type filters.
-func (j *JoinNode) pushEqualCmpr(joins []joinTuple) SelectNode {
+func (j *JoinNode) pushEqualCmpr(joins []joinTuple) (SelectNode, error) {
 	for i, joinFilter := range joins {
 		var parent SelectNode
+		var field selectTuple
+		var err error
 		ltb := j.referredTables[joinFilter.referTables[0]]
+		if ltb.inSubquery {
+			return j, errors.Errorf("unsupported: unknow.table.name.'%s'.", ltb.alias)
+		}
+		for ltb.tableName == "" {
+			if checkTbInNode(joinFilter.referTables[0:1], j.Left.getReferredTables()) {
+				field, err = getMatchedField(joinFilter.left.Name.String(), j.Left.getFields())
+			} else {
+				field, err = getMatchedField(joinFilter.left.Name.String(), j.Right.getFields())
+			}
+			if err != nil {
+				return j, err
+			}
+			ltb = j.referredTables[field.referTables[0]]
+		}
 		rtb := j.referredTables[joinFilter.referTables[1]]
+		if rtb.inSubquery {
+			return j, errors.Errorf("unsupported: unknow.table.name.'%s'.", rtb.alias)
+		}
+		for rtb.tableName == "" {
+			if checkTbInNode(joinFilter.referTables[1:], j.Left.getReferredTables()) {
+				field, err = getMatchedField(joinFilter.right.Name.String(), j.Left.getFields())
+			} else {
+				field, err = getMatchedField(joinFilter.right.Name.String(), j.Right.getFields())
+			}
+			if err != nil {
+				return j, err
+			}
+			rtb = j.referredTables[field.referTables[0]]
+		}
 		parent = findLCA(j, ltb.parent, rtb.parent)
 
 		switch node := parent.(type) {
@@ -388,7 +450,7 @@ func (j *JoinNode) pushEqualCmpr(joins []joinTuple) SelectNode {
 			}
 		}
 	}
-	return j
+	return j, nil
 }
 
 // calcRoute used to calc the route.
@@ -400,6 +462,7 @@ func (j *JoinNode) calcRoute() (SelectNode, error) {
 			tbInfo.parent.setWhereFilter(filter)
 		}
 	}
+	j.tableFilter = nil
 	if j.Left, err = j.Left.calcRoute(); err != nil {
 		return j, err
 	}
@@ -505,6 +568,11 @@ func (j *JoinNode) buildKeyFilter(filter filterTuple, isFind bool) bool {
 func (j *JoinNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, aggTyp aggrType) error {
 	if j.isHint {
 		j.reOrder(0)
+	}
+
+	if j.fields != nil {
+		j.Cols = nil
+		j.fields = nil
 	}
 
 	if len(groups) > 0 || aggTyp != nullAgg {
@@ -681,6 +749,65 @@ func (j *JoinNode) pushOtherFilter(expr sqlparser.Expr, node SelectNode, tbs []s
 
 // pushSelectExpr used to push the select field.
 func (j *JoinNode) pushSelectExpr(field selectTuple) (int, error) {
+	containAlias := false
+	for _, tb := range field.referTables {
+		if tb != "" {
+			tbInfo := j.referredTables[tb]
+			if tbInfo.inSubquery {
+				return -1, errors.Errorf("unsupported: unknow.table.name.'%s'.", tbInfo.alias)
+			}
+			if tbInfo.tableName == "" {
+				containAlias = true
+			}
+		} else {
+			return -1, errors.Errorf("unsupported: unknown.column.'%s'.in.clause", field.field)
+		}
+	}
+	if containAlias {
+		var err1, err2 error
+		var leftField, rightField selectTuple
+		if field.aggrFuc != "" {
+			s := strings.Split(field.aggrField, ".")
+			field.field = s[len(s)-1]
+		}
+		fromLeft := checkTbInNode(field.referTables, j.Left.getReferredTables())
+		fromRight := checkTbInNode(field.referTables, j.Right.getReferredTables())
+		if !fromRight {
+			leftField, err1 = getMatchedField(field.field, j.Left.getFields())
+			if err1 != nil && fromLeft {
+				return -1, err1
+			}
+		}
+		if !fromLeft {
+			rightField, err2 = getMatchedField(field.field, j.Right.getFields())
+			if err2 != nil && fromRight {
+				return -1, err2
+			}
+		}
+		if !fromLeft && !fromRight && err1 == nil && err2 == nil {
+			return -1, errors.Errorf("unsupported: column.name.'%s'.is.ambiguous", field.field)
+		}
+		if err1 != nil && err2 != nil {
+			return -1, err1
+		}
+
+		if err2 != nil || fromLeft {
+			rightField = leftField
+		}
+		if field.aggrFuc != "" {
+			field.field = field.aggrFuc + "(" + field.aggrField + ")"
+			field.aggrField = rightField.referTables[0] + "." + rightField.field
+			field.expr.(*sqlparser.AliasedExpr).Expr = rightField.expr.(*sqlparser.AliasedExpr).Expr
+			field.referTables = rightField.referTables
+		} else {
+			if field.alias != "" {
+				rightField.alias = field.alias
+				rightField.expr.(*sqlparser.AliasedExpr).As = field.expr.(*sqlparser.AliasedExpr).As
+			}
+			field = rightField
+		}
+	}
+
 	if checkTbInNode(field.referTables, j.Left.getReferredTables()) {
 		index, err := j.Left.pushSelectExpr(field)
 		if err != nil {
@@ -758,15 +885,23 @@ func (j *JoinNode) buildOrderBy(expr sqlparser.Expr, node SelectNode, idx *int) 
 		tuples := node.getFields()
 		field = exp.Name.String()
 		table = exp.Qualifier.Name.String()
+		if j.referredTables[table].tableName == "" {
+			f, _ := getMatchedField(field, tuples)
+			field = f.field
+			table = f.referTables[0]
+		}
 		for i, tuple := range tuples {
 			if tuple.isCol {
 				if table == tuple.referTables[0] && field == tuple.field {
+					exp.Name = sqlparser.NewColIdent(field)
+					exp.Qualifier.Name = sqlparser.NewTableIdent(table)
 					index = i
 					break
 				}
 			}
 		}
 		col = exp
+
 	}
 
 	// key not in the select fields.

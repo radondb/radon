@@ -16,7 +16,6 @@ import (
 	"router"
 	"xcontext"
 
-	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/xlog"
@@ -61,17 +60,10 @@ func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser
 }
 
 // analyze used to check the 'select' is at the support level, and get the db, table, etc..
-// Unsupports:
-// 1. subquery.
 func (p *SelectPlan) analyze() error {
 	var err error
 	log := p.log
 	node := p.node
-
-	// Check subquery.
-	if hasSubquery(node) {
-		return errors.New("unsupported: subqueries.in.select")
-	}
 
 	if p.Root, err = scanTableExprs(log, p.router, p.database, node.From); err != nil {
 		return err
@@ -86,14 +78,16 @@ func (p *SelectPlan) analyze() error {
 		if err = p.Root.pushFilter(filters); err != nil {
 			return err
 		}
-		p.Root = p.Root.pushEqualCmpr(joins)
+		if p.Root, err = p.Root.pushEqualCmpr(joins); err != nil {
+			return err
+		}
 	}
 	if p.Root, err = p.Root.calcRoute(); err != nil {
 		return err
 	}
 
 	mn, ok := p.Root.(*MergeNode)
-	if ok && mn.routeLen == 1 {
+	if ok && mn.routeLen == 1 && p.RawQuery != "" && !hasSubquery(node) {
 		sel := mn.Sel.(*sqlparser.Select)
 		node.From = sel.From
 		node.Where = sel.Where
@@ -112,6 +106,9 @@ func (p *SelectPlan) analyze() error {
 		return err
 	}
 
+	if ok && mn.fields != nil {
+		ok = !ok
+	}
 	if groups, err = checkGroupBy(node.GroupBy, fields, p.router, tbInfos, ok); err != nil {
 		return err
 	}

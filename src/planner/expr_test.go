@@ -133,7 +133,8 @@ func TestWhereFilters(t *testing.T) {
 		err = p.pushFilter(filters)
 		assert.Nil(t, err)
 
-		p = p.pushEqualCmpr(joins)
+		p, err = p.pushEqualCmpr(joins)
+		assert.Nil(t, err)
 
 		_, err = p.calcRoute()
 		assert.Nil(t, err)
@@ -174,7 +175,9 @@ func TestWhereFiltersError(t *testing.T) {
 		err = p.pushFilter(filters)
 		assert.Nil(t, err)
 
-		p = p.pushEqualCmpr(joins)
+		p, err = p.pushEqualCmpr(joins)
+		assert.Nil(t, err)
+
 		p, err = p.calcRoute()
 		assert.Nil(t, err)
 

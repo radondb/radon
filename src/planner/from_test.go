@@ -351,12 +351,83 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, 2, len(j2.joinOn))
 		assert.Equal(t, j2.Right, tbInfo.parent)
 	}
+	// simple select in subquery.
+	{
+		query := "select * from (select * from A) as D"
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+
+		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		assert.Nil(t, err)
+
+		m, ok := planNode.(*MergeNode)
+		if !ok {
+			t.Errorf("scanTableExprs returned plannode error")
+		}
+
+		tbMaps := m.getReferredTables()
+		assert.Equal(t, 2, len(tbMaps))
+		tbInfo := tbMaps["A"]
+		assert.Equal(t, m, tbInfo.parent)
+		tbInfo = tbMaps["D"]
+		assert.Equal(t, "", tbInfo.tableName)
+	}
+	//subquery in subquery
+	{
+		query := "select C.a from (select B.a from (select a from A) B) C"
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+
+		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		assert.Nil(t, err)
+
+		m, ok := planNode.(*MergeNode)
+		if !ok {
+			t.Errorf("scanTableExprs returned plannode error")
+		}
+
+		tbMaps := m.getReferredTables()
+		assert.Equal(t, 3, len(tbMaps))
+		tbInfo := tbMaps["A"]
+		assert.Equal(t, m, tbInfo.parent)
+		tbInfo = tbMaps["B"]
+		assert.Equal(t, "", tbInfo.tableName)
+		tbInfo = tbMaps["C"]
+		assert.Equal(t, "", tbInfo.tableName)
+	}
+	//join in subquery
+	{
+		query := "select * from (select A.id from A join B on B.id=A.id and 1=A.id) D"
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+
+		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		assert.Nil(t, err)
+
+		j, ok := planNode.(*JoinNode)
+		if !ok {
+			t.Errorf("scanTableExprs returned plannode error")
+		}
+		assert.Equal(t, 1, len(j.joinOn))
+		assert.False(t, j.IsLeftJoin)
+
+		tbMaps := j.getReferredTables()
+		tbInfo := tbMaps["D"]
+		assert.Equal(t, "", tbInfo.tableName)
+
+		tbInfo = tbMaps["A"]
+		m, ok := j.Left.(*MergeNode)
+		if !ok {
+			t.Errorf("scanTableExprs returned plannode error")
+		}
+		assert.Equal(t, m, tbInfo.parent)
+		assert.Equal(t, []int{2323}, m.index)
+	}
 }
 
 func TestScanTableExprsError(t *testing.T) {
 	querys := []string{
 		"select * from  C where C.id=1",
-		"select * from (select * from A) as D",
 		"select * from A natural join B",
 		"select * from A join B on A.id=B.id and id=1",
 		"select * from A join B on A.id=B.id and C.id=1",
@@ -371,7 +442,6 @@ func TestScanTableExprsError(t *testing.T) {
 	}
 	wants := []string{
 		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
-		"unsupported: subquery.in.select",
 		"unsupported: join.type:natural join",
 		"unsupported: unknown.column.'id'.in.clause",
 		"unsupported: unknown.table.'C'.in.clause",

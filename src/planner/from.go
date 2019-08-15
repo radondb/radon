@@ -37,6 +37,8 @@ type TableInfo struct {
 	Segments []router.Segment `json:",omitempty"`
 	// table's parent node, the type always a MergeNode.
 	parent *MergeNode
+	// whether the table is in subquery or not
+	inSubquery bool
 }
 
 /* scanTableExprs analyzes the 'FROM' clause, build a plannode tree.
@@ -130,7 +132,36 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 			mn.referredTables[tn.tableName] = tn
 		}
 	case *sqlparser.Subquery:
-		err = errors.New("unsupported: subquery.in.select")
+		subSelect := expr.Select.(*sqlparser.Select)
+		subNode := NewSelectPlan(log, database, "", subSelect, r)
+		if err := subNode.analyze(); err != nil {
+			return nil, err
+		}
+		if tableExpr.As.String() != "" {
+			tn := &TableInfo{
+				database: database,
+				alias:    tableExpr.As.String(),
+			}
+			for _, tbInfo := range subNode.Root.getReferredTables() {
+				tbInfo.inSubquery = true
+			}
+			subNode.Root.getReferredTables()[tn.alias] = tn
+		}
+		m := make(map[string]string)
+		for _, field := range subNode.Root.getFields() {
+			name := field.alias
+			if name == "" {
+				name = field.field
+			}
+			if len(field.referTables) > 0 {
+				name = field.referTables[0] + "." + name
+			}
+			if _, ok := m[name]; ok {
+				return subNode.Root, errors.Errorf("unsupported: duplicate.column.name.'%s'", name)
+			}
+			m[name] = ""
+		}
+		return subNode.Root, nil
 	}
 	mn.Sel = &sqlparser.Select{From: sqlparser.TableExprs([]sqlparser.TableExpr{tableExpr})}
 	return mn, err

@@ -250,6 +250,8 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*TableInfo
 	hasAggregates := false
 	referTables := make([]string, 0, 4)
 
+	theOnlyVisibleTb := getTheOnlyVisibleTb(tbInfos)
+
 	alias := expr.As.String()
 	if col, ok := expr.Expr.(*sqlparser.ColName); ok {
 		field = col.Name.String()
@@ -265,14 +267,14 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*TableInfo
 		case *sqlparser.ColName:
 			tableName := node.Qualifier.Name.String()
 			if tableName == "" {
-				if len(tbInfos) == 1 {
-					tableName, _ = getOneTableInfo(tbInfos)
+				if theOnlyVisibleTb != "" {
+					tableName = theOnlyVisibleTb
 				} else {
-					return false, errors.Errorf("unsupported: unknown.column.'%s'.in.select.exprs", node.Name.String())
+					return false, errors.Errorf("unsupported: unknown.table.name.'%s'.in.field.list", tableName)
 				}
 			} else {
 				if _, ok := tbInfos[tableName]; !ok {
-					return false, errors.Errorf("unsupported: unknown.column.'%s'.in.field.list", field)
+					return false, errors.Errorf("unsupported: unknown.table.name.'%s'.in.field.list", tableName)
 				}
 			}
 			for _, tb := range referTables {
@@ -375,6 +377,32 @@ func setAggregatorType(hasAggr, hasDist, isMergeNode bool) aggrType {
 		return canPush
 	}
 	return nullAgg
+}
+
+//getTheOnlyVisibleTb used to get the only visible table.
+func getTheOnlyVisibleTb(tbInfos map[string]*TableInfo) string {
+	var theOnlyVisibleTb string
+	for tb, tbInfo := range tbInfos {
+		if !tbInfo.inSubquery {
+			if theOnlyVisibleTb == "" {
+				theOnlyVisibleTb = tb
+			} else {
+				theOnlyVisibleTb = ""
+				break
+			}
+		}
+	}
+	return theOnlyVisibleTb
+}
+
+//getMatchedField used to find matched field in the subquery
+func getMatchedField(fieldName string, fields []selectTuple) (selectTuple, error) {
+	for _, f := range fields {
+		if (f.alias == "" && fieldName == f.field) || (fieldName == f.alias) {
+			return f, nil
+		}
+	}
+	return selectTuple{}, errors.Errorf("unsupported: unknown.column.name.'%s'", fieldName)
 }
 
 // checkTbInNode used to check whether the filter's referTables in the tbInfos.
@@ -514,6 +542,7 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 	filters := splitAndExpression(nil, exprs)
 	var joins []joinTuple
 	var wheres []filterTuple
+	theOnlyVisibleTb := getTheOnlyVisibleTb(tbInfos)
 
 	for _, filter := range filters {
 		var col *sqlparser.ColName
@@ -529,8 +558,8 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 				col = node
 				tableName := node.Qualifier.Name.String()
 				if tableName == "" {
-					if len(tbInfos) == 1 {
-						tableName, _ = getOneTableInfo(tbInfos)
+					if theOnlyVisibleTb != "" {
+						tableName = theOnlyVisibleTb
 					} else {
 						return false, errors.Errorf("unsupported: unknown.column.'%s'.in.clause", node.Name.String())
 					}
@@ -740,6 +769,7 @@ func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router 
 func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*TableInfo) ([]filterTuple, error) {
 	filters := splitAndExpression(nil, exprs)
 	var tuples []filterTuple
+	TheOnlyVisibleTb := getTheOnlyVisibleTb(tbInfos)
 
 	for _, filter := range filters {
 		filter = skipParenthesis(filter)
@@ -749,8 +779,8 @@ func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*TableInfo) ([]filter
 			case *sqlparser.ColName:
 				tableName := node.Qualifier.Name.String()
 				if tableName == "" {
-					if len(tbInfos) == 1 {
-						tableName, _ = getOneTableInfo(tbInfos)
+					if TheOnlyVisibleTb != "" {
+						tableName = TheOnlyVisibleTb
 					} else {
 						return false, errors.Errorf("unsupported: unknown.column.'%s'.in.having.clause", node.Name.String())
 					}
@@ -823,7 +853,6 @@ func checkShard(table, col string, tbInfos map[string]*TableInfo, router *router
 	if !ok {
 		return false, errors.Errorf("unsupported: unknown.column.'%s.%s'.in.field.list", table, col)
 	}
-
 	shardkey, err := router.ShardKey(tbInfo.database, tbInfo.tableName)
 	if err != nil {
 		return false, err

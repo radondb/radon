@@ -33,7 +33,7 @@ type SelectNode interface {
 	setWhereFilter(filter filterTuple)
 	setNoTableFilter(exprs []sqlparser.Expr)
 	setParenthese(hasParen bool)
-	pushEqualCmpr(joins []joinTuple) SelectNode
+	pushEqualCmpr(joins []joinTuple) (SelectNode, error)
 	calcRoute() (SelectNode, error)
 	pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, aggTyp aggrType) error
 	pushSelectExpr(field selectTuple) (int, error)

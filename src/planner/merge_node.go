@@ -10,11 +10,13 @@ package planner
 
 import (
 	"math/rand"
+	"strings"
 	"time"
 
 	"router"
 	"xcontext"
 
+	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
@@ -98,6 +100,21 @@ func (m *MergeNode) setParenthese(hasParen bool) {
 func (m *MergeNode) pushFilter(filters []filterTuple) error {
 	var err error
 	for _, filter := range filters {
+		for i, tb := range filter.referTables {
+			tbInfo := m.referredTables[tb]
+			if tbInfo.inSubquery {
+				return errors.Errorf("unsupported: unknow.table.name.'%s'.", tbInfo.alias)
+			}
+			if tbInfo.tableName == "" {
+				f, err := getMatchedField(filter.col.Name.String(), m.fields)
+				if err != nil {
+					return err
+				}
+				filter.referTables[i] = f.referTables[0]
+				filter.col.Name = sqlparser.NewColIdent(f.field)
+			}
+		}
+
 		m.addWhere(filter.expr)
 		if len(filter.referTables) == 1 {
 			tbInfo := m.referredTables[filter.referTables[0]]
@@ -141,41 +158,43 @@ func (m *MergeNode) setNoTableFilter(exprs []sqlparser.Expr) {
 }
 
 // pushEqualCmpr used to push the 'join' type filters.
-func (m *MergeNode) pushEqualCmpr(joins []joinTuple) SelectNode {
+func (m *MergeNode) pushEqualCmpr(joins []joinTuple) (SelectNode, error) {
 	for _, joinFilter := range joins {
 		m.addWhere(joinFilter.expr)
 	}
-	return m
+	return m, nil
 }
 
 // calcRoute used to calc the route.
 func (m *MergeNode) calcRoute() (SelectNode, error) {
 	var err error
 	for _, tbInfo := range m.referredTables {
-		if m.nonGlobalCnt == 0 {
-			segments, err := m.router.Lookup(tbInfo.database, tbInfo.tableName, nil, nil)
-			if err != nil {
-				return nil, err
+		if tbInfo.tableName != "" {
+			if m.nonGlobalCnt == 0 {
+				segments, err := m.router.Lookup(tbInfo.database, tbInfo.tableName, nil, nil)
+				if err != nil {
+					return nil, err
+				}
+				rand := rand.New(rand.NewSource(time.Now().UnixNano()))
+				idx := rand.Intn(len(segments))
+				m.backend = segments[idx].Backend
+				m.index = append(m.index, idx)
+				m.routeLen = 1
+				break
 			}
-			rand := rand.New(rand.NewSource(time.Now().UnixNano()))
-			idx := rand.Intn(len(segments))
-			m.backend = segments[idx].Backend
-			m.index = append(m.index, idx)
-			m.routeLen = 1
-			break
-		}
-		if tbInfo.shardType == "GLOBAL" {
-			continue
-		}
-		tbInfo.Segments, err = m.router.GetSegments(tbInfo.database, tbInfo.tableName, m.index)
-		if err != nil {
-			return m, err
-		}
-		if m.backend == "" && len(tbInfo.Segments) == 1 {
-			m.backend = tbInfo.Segments[0].Backend
-		}
-		if m.routeLen == 0 {
-			m.routeLen = len(tbInfo.Segments)
+			if tbInfo.shardType == "GLOBAL" {
+				continue
+			}
+			tbInfo.Segments, err = m.router.GetSegments(tbInfo.database, tbInfo.tableName, m.index)
+			if err != nil {
+				return m, err
+			}
+			if m.backend == "" && len(tbInfo.Segments) == 1 {
+				m.backend = tbInfo.Segments[0].Backend
+			}
+			if m.routeLen == 0 {
+				m.routeLen = len(tbInfo.Segments)
+			}
 		}
 	}
 	return m, nil
@@ -183,16 +202,118 @@ func (m *MergeNode) calcRoute() (SelectNode, error) {
 
 // pushSelectExprs used to push the select fields.
 func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, aggTyp aggrType) error {
+	var secondTime bool
 	node := m.Sel.(*sqlparser.Select)
-	node.SelectExprs = sel.SelectExprs
-	node.GroupBy = sel.GroupBy
+	if node.SelectExprs == nil {
+		if len(m.referredTables) > 1 {
+			for _, expr := range sel.SelectExprs {
+				if aliasedExpr, ok := expr.(*sqlparser.AliasedExpr); ok {
+					if funcExpr, ok := aliasedExpr.Expr.(*sqlparser.FuncExpr); ok {
+						if e, ok := funcExpr.Exprs[0].(*sqlparser.AliasedExpr); ok {
+							aliasedExpr = e
+						}
+					}
+					if colName, ok := aliasedExpr.Expr.(*sqlparser.ColName); ok && colName.Qualifier.Name.String() == "" {
+						return errors.Errorf("unsupported: unknown.column.'%s'.in.clause", colName.Name.String())
+					}
+
+				}
+			}
+		}
+		node.SelectExprs = sel.SelectExprs
+	}
+	if m.fields == nil {
+		node.GroupBy = sel.GroupBy
+	} else {
+		secondTime = true
+	}
 	node.Distinct = sel.Distinct
-	m.fields = fields
+	if m.fields == nil {
+		m.fields = fields
+	} else {
+		for _, subPlan := range m.children.children {
+			if aggPlan, ok := subPlan.(*AggregatePlan); ok {
+				if len(aggPlan.normalAggrs) > 0 {
+					return errors.Errorf("unsupported: aggregation.function.in.subquery")
+				}
+				return errors.Errorf("unsupported: group.by.in.subquery")
+			}
+		}
+		if aggTyp == canPush {
+			aggTyp = notPush
+		}
+
+		//rebuild the fields
+		node.SelectExprs = nil
+		unusedFields := make([]selectTuple, len(m.fields))
+		dupFields := make([]selectTuple, len(m.fields))
+		copy(unusedFields, m.fields)
+		copy(dupFields, m.fields)
+		var newFields []selectTuple
+
+		for _, field := range fields {
+			for _, tb := range field.referTables {
+				tbInfo := m.referredTables[tb]
+				if tbInfo.inSubquery {
+					return errors.Errorf("unsupported: unknow.table.name.'%s'.", tbInfo.alias)
+				}
+			}
+			if field.field == "*" {
+				for _, f := range m.fields {
+					newFields = append(newFields, f)
+					node.SelectExprs = append(node.SelectExprs, f.expr)
+				}
+			} else {
+				if field.aggrFuc == "" {
+					f, err := getMatchedField(field.field, m.fields)
+					if err != nil {
+						return err
+					}
+					newFields = append(newFields, f)
+					node.SelectExprs = append(node.SelectExprs, f.expr)
+				} else {
+					if field.aggrField == "*" {
+						newFields = append(newFields, field)
+						node.SelectExprs = append(node.SelectExprs, field.expr)
+						continue
+					}
+					s := strings.Split(field.aggrField, ".")
+					field.field = s[len(s)-1]
+					f, err := getMatchedField(field.field, m.fields)
+					if err != nil {
+						return err
+					}
+					f.aggrFuc = field.aggrFuc
+					field.expr.(*sqlparser.AliasedExpr).Expr.(*sqlparser.FuncExpr).Exprs[0] = f.expr.(*sqlparser.AliasedExpr)
+					f.expr = field.expr
+					f.aggrField = field.field
+					if len(f.referTables) > 0 {
+						f.aggrField = f.referTables[0] + "." + f.field
+					}
+					f.alias = field.alias
+					f.field = f.aggrFuc + "(" + field.aggrField + ")"
+
+					newFields = append(newFields, f)
+					node.SelectExprs = append(node.SelectExprs, f.expr)
+				}
+			}
+		}
+		m.fields = newFields
+	}
 
 	if len(sel.GroupBy) > 0 {
 		// group by implicitly contains order by.
 		if len(sel.OrderBy) == 0 {
-			for _, by := range sel.GroupBy {
+			for i, by := range sel.GroupBy {
+				e, ok := by.(*sqlparser.ColName)
+				if ok && secondTime {
+					field, _ := getMatchedField(e.Name.String(), m.fields)
+					e.Name = sqlparser.NewColIdent(field.field)
+					groups[i].field = field.field
+					if len(field.referTables) > 0 && e.Qualifier.Name.String() != "" {
+						e.Qualifier.Name = sqlparser.NewTableIdent(field.referTables[0])
+					}
+				}
 				node.OrderBy = append(node.OrderBy, &sqlparser.Order{
 					Expr:      by,
 					Direction: sqlparser.AscScr,
@@ -212,7 +333,7 @@ func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser
 	}
 
 	if aggTyp != nullAgg || len(groups) > 0 {
-		aggrPlan := NewAggregatePlan(m.log, node.SelectExprs, fields, groups, aggTyp == canPush)
+		aggrPlan := NewAggregatePlan(m.log, node.SelectExprs, m.fields, groups, aggTyp == canPush)
 		if err := aggrPlan.Build(); err != nil {
 			return err
 		}
@@ -224,6 +345,13 @@ func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser
 
 // pushSelectExpr used to push the select field, called by JoinNode.pushSelectExpr.
 func (m *MergeNode) pushSelectExpr(field selectTuple) (int, error) {
+	for i, f := range m.fields {
+		if field.field == f.field {
+			node := m.Sel.(*sqlparser.Select)
+			node.SelectExprs[i].(*sqlparser.AliasedExpr).As = sqlparser.NewColIdent(field.alias)
+			return i, nil
+		}
+	}
 	node := m.Sel.(*sqlparser.Select)
 	node.SelectExprs = append(node.SelectExprs, field.expr)
 	m.fields = append(m.fields, field)
@@ -243,6 +371,25 @@ func (m *MergeNode) pushOrderBy(sel sqlparser.SelectStatement) error {
 	node := m.Sel.(*sqlparser.Select)
 	if len(sel.(*sqlparser.Select).OrderBy) > 0 {
 		node.OrderBy = sel.(*sqlparser.Select).OrderBy
+		for _, order := range node.OrderBy {
+			e, ok := order.Expr.(*sqlparser.ColName)
+			if ok && e.Qualifier.Name.String() != "" {
+				tbInfo := m.referredTables[e.Qualifier.Name.String()]
+				if tbInfo.inSubquery {
+					return errors.Errorf("unsupported: unknow.table.name.'%s'.", tbInfo.alias)
+				}
+			}
+			if ok && (e.Qualifier.Name.String() != "" && m.referredTables[e.Qualifier.Name.String()].tableName == "") {
+				field, err := getMatchedField(e.Name.String(), m.fields)
+				if err != nil {
+					return err
+				}
+				e.Name = sqlparser.NewColIdent(field.field)
+				if len(field.referTables) > 0 {
+					e.Qualifier.Name = sqlparser.NewTableIdent(field.referTables[0])
+				}
+			}
+		}
 		orderPlan := NewOrderByPlan(m.log, node.OrderBy, m.fields, m.referredTables)
 		if err := orderPlan.Build(); err != nil {
 			return err
@@ -307,6 +454,18 @@ func (m *MergeNode) buildQuery(tbInfos map[string]*TableInfo) {
 		case *sqlparser.ColName:
 			tableName := node.Qualifier.Name.String()
 			if tableName != "" {
+				if tbInfo, ok := tbInfos[tableName]; ok && tbInfo.tableName == "" {
+					f, err := getMatchedField(node.Name.String(), m.fields)
+					if err != nil {
+						tableName = ""
+					} else {
+						tableName = f.referTables[0]
+					}
+					node.Qualifier.Name = sqlparser.NewTableIdent(tableName)
+					if tableName == "" {
+						break
+					}
+				}
 				if _, ok := m.referredTables[tableName]; !ok {
 					joinVar := procure(tbInfos, node)
 					buf.Myprintf("%a", ":"+joinVar)

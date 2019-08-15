@@ -9,9 +9,8 @@
 package planner
 
 import (
-	"testing"
-
 	"router"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -601,7 +600,6 @@ func TestSelectPlanDatabaseIsNull(t *testing.T) {
 
 func TestSelectUnsupportedPlan(t *testing.T) {
 	querys := []string{
-		"select * from A as A1 where id in (select id from B)",
 		"select distinct(b) from A",
 		"select * from A join B on B.id=A.id",
 		"select id from A order by b",
@@ -637,9 +635,33 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"select count(distinct *) from A",
 		"select t1.a from G",
 		"select A.id from A join B on A.id=B.id where A.id in (1,2) or B.a=1",
+		"select p.id, sum(p.a) as A from (select a, id from sbtest.A group by a having A\u003e1000) p",
+		"select p.b from (select avg(a) b from A) p",
+		"select p.id from (select A.id, B.id from A join B on A.id=B.id) p",
+		"select p.c from (select A.id from A) p",
+		"select p.id from (select A.id, A.id from A) p",
+		"select p.id from (select A.id, B.id from A join B) p",
+		"select p.a from (select A.id, A.a, B.id from A join B) p where p.id = 1",
+		"select p.a from (select A.id, A.a, B.id from A join B) p where p.i = 1",
+		"select p.id from (select A.id from A) p where p.i = 1",
+		"select p.id from (select A.id from A) p where q.id = 1",
+		"select q.id from (select A.id from B) p",
+		"select p.id, q.id from (select A.id from A where A.id=1) p , (select B.id from B) q where p.i = q.id",
+		"select p.id, q.id from (select A.id from A where A.id=1) p , (select B.id from B) q where p.id = q.i",
+		"select p.i from (select A.id from A where A.id=1) p , (select B.id from B) q",
+		"select q.i from (select A.id from A where A.id=1) p , (select B.id from B) q",
+		"select p.i from (select A.id from A join B) p",
+		"select id from A join B on A.id = B.id",
+		"select p.i from (select A.id from A) p",
+		"select p.id from (select A.id from A) p order by p.i",
+		"select p.id from (select A.id from A, B) p order by p.i",
+		"select id from A, B",
+		"select p.id from (select A.id from A) p order by A.id",
+		"select p.id, q.id from (select A.id from A where A.id=1) p , (select B.id from B) q where A.id = q.id",
+		"select p.id, q.id from (select A.id from A where A.id=1) p , (select B.id from B) q where p.id = B.id",
+		"select id from A, B where id =1",
 	}
 	results := []string{
-		"unsupported: subqueries.in.select",
 		"unsupported: distinct",
 		"unsupported: '*'.expression.in.cross-shard.query",
 		"unsupported: orderby[b].should.in.select.list",
@@ -650,7 +672,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: 'round(avg(id))'.contain.aggregate.in.select.exprs",
 		"unsupported: group_concat.in.select.exprs",
 		"unsupported: nextval.in.select.exprs",
-		"unsupported: subqueries.in.select",
+		"unsupported: subqueries.in.select.exprs",
 		"unsupported: 'avg(id) * 1000'.contain.aggregate.in.select.exprs",
 		"unsupported: syntax.error.at.'avg(*)'",
 		"unsupported:  unknown.table.'B'.in.field.list",
@@ -675,6 +697,31 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: syntax.error.at.'count(distinct *)'",
 		"unsupported: unknown.column.'t1.a'.in.exprs",
 		"unsupported: clause.'A.id in (1, 2) or B.a in (1)'.in.cross-shard.join",
+		"unsupported: group.by.in.subquery",
+		"unsupported: aggregation.function.in.subquery",
+		"unsupported: column.name.'id'.is.ambiguous",
+		"unsupported: unknown.column.name.'c'",
+		"unsupported: duplicate.column.name.'A.id'",
+		"unsupported: column.name.'id'.is.ambiguous",
+		"unsupported: column.name.'id'.is.ambiguous",
+		"unsupported: unknown.column.name.'i'",
+		"unsupported: unknown.column.name.'i'",
+		"unsupported: unknown.table.'q'.in.clause",
+		"unsupported: unknown.table.name.'A'.in.field.list",
+		"unsupported: unknown.column.name.'i'",
+		"unsupported: unknown.column.name.'i'",
+		"unsupported: unknown.column.name.'i'",
+		"unsupported: unknown.column.name.'i'",
+		"unsupported: unknown.column.name.'i'",
+		"unsupported: unknown.table.name.''.in.field.list",
+		"unsupported: unknown.column.name.'i'",
+		"unsupported: unknown.column.name.'i'",
+		"unsupported: unknown.column.name.'i'",
+		"unsupported: unknown.table.name.''.in.field.list",
+		"unsupported: unknow.table.name.'A'.",
+		"unsupported: unknow.table.name.'A'.",
+		"unsupported: unknow.table.name.'B'.",
+		"unsupported: unknown.column.'id'.in.clause",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -1075,6 +1122,309 @@ func TestSelectPlanJoinErr(t *testing.T) {
 			want := results[i]
 			got := err.Error()
 			assert.Equal(t, want, got)
+		}
+	}
+}
+
+func TestSelectPlanSubquery(t *testing.T) {
+	results := []string{
+		`{
+	"RawQuery": "select q from (select id q from A where id=1 or 2=id) p order by p.q",
+	"Project": "q",
+	"Partitions": [
+		{
+			"Query": "select id as q from sbtest.A6 as A where id in (1, 2) order by A.id asc",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	],
+	"GatherMerge": [
+		"A.q"
+	]
+}`,
+		`{
+	"RawQuery": "select p.q from (select id q from A where id=1 or 2=id) p group by p.q",
+	"Project": "q",
+	"Partitions": [
+		{
+			"Query": "select id as q from sbtest.A6 as A where id in (1, 2) order by A.id asc",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	],
+	"HashGroupBy": [
+		"id"
+	]
+}`,
+		`{
+	"RawQuery": "select * from (select id q from A where id=1 or 2=id) p where p.q = 1",
+	"Project": "q",
+	"Partitions": [
+		{
+			"Query": "select id as q from sbtest.A6 as A where id in (1, 2) and id = 1",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+		`{
+	"RawQuery": "select count(*) from (select id q from A where id=1 or 2=id) p",
+	"Project": "count(*)",
+	"Partitions": [
+		{
+			"Query": "select 1 as ` + "`count(*)`" + ` from sbtest.A6 as A where id in (1, 2)",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	],
+	"Aggregate": [
+		"count(*)"
+	]
+}`,
+		`{
+	"RawQuery": "select q.id, q.a from (select id, a from sbtest.A where (a\u003e1 and (id=1))) q",
+	"Project": "id, a",
+	"Partitions": [
+		{
+			"Query": "select id, a from sbtest.A6 as A where a \u003e 1 and id = 1",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+		`{
+	"RawQuery": "select id, sum(p.id) from (select A.id from A join B where A.id=1) p where p.id = 1 order by id",
+	"Project": "id, sum(p.id)",
+	"Partitions": [
+		{
+			"Query": "select A.id, A.id as ` + "`sum(p.id)`" + ` from sbtest.A6 as A where A.id = 1 and A.id = 1",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		},
+		{
+			"Query": "select 1 from sbtest.B0 as B",
+			"Backend": "backend1",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "select 1 from sbtest.B1 as B",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	],
+	"Join": {
+		"Type": "CROSS JOIN",
+		"Strategy": "Cartesian Join"
+	},
+	"Aggregate": [
+		"sum(p.id)"
+	],
+	"GatherMerge": [
+		"id"
+	]
+}`,
+		`{
+	"RawQuery": "select p.id from (select B.id from A join B where A.id=1) p where p.id = 1 order by p.id",
+	"Project": "id",
+	"Partitions": [
+		{
+			"Query": "select 1 from sbtest.A6 as A where A.id = 1",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		},
+		{
+			"Query": "select B.id from sbtest.B0 as B where B.id = 1",
+			"Backend": "backend1",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "select B.id from sbtest.B1 as B where B.id = 1",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	],
+	"Join": {
+		"Type": "CROSS JOIN",
+		"Strategy": "Cartesian Join"
+	},
+	"GatherMerge": [
+		"B.id"
+	]
+}`,
+		`{
+	"RawQuery": "select p.id, sum(p.a) as A from (select a, id from sbtest.A group by id having id\u003e1000) p",
+	"Project": "id, A",
+	"Partitions": [
+		{
+			"Query": "select id, a as A from sbtest.A1 as A group by id having id \u003e 1000 order by id asc",
+			"Backend": "backend1",
+			"Range": "[0-32)"
+		},
+		{
+			"Query": "select id, a as A from sbtest.A2 as A group by id having id \u003e 1000 order by id asc",
+			"Backend": "backend2",
+			"Range": "[32-64)"
+		},
+		{
+			"Query": "select id, a as A from sbtest.A3 as A group by id having id \u003e 1000 order by id asc",
+			"Backend": "backend3",
+			"Range": "[64-96)"
+		},
+		{
+			"Query": "select id, a as A from sbtest.A4 as A group by id having id \u003e 1000 order by id asc",
+			"Backend": "backend4",
+			"Range": "[96-256)"
+		},
+		{
+			"Query": "select id, a as A from sbtest.A5 as A group by id having id \u003e 1000 order by id asc",
+			"Backend": "backend5",
+			"Range": "[256-512)"
+		},
+		{
+			"Query": "select id, a as A from sbtest.A6 as A group by id having id \u003e 1000 order by id asc",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	],
+	"Aggregate": [
+		"sum(p.a)"
+	],
+	"GatherMerge": [
+		"id"
+	]
+}`,
+		`{
+	"RawQuery": "select p.id, sum(p.a) as A from (select a, id from sbtest.A) p group by id having p.A\u003e1000",
+	"Project": "id, A",
+	"Partitions": [
+		{
+			"Query": "select id, a as A from sbtest.A1 as A having A.A \u003e 1000 order by id asc",
+			"Backend": "backend1",
+			"Range": "[0-32)"
+		},
+		{
+			"Query": "select id, a as A from sbtest.A2 as A having A.A \u003e 1000 order by id asc",
+			"Backend": "backend2",
+			"Range": "[32-64)"
+		},
+		{
+			"Query": "select id, a as A from sbtest.A3 as A having A.A \u003e 1000 order by id asc",
+			"Backend": "backend3",
+			"Range": "[64-96)"
+		},
+		{
+			"Query": "select id, a as A from sbtest.A4 as A having A.A \u003e 1000 order by id asc",
+			"Backend": "backend4",
+			"Range": "[96-256)"
+		},
+		{
+			"Query": "select id, a as A from sbtest.A5 as A having A.A \u003e 1000 order by id asc",
+			"Backend": "backend5",
+			"Range": "[256-512)"
+		},
+		{
+			"Query": "select id, a as A from sbtest.A6 as A having A.A \u003e 1000 order by id asc",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	],
+	"Aggregate": [
+		"sum(p.a)"
+	],
+	"HashGroupBy": [
+		"id"
+	]
+}`,
+		`{
+	"RawQuery": "select p.id, q.id from (select A.id from A where A.id=1) p , (select B.id from B) q where p.id = q.id",
+	"Project": "id, id",
+	"Partitions": [
+		{
+			"Query": "select A.id from sbtest.A6 as A where A.id = 1 order by A.id asc",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		},
+		{
+			"Query": "select B.id from sbtest.B0 as B order by B.id asc",
+			"Backend": "backend1",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "select B.id from sbtest.B1 as B order by B.id asc",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	],
+	"Join": {
+		"Type": "INNER JOIN",
+		"Strategy": "Sort Merge Join"
+	}
+}`,
+		`{
+	"RawQuery": "select p.id, q.i d from (select A.id from A where A.id=1) p , (select B.id as i from B) q where q.i = p.id",
+	"Project": "id, d",
+	"Partitions": [
+		{
+			"Query": "select A.id from sbtest.A6 as A where A.id = 1 order by A.id asc",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		},
+		{
+			"Query": "select B.id as d from sbtest.B0 as B order by B.id asc",
+			"Backend": "backend1",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "select B.id as d from sbtest.B1 as B order by B.id asc",
+			"Backend": "backend2",
+			"Range": "[512-4096)"
+		}
+	],
+	"Join": {
+		"Type": "INNER JOIN",
+		"Strategy": "Sort Merge Join"
+	}
+}`,
+	}
+	querys := []string{
+		"select q from (select id q from A where id=1 or 2=id) p order by p.q",
+		"select p.q from (select id q from A where id=1 or 2=id) p group by p.q",
+		"select * from (select id q from A where id=1 or 2=id) p where p.q = 1",
+		"select count(*) from (select id q from A where id=1 or 2=id) p",
+		"select q.id, q.a from (select id, a from sbtest.A where (a\u003e1 and (id=1))) q",
+		"select id, sum(p.id) from (select A.id from A join B where A.id=1) p where p.id = 1 order by id",
+		"select p.id from (select B.id from A join B where A.id=1) p where p.id = 1 order by p.id",
+		"select p.id, sum(p.a) as A from (select a, id from sbtest.A group by id having id\u003e1000) p",
+		"select p.id, sum(p.a) as A from (select a, id from sbtest.A) p group by id having p.A\u003e1000",
+		"select p.id, q.id from (select A.id from A where A.id=1) p , (select B.id from B) q where p.id = q.id",
+		"select p.id, q.i d from (select A.id from A where A.id=1) p , (select B.id as i from B) q where q.i = p.id",
+	}
+
+	{
+		log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+		database := "sbtest"
+
+		route, cleanup := router.MockNewRouter(log)
+		defer cleanup()
+
+		err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+		assert.Nil(t, err)
+		for i, query := range querys {
+			node, err := sqlparser.Parse(query)
+			assert.Nil(t, err)
+			plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+
+			// plan build
+			{
+				log.Info("--select.query:%+v", query)
+				err := plan.Build()
+				assert.Nil(t, err)
+				got := plan.JSON()
+				want := results[i]
+				assert.Equal(t, want, got)
+				assert.Equal(t, PlanTypeSelect, plan.Type())
+				assert.NotNil(t, plan.Children())
+			}
 		}
 	}
 }

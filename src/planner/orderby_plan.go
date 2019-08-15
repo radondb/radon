@@ -80,8 +80,15 @@ func (p *OrderByPlan) analyze() error {
 			orderBy.Field = e.Name.String()
 			orderBy.Table = e.Qualifier.Name.String()
 			if orderBy.Table != "" {
-				if _, ok := p.tbInfos[orderBy.Table]; !ok {
+				if tbInfo, ok := p.tbInfos[orderBy.Table]; !ok {
 					return errors.Errorf("unsupported: unknow.table.in.order.by.field[%s.%s]", orderBy.Table, orderBy.Field)
+				} else if tbInfo.tableName == "" {
+					f, err := getMatchedField(orderBy.Field, p.tuples)
+					if err != nil {
+						return err
+					}
+					orderBy.Field = f.field
+					orderBy.Table = f.referTables[0]
 				}
 			}
 
