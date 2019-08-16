@@ -67,6 +67,14 @@ func isNumber(t querypb.Type) bool {
 	return IsIntegral(t) || IsFloat(t) || t == Decimal
 }
 
+func IsTemporal(t querypb.Type) bool {
+	switch t {
+	case Timestamp, Date, Time, Datetime:
+		return true
+	}
+	return false
+}
+
 // Vitess data types. These are idiomatically
 // named synonyms for the querypb.Type values.
 const (

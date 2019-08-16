@@ -86,6 +86,22 @@ func TestNewAggregations(t *testing.T) {
 			Name: "b",
 			Type: querypb.Type_VARCHAR,
 		}},
+		{{
+			Name:     "a",
+			Type:     querypb.Type_TIMESTAMP,
+			Decimals: 6,
+		}, {
+			Name: "b",
+			Type: querypb.Type_DATETIME,
+		}},
+		{{
+			Name:     "a",
+			Type:     querypb.Type_DATE,
+			Decimals: 0,
+		}, {
+			Name: "b",
+			Type: querypb.Type_TIME,
+		}},
 	}
 
 	typs := [][]querypb.Type{
@@ -96,6 +112,8 @@ func TestNewAggregations(t *testing.T) {
 		{querypb.Type_FLOAT64, sqltypes.Decimal},
 		{sqltypes.Decimal, querypb.Type_FLOAT64},
 		{querypb.Type_FLOAT64, querypb.Type_FLOAT64},
+		{sqltypes.Decimal, sqltypes.Decimal},
+		{sqltypes.Decimal, sqltypes.Decimal},
 	}
 	for i, field := range fields {
 		aggrs := NewAggregations(plan1, false, field)

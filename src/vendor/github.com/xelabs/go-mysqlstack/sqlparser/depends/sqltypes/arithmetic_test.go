@@ -12,6 +12,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/stretchr/testify/assert"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
@@ -146,6 +148,7 @@ func TestAdd(t *testing.T) {
 	tcases := []struct {
 		v1, v2 Value
 		out    Value
+		typ    querypb.Type
 		err    string
 	}{{
 		// All nulls.
@@ -156,40 +159,130 @@ func TestAdd(t *testing.T) {
 		// First value null.
 		v1:  NewInt64(1),
 		v2:  NULL,
+		typ: Int64,
 		out: NewInt64(1),
 	}, {
 		// Second value null.
 		v1:  NULL,
 		v2:  NewInt64(1),
+		typ: Int64,
 		out: NewInt64(1),
-	}, {
-		// Normal case.
-		v1:  NewInt64(1),
-		v2:  NewInt64(2),
-		out: NewInt64(3),
 	}, {
 		// Make sure underlying error is returned for LHS.
 		v1:  testVal(Int64, "1.2"),
 		v2:  NewInt64(2),
+		typ: Int64,
 		err: "strconv.ParseInt: parsing \"1.2\": invalid syntax",
 	}, {
 		// Make sure underlying error is returned for RHS.
 		v1:  NewInt64(2),
 		v2:  testVal(Int64, "1.2"),
+		typ: Int64,
 		err: "strconv.ParseInt: parsing \"1.2\": invalid syntax",
 	}, {
 		// Make sure underlying error is returned while adding.
-		v1:  NewInt64(-1),
-		v2:  NewUint64(2),
-		err: "cannot add a negative number to an unsigned integer: 2, -1",
+		v1:  NewInt64(-2),
+		v2:  NewUint64(1),
+		typ: Uint64,
+		err: "BIGINT.UNSIGNED.value.is.out.of.range.in: '1 + -2'",
 	}, {
-		// Make sure underlying error is returned while converting.
+		v1:  testVal(Decimal, "1.797693134862315708145274237317043567981e+308"),
+		v2:  testVal(Decimal, "1.797693134862315708145274237317043567981e+308"),
+		typ: Decimal,
+		err: "DOUBLE.value.is.out.of.range",
+	}, {
+		v1:  NewInt64(3),
+		v2:  NewFloat64(2.2),
+		typ: Float64,
+		out: NewFloat64(5.2),
+	}, {
+		v1:  NewUint64(3),
+		v2:  NewFloat64(2),
+		typ: Float64,
+		out: NewFloat64(5),
+	}, {
+		v1:  testVal(Decimal, "3"),
+		v2:  NewFloat64(2),
+		typ: Float64,
+		out: NewFloat64(5),
+	}, {
 		v1:  NewFloat64(1),
 		v2:  NewFloat64(2),
-		err: "unexpected type conversion: FLOAT64 to INT64",
+		typ: Float64,
+		out: NewFloat64(3),
+	}, {
+		v1:  testVal(Decimal, "1.2"),
+		v2:  testVal(Decimal, "2.1"),
+		typ: Decimal,
+		out: testVal(Decimal, "3.3"),
+	}, {
+		v1:  testVal(Decimal, "1.2"),
+		v2:  NewFloat64(2.1),
+		typ: Float64,
+		out: testVal(Float64, "3.3"),
+	}, {
+		v1:  testVal(Decimal, "1.2"),
+		v2:  NewUint64(1),
+		typ: Decimal,
+		out: testVal(Decimal, "2.2"),
+	}, {
+		v1:  testVal(Decimal, "1.2"),
+		v2:  NewInt64(-1),
+		typ: Decimal,
+		out: testVal(Decimal, "0.2"),
+	}, {
+		v1:  NewInt64(3),
+		v2:  NewInt64(2),
+		typ: Int64,
+		out: NewInt64(5),
+	}, {
+		v1:  NewUint64(3),
+		v2:  NewInt64(2),
+		typ: Uint64,
+		out: NewUint64(5),
+	}, {
+		v1:  testVal(Decimal, "3"),
+		v2:  NewInt64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "5"),
+	}, {
+		v1:  NewFloat64(3),
+		v2:  NewInt64(2),
+		typ: Float64,
+		out: NewFloat64(5),
+	}, {
+		v1:  NewInt64(3),
+		v2:  NewUint64(2),
+		typ: Uint64,
+		out: NewUint64(5),
+	}, {
+		v1:  NewUint64(3),
+		v2:  NewUint64(2),
+		typ: Uint64,
+		out: NewUint64(5),
+	}, {
+		v1:  testVal(Decimal, "3"),
+		v2:  NewUint64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "5"),
+	}, {
+		v1:  NewFloat64(3),
+		v2:  NewUint64(2),
+		typ: Float64,
+		out: NewFloat64(5),
+	}, {
+		v1:  testVal(Datetime, "1000-01-01 00:00:00.00"),
+		v2:  NewUint64(200),
+		typ: Decimal,
+		out: testVal(Decimal, "10000101000200"),
+	}, {
+		v1:  testVal(Date, "1000-01-01"),
+		v2:  NewUint64(200),
+		typ: Uint64,
+		out: NewUint64(10000301),
 	}}
 	for _, tcase := range tcases {
-		got, errs := NullsafeAdd(tcase.v1, tcase.v2, Int64, -1)
+		got, errs := NullsafeAdd(tcase.v1, tcase.v2, tcase.typ, -1)
 		if errs != nil {
 			assert.Equal(t, tcase.err, errs.Error())
 			continue
@@ -202,47 +295,142 @@ func TestDiv(t *testing.T) {
 	tcases := []struct {
 		v1, v2 Value
 		out    Value
+		typ    querypb.Type
 		err    string
 	}{{
 		// First value null.
 		v1:  NewInt64(1),
 		v2:  NULL,
+		typ: Decimal,
 		out: NULL,
 	}, {
 		// Second value null.
 		v1:  NULL,
 		v2:  NewInt64(1),
+		typ: Decimal,
 		out: NULL,
 	}, {
 		// 0.
 		v1:  NewInt64(1),
 		v2:  NewInt64(0),
+		typ: Decimal,
 		out: NULL,
-	}, {
-		v1:  NewInt64(2),
-		v2:  NewInt64(1),
-		out: NewFloat64(2.0000),
 	}, {
 		// Make sure underlying error is returned for LHS.
 		v1:  testVal(Int64, "1.2"),
 		v2:  NewInt64(2),
+		typ: Decimal,
 		err: "strconv.ParseInt: parsing \"1.2\": invalid syntax",
 	}, {
 		// Make sure underlying error is returned for RHS.
 		v1:  NewInt64(2),
 		v2:  testVal(Int64, "1.2"),
+		typ: Decimal,
 		err: "strconv.ParseInt: parsing \"1.2\": invalid syntax",
 	}, {
-		v1:  NewInt64(-1),
-		v2:  NewUint64(2),
-		out: NewFloat64(-0.5000),
+		// Make sure underlying error is returned while adding.
+		v1:  NewFloat64(1.797693134862315708145274237317043567981e+308),
+		v2:  NewFloat64(0.2),
+		typ: Float64,
+		err: "DOUBLE.value.is.out.of.range.in: '1.7976931348623157e+308 / 0.2'",
 	}, {
-		v1:  NewFloat64(1),
+		v1:  testVal(Decimal, "1.797693134862315708145274237317043567981e+308"),
+		v2:  testVal(Decimal, "0.2"),
+		typ: Decimal,
+		err: "DOUBLE.value.is.out.of.range",
+	}, {
+		v1:  NewInt64(3),
+		v2:  NewFloat64(2),
+		typ: Float64,
+		out: testVal(Float64, "1.5000"),
+	}, {
+		v1:  NewUint64(3),
+		v2:  NewFloat64(2),
+		typ: Float64,
+		out: testVal(Float64, "1.5000"),
+	}, {
+		v1:  testVal(Decimal, "3"),
+		v2:  NewFloat64(2),
+		typ: Float64,
+		out: testVal(Float64, "1.5000"),
+	}, {
+		v1:  NewFloat64(3),
+		v2:  NewFloat64(2),
+		typ: Float64,
+		out: testVal(Float64, "1.5000"),
+	}, {
+		v1:  NewInt64(3),
+		v2:  testVal(Decimal, "2"),
+		typ: Decimal,
+		out: testVal(Decimal, "1.5000"),
+	}, {
+		v1:  NewUint64(3),
+		v2:  testVal(Decimal, "2"),
+		typ: Decimal,
+		out: testVal(Decimal, "1.5000"),
+	}, {
+		v1:  testVal(Decimal, "3"),
+		v2:  testVal(Decimal, "2"),
+		typ: Decimal,
+		out: testVal(Decimal, "1.5000"),
+	}, {
+		v1:  NewFloat64(3),
+		v2:  testVal(Decimal, "2"),
+		typ: Float64,
+		out: testVal(Float64, "1.5000"),
+	}, {
+		v1:  NewInt64(3),
 		v2:  NewInt64(2),
-		out: NewFloat64(0.5000),
+		typ: Decimal,
+		out: testVal(Decimal, "1.5000"),
+	}, {
+		v1:  NewUint64(3),
+		v2:  NewInt64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "1.5000"),
+	}, {
+		v1:  testVal(Decimal, "3"),
+		v2:  NewInt64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "1.5000"),
+	}, {
+		v1:  NewFloat64(3),
+		v2:  NewInt64(2),
+		typ: Float64,
+		out: testVal(Float64, "1.5000"),
+	}, {
+		v1:  NewInt64(3),
+		v2:  NewUint64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "1.5000"),
+	}, {
+		v1:  NewUint64(3),
+		v2:  NewUint64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "1.5000"),
+	}, {
+		v1:  testVal(Decimal, "3"),
+		v2:  NewUint64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "1.5000"),
+	}, {
+		v1:  NewFloat64(3),
+		v2:  NewUint64(2),
+		typ: Float64,
+		out: testVal(Float64, "1.5000"),
+	}, {
+		v1:  testVal(Datetime, "1000-01-01 00:00:00.00"),
+		v2:  NewUint64(200),
+		typ: Decimal,
+		out: testVal(Decimal, "50000505000.0000"),
+	}, {
+		v1:  testVal(Date, "1000-01-01"),
+		v2:  NewUint64(200),
+		typ: Decimal,
+		out: testVal(Decimal, "50000.5050"),
 	}}
 	for _, tcase := range tcases {
-		got, errs := NullsafeDiv(tcase.v1, tcase.v2, Float64, 4)
+		got, errs := NullsafeDiv(tcase.v1, tcase.v2, tcase.typ, 4)
 		if errs != nil {
 			assert.Equal(t, tcase.err, errs.Error())
 			continue
@@ -282,6 +470,18 @@ func TestNullsafeCompare(t *testing.T) {
 		v2:  NewUint64(2),
 		out: -1,
 	}, {
+		v1:  NewInt64(1),
+		v2:  testVal(Decimal, "1.0"),
+		out: 0,
+	}, {
+		v1:  testVal(Decimal, "1.0"),
+		v2:  NewUint64(2),
+		out: -1,
+	}, {
+		v1:  testVal(Decimal, "1.0"),
+		v2:  NewFloat64(2),
+		out: -1,
+	}, {
 		// Non-numeric equal
 		v1:  testVal(VarBinary, "abcd"),
 		v2:  testVal(Binary, "abcd"),
@@ -306,6 +506,16 @@ func TestNullsafeCompare(t *testing.T) {
 		v1:  testVal(Datetime, "1000-01-01 00:00:00"),
 		v2:  testVal(Binary, "2000-01-01 00:00:00"),
 		out: -1,
+	}, {
+		// Date/Time types
+		v1:  testVal(Datetime, "1000-01-01 00:00:00.00"),
+		v2:  testVal(Decimal, "10000101000000.00"),
+		out: 0,
+	}, {
+		// Date/Time types
+		v1:  testVal(Date, "1000-01-01"),
+		v2:  testVal(Int64, "10000101"),
+		out: 0,
 	}}
 	for _, tcase := range tcases {
 		got := NullsafeCompare(tcase.v1, tcase.v2)
@@ -364,6 +574,10 @@ func TestCast(t *testing.T) {
 		v:   testVal(Decimal, "1.24"),
 		out: testVal(Float32, "1.24"),
 	}, {
+		typ: Decimal,
+		v:   testVal(Float32, "1.24"),
+		out: testVal(Decimal, "1.24"),
+	}, {
 		typ: Float64,
 		v:   testVal(VarChar, "1.25"),
 		out: testVal(Float64, "1.25"),
@@ -421,9 +635,12 @@ func TestNewNumeric(t *testing.T) {
 		v:   NewFloat64(1),
 		out: numeric{typ: Float64, fval: 1},
 	}, {
+		v:   testVal(Decimal, "1.2"),
+		out: numeric{typ: Decimal, dval: decimal.NewFromFloat(1.2)},
+	}, {
 		// For non-number type, Int64 is the default.
 		v:   testVal(VarChar, "1"),
-		out: numeric{typ: Int64, ival: 1},
+		out: numeric{typ: Float64, fval: 1},
 	}, {
 		// If Int64 can't work, we use Float64.
 		v:   testVal(VarChar, "1.2"),
@@ -484,24 +701,45 @@ func TestAddNumeric(t *testing.T) {
 		v2:  numeric{typ: Float64, fval: 2},
 		out: numeric{typ: Float64, fval: 3},
 	}, {
+		v1:  numeric{typ: Int64, ival: 1},
+		v2:  numeric{typ: Decimal, dval: decimal.NewFromFloat(2)},
+		out: numeric{typ: Decimal, dval: decimal.NewFromFloat(3)},
+	}, {
+		v1:  numeric{typ: Uint64, uval: 1},
+		v2:  numeric{typ: Decimal, dval: decimal.NewFromFloat(2)},
+		out: numeric{typ: Decimal, dval: decimal.NewFromFloat(3)},
+	}, {
+		v1:  numeric{typ: Decimal, dval: decimal.NewFromFloat(1)},
+		v2:  numeric{typ: Decimal, dval: decimal.NewFromFloat(2)},
+		out: numeric{typ: Decimal, dval: decimal.NewFromFloat(3)},
+	}, {
+		v1:  numeric{typ: Float64, fval: 1},
+		v2:  numeric{typ: Decimal, dval: decimal.NewFromFloat(2)},
+		out: numeric{typ: Float64, fval: 3},
+	}, {
 		// Int64 overflow.
 		v1:  numeric{typ: Int64, ival: 9223372036854775807},
 		v2:  numeric{typ: Int64, ival: 2},
-		out: numeric{typ: Float64, fval: 9223372036854775809},
+		err: fmt.Errorf("BIGINT.value.is.out.of.range.in: '9223372036854775807 + 2'"),
 	}, {
 		// Int64 underflow.
 		v1:  numeric{typ: Int64, ival: -9223372036854775807},
 		v2:  numeric{typ: Int64, ival: -2},
-		out: numeric{typ: Float64, fval: -9223372036854775809},
+		err: fmt.Errorf("BIGINT.value.is.out.of.range.in: '-9223372036854775807 + -2'"),
 	}, {
 		v1:  numeric{typ: Int64, ival: -1},
 		v2:  numeric{typ: Uint64, uval: 2},
-		err: fmt.Errorf("cannot add a negative number to an unsigned integer: 2, -1"),
+		out: numeric{typ: Uint64, uval: 1},
 	}, {
 		// Uint64 overflow.
 		v1:  numeric{typ: Uint64, uval: 18446744073709551615},
 		v2:  numeric{typ: Uint64, uval: 2},
-		out: numeric{typ: Float64, fval: 18446744073709551617},
+		err: fmt.Errorf("BIGINT.UNSIGNED.value.is.out.of.range.in: '18446744073709551615 + 2'"),
+	}, {
+		// Float64 overflow.
+		v1:  numeric{typ: Float64, fval: 1.797693134862315708145274237317043567981e+308},
+		v2:  numeric{typ: Float64, fval: 1.797693134862315708145274237317043567981e+308},
+		err: fmt.Errorf("DOUBLE.value.is.out.of.range.in: '1.7976931348623157e+308 + 1.7976931348623157e+308'"),
 	}}
 	for _, tcase := range tcases {
 		got, err := addNumeric(tcase.v1, tcase.v2)
@@ -517,6 +755,7 @@ func TestPrioritize(t *testing.T) {
 	ival := numeric{typ: Int64}
 	uval := numeric{typ: Uint64}
 	fval := numeric{typ: Float64}
+	dval := numeric{typ: Decimal}
 
 	tcases := []struct {
 		v1, v2     numeric
@@ -550,6 +789,21 @@ func TestPrioritize(t *testing.T) {
 		v1:   fval,
 		v2:   uval,
 		out1: fval,
+		out2: uval,
+	}, {
+		v1:   dval,
+		v2:   fval,
+		out1: fval,
+		out2: dval,
+	}, {
+		v1:   ival,
+		v2:   dval,
+		out1: dval,
+		out2: ival,
+	}, {
+		v1:   uval,
+		v2:   dval,
+		out1: dval,
 		out2: uval,
 	}}
 	for _, tcase := range tcases {
