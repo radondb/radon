@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTimeToNumeric(t *testing.T) {
+func TesttimeToNumeric(t *testing.T) {
 	testcases := []struct {
 		in  Value
 		out interface{}
@@ -63,7 +63,7 @@ func TestTimeToNumeric(t *testing.T) {
 	}
 
 	for _, tcase := range testcases {
-		got, err := TimeToNumeric(tcase.in)
+		got, err := timeToNumeric(tcase.in)
 		assert.Nil(t, err)
 
 		var v interface{}

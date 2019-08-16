@@ -7,8 +7,11 @@ package sqltypes
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"strconv"
 
+	"github.com/shopspring/decimal"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
 
@@ -19,12 +22,13 @@ type numeric struct {
 	ival int64
 	uval uint64
 	fval float64
+	dval decimal.Decimal
 }
 
 // NullsafeAdd adds two Values in a null-safe manner. A null value
 // is treated as 0. If both values are null, then a null is returned.
 // If both values are not null, a numeric value is built
-// from each input: Signed->int64, Unsigned->uint64, Float->float64.
+// from each input: Signed->int64, Unsigned->uint64, Float->float64, Decimal->Decimal.
 // Otherwise the 'best type fit' is chosen for the number: int64 or float64.
 // Addition is performed by upgrading types as needed, or in case
 // of overflow: int64->uint64, int64->float64, uint64->float64.
@@ -48,11 +52,11 @@ func NullsafeAdd(v1, v2 Value, resultType querypb.Type, prec int) (Value, error)
 	if err != nil {
 		return NULL, err
 	}
-	lresult, err := addNumeric(lv1, lv2)
+	res, err := addNumeric(lv1, lv2)
 	if err != nil {
 		return NULL, err
 	}
-	return castFromNumeric(lresult, resultType, prec)
+	return castFromNumeric(res, resultType, prec)
 }
 
 // NullsafeDiv used to divide two Values in a null-safe manner.
@@ -74,8 +78,17 @@ func NullsafeDiv(v1, v2 Value, resultType querypb.Type, prec int) (Value, error)
 		return NULL, nil
 	}
 
-	lresult := numeric{typ: Float64, fval: lv1.fval / lv2.fval}
-	return castFromNumeric(lresult, resultType, prec)
+	res := numeric{}
+	if resultType == Decimal {
+		res = numeric{typ: Decimal, dval: decimal.NewFromFloat(lv1.fval).Div(decimal.NewFromFloat(lv2.fval))}
+	} else {
+		fval := lv1.fval / lv2.fval
+		if math.IsInf(fval, 0) {
+			return NULL, fmt.Errorf("DOUBLE.value.is.out.of.range.in: '%v / %v'", lv1.fval, lv2.fval)
+		}
+		res = numeric{typ: Float64, fval: fval}
+	}
+	return castFromNumeric(res, resultType, prec)
 }
 
 // NullsafeCompare returns 0 if v1==v2, -1 if v1<v2, and 1 if v1>v2.
@@ -144,7 +157,7 @@ func minmax(v1, v2 Value, min bool) Value {
 	return v2
 }
 
-// newNumeric parses a value and produces an Int64, Uint64 or Float64.
+// newNumeric parses a value and produces an Int64, Uint64, Decimal or Float64.
 func newNumeric(v Value) (numeric, error) {
 	str := v.String()
 	switch {
@@ -166,19 +179,24 @@ func newNumeric(v Value) (numeric, error) {
 			return numeric{}, err
 		}
 		return numeric{fval: fval, typ: Float64}, nil
+	case v.IsTemporal():
+		return timeToNumeric(v)
+	case v.Type() == Decimal:
+		dval, err := decimal.NewFromString(str)
+		if err != nil {
+			return numeric{}, err
+		}
+		return numeric{dval: dval, typ: Decimal}, nil
 	}
 
 	// For other types, do best effort.
-	if ival, err := strconv.ParseInt(str, 10, 64); err == nil {
-		return numeric{ival: ival, typ: Int64}, nil
-	}
 	if fval, err := strconv.ParseFloat(str, 64); err == nil {
 		return numeric{fval: fval, typ: Float64}, nil
 	}
 	return numeric{ival: 0, typ: Int64}, nil
 }
 
-// newNumeric parses a value and produces an Int64, Uint64 or Float64.
+// newNumericFloat parses a value and produces an Float64.
 func newNumericFloat(v Value) (numeric, error) {
 	str := v.String()
 	var fval float64
@@ -195,20 +213,29 @@ func newNumericFloat(v Value) (numeric, error) {
 			return numeric{}, err
 		}
 		fval = float64(uval)
-	case v.IsFloat():
+	case v.IsFloat() || v.Type() == Decimal:
 		val, err := strconv.ParseFloat(str, 64)
 		if err != nil {
 			return numeric{}, err
 		}
 		fval = val
+	case v.IsTemporal():
+		num, err := timeToNumeric(v)
+		if err != nil {
+			return numeric{}, err
+		}
+		switch num.typ {
+		case Uint64:
+			fval = float64(num.uval)
+		case Int64:
+			fval = float64(num.ival)
+		case Float64:
+			fval = num.fval
+		}
 	default:
 		// For other types, do best effort.
-		if ival, err := strconv.ParseInt(str, 10, 64); err == nil {
-			fval = float64(ival)
-		} else {
-			if val, err := strconv.ParseFloat(str, 64); err == nil {
-				fval = val
-			}
+		if val, err := strconv.ParseFloat(str, 64); err == nil {
+			fval = val
 		}
 	}
 
@@ -219,46 +246,35 @@ func addNumeric(v1, v2 numeric) (numeric, error) {
 	v1, v2 = prioritize(v1, v2)
 	switch v1.typ {
 	case Int64:
-		return intPlusInt(v1.ival, v2.ival), nil
+		return intPlusInt(v1.ival, v2.ival)
 	case Uint64:
 		switch v2.typ {
 		case Int64:
 			return uintPlusInt(v1.uval, v2.ival)
 		case Uint64:
-			return uintPlusUint(v1.uval, v2.uval), nil
+			return uintPlusUint(v1.uval, v2.uval)
 		}
+	case Decimal:
+		return decimalPlusAny(v1.dval, v2)
 	case Float64:
-		return floatPlusAny(v1.fval, v2), nil
-	}
-	panic("unreachable")
-}
-
-func divNumeric(v1, v2 numeric) (numeric, error) {
-	switch v1.typ {
-	case Int64:
-		return intPlusInt(v1.ival, v2.ival), nil
-	case Uint64:
-		switch v2.typ {
-		case Int64:
-			return uintPlusInt(v1.uval, v2.ival)
-		case Uint64:
-			return uintPlusUint(v1.uval, v2.uval), nil
-		}
-	case Float64:
-		return floatPlusAny(v1.fval, v2), nil
+		return floatPlusAny(v1.fval, v2)
 	}
 	panic("unreachable")
 }
 
 // prioritize reorders the input parameters
-// to be Float64, Uint64, Int64.
+// to be Float64, Uint64, Int64, Decimal.
 func prioritize(v1, v2 numeric) (altv1, altv2 numeric) {
 	switch v1.typ {
 	case Int64:
-		if v2.typ == Uint64 || v2.typ == Float64 {
+		if v2.typ == Uint64 || v2.typ == Float64 || v2.typ == Decimal {
 			return v2, v1
 		}
 	case Uint64:
+		if v2.typ == Float64 || v2.typ == Decimal {
+			return v2, v1
+		}
+	case Decimal:
 		if v2.typ == Float64 {
 			return v2, v1
 		}
@@ -266,43 +282,56 @@ func prioritize(v1, v2 numeric) (altv1, altv2 numeric) {
 	return v1, v2
 }
 
-func intPlusInt(v1, v2 int64) numeric {
-	result := v1 + v2
-	if v1 > 0 && v2 > 0 && result < 0 {
-		goto overflow
+func intPlusInt(v1, v2 int64) (numeric, error) {
+	if (v1 > 0 && v2 > math.MaxInt64-v1) || (v1 < 0 && v2 < math.MinInt64-v1) {
+		return numeric{}, fmt.Errorf("BIGINT.value.is.out.of.range.in: '%v + %v'", v1, v2)
 	}
-	if v1 < 0 && v2 < 0 && result > 0 {
-		goto overflow
-	}
-	return numeric{typ: Int64, ival: result}
 
-overflow:
-	return numeric{typ: Float64, fval: float64(v1) + float64(v2)}
+	return numeric{typ: Int64, ival: v1 + v2}, nil
 }
 
 func uintPlusInt(v1 uint64, v2 int64) (numeric, error) {
 	if v2 < 0 {
-		return numeric{}, fmt.Errorf("cannot add a negative number to an unsigned integer: %d, %d", v1, v2)
+		if uint64(-v2) > v1 {
+			return numeric{}, fmt.Errorf("BIGINT.UNSIGNED.value.is.out.of.range.in: '%v + %v'", v1, v2)
+		}
+		return numeric{typ: Uint64, uval: v1 - uint64(-v2)}, nil
 	}
-	return uintPlusUint(v1, uint64(v2)), nil
+	return uintPlusUint(v1, uint64(v2))
 }
 
-func uintPlusUint(v1, v2 uint64) numeric {
-	result := v1 + v2
-	if result < v2 {
-		return numeric{typ: Float64, fval: float64(v1) + float64(v2)}
+func uintPlusUint(v1, v2 uint64) (numeric, error) {
+	if v1 > math.MaxUint64-v2 {
+		return numeric{}, fmt.Errorf("BIGINT.UNSIGNED.value.is.out.of.range.in: '%v + %v'", v1, v2)
 	}
-	return numeric{typ: Uint64, uval: result}
+	return numeric{typ: Uint64, uval: v1 + v2}, nil
 }
 
-func floatPlusAny(v1 float64, v2 numeric) numeric {
+func decimalPlusAny(v1 decimal.Decimal, v2 numeric) (numeric, error) {
+	switch v2.typ {
+	case Int64:
+		v2.dval = decimal.NewFromFloat(float64(v2.ival))
+	case Uint64:
+		v2.dval = decimal.NewFromFloat(float64(v2.uval))
+	}
+	return numeric{typ: Decimal, dval: v1.Add(v2.dval)}, nil
+}
+
+func floatPlusAny(v1 float64, v2 numeric) (numeric, error) {
 	switch v2.typ {
 	case Int64:
 		v2.fval = float64(v2.ival)
 	case Uint64:
 		v2.fval = float64(v2.uval)
+	case Decimal:
+		v2.fval, _ = v2.dval.Float64()
 	}
-	return numeric{typ: Float64, fval: v1 + v2.fval}
+
+	res := v1 + v2.fval
+	if math.IsInf(res, 0) {
+		return numeric{}, fmt.Errorf("DOUBLE.value.is.out.of.range.in: '%v + %v'", v1, v2.fval)
+	}
+	return numeric{typ: Float64, fval: res}, nil
 }
 
 func castFromNumeric(v numeric, resultType querypb.Type, prec int) (Value, error) {
@@ -311,14 +340,14 @@ func castFromNumeric(v numeric, resultType querypb.Type, prec int) (Value, error
 		switch v.typ {
 		case Int64:
 			return MakeTrusted(resultType, strconv.AppendInt(nil, v.ival, 10)), nil
-		case Uint64, Float64:
+		case Uint64, Float64, Decimal:
 			return NULL, fmt.Errorf("unexpected type conversion: %v to %v", v.typ, resultType)
 		}
 	case IsUnsigned(resultType):
 		switch v.typ {
 		case Uint64:
 			return MakeTrusted(resultType, strconv.AppendUint(nil, v.uval, 10)), nil
-		case Int64, Float64:
+		case Int64, Float64, Decimal:
 			return NULL, fmt.Errorf("unexpected type conversion: %v to %v", v.typ, resultType)
 		}
 	case IsFloat(resultType) || resultType == Decimal:
@@ -329,10 +358,23 @@ func castFromNumeric(v numeric, resultType querypb.Type, prec int) (Value, error
 			return MakeTrusted(resultType, strconv.AppendUint(nil, v.uval, 10)), nil
 		case Float64:
 			format := byte('g')
-			if resultType == Decimal {
+			if prec != -1 || resultType == Decimal {
 				format = 'f'
 			}
 			return MakeTrusted(resultType, strconv.AppendFloat(nil, v.fval, format, prec, 64)), nil
+		case Decimal:
+			fval, _ := v.dval.Float64()
+			if math.IsInf(fval, 0) {
+				return NULL, fmt.Errorf("DOUBLE.value.is.out.of.range")
+			}
+
+			var str string
+			if prec == -1 {
+				str = v.dval.String()
+			} else {
+				str = v.dval.StringFixed(int32(prec))
+			}
+			return MakeTrusted(resultType, common.StringToBytes(str)), nil
 		}
 	}
 	return NULL, fmt.Errorf("unexpected type conversion to non-numeric: %v", resultType)
@@ -350,6 +392,8 @@ func compareNumeric(v1, v2 numeric) int {
 			v1 = numeric{typ: Uint64, uval: uint64(v1.ival)}
 		case Float64:
 			v1 = numeric{typ: Float64, fval: float64(v1.ival)}
+		case Decimal:
+			v1 = numeric{typ: Decimal, dval: decimal.NewFromFloat(float64(v1.ival))}
 		}
 	case Uint64:
 		switch v2.typ {
@@ -360,6 +404,18 @@ func compareNumeric(v1, v2 numeric) int {
 			v2 = numeric{typ: Uint64, uval: uint64(v2.ival)}
 		case Float64:
 			v1 = numeric{typ: Float64, fval: float64(v1.uval)}
+		case Decimal:
+			v1 = numeric{typ: Decimal, dval: decimal.NewFromFloat(float64(v1.uval))}
+		}
+	case Decimal:
+		switch v2.typ {
+		case Uint64:
+			v2 = numeric{typ: Decimal, dval: decimal.NewFromFloat(float64(v2.uval))}
+		case Int64:
+			v2 = numeric{typ: Decimal, dval: decimal.NewFromFloat(float64(v2.ival))}
+		case Float64:
+			f, _ := v1.dval.Float64()
+			v1 = numeric{typ: Float64, fval: f}
 		}
 	case Float64:
 		switch v2.typ {
@@ -367,6 +423,9 @@ func compareNumeric(v1, v2 numeric) int {
 			v2 = numeric{typ: Float64, fval: float64(v2.ival)}
 		case Uint64:
 			v2 = numeric{typ: Float64, fval: float64(v2.uval)}
+		case Decimal:
+			f, _ := v2.dval.Float64()
+			v2 = numeric{typ: Float64, fval: f}
 		}
 	}
 
@@ -376,6 +435,8 @@ func compareNumeric(v1, v2 numeric) int {
 		return CompareInt64(v1.ival, v2.ival)
 	case Uint64:
 		return CompareUint64(v1.uval, v2.uval)
+	case Decimal:
+		return v1.dval.Cmp(v2.dval)
 	case Float64:
 		return CompareFloat64(v1.fval, v2.fval)
 	}

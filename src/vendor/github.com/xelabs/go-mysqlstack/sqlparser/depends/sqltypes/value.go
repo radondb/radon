@@ -397,6 +397,10 @@ func (v Value) IsBinary() bool {
 	return IsBinary(v.typ)
 }
 
+func (v Value) IsTemporal() bool {
+	return IsTemporal(v.typ)
+}
+
 // ToString returns the value as MySQL would return it as string.
 // If the value is not convertible like in the case of Expression, it returns nil.
 func (v Value) ToString() string {

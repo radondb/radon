@@ -16,7 +16,8 @@ import (
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
 
-func TimeToNumeric(v Value) (numeric, error) {
+// timeToNumeric used to cast time type to numeric.
+func timeToNumeric(v Value) (numeric, error) {
 	switch v.Type() {
 	case querypb.Type_TIMESTAMP, querypb.Type_DATETIME:
 		var i int64
