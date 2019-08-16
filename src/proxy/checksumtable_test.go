@@ -38,6 +38,26 @@ var (
 			},
 		},
 	}
+
+	checksumTableResult2 = &sqltypes.Result{
+		RowsAffected: 1,
+		Fields: []*querypb.Field{
+			{
+				Name: "Table",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Checksum",
+				Type: querypb.Type_INT64,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("a_0000")),
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("NULL")),
+			},
+		},
+	}
 )
 
 func TestProxyChecksumTable(t *testing.T) {
@@ -51,6 +71,7 @@ func TestProxyChecksumTable(t *testing.T) {
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("checksum table .*", checksumTableResult1)
+		fakedbs.AddQueryPattern("checksum table xx.*", checksumTableResult2)
 	}
 
 	// create database.
@@ -81,7 +102,7 @@ func TestProxyChecksumTable(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	// checksum.
+	// checksum with table exist.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
@@ -96,6 +117,38 @@ func TestProxyChecksumTable(t *testing.T) {
 			want += 2000038982
 		}
 		got := uint32(qr.Rows[0][1].ToNative().(int64))
+		assert.Equal(t, want, got)
+	}
+
+	// checksum with table or db not exist.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "checksum table xx.t1"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "xx.t1"
+		got := qr.Rows[0][0].String()
+		assert.Equal(t, want, got)
+		want = "NULL"
+		got = qr.Rows[0][1].String()
+		assert.Equal(t, want, got)
+	}
+
+	// checksum with table not exist.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "checksum table mock.t1"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "mock.t1"
+		got := qr.Rows[0][0].String()
+		assert.Equal(t, want, got)
+		want = "NULL"
+		got = qr.Rows[0][1].String()
 		assert.Equal(t, want, got)
 	}
 }
