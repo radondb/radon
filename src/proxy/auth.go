@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"strconv"
 
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqldb"
@@ -79,7 +80,26 @@ func (spanner *Spanner) AuthCheck(s *driver.Session) error {
 	// Client response.
 	resp := s.Scramble()
 
-	query := fmt.Sprintf("select authentication_string from mysql.user where user='%s'", user)
+	// Diff query for different MySQL version
+	versionQuery := fmt.Sprintf("select left(version(), 3) as version")
+	vr, err := spanner.ExecuteSingle(versionQuery)
+	if err != nil {
+		log.Error("proxy: get MySQL version error:%+v", err)
+		return sqldb.NewSQLErrorf(sqldb.CR_VERSION_ERROR, "Cann't get MySQL version '%v'", user)
+	}
+	versionStr := vr.Rows[0][0].String();
+	version, err := strconv.ParseFloat(versionStr, 64)
+	if err != nil {
+		log.Error("proxy: convert version to number error:%+v", err)
+	}
+
+	var query string
+	if (version > 5.6) {
+		query = fmt.Sprintf("select authentication_string from mysql.user where user='%s'", user)
+	} else {
+		query = fmt.Sprintf("select password as authentication_string from mysql.user where user='%s'", user)
+	}
+
 	qr, err := spanner.ExecuteSingle(query)
 
 	// Query error.
