@@ -226,6 +226,21 @@ func (db *DB) ResetErrors() {
 
 // addMockUser adds mock/mock user to mysql.user table.
 func (db *DB) addMockUser() {
+	resultVersion57 := &sqltypes.Result{
+		RowsAffected: 1,
+		Fields: []*querypb.Field{
+			{
+				Name: "version",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("5.7")),
+			},
+		},
+	}
+
 	r1 := &sqltypes.Result{
 		Fields: []*querypb.Field{
 			{
@@ -239,6 +254,8 @@ func (db *DB) addMockUser() {
 			},
 		},
 	}
+
+	db.AddQuery("select left(version(), 3) as version", resultVersion57)
 	db.AddQuery("select authentication_string from mysql.user where user='mock'", r1)
 	// Multiple users for the privilege.
 	db.AddQuery("select authentication_string from mysql.user where user='mock1'", r1)
