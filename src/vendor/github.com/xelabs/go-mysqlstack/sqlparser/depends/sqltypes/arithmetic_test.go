@@ -280,9 +280,161 @@ func TestAdd(t *testing.T) {
 		v2:  NewUint64(200),
 		typ: Uint64,
 		out: NewUint64(10000301),
+	}, {
+		v1:  NewInt64(9223372036854775807),
+		v2:  NewInt64(9223372036854775807),
+		typ: Int64,
+		err: "BIGINT.value.is.out.of.range.in: '9223372036854775807 + 9223372036854775807'",
 	}}
 	for _, tcase := range tcases {
 		got, errs := NullsafeAdd(tcase.v1, tcase.v2, tcase.typ, -1)
+		if errs != nil {
+			assert.Equal(t, tcase.err, errs.Error())
+			continue
+		}
+		assert.Equal(t, tcase.out, got)
+	}
+}
+
+func TestSum(t *testing.T) {
+	tcases := []struct {
+		v1, v2 Value
+		out    Value
+		typ    querypb.Type
+		err    string
+	}{{
+		// First value null.
+		v1:  NewInt64(1),
+		v2:  NULL,
+		typ: Decimal,
+		out: NewInt64(1),
+	}, {
+		// Second value null.
+		v1:  NULL,
+		v2:  NewInt64(1),
+		typ: Decimal,
+		out: NewInt64(1),
+	}, {
+		v1:  NewInt64(9223372036854775807),
+		v2:  NewInt64(9223372036854775807),
+		typ: Decimal,
+		out: testVal(Decimal, "18446744073709552000"),
+	}, {
+		// Make sure underlying error is returned for LHS.
+		v1:  testVal(Int64, "1.2"),
+		v2:  NewInt64(2),
+		typ: Decimal,
+		err: "strconv.ParseInt: parsing \"1.2\": invalid syntax",
+	}, {
+		// Make sure underlying error is returned for RHS.
+		v1:  NewInt64(2),
+		v2:  testVal(Int64, "1.2"),
+		typ: Decimal,
+		err: "strconv.ParseInt: parsing \"1.2\": invalid syntax",
+	}, {
+		// Make sure underlying error is returned while adding.
+		v1:  NewFloat64(1.797693134862315708145274237317043567981e+308),
+		v2:  NewFloat64(1.797693134862315708145274237317043567981e+308),
+		typ: Float64,
+		err: "DOUBLE.value.is.out.of.range.in: '1.7976931348623157e+308 + 1.7976931348623157e+308'",
+	}, {
+		v1:  testVal(Decimal, "1.797693134862315708145274237317043567981e+308"),
+		v2:  testVal(Decimal, "1.797693134862315708145274237317043567981e+308"),
+		typ: Decimal,
+		err: "DOUBLE.value.is.out.of.range",
+	}, {
+		v1:  NewInt64(3),
+		v2:  NewFloat64(2),
+		typ: Float64,
+		out: testVal(Float64, "5"),
+	}, {
+		v1:  NewUint64(3),
+		v2:  NewFloat64(2),
+		typ: Float64,
+		out: testVal(Float64, "5"),
+	}, {
+		v1:  testVal(Decimal, "3"),
+		v2:  NewFloat64(2),
+		typ: Float64,
+		out: testVal(Float64, "5"),
+	}, {
+		v1:  NewFloat64(3),
+		v2:  NewFloat64(2),
+		typ: Float64,
+		out: testVal(Float64, "5"),
+	}, {
+		v1:  NewInt64(3),
+		v2:  testVal(Decimal, "2"),
+		typ: Decimal,
+		out: testVal(Decimal, "5"),
+	}, {
+		v1:  NewUint64(3),
+		v2:  testVal(Decimal, "2"),
+		typ: Decimal,
+		out: testVal(Decimal, "5"),
+	}, {
+		v1:  testVal(Decimal, "3"),
+		v2:  testVal(Decimal, "2"),
+		typ: Decimal,
+		out: testVal(Decimal, "5"),
+	}, {
+		v1:  NewFloat64(3),
+		v2:  testVal(Decimal, "2"),
+		typ: Float64,
+		out: testVal(Float64, "5"),
+	}, {
+		v1:  NewInt64(3),
+		v2:  NewInt64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "5"),
+	}, {
+		v1:  NewUint64(3),
+		v2:  NewInt64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "5"),
+	}, {
+		v1:  testVal(Decimal, "3"),
+		v2:  NewInt64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "5"),
+	}, {
+		v1:  NewFloat64(3),
+		v2:  NewInt64(2),
+		typ: Float64,
+		out: testVal(Float64, "5"),
+	}, {
+		v1:  NewInt64(3),
+		v2:  NewUint64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "5"),
+	}, {
+		v1:  NewUint64(3),
+		v2:  NewUint64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "5"),
+	}, {
+		v1:  testVal(Decimal, "3"),
+		v2:  NewUint64(2),
+		typ: Decimal,
+		out: testVal(Decimal, "5"),
+	}, {
+		v1:  NewFloat64(3),
+		v2:  NewUint64(2),
+		typ: Float64,
+		out: testVal(Float64, "5"),
+	}, {
+		v1:  testVal(Datetime, "1000-01-01 00:00:00.00"),
+		v2:  NewUint64(200),
+		typ: Decimal,
+		out: testVal(Decimal, "10000101000200"),
+	}, {
+		v1:  testVal(Date, "1000-01-01"),
+		v2:  NewUint64(200),
+		typ: Decimal,
+		out: testVal(Decimal, "10000301"),
+	}}
+	for _, tcase := range tcases {
+		got, errs := NullsafeSum(tcase.v1, tcase.v2, tcase.typ, -1)
 		if errs != nil {
 			assert.Equal(t, tcase.err, errs.Error())
 			continue

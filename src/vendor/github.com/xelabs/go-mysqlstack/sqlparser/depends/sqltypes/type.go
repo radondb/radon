@@ -67,6 +67,7 @@ func isNumber(t querypb.Type) bool {
 	return IsIntegral(t) || IsFloat(t) || t == Decimal
 }
 
+// IsTemporal returns true if Value is time type.
 func IsTemporal(t querypb.Type) bool {
 	switch t {
 	case Timestamp, Date, Time, Datetime:

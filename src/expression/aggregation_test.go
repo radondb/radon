@@ -262,7 +262,7 @@ func TestGetResults(t *testing.T) {
 		},
 		{
 			count: 2,
-			val:   sqltypes.MakeTrusted(sqltypes.Decimal, []byte("9")),
+			val:   sqltypes.MakeTrusted(sqltypes.Decimal, []byte("9.0000")),
 		},
 		{
 			count: 2,

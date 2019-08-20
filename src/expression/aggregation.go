@@ -29,8 +29,9 @@ type Aggregation struct {
 
 // AggEvaluateContext is used to store intermediate result when calculating aggregate functions.
 type AggEvaluateContext struct {
-	count int64
-	val   sqltypes.Value
+	count  int64
+	val    sqltypes.Value
+	hasErr bool
 	// buffer used to store the values when Aggregation.distinct is true.
 	buffer *common.HashTable
 }
@@ -137,6 +138,10 @@ func (aggr *Aggregation) FixField(field *querypb.Field) {
 
 // Update during executing.
 func (aggr *Aggregation) Update(x []sqltypes.Value, evalCtx *AggEvaluateContext) {
+	if evalCtx.hasErr {
+		return
+	}
+
 	v := x[aggr.index]
 	if v.Type() == sqltypes.Null {
 		return
@@ -150,6 +155,8 @@ func (aggr *Aggregation) Update(x []sqltypes.Value, evalCtx *AggEvaluateContext)
 			return
 		}
 	}
+
+	var err error
 	switch aggr.aggrTyp {
 	case planner.AggrTypeMin:
 		evalCtx.val = sqltypes.Min(evalCtx.val, v)
@@ -157,42 +164,49 @@ func (aggr *Aggregation) Update(x []sqltypes.Value, evalCtx *AggEvaluateContext)
 		evalCtx.val = sqltypes.Max(evalCtx.val, v)
 	case planner.AggrTypeSum:
 		evalCtx.count++
-		evalCtx.val, _ = sqltypes.NullsafeAdd(evalCtx.val, v, aggr.fieldType, aggr.prec)
+		evalCtx.val, err = sqltypes.NullsafeSum(evalCtx.val, v, aggr.fieldType, aggr.prec)
 	case planner.AggrTypeCount:
 		if aggr.isPushDown {
-			evalCtx.val, _ = sqltypes.NullsafeAdd(evalCtx.val, v, aggr.fieldType, aggr.prec)
+			evalCtx.val, err = sqltypes.NullsafeAdd(evalCtx.val, v, aggr.fieldType, aggr.prec)
 		} else {
 			evalCtx.count++
 		}
 	case planner.AggrTypeAvg:
 		if !aggr.isPushDown {
 			evalCtx.count++
-			evalCtx.val, _ = sqltypes.NullsafeAdd(evalCtx.val, v, aggr.fieldType, aggr.prec)
+			evalCtx.val, err = sqltypes.NullsafeSum(evalCtx.val, v, aggr.fieldType, aggr.prec)
 		}
+	}
+	if err != nil {
+		evalCtx.hasErr = true
 	}
 }
 
 // GetResult used to get Value finally.
 func (aggr *Aggregation) GetResult(evalCtx *AggEvaluateContext) sqltypes.Value {
 	var val sqltypes.Value
+	var err error
+	if evalCtx.hasErr {
+		return sqltypes.MakeTrusted(aggr.fieldType, []byte("0"))
+	}
 	switch aggr.aggrTyp {
 	case planner.AggrTypeAvg:
 		if !aggr.isPushDown {
-			val, _ = sqltypes.NullsafeDiv(evalCtx.val, sqltypes.NewInt64(evalCtx.count), aggr.fieldType, aggr.prec)
+			val, err = sqltypes.NullsafeDiv(evalCtx.val, sqltypes.NewInt64(evalCtx.count), aggr.fieldType, aggr.prec)
 		}
 	case planner.AggrTypeMax, planner.AggrTypeMin:
 		val = evalCtx.val
 	case planner.AggrTypeSum:
-		var err error
-		if val, err = sqltypes.Cast(evalCtx.val, aggr.fieldType); err != nil {
-			val = sqltypes.MakeTrusted(aggr.fieldType, []byte("0"))
-		}
+		val, err = sqltypes.Cast(evalCtx.val, aggr.fieldType)
 	case planner.AggrTypeCount:
 		if aggr.isPushDown {
 			val = evalCtx.val
 		} else {
 			val = sqltypes.NewInt64(evalCtx.count)
 		}
+	}
+	if err != nil {
+		val = sqltypes.MakeTrusted(aggr.fieldType, []byte("0"))
 	}
 	return val
 }
@@ -226,7 +240,10 @@ func GetResults(aggrs []*Aggregation, evalCtxs []*AggEvaluateContext, x []sqltyp
 		aggr := aggrs[i]
 		evalCtx := evalCtxs[i]
 		if aggr.isPushDown && aggr.aggrTyp == planner.AggrTypeAvg {
-			x[aggr.index], _ = sqltypes.NullsafeDiv(evalCtxs[i+1].val, evalCtxs[i+2].val, aggr.fieldType, aggr.prec)
+			var err error
+			if x[aggr.index], err = sqltypes.NullsafeDiv(evalCtxs[i+1].val, evalCtxs[i+2].val, aggr.fieldType, aggr.prec); err != nil {
+				x[aggr.index] = sqltypes.MakeTrusted(aggr.fieldType, []byte("0"))
+			}
 			deIdxs = append(deIdxs, aggr.index+1)
 			i = i + 2
 		} else {
