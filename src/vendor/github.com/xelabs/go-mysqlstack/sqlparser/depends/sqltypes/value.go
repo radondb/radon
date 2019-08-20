@@ -397,6 +397,7 @@ func (v Value) IsBinary() bool {
 	return IsBinary(v.typ)
 }
 
+// IsTemporal returns true if Value is time type.
 func (v Value) IsTemporal() bool {
 	return IsTemporal(v.typ)
 }

@@ -59,7 +59,41 @@ func NullsafeAdd(v1, v2 Value, resultType querypb.Type, prec int) (Value, error)
 	return castFromNumeric(res, resultType, prec)
 }
 
+// NullsafeSum adds v to sum, used in 'sum' aggregation. The `sum` aggregation's
+// result is `float64` or `decimal`, So need cast the value to `float64`.
+// By using NullsafeSum instead of NullsafeAdd, can avoid overflow between two integers.
+func NullsafeSum(sum, v Value, resultType querypb.Type, prec int) (Value, error) {
+	if sum.IsNull() {
+		return v, nil
+	}
+	if v.IsNull() {
+		return sum, nil
+	}
+
+	lv1, err := newNumericFloat(sum)
+	if err != nil {
+		return NULL, err
+	}
+	lv2, err := newNumericFloat(v)
+	if err != nil {
+		return NULL, err
+	}
+
+	res := numeric{}
+	if resultType == Decimal {
+		res = numeric{typ: Decimal, dval: decimal.NewFromFloat(lv1.fval).Add(decimal.NewFromFloat(lv2.fval))}
+	} else {
+		fval := lv1.fval + lv2.fval
+		if math.IsInf(fval, 0) {
+			return NULL, fmt.Errorf("DOUBLE.value.is.out.of.range.in: '%v + %v'", lv1.fval, lv2.fval)
+		}
+		res = numeric{typ: Float64, fval: fval}
+	}
+	return castFromNumeric(res, resultType, prec)
+}
+
 // NullsafeDiv used to divide two Values in a null-safe manner.
+// The result always is float64 or decimal, so cast to float64 first.
 func NullsafeDiv(v1, v2 Value, resultType querypb.Type, prec int) (Value, error) {
 	if v1.IsNull() || v2.IsNull() {
 		return NULL, nil
@@ -263,7 +297,7 @@ func addNumeric(v1, v2 numeric) (numeric, error) {
 }
 
 // prioritize reorders the input parameters
-// to be Float64, Uint64, Int64, Decimal.
+// to be Float64, Decimal, Uint64, Int64.
 func prioritize(v1, v2 numeric) (altv1, altv2 numeric) {
 	switch v1.typ {
 	case Int64:
