@@ -388,7 +388,7 @@ func TestAggregateGroup(t *testing.T) {
 			},
 			{
 				Name: "sum(score)",
-				Type: querypb.Type_INT32,
+				Type: sqltypes.Decimal,
 			},
 		},
 		Rows: [][]sqltypes.Value{
