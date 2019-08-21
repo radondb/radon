@@ -15,6 +15,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -22,37 +23,11 @@ var (
 	_ Plan = &AggregatePlan{}
 )
 
-// AggrType type.
-type AggrType string
-
-const (
-	// AggrTypeNull enum.
-	AggrTypeNull AggrType = ""
-
-	// AggrTypeCount enum.
-	AggrTypeCount AggrType = "COUNT"
-
-	// AggrTypeSum enum.
-	AggrTypeSum AggrType = "SUM"
-
-	// AggrTypeMin enum.
-	AggrTypeMin AggrType = "MIN"
-
-	// AggrTypeMax enum.
-	AggrTypeMax AggrType = "MAX"
-
-	// AggrTypeAvg enum.
-	AggrTypeAvg AggrType = "AVG"
-
-	// AggrTypeGroupBy enum.
-	AggrTypeGroupBy AggrType = "GROUP BY"
-)
-
 // Aggregator tuple.
 type Aggregator struct {
 	Field    string
 	Index    int
-	Type     AggrType
+	Type     sqltypes.AggrType
 	Distinct bool
 }
 
@@ -103,32 +78,32 @@ func (p *AggregatePlan) analyze() error {
 			if tuple.field == "*" {
 				return errors.Errorf("unsupported: exists.aggregate.and.'*'.select.exprs")
 			}
-			nullAggrs = append(nullAggrs, Aggregator{Field: tuple.field, Index: k, Type: AggrTypeNull})
+			nullAggrs = append(nullAggrs, Aggregator{Field: tuple.field, Index: k, Type: sqltypes.AggrTypeNull})
 			k++
 			continue
 		}
 
-		var aggType AggrType
+		var aggType sqltypes.AggrType
 		switch aggrFuc {
 		case "sum":
-			aggType = AggrTypeSum
+			aggType = sqltypes.AggrTypeSum
 		case "count":
-			aggType = AggrTypeCount
+			aggType = sqltypes.AggrTypeCount
 		case "min":
-			aggType = AggrTypeMin
+			aggType = sqltypes.AggrTypeMin
 		case "max":
-			aggType = AggrTypeMax
+			aggType = sqltypes.AggrTypeMax
 		case "avg":
-			aggType = AggrTypeAvg
+			aggType = sqltypes.AggrTypeAvg
 		default:
 			return errors.Errorf("unsupported: function:%+v", tuple.aggrFuc)
 		}
 
 		p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: aggType, Distinct: tuple.distinct})
 		if p.IsPushDown {
-			if aggType == AggrTypeAvg {
-				p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("sum(%s)", tuple.aggrField), Index: k, Type: AggrTypeSum})
-				p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("count(%s)", tuple.aggrField), Index: k + 1, Type: AggrTypeCount})
+			if aggType == sqltypes.AggrTypeAvg {
+				p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("sum(%s)", tuple.aggrField), Index: k, Type: sqltypes.AggrTypeSum})
+				p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("count(%s)", tuple.aggrField), Index: k + 1, Type: sqltypes.AggrTypeCount})
 				avgs := decomposeAvg(&tuple)
 				p.rewritten = append(p.rewritten, &sqlparser.AliasedExpr{})
 				copy(p.rewritten[(k+2):], p.rewritten[k+1:])
@@ -156,7 +131,7 @@ func (p *AggregatePlan) analyze() error {
 		if idx == -1 {
 			return errors.Errorf("unsupported: group.by.field[%s].should.be.in.noaggregate.select.list", by.field)
 		}
-		p.groupAggrs = append(p.groupAggrs, Aggregator{Field: by.field, Index: idx, Type: AggrTypeGroupBy})
+		p.groupAggrs = append(p.groupAggrs, Aggregator{Field: by.field, Index: idx, Type: sqltypes.AggrTypeGroupBy})
 	}
 	return nil
 }

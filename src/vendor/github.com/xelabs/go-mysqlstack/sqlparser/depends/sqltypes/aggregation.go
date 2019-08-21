@@ -6,21 +6,44 @@
  *
  */
 
-package expression
+package sqltypes
 
 import (
-	"planner"
-
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
+)
+
+// AggrType type.
+type AggrType string
+
+const (
+	// AggrTypeNull enum.
+	AggrTypeNull AggrType = ""
+
+	// AggrTypeCount enum.
+	AggrTypeCount AggrType = "COUNT"
+
+	// AggrTypeSum enum.
+	AggrTypeSum AggrType = "SUM"
+
+	// AggrTypeMin enum.
+	AggrTypeMin AggrType = "MIN"
+
+	// AggrTypeMax enum.
+	AggrTypeMax AggrType = "MAX"
+
+	// AggrTypeAvg enum.
+	AggrTypeAvg AggrType = "AVG"
+
+	// AggrTypeGroupBy enum.
+	AggrTypeGroupBy AggrType = "GROUP BY"
 )
 
 // Aggregation operator.
 type Aggregation struct {
 	distinct   bool
 	index      int
-	aggrTyp    planner.AggrType
+	aggrTyp    AggrType
 	fieldType  querypb.Type
 	isPushDown bool
 	// prec controls the number of digits.
@@ -30,33 +53,33 @@ type Aggregation struct {
 // AggEvaluateContext is used to store intermediate result when calculating aggregate functions.
 type AggEvaluateContext struct {
 	count  int64
-	val    sqltypes.Value
+	val    Value
 	hasErr bool
 	// buffer used to store the values when Aggregation.distinct is true.
 	buffer *common.HashTable
 }
 
 // NewAggregation new an Aggregetion.
-func newAggregation(p planner.Aggregator, isPushDown bool) *Aggregation {
+func NewAggregation(index int, aggrTyp AggrType, distinct, isPushDown bool) *Aggregation {
 	return &Aggregation{
-		distinct:   p.Distinct,
-		index:      p.Index,
-		aggrTyp:    p.Type,
+		distinct:   distinct,
+		index:      index,
+		aggrTyp:    aggrTyp,
 		isPushDown: isPushDown,
 		prec:       -1,
 	}
 }
 
 // InitEvalCtx used to init the AggEvaluateContext.
-func (aggr *Aggregation) InitEvalCtx(x []sqltypes.Value) *AggEvaluateContext {
+func (aggr *Aggregation) InitEvalCtx(x []Value) *AggEvaluateContext {
 	var count int64
-	v := sqltypes.MakeTrusted(sqltypes.Null, nil)
+	v := MakeTrusted(Null, nil)
 	if x != nil {
 		v = x[aggr.index]
 	}
 
 	buffer := common.NewHashTable()
-	if !aggr.isPushDown && v.Type() != sqltypes.Null {
+	if !aggr.isPushDown && v.Type() != Null {
 		count = 1
 		if aggr.distinct {
 			key := v.Raw()
@@ -72,18 +95,18 @@ func (aggr *Aggregation) InitEvalCtx(x []sqltypes.Value) *AggEvaluateContext {
 
 // FixField used to fix querypb.Field lenght and decimal.
 func (aggr *Aggregation) FixField(field *querypb.Field) {
-	if !aggr.isPushDown || aggr.aggrTyp == planner.AggrTypeAvg {
+	if !aggr.isPushDown || aggr.aggrTyp == AggrTypeAvg {
 		switch aggr.aggrTyp {
-		case planner.AggrTypeMax, planner.AggrTypeMin:
-		case planner.AggrTypeCount:
+		case AggrTypeMax, AggrTypeMin:
+		case AggrTypeCount:
 			field.Decimals = 0
 			field.ColumnLength = 21
 			field.Type = querypb.Type_INT64
-		case planner.AggrTypeAvg:
+		case AggrTypeAvg:
 			field.ColumnLength = field.ColumnLength + 4
 			decimals := field.Decimals + 4
-			if sqltypes.IsIntegral(field.Type) || field.Type == sqltypes.Decimal {
-				if sqltypes.IsUnsigned(field.Type) {
+			if IsIntegral(field.Type) || field.Type == Decimal {
+				if IsUnsigned(field.Type) {
 					field.ColumnLength++
 				}
 				if field.Decimals == 0 {
@@ -92,35 +115,35 @@ func (aggr *Aggregation) FixField(field *querypb.Field) {
 				if decimals > 30 {
 					decimals = 30
 				}
-				field.Type = sqltypes.Decimal
-			} else if sqltypes.IsFloat(field.Type) {
+				field.Type = Decimal
+			} else if IsFloat(field.Type) {
 				if decimals > 31 {
 					decimals = 31
 				}
 				field.Type = querypb.Type_FLOAT64
-			} else if sqltypes.IsTemporal(field.Type) {
-				field.Type = sqltypes.Decimal
+			} else if IsTemporal(field.Type) {
+				field.Type = Decimal
 			} else {
 				decimals = 31
 				field.Type = querypb.Type_FLOAT64
 			}
 			field.Decimals = decimals
-		case planner.AggrTypeSum:
-			if sqltypes.IsIntegral(field.Type) || field.Type == sqltypes.Decimal {
+		case AggrTypeSum:
+			if IsIntegral(field.Type) || field.Type == Decimal {
 				field.ColumnLength = field.ColumnLength + DecimalLongLongDigits
-				if sqltypes.IsUnsigned(field.Type) {
+				if IsUnsigned(field.Type) {
 					field.ColumnLength++
 				}
-				field.Type = sqltypes.Decimal
-			} else if sqltypes.IsFloat(field.Type) {
+				field.Type = Decimal
+			} else if IsFloat(field.Type) {
 				if field.Decimals < 31 {
 					field.ColumnLength = field.ColumnLength + DoubleDigits + 2
 				} else {
 					field.ColumnLength = 23
 				}
 				field.Type = querypb.Type_FLOAT64
-			} else if sqltypes.IsTemporal(field.Type) {
-				field.Type = sqltypes.Decimal
+			} else if IsTemporal(field.Type) {
+				field.Type = Decimal
 			} else {
 				field.Decimals = 31
 				field.ColumnLength = 23
@@ -130,20 +153,20 @@ func (aggr *Aggregation) FixField(field *querypb.Field) {
 	}
 
 	// FLOAT(M,D).
-	if field.Type == sqltypes.Decimal || sqltypes.IsFloat(field.Type) && field.Decimals < 31 {
+	if field.Type == Decimal || IsFloat(field.Type) && field.Decimals < 31 {
 		aggr.prec = int(field.Decimals)
 	}
 	aggr.fieldType = field.Type
 }
 
 // Update during executing.
-func (aggr *Aggregation) Update(x []sqltypes.Value, evalCtx *AggEvaluateContext) {
+func (aggr *Aggregation) Update(x []Value, evalCtx *AggEvaluateContext) {
 	if evalCtx.hasErr {
 		return
 	}
 
 	v := x[aggr.index]
-	if v.Type() == sqltypes.Null {
+	if v.Type() == Null {
 		return
 	}
 
@@ -158,23 +181,23 @@ func (aggr *Aggregation) Update(x []sqltypes.Value, evalCtx *AggEvaluateContext)
 
 	var err error
 	switch aggr.aggrTyp {
-	case planner.AggrTypeMin:
-		evalCtx.val = sqltypes.Min(evalCtx.val, v)
-	case planner.AggrTypeMax:
-		evalCtx.val = sqltypes.Max(evalCtx.val, v)
-	case planner.AggrTypeSum:
+	case AggrTypeMin:
+		evalCtx.val = Min(evalCtx.val, v)
+	case AggrTypeMax:
+		evalCtx.val = Max(evalCtx.val, v)
+	case AggrTypeSum:
 		evalCtx.count++
-		evalCtx.val, err = sqltypes.NullsafeSum(evalCtx.val, v, aggr.fieldType, aggr.prec)
-	case planner.AggrTypeCount:
+		evalCtx.val, err = NullsafeSum(evalCtx.val, v, aggr.fieldType, aggr.prec)
+	case AggrTypeCount:
 		if aggr.isPushDown {
-			evalCtx.val, err = sqltypes.NullsafeAdd(evalCtx.val, v, aggr.fieldType, aggr.prec)
+			evalCtx.val, err = NullsafeAdd(evalCtx.val, v, aggr.fieldType, aggr.prec)
 		} else {
 			evalCtx.count++
 		}
-	case planner.AggrTypeAvg:
+	case AggrTypeAvg:
 		if !aggr.isPushDown {
 			evalCtx.count++
-			evalCtx.val, err = sqltypes.NullsafeSum(evalCtx.val, v, aggr.fieldType, aggr.prec)
+			evalCtx.val, err = NullsafeSum(evalCtx.val, v, aggr.fieldType, aggr.prec)
 		}
 	}
 	if err != nil {
@@ -183,47 +206,36 @@ func (aggr *Aggregation) Update(x []sqltypes.Value, evalCtx *AggEvaluateContext)
 }
 
 // GetResult used to get Value finally.
-func (aggr *Aggregation) GetResult(evalCtx *AggEvaluateContext) sqltypes.Value {
-	var val sqltypes.Value
+func (aggr *Aggregation) GetResult(evalCtx *AggEvaluateContext) Value {
+	var val Value
 	var err error
 	if evalCtx.hasErr {
-		return sqltypes.MakeTrusted(aggr.fieldType, []byte("0"))
+		return MakeTrusted(aggr.fieldType, []byte("0"))
 	}
 	switch aggr.aggrTyp {
-	case planner.AggrTypeAvg:
+	case AggrTypeAvg:
 		if !aggr.isPushDown {
-			val, err = sqltypes.NullsafeDiv(evalCtx.val, sqltypes.NewInt64(evalCtx.count), aggr.fieldType, aggr.prec)
+			val, err = NullsafeDiv(evalCtx.val, NewInt64(evalCtx.count), aggr.fieldType, aggr.prec)
 		}
-	case planner.AggrTypeMax, planner.AggrTypeMin:
+	case AggrTypeMax, AggrTypeMin:
 		val = evalCtx.val
-	case planner.AggrTypeSum:
-		val, err = sqltypes.Cast(evalCtx.val, aggr.fieldType)
-	case planner.AggrTypeCount:
+	case AggrTypeSum:
+		val, err = Cast(evalCtx.val, aggr.fieldType)
+	case AggrTypeCount:
 		if aggr.isPushDown {
 			val = evalCtx.val
 		} else {
-			val = sqltypes.NewInt64(evalCtx.count)
+			val = NewInt64(evalCtx.count)
 		}
 	}
 	if err != nil {
-		val = sqltypes.MakeTrusted(aggr.fieldType, []byte("0"))
+		val = MakeTrusted(aggr.fieldType, []byte("0"))
 	}
 	return val
 }
 
-// NewAggregations new aggrs based on plans.
-func NewAggregations(plans []planner.Aggregator, isPushDown bool, fields []*querypb.Field) []*Aggregation {
-	var aggrs []*Aggregation
-	for _, plan := range plans {
-		aggr := newAggregation(plan, isPushDown)
-		aggr.FixField(fields[aggr.index])
-		aggrs = append(aggrs, aggr)
-	}
-	return aggrs
-}
-
 // NewAggEvalCtxs new evalCtxs.
-func NewAggEvalCtxs(aggrs []*Aggregation, x []sqltypes.Value) []*AggEvaluateContext {
+func NewAggEvalCtxs(aggrs []*Aggregation, x []Value) []*AggEvaluateContext {
 	var evalCtxs []*AggEvaluateContext
 	for _, aggr := range aggrs {
 		evalCtx := aggr.InitEvalCtx(x)
@@ -233,16 +245,16 @@ func NewAggEvalCtxs(aggrs []*Aggregation, x []sqltypes.Value) []*AggEvaluateCont
 }
 
 // GetResults will be called when all data have been processed.
-func GetResults(aggrs []*Aggregation, evalCtxs []*AggEvaluateContext, x []sqltypes.Value) ([]sqltypes.Value, []int) {
+func GetResults(aggrs []*Aggregation, evalCtxs []*AggEvaluateContext, x []Value) ([]Value, []int) {
 	var deIdxs []int
 	i := 0
 	for i < len(aggrs) {
 		aggr := aggrs[i]
 		evalCtx := evalCtxs[i]
-		if aggr.isPushDown && aggr.aggrTyp == planner.AggrTypeAvg {
+		if aggr.isPushDown && aggr.aggrTyp == AggrTypeAvg {
 			var err error
-			if x[aggr.index], err = sqltypes.NullsafeDiv(evalCtxs[i+1].val, evalCtxs[i+2].val, aggr.fieldType, aggr.prec); err != nil {
-				x[aggr.index] = sqltypes.MakeTrusted(aggr.fieldType, []byte("0"))
+			if x[aggr.index], err = NullsafeDiv(evalCtxs[i+1].val, evalCtxs[i+2].val, aggr.fieldType, aggr.prec); err != nil {
+				x[aggr.index] = MakeTrusted(aggr.fieldType, []byte("0"))
 			}
 			deIdxs = append(deIdxs, aggr.index+1)
 			i = i + 2

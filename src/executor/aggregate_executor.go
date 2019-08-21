@@ -11,7 +11,6 @@ package executor
 import (
 	"sort"
 
-	"expression"
 	"planner"
 	"xcontext"
 
@@ -76,14 +75,21 @@ func (executor *AggregateExecutor) aggregate(result *sqltypes.Result) {
 
 	type group struct {
 		row      []sqltypes.Value
-		evalCtxs []*expression.AggEvaluateContext
+		evalCtxs []*sqltypes.AggEvaluateContext
 	}
-	aggrs := expression.NewAggregations(aggPlans, plan.IsPushDown, result.Fields)
+
+	var aggrs []*sqltypes.Aggregation
+	for _, aggPlan := range aggPlans {
+		aggr := sqltypes.NewAggregation(aggPlan.Index, aggPlan.Type, aggPlan.Distinct, plan.IsPushDown)
+		aggr.FixField(result.Fields[aggPlan.Index])
+		aggrs = append(aggrs, aggr)
+	}
+
 	var groups []*group
 	for _, row := range result.Rows {
 		length := len(groups)
 		if length == 0 {
-			evalCtxs := expression.NewAggEvalCtxs(aggrs, row)
+			evalCtxs := sqltypes.NewAggEvalCtxs(aggrs, row)
 			groups = append(groups, &group{row, evalCtxs})
 			continue
 		}
@@ -96,7 +102,7 @@ func (executor *AggregateExecutor) aggregate(result *sqltypes.Result) {
 				}
 			}
 		} else {
-			evalCtxs := expression.NewAggEvalCtxs(aggrs, row)
+			evalCtxs := sqltypes.NewAggEvalCtxs(aggrs, row)
 			groups = append(groups, &group{row, evalCtxs})
 		}
 	}
@@ -105,14 +111,14 @@ func (executor *AggregateExecutor) aggregate(result *sqltypes.Result) {
 	i := 0
 	result.Rows = make([][]sqltypes.Value, len(groups))
 	for _, g := range groups {
-		result.Rows[i], deIdxs = expression.GetResults(aggrs, g.evalCtxs, g.row)
+		result.Rows[i], deIdxs = sqltypes.GetResults(aggrs, g.evalCtxs, g.row)
 		i++
 	}
 
 	if len(groups) == 0 && aggPlansLen > 0 {
 		result.Rows = make([][]sqltypes.Value, 1)
-		evalCtxs := expression.NewAggEvalCtxs(aggrs, nil)
-		result.Rows[0], deIdxs = expression.GetResults(aggrs, evalCtxs, make([]sqltypes.Value, len(result.Fields)))
+		evalCtxs := sqltypes.NewAggEvalCtxs(aggrs, nil)
+		result.Rows[0], deIdxs = sqltypes.GetResults(aggrs, evalCtxs, make([]sqltypes.Value, len(result.Fields)))
 	}
 	// Remove avg decompose columns.
 	result.RemoveColumns(deIdxs...)
