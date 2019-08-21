@@ -6,7 +6,7 @@
  *
  */
 
-package expression
+package sqltypes
 
 const (
 	// DecimalLongLongDigits decimal longlong digits.
