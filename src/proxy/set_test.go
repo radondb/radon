@@ -79,7 +79,7 @@ func TestProxySet(t *testing.T) {
 }
 
 func TestProxySetAutocommit(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
 	address := proxy.Address()
@@ -87,6 +87,7 @@ func TestProxySetAutocommit(t *testing.T) {
 	// fakedbs.
 	{
 		proxy.conf.Proxy.TwopcEnable = true
+		proxy.conf.Proxy.AutocommitFalseIsTxn = true
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("xa .*", &sqltypes.Result{})
@@ -108,6 +109,34 @@ func TestProxySetAutocommit(t *testing.T) {
 			query = "commit"
 			_, err = client.FetchAll(query, -1)
 			assert.Nil(t, err)
+		}
+		{
+			query := "set autocommit=1"
+			_, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "commit"
+			_, err = client.FetchAll(query, -1)
+			assert.NotNil(t, err)
+		}
+	}
+
+	proxy.conf.Proxy.AutocommitFalseIsTxn = false
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		{
+			query := "set autocommit=0"
+			_, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "select 1"
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "commit"
+			_, err = client.FetchAll(query, -1)
+			assert.NotNil(t, err)
 		}
 		{
 			query := "set autocommit=1"

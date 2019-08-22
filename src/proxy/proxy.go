@@ -229,6 +229,14 @@ func (p *Proxy) SetTwoPC(enable bool) {
 	p.conf.Proxy.TwopcEnable = enable
 }
 
+// SetAutocommitFalseIsTxn used to set autocommitFalseIsTxn to true or false.
+func (p *Proxy) SetAutocommitFalseIsTxn(enable bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.log.Info("proxy.SetAutocommitFalseIsTxn:[%v->%v]", p.conf.Proxy.AutocommitFalseIsTxn, enable)
+	p.conf.Proxy.AutocommitFalseIsTxn = enable
+}
+
 // SetAllowIP used to set allow ips.
 func (p *Proxy) SetAllowIP(ips []string) {
 	p.mu.Lock()

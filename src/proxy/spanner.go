@@ -124,3 +124,7 @@ func (spanner *Spanner) ServerVersion() string {
 func (spanner *Spanner) isTwoPC() bool {
 	return spanner.conf.Proxy.TwopcEnable
 }
+
+func (spanner *Spanner) isAutocommitFalseIsTxn() bool {
+	return spanner.conf.Proxy.AutocommitFalseIsTxn
+}
