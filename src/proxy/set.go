@@ -56,6 +56,7 @@ func (spanner *Spanner) handleSet(session *driver.Session, query string, node *s
 					txSession.setStreamingFetchVar(false)
 				}
 			}
+
 		case var_mysql_autocommit:
 			var autocommit = true
 
@@ -68,7 +69,7 @@ func (spanner *Spanner) handleSet(session *driver.Session, query string, node *s
 					}
 				}
 			}
-			if !autocommit {
+			if !autocommit && spanner.isAutocommitFalseIsTxn() {
 				query := "begin"
 				node := &sqlparser.Transaction{
 					Action: "begin",

@@ -38,6 +38,10 @@ type ProxyConfig struct {
 	LongQueryTime    int    `json:"long-query-time"`
 	StreamBufferSize int    `json:"stream-buffer-size"`
 	IdleTxnTimeout   uint32 `json:"kill-idle-transaction"` //is consistent with the official 8.0 kill_idle_transaction
+
+	//If autocommit-false-is-txn=true (false by default), a client connection with cmd: set autocommit=0
+	//is treated as start a transaction, e.g. begin, start transaction.
+	AutocommitFalseIsTxn bool `json:"autocommit-false-is-txn"`
 }
 
 // DefaultProxyConfig returns default proxy config.
