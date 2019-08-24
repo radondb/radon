@@ -13,7 +13,6 @@ import (
 	"fmt"
 
 	"github.com/xelabs/go-mysqlstack/sqldb"
-
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
@@ -26,6 +25,7 @@ type Statement struct {
 	ColumnCount uint16
 	ParamCount  uint16
 	Warnings    uint16
+	ParamsType  []int32
 	ColumnNames []string
 
 	BindVars map[string]*querypb.BindVariable
@@ -156,87 +156,79 @@ func PackStatementExecute(stmtID uint32, parameters []sqltypes.Value) ([]byte, e
 }
 
 // UnPackStatementExecute -- unpack the stmt-execute packet from client.
-func UnPackStatementExecute(data []byte, paramsCount uint16, parseValueFn func(*common.Buffer, querypb.Type) (interface{}, error)) (*Statement, error) {
+func UnPackStatementExecute(data []byte, prepare *Statement, parseValueFn func(*common.Buffer, querypb.Type) (interface{}, error)) error {
 	var err error
-	var paramsType []int32
-
-	stmt := &Statement{}
 	bitMap := make([]byte, 0)
 	buf := common.ReadBuffer(data)
 
-	// statement ID
-	if stmt.ID, err = buf.ReadU32(); err != nil {
-		return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading statement ID failed")
+	if _, err = buf.ReadU32(); err != nil {
+		return sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading statement ID failed")
 	}
 
 	// cursor type flags
 	if _, err = buf.ReadU8(); err != nil {
-		return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading cursor type flags failed")
+		return sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading cursor type flags failed")
 	}
 
 	// iteration count
 	var itercount uint32
 	if itercount, err = buf.ReadU32(); err != nil {
-		return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading iteration count failed")
+		return sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading iteration count failed")
 	}
 	if itercount != 1 {
-		return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "iteration count is not equal to 1")
+		return sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "iteration count is not equal to 1")
 	}
 
-	if paramsCount > 0 {
-		// Init.
-		paramsType = make([]int32, paramsCount)
-		stmt.BindVars = make(map[string]*querypb.BindVariable)
-
-		if bitMap, err = buf.ReadBytes(int((paramsCount + 7) / 8)); err != nil {
-			return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading NULL-bitmap failed")
+	if prepare.ParamCount > 0 {
+		if bitMap, err = buf.ReadBytes(int((prepare.ParamCount + 7) / 8)); err != nil {
+			return sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading NULL-bitmap failed")
 		}
 
 		var newParamsBoundFlag byte
 		if newParamsBoundFlag, err = buf.ReadU8(); err != nil {
-			return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading NULL-bitmap failed")
+			return sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading NULL-bitmap failed")
 		}
 		if newParamsBoundFlag == 0x01 {
 			var mysqlType, flags byte
-			for i := uint16(0); i < paramsCount; i++ {
+			for i := uint16(0); i < prepare.ParamCount; i++ {
 				if mysqlType, err = buf.ReadU8(); err != nil {
-					return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading parameter type failed")
+					return sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading parameter type failed")
 				}
 
 				if flags, err = buf.ReadU8(); err != nil {
-					return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading parameter flags failed")
+					return sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, "reading parameter flags failed")
 				}
 				// Convert MySQL type to Vitess type.
 				valType, err := sqltypes.MySQLToType(int64(mysqlType), int64(flags))
 				if err != nil {
-					return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, fmt.Sprintf("MySQLToType(%v,%v) failed: %v", mysqlType, flags, err))
+					return sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, fmt.Sprintf("MySQLToType(%v,%v) failed: %v", mysqlType, flags, err))
 				}
-				paramsType[i] = int32(valType)
+				prepare.ParamsType[i] = int32(valType)
 			}
 		}
 
-		for i := uint16(0); i < paramsCount; i++ {
+		for i := uint16(0); i < prepare.ParamCount; i++ {
 			var val interface{}
-			if paramsType[i] == int32(sqltypes.Text) || paramsType[i] == int32(sqltypes.Blob) {
+			if prepare.ParamsType[i] == int32(sqltypes.Text) || prepare.ParamsType[i] == int32(sqltypes.Blob) {
 				continue
 			}
 
 			if (bitMap[i/8] & (1 << uint(i%8))) > 0 {
 				val, err = parseValueFn(buf, sqltypes.Null)
 			} else {
-				val, err = parseValueFn(buf, querypb.Type(paramsType[i]))
+				val, err = parseValueFn(buf, querypb.Type(prepare.ParamsType[i]))
 			}
 			if err != nil {
-				return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, fmt.Sprintf("decoding parameter value failed(%v) failed: %v", paramsType[i], err))
+				return sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, fmt.Sprintf("decoding parameter value failed(%v) failed: %v", prepare.ParamsType[i], err))
 			}
 
 			// If value is nil, must set bind variables to nil.
 			bv, err := sqltypes.BuildBindVariable(val)
 			if err != nil {
-				return nil, sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, fmt.Sprintf("build converted parameters value failed: %v", err))
+				return sqldb.NewSQLErrorf(sqldb.ER_MALFORMED_PACKET, fmt.Sprintf("build converted parameters value failed: %v", err))
 			}
-			stmt.BindVars[fmt.Sprintf("v%d", i+1)] = bv
+			prepare.BindVars[fmt.Sprintf("v%d", i+1)] = bv
 		}
 	}
-	return stmt, nil
+	return nil
 }

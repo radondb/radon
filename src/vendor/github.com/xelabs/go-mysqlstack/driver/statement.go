@@ -12,7 +12,6 @@ package driver
 import (
 	"github.com/xelabs/go-mysqlstack/proto"
 	"github.com/xelabs/go-mysqlstack/sqldb"
-
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
@@ -23,6 +22,7 @@ type Statement struct {
 	ID          uint32
 	ParamCount  uint16
 	PrepareStmt string
+	ParamsType  []int32
 	ColumnNames []string
 	BindVars    map[string]*querypb.BindVariable
 }
