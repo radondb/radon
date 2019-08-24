@@ -93,9 +93,15 @@ func TestStatementExecute(t *testing.T) {
 	parseFn := func(*common.Buffer, querypb.Type) (interface{}, error) {
 		return nil, nil
 	}
-	got, err := UnPackStatementExecute(datas, 4, parseFn)
+
+	protoStmt := &Statement{
+		ID:         id,
+		ParamCount: uint16(len(values)),
+		ParamsType: make([]int32, len(values)),
+		BindVars:   make(map[string]*querypb.BindVariable, len(values)),
+	}
+	err = UnPackStatementExecute(datas, protoStmt, parseFn)
 	assert.Nil(t, err)
-	assert.NotNil(t, got)
 }
 
 func TestStatementExecuteUnPackError(t *testing.T) {
@@ -140,8 +146,44 @@ func TestStatementExecuteUnPackError(t *testing.T) {
 	buff := common.NewBuffer(32)
 	fs := []func(buff *common.Buffer){f0, f1, f2, f3, f4, f5, f6}
 	for i := 0; i < len(fs); i++ {
-		_, err := UnPackStatementExecute(buff.Datas(), 1, parseFn)
+
+		protoStmt := &Statement{
+			ID:         1,
+			ParamCount: 2,
+			ParamsType: make([]int32, 2),
+			BindVars:   make(map[string]*querypb.BindVariable, 2),
+		}
+
+		err := UnPackStatementExecute(buff.Datas(), protoStmt, parseFn)
 		assert.NotNil(t, err)
 		fs[i](buff)
 	}
+}
+
+// issue 462.
+// https://dev.mysql.com/doc/internals/en/com-stmt-execute.html
+// test about new-params-bound-flag about 0 1
+func TestStatementExecuteBatchUnPackStatementExecute(t *testing.T) {
+	data := []byte{/*23,*/18, 0, 0, 0, 128, 1, 0, 0, 0, 0, 1, 1, 128, 1}
+	data2 := []byte{/*23,*/18, 0, 0, 0, 128, 1, 0, 0, 0, 0, 0, 1, 128, 1}
+
+	var dataBatch [][]byte
+	dataBatch = append(dataBatch, data)
+	dataBatch = append(dataBatch, data2)
+
+	parseFn := func(*common.Buffer, querypb.Type) (interface{}, error) {
+		return nil, nil
+	}
+
+	protoStmt := &Statement{
+		ID:         23,
+		ParamCount: 1,
+		ParamsType: make([]int32, 1),
+		BindVars:   make(map[string]*querypb.BindVariable, 1),
+	}
+	err := UnPackStatementExecute(dataBatch[0], protoStmt, parseFn)
+	assert.Nil(t, err)
+
+	err = UnPackStatementExecute(dataBatch[1], protoStmt, parseFn)
+	assert.Nil(t, err)
 }

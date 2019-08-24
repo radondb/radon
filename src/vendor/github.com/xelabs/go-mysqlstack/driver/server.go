@@ -19,11 +19,10 @@ import (
 
 	"github.com/xelabs/go-mysqlstack/proto"
 	"github.com/xelabs/go-mysqlstack/sqldb"
-	"github.com/xelabs/go-mysqlstack/xlog"
-
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
+	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
 // Handler interface.
@@ -123,11 +122,16 @@ func (l *Listener) parserComStatementExecute(data []byte, session *Session) (*St
 	if err != nil {
 		return nil, err
 	}
-	protoStmt, err := proto.UnPackStatementExecute(data[1:], stmt.ParamCount, sqltypes.ParseMySQLValues)
-	if err != nil {
+
+	protoStmt := &proto.Statement{
+		ID:         stmt.ID,
+		ParamCount: stmt.ParamCount,
+		ParamsType: stmt.ParamsType,
+		BindVars:   stmt.BindVars,
+	}
+	if err = proto.UnPackStatementExecute(data[1:], protoStmt, sqltypes.ParseMySQLValues); err != nil {
 		return nil, err
 	}
-	stmt.BindVars = protoStmt.BindVars
 	return stmt, nil
 }
 
@@ -252,6 +256,7 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 				ID:          id,
 				PrepareStmt: query,
 				ParamCount:  paramCount,
+				ParamsType:  make([]int32, paramCount),
 				BindVars:    make(map[string]*querypb.BindVariable, paramCount),
 			}
 			for i := uint16(0); i < paramCount; i++ {
@@ -274,6 +279,7 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 					return
 				}
 			}
+
 			if err = l.handler.ComQuery(session, stmt.PrepareStmt, sqltypes.CopyBindVariables(stmt.BindVars), func(qr *sqltypes.Result) error {
 				return session.writeBinaryRows(qr)
 			}); err != nil {
