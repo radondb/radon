@@ -18,7 +18,7 @@ import (
 	"config"
 
 	"github.com/pkg/errors"
-	jump "github.com/renstrom/go-jump-consistent-hash"
+	jump "github.com/lithammer/go-jump-consistent-hash"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
@@ -178,7 +178,7 @@ func (h *Hash) GetIndex(sqlval *sqlparser.SQLVal) (int, error) {
 		}
 		idx = int(jump.Hash(uint64(unsigned), int32(h.slots)))
 	case sqlparser.StrVal:
-		idx = int(jump.HashString(valStr, int32(h.slots), jump.CRC64))
+		idx = int(jump.HashString(valStr, int32(h.slots), jump.NewCRC64()))
 	default:
 		return -1, errors.Errorf("hash.unsupported.key.type:[%v]", sqlval.Type)
 	}
