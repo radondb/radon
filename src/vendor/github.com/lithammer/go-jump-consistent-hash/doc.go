@@ -1,4 +1,6 @@
 /*
+Package jump implements the "jump consistent hash" algorithm.
+
 Example
 
  h := jump.Hash(256, 1024)  // h = 520

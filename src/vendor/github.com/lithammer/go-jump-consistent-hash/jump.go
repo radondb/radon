@@ -77,12 +77,19 @@ func (h *Hasher) Hash(key string) int {
 var (
 	// CRC32 uses the 32-bit Cyclic Redundancy Check (CRC-32) with the IEEE
 	// polynomial.
-	CRC32 hash.Hash64 = &crc32Hasher{crc32.NewIEEE()}
+	NewCRC32 func() hash.Hash64 = func() hash.Hash64 { return &crc32Hasher{crc32.NewIEEE()} }
 	// CRC64 uses the 64-bit Cyclic Redundancy Check (CRC-64) with the ECMA
 	// polynomial.
-	CRC64 hash.Hash64 = crc64.New(crc64.MakeTable(crc64.ECMA))
+	NewCRC64 func() hash.Hash64 = func() hash.Hash64 { return crc64.New(crc64.MakeTable(crc64.ECMA)) }
 	// FNV1 uses the non-cryptographic hash function FNV-1.
-	FNV1 hash.Hash64 = fnv.New64()
+	NewFNV1 func() hash.Hash64 = func() hash.Hash64 { return fnv.New64() }
 	// FNV1a uses the non-cryptographic hash function FNV-1a.
+	NewFNV1a func() hash.Hash64 = func() hash.Hash64 { return fnv.New64a() }
+
+	// These are deprecated because they're not safe for concurrent use. Please
+	// use the New* functions instead.
+	CRC32 hash.Hash64 = &crc32Hasher{crc32.NewIEEE()}
+	CRC64 hash.Hash64 = crc64.New(crc64.MakeTable(crc64.ECMA))
+	FNV1  hash.Hash64 = fnv.New64()
 	FNV1a hash.Hash64 = fnv.New64a()
 )
