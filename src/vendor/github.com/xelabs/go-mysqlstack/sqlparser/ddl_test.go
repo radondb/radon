@@ -29,6 +29,26 @@ func TestDDL1(t *testing.T) {
 		// Table.
 		{
 			input: "create table t (\n" +
+				"	`status` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`status` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
+		{
+			input: "create table t (\n" +
+				"	status int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`status` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
+		{
+			input: "create table t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") partition by hash(id)",

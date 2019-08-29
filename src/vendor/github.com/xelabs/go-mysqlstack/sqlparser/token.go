@@ -303,7 +303,6 @@ var keywords = map[string]int{
 	"sql_no_cache":        SQL_NO_CACHE,
 	"sql_small_result":    UNUSED,
 	"ssl":                 UNUSED,
-	"status":              STATUS,
 	"start":               START,
 	"starting":            UNUSED,
 	"stored":              UNUSED,

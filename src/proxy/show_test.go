@@ -1080,6 +1080,9 @@ func TestProxyShowUnsupports(t *testing.T) {
 	}
 	querys := []string{
 		"show test",
+		"show statu",
+		"show table st",
+		"show table statxx from db",
 	}
 
 	// show test.

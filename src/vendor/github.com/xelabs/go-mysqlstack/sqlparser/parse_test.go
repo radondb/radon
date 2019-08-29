@@ -24,6 +24,12 @@ func TestValid(t *testing.T) {
 		input  string
 		output string
 	}{{
+		input:  "select `status` from t",
+		output: "select status from t",
+	}, {
+		input:  "select status from t",
+		output: "select status from t",
+	}, {
 		input:  "select 1",
 		output: "select 1 from dual",
 	}, {

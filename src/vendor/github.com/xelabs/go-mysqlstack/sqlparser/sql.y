@@ -171,7 +171,7 @@ func forceEOF(yylex interface{}) {
 %token <bytes> NULLX AUTO_INCREMENT APPROXNUM SIGNED UNSIGNED ZEROFILL
 
 // Supported SHOW tokens
-%token <bytes> DATABASES TABLES VITESS_KEYSPACES VITESS_SHARDS VSCHEMA_TABLES WARNINGS VARIABLES EVENTS BINLOG GTID STATUS COLUMNS
+%token <bytes> DATABASES TABLES VITESS_KEYSPACES VITESS_SHARDS VSCHEMA_TABLES WARNINGS VARIABLES EVENTS BINLOG GTID COLUMNS
 
 // Functions
 %token <bytes> CURRENT_TIMESTAMP DATABASE CURRENT_DATE
@@ -1167,7 +1167,12 @@ radon_statement:
 show_statement_type:
   ID
   {
-    $$ = ShowUnsupportedStr
+    switch v := string($1); v {
+   case ShowStatusStr:
+     $$ = v
+   default:
+     $$ = ShowUnsupportedStr
+   }
   }
 | reserved_keyword
   {
@@ -1220,13 +1225,13 @@ show_statement:
   {
     $$ = &Show{Type: ShowBinlogEventsStr, From: $4, Limit: $5 }
   }
-| SHOW STATUS force_eof
+| SHOW TABLE show_statement_type database_from_opt force_eof
   {
-    $$ = &Show{Type: ShowStatusStr}
-  }
-| SHOW TABLE STATUS database_from_opt force_eof
-  {
-    $$ = &Show{Type: ShowTableStatusStr, Database: $4}
+    if $3 == ShowStatusStr {
+      $$ = &Show{Type: ShowTableStatusStr, Database: $4}
+    } else {
+      $$ = &Show{Type: ShowUnsupportedStr, Database: $4}
+    }
   }
 
 binlog_from_opt:
