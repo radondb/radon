@@ -722,6 +722,7 @@ func TestSelectSupportedPlan(t *testing.T) {
 		"select /*+nested+*/ A.id from A join B on A.id = B.id join G on A.id+B.id<=G.id",
 		"select /*+nested+*/ A.id from G join (A,B) on A.id+B.id<=G.id",
 		"select /*+nested+*/ A.id from G join (A,B) on G.id<=A.id+B.id",
+		"select /*+nested+*/ sum(A.id) from A join B on A.id=B.id",
 		"select /*+nested+*/ A.id from G,A,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
 		"select COALESCE(A.b, ''), IF(A.b IS NULL, FALSE, TRUE) AS spent from A left join B on A.a=B.a",
 		"select COALESCE(B.b, ''), IF(B.b IS NULL, FALSE, TRUE) AS spent from A join B on A.a=B.a",
