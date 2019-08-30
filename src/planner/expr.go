@@ -438,13 +438,13 @@ func decomposeAvg(tuple *selectTuple) []*sqlparser.AliasedExpr {
 	sum := &sqlparser.AliasedExpr{
 		Expr: &sqlparser.FuncExpr{
 			Name:  sqlparser.NewColIdent("sum"),
-			Exprs: []sqlparser.SelectExpr{&sqlparser.AliasedExpr{Expr: sqlparser.NewValArg([]byte(tuple.aggrField))}},
+			Exprs: tuple.expr.(*sqlparser.AliasedExpr).Expr.(*sqlparser.FuncExpr).Exprs,
 		},
 		As: sqlparser.NewColIdent(alias),
 	}
 	count := &sqlparser.AliasedExpr{Expr: &sqlparser.FuncExpr{
 		Name:  sqlparser.NewColIdent("count"),
-		Exprs: []sqlparser.SelectExpr{&sqlparser.AliasedExpr{Expr: sqlparser.NewValArg([]byte(tuple.aggrField))}},
+		Exprs: tuple.expr.(*sqlparser.AliasedExpr).Expr.(*sqlparser.FuncExpr).Exprs,
 	}}
 	ret = append(ret, sum, count)
 	return ret
@@ -453,17 +453,23 @@ func decomposeAvg(tuple *selectTuple) []*sqlparser.AliasedExpr {
 // decomposeAgg decomposes the aggregate function.
 // such as: avg(a) -> a as `avg(a)`.
 func decomposeAgg(tuple *selectTuple) *sqlparser.AliasedExpr {
-	field := tuple.aggrField
-	if field == "*" {
-		field = "1"
+	var expr sqlparser.Expr
+	switch exp := tuple.expr.(*sqlparser.AliasedExpr).Expr.(*sqlparser.FuncExpr).Exprs[0].(type) {
+	case *sqlparser.StarExpr:
+		expr = sqlparser.NewIntVal([]byte("1"))
+	case *sqlparser.AliasedExpr:
+		expr = exp.Expr
+	case sqlparser.Nextval:
+		panic("unreachable")
 	}
+
 	alias := tuple.alias
 	if alias == "" {
 		alias = tuple.field
 	}
 
 	return &sqlparser.AliasedExpr{
-		Expr: sqlparser.NewValArg([]byte(field)),
+		Expr: expr,
 		As:   sqlparser.NewColIdent(alias),
 	}
 }
