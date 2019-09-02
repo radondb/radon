@@ -4294,7 +4294,7 @@ yydefault:
 			// as a function. If support is needed for that,
 			// we'll need to revisit this. The solution
 			// will be non-trivial because of grammar conflicts.
-			yyVAL.expr = &IntervalExpr{Expr: yyDollar[2].expr, Unit: yyDollar[3].colIdent}
+			yyVAL.expr = &IntervalExpr{Expr: yyDollar[2].expr, Unit: yyDollar[3].colIdent.String()}
 		}
 	case 346:
 		yyDollar = yyS[yypt-4 : yypt+1]

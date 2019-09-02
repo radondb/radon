@@ -496,6 +496,8 @@ func TestValid(t *testing.T) {
 	}, {
 		input: "select /* interval */ adddate('2008-01-02', interval 31 day) from t",
 	}, {
+		input: "select /* interval keyword */ adddate('2008-01-02', interval 1 year) from t",
+	}, {
 		input: "select /* dual */ 1 from dual",
 	}, {
 		input:  "select /* Dual */ 1 from Dual",
