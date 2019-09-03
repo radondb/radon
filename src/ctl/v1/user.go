@@ -24,6 +24,7 @@ type userParams struct {
 	Databases string `json:"databases"`
 	User      string `json:"user"`
 	Password  string `json:"password"`
+	Privilege string `json:"privilege"`
 }
 
 // CreateUserHandler impl.
@@ -57,8 +58,12 @@ func createUserHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter,
 	log.Warning("api.v1.create.user[from:%v].[%v]", r.RemoteAddr, p)
 	databases := strings.TrimSuffix(p.Databases, ",")
 	dbList := strings.Split(databases, ",")
+	priv := p.Privilege
+	if priv == "" {
+		priv = "ALL"
+	}
 	for _, db := range dbList {
-		query := fmt.Sprintf("GRANT ALL ON %s.* TO '%s'@'%%' IDENTIFIED BY '%s'", db, p.User, p.Password)
+		query := fmt.Sprintf("GRANT %s ON %s.* TO '%s'@'%%' IDENTIFIED BY '%s'", priv, db, p.User, p.Password)
 		if _, err := spanner.ExecuteScatter(query); err != nil {
 			log.Error("api.v1.create.user[%+v].error:%+v", p, err)
 			rest.Error(w, err.Error(), http.StatusServiceUnavailable)
