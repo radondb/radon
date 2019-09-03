@@ -36,7 +36,7 @@ Contents
       * [remove peer](#remove-peer)
    * [users](#users)
       * [create user](#create-user)
-      * [update user](#update-user)
+      * [update user password](#update-user-password)
       * [drop user](#drop-user)
       * [get users](#get-users)
 
@@ -784,9 +784,10 @@ The normal users that can connect to radon with password.
 Path:    /v1/user/add
 Method:  POST
 Request: {
-			"databases": "database1,database2", [required]
+			"databases": "database1,database2", [optional]
 			"user": "user name",	[required]
 			"password": "password",	[required]
+			"privilege": "select, insert, update, delete",	[optional]
          }
 ```
 
@@ -802,6 +803,7 @@ Request: {
 `Example: `
 
 "databases" is array about database, if it is empty, we will set it to * .
+"privilege" is composed of [select | insert | update | delete], separated by ",". If it is empty, we will set it to all priv.
 
 ```
 ---backend should not be null---
@@ -812,19 +814,19 @@ Date: Tue, 10 Apr 2018 03:35:22 GMT
 Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"databases":"db1,db2", "user": "test", "password": "test"}' \
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"databases":"db1,db2", "user": "test", "password": "test", "privilege": "select, update"}' \
 		 http://127.0.0.1:8080/v1/user/add
 HTTP/1.1 200 OK
 Date: Tue, 10 Apr 2018 03:35:27 GMT
 Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"databases":"", "user": "u2", "password": "111111"}' http://127.0.0.1:8080/v1/user/add
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"databases":"", "user": "u2", "password": "111111", "privilege": "select, update, delete"}' http://127.0.0.1:8080/v1/user/add
 HTTP/1.1 200 OK
 Date: Wed, 15 May 2019 02:46:42 GMT
 Content-Length: 0
 
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"user": "u3", "password": "111111"}' http://127.0.0.1:8080/v1/user/add
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"user": "u3", "password": "111111", "privilege": ""}' http://127.0.0.1:8080/v1/user/add
 HTTP/1.1 200 OK
 Date: Wed, 15 May 2019 02:49:30 GMT
 Content-Length: 0
@@ -832,7 +834,7 @@ Content-Length: 0
 ```
 
 
-### update user
+### update user password
 
 ```
 Path:    /v1/user/update

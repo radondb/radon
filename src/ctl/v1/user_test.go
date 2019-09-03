@@ -29,7 +29,7 @@ func TestCtlV1CreateUser(t *testing.T) {
 
 	// fakedbs.
 	{
-		fakedbs.AddQuery("GRANT ALL ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", &sqltypes.Result{})
+		fakedbs.AddQuery("GRANT select,insert,update,delete ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", &sqltypes.Result{})
 	}
 
 	// server
@@ -45,6 +45,7 @@ func TestCtlV1CreateUser(t *testing.T) {
 			Databases: "*",
 			User:      "mock",
 			Password:  "pwd",
+			Privilege: "select,insert,update,delete",
 		}
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/user/add", p))
 		recorded.CodeIs(200)
@@ -121,6 +122,9 @@ func TestCtlV1CreateUserError(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryError("GRANT ALL ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", errors.New("mock.create.user.error"))
+		fakedbs.AddQueryError("GRANT privErr ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", errors.New("mock.create.user.error"))
+		fakedbs.AddQueryError("GRANT ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", errors.New("mock.create.user.error"))
+		fakedbs.AddQueryError("GRANT selec,insert,update ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", errors.New("mock.create.user.error"))
 	}
 
 	// server
@@ -141,6 +145,50 @@ func TestCtlV1CreateUserError(t *testing.T) {
 			Databases: "*",
 			User:      "mock",
 			Password:  "pwd",
+		}
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/user/add", p))
+		recorded.CodeIs(503)
+	}
+
+	{
+		p := &userParams{
+			Databases: "*",
+			User:      "mock",
+			Password:  "pwd",
+			Privilege: "select",
+		}
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/user/add", p))
+		recorded.CodeIs(503)
+	}
+
+	{
+		p := &userParams{
+			Databases: "*,a,b",
+			User:      "mock",
+			Password:  "pwd",
+			Privilege: "selec,insert,update",
+		}
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/user/add", p))
+		recorded.CodeIs(503)
+	}
+
+	{
+		p := &userParams{
+			Databases: "*,a,b",
+			User:      "mock",
+			Password:  "pwd",
+			Privilege: " ",
+		}
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/user/add", p))
+		recorded.CodeIs(503)
+	}
+
+	{
+		p := &userParams{
+			Databases: "*,a,b",
+			User:      "mock",
+			Password:  "pwd",
+			Privilege: "privErr",
 		}
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/user/add", p))
 		recorded.CodeIs(503)
@@ -168,6 +216,73 @@ func TestCtlV1CreateUserError1(t *testing.T) {
 		}
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/user/add", p))
 		recorded.CodeIs(204)
+	}
+}
+
+func TestCtlV1CreateUserPriv(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := proxy.MockProxy(log)
+	defer cleanup()
+
+	// fakedbs.
+	{
+		fakedbs.AddQuery("GRANT ALL ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", &sqltypes.Result{})
+		fakedbs.AddQuery("GRANT select,insert,update,delete ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", &sqltypes.Result{})
+		fakedbs.AddQuery("GRANT select ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", &sqltypes.Result{})
+		fakedbs.AddQuery("GRANT insert,update,delete ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", &sqltypes.Result{})
+		fakedbs.AddQuery("GRANT delete ON *.* TO 'mock'@'%' IDENTIFIED BY 'pwd'", &sqltypes.Result{})
+	}
+
+	// server
+	api := rest.NewApi()
+	router, _ := rest.MakeRouter(
+		rest.Post("/v1/user/add", CreateUserHandler(log, proxy)),
+	)
+	api.SetApp(router)
+	handler := api.MakeHandler()
+
+	{
+		p := &userParams{
+			Databases: "*",
+			User:      "mock",
+			Password:  "pwd",
+			Privilege: "select,insert,update,delete",
+		}
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/user/add", p))
+		recorded.CodeIs(200)
+	}
+
+	{
+		p := &userParams{
+			Databases: "*",
+			User:      "mock",
+			Password:  "pwd",
+			Privilege: "select",
+		}
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/user/add", p))
+		recorded.CodeIs(200)
+	}
+
+	{
+		p := &userParams{
+			Databases: "*",
+			User:      "mock",
+			Password:  "pwd",
+			Privilege: "delete",
+		}
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/user/add", p))
+		recorded.CodeIs(200)
+	}
+
+	{
+		p := &userParams{
+			Databases: "*",
+			User:      "mock",
+			Password:  "pwd",
+			Privilege: "insert,update,delete",
+		}
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/user/add", p))
+		recorded.CodeIs(200)
 	}
 }
 
