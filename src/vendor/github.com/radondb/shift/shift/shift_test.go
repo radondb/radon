@@ -23,7 +23,7 @@ import (
 
 func assertChecksumEqual(t *testing.T, shift *Shift) {
 	// check checksum.
-	<-shift.Done()
+	<-shift.getDoneCh()
 
 	assert.Equal(t, false, readonlyLast)
 	assert.Equal(t, 0, throttleLast)
@@ -31,7 +31,7 @@ func assertChecksumEqual(t *testing.T, shift *Shift) {
 
 func assertChecksumNotEqual(t *testing.T, shift *Shift) {
 	// check checksum.
-	<-shift.Done()
+	<-shift.getDoneCh()
 
 	fromConn := shift.fromPool.Get()
 	defer shift.fromPool.Put(fromConn)
@@ -1079,7 +1079,7 @@ func TestShiftWithRadonShardShiftError(t *testing.T) {
 func TestShiftStart(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
 	shift := NewShift(log, mockCfg)
-	defer shift.Close()
+	defer shift.close()
 
 	err := shift.Start()
 	assert.Nil(t, err)
@@ -1134,7 +1134,7 @@ func TestShiftCanalClose(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	// Keep continuing insert so that canal will be always running and we
-	// have enough time to use shift.Close() to simulate signal like kill
+	// have enough time to use shift.close() to simulate signal like kill
 	go func() {
 		begin := 0
 		step := 5000
@@ -1198,10 +1198,10 @@ func TestShiftCanalClose(t *testing.T) {
 	assert.Nil(t, errstart)
 
 	// Sleep 2s to make sure we have enough time that shift.Start() having executed
-	// canal.Run(), then we can use shift.Close() to simulate signal like kill
+	// canal.Run(), then we can use shift.close() to simulate signal like kill
 	time.Sleep(time.Second * 2)
 	log.Debug("sleep 2s")
-	errClose := shift.Close()
+	errClose := shift.close()
 	assert.Nil(t, errClose)
 	c <- true
 	wg.Wait()
@@ -1339,9 +1339,9 @@ func TestShiftParseBOM(t *testing.T) {
 		err := shift.Start()
 		assert.Nil(t, err)
 		// wait shift done
-		<-shift.Done()
+		<-shift.getDoneCh()
 		assert.True(t, shift.allDone.Get())
-		shift.Close()
+		shift.close()
 
 		ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 		h.Shutdown(ctx)
@@ -1360,9 +1360,9 @@ func TestShiftParseBOM(t *testing.T) {
 		err := shift.Start()
 		assert.Nil(t, err)
 		// wait shift done
-		<-shift.Done()
+		<-shift.getDoneCh()
 		assert.True(t, shift.allDone.Get())
-		shift.Close()
+		shift.close()
 
 		ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 		h.Shutdown(ctx)
@@ -1381,9 +1381,9 @@ func TestShiftParseBOM(t *testing.T) {
 		err := shift.Start()
 		assert.Nil(t, err)
 		// wait shift done
-		<-shift.Done()
+		<-shift.getDoneCh()
 		assert.True(t, shift.allDone.Get())
-		shift.Close()
+		shift.close()
 
 		ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 		h.Shutdown(ctx)
@@ -1530,9 +1530,9 @@ func TestSupportShiftToRadonDB(t *testing.T) {
 		err := shift.Start()
 		assert.Nil(t, err)
 		// wait shift done
-		<-shift.Done()
+		<-shift.getDoneCh()
 		assert.True(t, shift.allDone.Get())
-		shift.Close()
+		shift.close()
 
 		log.Info("shift to radondb done.")
 	}

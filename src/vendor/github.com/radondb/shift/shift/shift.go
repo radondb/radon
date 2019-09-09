@@ -54,6 +54,60 @@ func NewShift(log *xlog.Log, cfg *Config) *Shift {
 	}
 }
 
+// Start used to start canal and behinds ticker.
+func (shift *Shift) Start() error {
+	log := shift.log
+	if err := shift.prepareConnection(); err != nil {
+		log.Error("shift.prepare.connection.error")
+		return errors.Trace(err)
+	}
+	if err := shift.prepareTable(); err != nil {
+		log.Error("shift.prepare.table.error")
+		return errors.Trace(err)
+	}
+	if err := shift.prepareCanal(); err != nil {
+		log.Error("shift.prepare.canal.error")
+		return errors.Trace(err)
+	}
+	if err := shift.behindsCheckStart(); err != nil {
+		log.Error("shift.start.check.behinds.error")
+		return errors.Trace(err)
+	}
+	return nil
+}
+
+// In WaitFinish(), we should add signal kill operation if we use shift as a program.
+func (shift *Shift) WaitFinish() error {
+	log := shift.log
+	// No matter shift table success or not, we do close func
+	closeWithDone := func() error {
+		if err := shift.close(); err != nil {
+			log.Error("shift.do.close.failed:%+v", err)
+			return err
+		} else {
+			log.Info("shift.completed.OK!")
+			return nil
+		}
+	}
+	closeWithError := func() error {
+		if err := shift.close(); err != nil {
+			log.Error("shift.do.close.failed:%+v", err)
+			return err
+		}
+		return nil
+	}
+
+	select {
+	case <-shift.getDoneCh():
+		log.Info("shift.table.done.and.do.close.work.before.return.")
+		return closeWithDone()
+	case err := <-shift.getErrorCh():
+		log.Error("shift.table.got.error.and.do.close.work.before.return:%+v", err)
+		_ = closeWithError()
+		return err
+	}
+}
+
 func (shift *Shift) GetCanalStatus() bool {
 	return shift.atomicBool.Get()
 }
@@ -372,33 +426,10 @@ func (shift *Shift) behindsCheckStart() error {
 	return nil
 }
 
-// Start used to start canal and behinds ticker.
-func (shift *Shift) Start() error {
-	log := shift.log
-	if err := shift.prepareConnection(); err != nil {
-		log.Error("shift.prepare.connection.error")
-		return errors.Trace(err)
-	}
-	if err := shift.prepareTable(); err != nil {
-		log.Error("shift.prepare.table.error")
-		return errors.Trace(err)
-	}
-	if err := shift.prepareCanal(); err != nil {
-		log.Error("shift.prepare.canal.error")
-		return errors.Trace(err)
-	}
-	if err := shift.behindsCheckStart(); err != nil {
-		log.Error("shift.start.check.behinds.error")
-		return errors.Trace(err)
-	}
-	return nil
-}
-
 // Close used to destroy all the resource.
-func (shift *Shift) Close() error {
+func (shift *Shift) close() error {
 	log := shift.log
 
-	log.Info("shift.do.close.start...")
 	shift.behindsTicker.Stop()
 	shift.canal.Close()
 	shift.fromPool.Close()
@@ -410,10 +441,10 @@ func (shift *Shift) Close() error {
 	return nil
 }
 
-func (shift *Shift) Done() chan bool {
+func (shift *Shift) getDoneCh() chan bool {
 	return shift.done
 }
 
-func (shift *Shift) Error() chan error {
+func (shift *Shift) getErrorCh() chan error {
 	return shift.err
 }
