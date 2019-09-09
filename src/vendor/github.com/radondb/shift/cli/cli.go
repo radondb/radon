@@ -11,10 +11,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
-	"os/signal"
 	"runtime"
-	"syscall"
 
 	"github.com/radondb/shift/build"
 	"github.com/radondb/shift/shift"
@@ -99,41 +96,5 @@ func main() {
 		log.Fatal("shift.start.error:%+v", err)
 	}
 
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc,
-		os.Kill,
-		os.Interrupt,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT)
-
-	// No matter shift table success or not, we do close func
-	closeWithOK := func() {
-		if err := shift.Close(); err != nil {
-			log.Error("shift.close.fail:%+v", err)
-			log.Error("shift.table.fail!")
-		} else {
-			log.Info("shift.completed.OK!")
-		}
-	}
-	closeWithError := func() {
-		if err := shift.Close(); err != nil {
-			log.Error("shift.close.fail:%+v", err)
-		}
-		log.Error("shift.table.fail!")
-	}
-
-	var err error
-	select {
-	case <-shift.Done():
-		log.Info("shift.table.done!")
-		closeWithOK()
-	case err = <-shift.Error():
-		log.Error("shift.table.error:%+v", err)
-		closeWithError()
-	case <-sc:
-		log.Error("shift.signal.done...")
-		closeWithError()
-	}
+	_ = shift.WaitFinish()
 }

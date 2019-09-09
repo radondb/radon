@@ -240,7 +240,7 @@ func mockShift(log *xlog.Log, cfg *Config, hasPK bool, initData bool, readonlyHa
 		}
 	}
 	return shift, func() {
-		shift.Close()
+		shift.close()
 		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 		h.Shutdown(ctx)
 		time.Sleep(time.Millisecond * 100)
