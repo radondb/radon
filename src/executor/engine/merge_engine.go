@@ -6,10 +6,11 @@
  *
  */
 
-package executor
+package engine
 
 import (
 	"backend"
+	"executor/engine/operator"
 	"planner"
 	"xcontext"
 
@@ -38,8 +39,8 @@ func NewMergeEngine(log *xlog.Log, node *planner.MergeNode, txn backend.Transact
 	}
 }
 
-// execute used to execute the executor.
-func (m *MergeEngine) execute(ctx *xcontext.ResultContext) error {
+// Execute used to execute the executor.
+func (m *MergeEngine) Execute(ctx *xcontext.ResultContext) error {
 	var err error
 
 	reqCtx := xcontext.NewRequestContext()
@@ -56,7 +57,7 @@ func (m *MergeEngine) execute(ctx *xcontext.ResultContext) error {
 	if ctx.Results, err = m.txn.Execute(reqCtx); err != nil {
 		return err
 	}
-	return execSubPlan(m.log, m.node, ctx)
+	return operator.ExecSubPlan(m.log, m.node, ctx)
 }
 
 // execBindVars used to execute querys with bindvas.
@@ -81,7 +82,7 @@ func (m *MergeEngine) execBindVars(ctx *xcontext.ResultContext, bindVars map[str
 	if ctx.Results, err = m.txn.Execute(reqCtx); err != nil {
 		return err
 	}
-	return execSubPlan(m.log, m.node, ctx)
+	return operator.ExecSubPlan(m.log, m.node, ctx)
 }
 
 // getFields fetches the field info.

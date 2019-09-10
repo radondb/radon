@@ -6,7 +6,7 @@
  *
  */
 
-package executor
+package operator
 
 import (
 	"fmt"
@@ -19,50 +19,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
-	"github.com/xelabs/go-mysqlstack/xlog"
-
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
+	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
-func TestAggregateExecutor(t *testing.T) {
-	r1 := &sqltypes.Result{
-		Fields: []*querypb.Field{
-			{
-				Name: "id",
-				Type: querypb.Type_INT32,
-			},
-			{
-				Name: "score",
-				Type: sqltypes.Decimal,
-			},
-		},
-		Rows: [][]sqltypes.Value{
-			{
-				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
-				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
-			},
-		},
-	}
-	r2 := &sqltypes.Result{
-		Fields: []*querypb.Field{
-			{
-				Name: "id",
-				Type: querypb.Type_INT32,
-			},
-			{
-				Name: "score",
-				Type: sqltypes.Decimal,
-			},
-		},
-		Rows: [][]sqltypes.Value{
-			{
-				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
-				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("7")),
-			},
-		},
-	}
-
+func TestAggregateOperator(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
 
@@ -73,37 +35,8 @@ func TestAggregateExecutor(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Create scatter and query handler.
-	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	scatter, _, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
-	// sum.
-	fakedbs.AddQuery("select id, sum(score) as score from sbtest.A0 as A where id > 1", r1)
-	fakedbs.AddQuery("select id, sum(score) as score from sbtest.A2 as A where id > 1", r2)
-	fakedbs.AddQuery("select id, sum(score) as score from sbtest.A4 as A where id > 1", r1)
-	fakedbs.AddQuery("select id, sum(score) as score from sbtest.A8 as A where id > 1", r2)
-
-	// count.
-	fakedbs.AddQuery("select id, count(score) as score from sbtest.A0 as A where id > 2", r1)
-	fakedbs.AddQuery("select id, count(score) as score from sbtest.A2 as A where id > 2", r2)
-	fakedbs.AddQuery("select id, count(score) as score from sbtest.A4 as A where id > 2", r1)
-	fakedbs.AddQuery("select id, count(score) as score from sbtest.A8 as A where id > 2", r2)
-
-	// min.
-	fakedbs.AddQuery("select id, min(score) as score from sbtest.A0 as A where id > 1", r1)
-	fakedbs.AddQuery("select id, min(score) as score from sbtest.A2 as A where id > 1", r2)
-	fakedbs.AddQuery("select id, min(score) as score from sbtest.A4 as A where id > 1", r1)
-	fakedbs.AddQuery("select id, min(score) as score from sbtest.A8 as A where id > 1", r2)
-
-	// max.
-	fakedbs.AddQuery("select id, max(score) as score from sbtest.A0 as A where id > 2", r1)
-	fakedbs.AddQuery("select id, max(score) as score from sbtest.A2 as A where id > 2", r2)
-	fakedbs.AddQuery("select id, max(score) as score from sbtest.A4 as A where id > 2", r1)
-	fakedbs.AddQuery("select id, max(score) as score from sbtest.A8 as A where id > 2", r2)
-
-	// distinct.
-	fakedbs.AddQuery("select id, score as score from sbtest.A0 as A where id > 2", r1)
-	fakedbs.AddQuery("select id, score as score from sbtest.A2 as A where id > 2", r2)
-	fakedbs.AddQuery("select id, score as score from sbtest.A4 as A where id > 2", r1)
-	fakedbs.AddQuery("select id, score as score from sbtest.A8 as A where id > 2", r2)
 
 	querys := []string{
 		"select id, sum(score) as score from A where id>1",
@@ -138,10 +71,37 @@ func TestAggregateExecutor(t *testing.T) {
 		txn, err := scatter.CreateTransaction()
 		assert.Nil(t, err)
 		defer txn.Finish()
-		executor := NewSelectExecutor(log, plan, txn)
 		{
 			ctx := xcontext.NewResultContext()
-			err := executor.Execute(ctx)
+			ctx.Results = &sqltypes.Result{}
+			ctx.Results.Fields = []*querypb.Field{
+				{
+					Name: "id",
+					Type: querypb.Type_INT32,
+				}, {
+					Name: "score",
+					Type: sqltypes.Decimal,
+				},
+			}
+			ctx.Results.Rows = [][]sqltypes.Value{
+				{
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
+				},
+				{
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("7")),
+				},
+				{
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
+				},
+				{
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("7")),
+				},
+			}
+			err = ExecSubPlan(log, plan.Root, ctx)
 			assert.Nil(t, err)
 			want := results[i]
 			got := fmt.Sprintf("%v", ctx.Results.Rows)
@@ -151,47 +111,7 @@ func TestAggregateExecutor(t *testing.T) {
 	}
 }
 
-func TestAggregateAvgExecutor(t *testing.T) {
-	r1 := &sqltypes.Result{
-		Fields: []*querypb.Field{
-			{
-				Name:     "score",
-				Type:     querypb.Type_FLOAT32,
-				Decimals: 2,
-			},
-			{
-				Name: "count(score)",
-				Type: querypb.Type_INT32,
-			},
-		},
-		Rows: [][]sqltypes.Value{
-			{
-				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
-				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("1")),
-			},
-		},
-	}
-
-	r2 := &sqltypes.Result{
-		Fields: []*querypb.Field{
-			{
-				Name:     "score",
-				Type:     querypb.Type_FLOAT32,
-				Decimals: 2,
-			},
-			{
-				Name: "count(score)",
-				Type: querypb.Type_INT32,
-			},
-		},
-		Rows: [][]sqltypes.Value{
-			{
-				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("13")),
-				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
-			},
-		},
-	}
-
+func TestAggregateAvgOperator(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
 
@@ -202,19 +122,8 @@ func TestAggregateAvgExecutor(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Create scatter and query handler.
-	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	scatter, _, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
-	// avg.
-	fakedbs.AddQuery("select sum(score) as score, count(score) from sbtest.A0 as A where id > 8", r1)
-	fakedbs.AddQuery("select sum(score) as score, count(score) from sbtest.A2 as A where id > 8", r1)
-	fakedbs.AddQuery("select sum(score) as score, count(score) from sbtest.A4 as A where id > 8", r1)
-	fakedbs.AddQuery("select sum(score) as score, count(score) from sbtest.A8 as A where id > 8", r2)
-
-	// avg distinct.
-	fakedbs.AddQuery("select score as score, score as `count(score)` from sbtest.A0 as A where id > 8", r1)
-	fakedbs.AddQuery("select score as score, score as `count(score)` from sbtest.A2 as A where id > 8", r1)
-	fakedbs.AddQuery("select score as score, score as `count(score)` from sbtest.A4 as A where id > 8", r1)
-	fakedbs.AddQuery("select score as score, score as `count(score)` from sbtest.A8 as A where id > 8", r2)
 	querys := []string{
 		"select avg(score) as score from A where id>8",
 		"select avg(distinct score) as score, count(score) from A where id>8",
@@ -236,10 +145,39 @@ func TestAggregateAvgExecutor(t *testing.T) {
 		txn, err := scatter.CreateTransaction()
 		assert.Nil(t, err)
 		defer txn.Finish()
-		executor := NewSelectExecutor(log, plan, txn)
 		{
 			ctx := xcontext.NewResultContext()
-			err := executor.Execute(ctx)
+			ctx.Results = &sqltypes.Result{}
+			ctx.Results.Fields = []*querypb.Field{
+				{
+					Name:     "score",
+					Type:     querypb.Type_FLOAT32,
+					Decimals: 2,
+				},
+				{
+					Name: "count(score)",
+					Type: querypb.Type_INT32,
+				},
+			}
+			ctx.Results.Rows = [][]sqltypes.Value{
+				{
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("1")),
+				},
+				{
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("1")),
+				},
+				{
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("1")),
+				},
+				{
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("13")),
+					sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
+				},
+			}
+			err = ExecSubPlan(log, plan.Root, ctx)
 			assert.Nil(t, err)
 			want := results[i]
 			got := fmt.Sprintf("%v", ctx.Results.Rows)
@@ -316,7 +254,7 @@ func TestAggregateNotPush(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Create scatter and query handler.
-	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	scatter, _, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
 
 	querys := []string{
@@ -333,9 +271,6 @@ func TestAggregateNotPush(t *testing.T) {
 	}
 
 	for i, query := range querys {
-		fakedbs.ResetAll()
-		fakedbs.AddQueryPattern("select.*", rss[i])
-
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
@@ -347,10 +282,10 @@ func TestAggregateNotPush(t *testing.T) {
 		txn, err := scatter.CreateTransaction()
 		assert.Nil(t, err)
 		defer txn.Finish()
-		executor := NewSelectExecutor(log, plan, txn)
 		{
 			ctx := xcontext.NewResultContext()
-			err := executor.Execute(ctx)
+			ctx.Results = rss[i]
+			err = ExecSubPlan(log, plan.Root, ctx)
 			assert.Nil(t, err)
 			want := wantResults[i]
 			got := fmt.Sprintf("%v", ctx.Results.Rows)
@@ -377,21 +312,14 @@ func TestAggregateGroup(t *testing.T) {
 				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("1")),
 				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("11")),
 			},
-		},
-	}
-
-	r2 := &sqltypes.Result{
-		Fields: []*querypb.Field{
 			{
-				Name: "a",
-				Type: querypb.Type_INT32,
+				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("2")),
+				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("22")),
 			},
 			{
-				Name: "sum(score)",
-				Type: sqltypes.Decimal,
+				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("1")),
+				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("11")),
 			},
-		},
-		Rows: [][]sqltypes.Value{
 			{
 				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("2")),
 				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("22")),
@@ -409,14 +337,8 @@ func TestAggregateGroup(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Create scatter and query handler.
-	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	scatter, _, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
-	// avg.
-	fakedbs.AddQuery("select a, sum(score) from sbtest.A0 as A where id > 8 group by a order by a asc", r1)
-	fakedbs.AddQuery("select a, sum(score) from sbtest.A2 as A where id > 8 group by a order by a asc", r1)
-	fakedbs.AddQuery("select a, sum(score) from sbtest.A4 as A where id > 8 group by a order by a asc", r2)
-	fakedbs.AddQuery("select a, sum(score) from sbtest.A8 as A where id > 8 group by a order by a asc", r2)
-
 	querys := []string{
 		"select a, sum(score) from A where id>8 group by a",
 	}
@@ -436,10 +358,11 @@ func TestAggregateGroup(t *testing.T) {
 		txn, err := scatter.CreateTransaction()
 		assert.Nil(t, err)
 		defer txn.Finish()
-		executor := NewSelectExecutor(log, plan, txn)
 		{
 			ctx := xcontext.NewResultContext()
-			err := executor.Execute(ctx)
+			ctx.Results = &sqltypes.Result{}
+			ctx.Results = r1
+			err = ExecSubPlan(log, plan.Root, ctx)
 			assert.Nil(t, err)
 			want := results[i]
 			got := fmt.Sprintf("%v", ctx.Results.Rows)

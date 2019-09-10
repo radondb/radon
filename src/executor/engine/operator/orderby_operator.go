@@ -6,11 +6,12 @@
  *
  */
 
-package executor
+package operator
 
 import (
-	"planner"
 	"sort"
+
+	"planner"
 	"xcontext"
 
 	"github.com/pkg/errors"
@@ -19,28 +20,28 @@ import (
 )
 
 var (
-	_ Executor = &OrderByExecutor{}
+	_ Operator = &OrderByOperator{}
 )
 
-// OrderByExecutor represents order by executor.
-type OrderByExecutor struct {
+// OrderByOperator represents order by operator.
+type OrderByOperator struct {
 	log  *xlog.Log
 	plan planner.Plan
 }
 
-// NewOrderByExecutor creates new orderby executor.
-func NewOrderByExecutor(log *xlog.Log, plan planner.Plan) *OrderByExecutor {
-	return &OrderByExecutor{
+// NewOrderByOperator creates new orderby operator.
+func NewOrderByOperator(log *xlog.Log, plan planner.Plan) *OrderByOperator {
+	return &OrderByOperator{
 		log:  log,
 		plan: plan,
 	}
 }
 
-// Execute used to execute the executor.
-func (executor *OrderByExecutor) Execute(ctx *xcontext.ResultContext) error {
+// Execute used to execute the operator.
+func (operator *OrderByOperator) Execute(ctx *xcontext.ResultContext) error {
 	var err error
 	rs := ctx.Results
-	plan := executor.plan.(*planner.OrderByPlan)
+	plan := operator.plan.(*planner.OrderByPlan)
 
 	sort.Slice(rs.Rows, func(i, j int) bool {
 		// If there are any errors below, the function sets

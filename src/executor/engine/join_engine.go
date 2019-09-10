@@ -6,12 +6,13 @@
  *
  */
 
-package executor
+package engine
 
 import (
 	"sync"
 
 	"backend"
+	"executor/engine/operator"
 	"planner"
 	"xcontext"
 
@@ -42,14 +43,14 @@ func NewJoinEngine(log *xlog.Log, node *planner.JoinNode, txn backend.Transactio
 	}
 }
 
-// execute used to execute the executor.
-func (j *JoinEngine) execute(ctx *xcontext.ResultContext) error {
+// Execute used to execute the executor.
+func (j *JoinEngine) Execute(ctx *xcontext.ResultContext) error {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	allErrors := make([]error, 0, 2)
 	oneExec := func(exec PlanEngine, ctx *xcontext.ResultContext) {
 		defer wg.Done()
-		if err := exec.execute(ctx); err != nil {
+		if err := exec.Execute(ctx); err != nil {
 			mu.Lock()
 			allErrors = append(allErrors, err)
 			mu.Unlock()
@@ -97,7 +98,7 @@ func (j *JoinEngine) execute(ctx *xcontext.ResultContext) error {
 		}
 	}
 
-	return execSubPlan(j.log, j.node, ctx)
+	return operator.ExecSubPlan(j.log, j.node, ctx)
 }
 
 // execBindVars used to execute querys with bindvas.

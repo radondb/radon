@@ -6,7 +6,7 @@
  *
  */
 
-package executor
+package operator
 
 import (
 	"sort"
@@ -19,28 +19,28 @@ import (
 )
 
 var (
-	_ Executor = &AggregateExecutor{}
+	_ Operator = &AggregateOperator{}
 )
 
-// AggregateExecutor represents aggregate executor.
+// AggregateOperator represents aggregate operator.
 // Including: COUNT/MAX/MIN/SUM/AVG/GROUPBY.
-type AggregateExecutor struct {
+type AggregateOperator struct {
 	log  *xlog.Log
 	plan planner.Plan
 }
 
-// NewAggregateExecutor creates new AggregateExecutor.
-func NewAggregateExecutor(log *xlog.Log, plan planner.Plan) *AggregateExecutor {
-	return &AggregateExecutor{
+// NewAggregateOperator creates new AggregateOperator.
+func NewAggregateOperator(log *xlog.Log, plan planner.Plan) *AggregateOperator {
+	return &AggregateOperator{
 		log:  log,
 		plan: plan,
 	}
 }
 
-// Execute used to execute the executor.
-func (executor *AggregateExecutor) Execute(ctx *xcontext.ResultContext) error {
+// Execute used to execute the operator.
+func (operator *AggregateOperator) Execute(ctx *xcontext.ResultContext) error {
 	rs := ctx.Results
-	executor.aggregate(rs)
+	operator.aggregate(rs)
 	return nil
 }
 
@@ -50,9 +50,9 @@ func (executor *AggregateExecutor) Execute(ctx *xcontext.ResultContext) error {
 // eg: select a,b from tb group by b.        ×
 //     select count(a),b from tb group by b. √
 //     select b from tb group by b.          √
-func (executor *AggregateExecutor) aggregate(result *sqltypes.Result) {
+func (operator *AggregateOperator) aggregate(result *sqltypes.Result) {
 	var deIdxs []int
-	plan := executor.plan.(*planner.AggregatePlan)
+	plan := operator.plan.(*planner.AggregatePlan)
 	if plan.Empty() {
 		return
 	}
@@ -94,7 +94,7 @@ func (executor *AggregateExecutor) aggregate(result *sqltypes.Result) {
 			continue
 		}
 
-		equal := executor.keysEqual(groups[length-1].row, row, groupAggrs)
+		equal := keysEqual(groups[length-1].row, row, groupAggrs)
 		if equal {
 			if aggPlansLen > 0 {
 				for i, aggr := range aggrs {
@@ -124,7 +124,7 @@ func (executor *AggregateExecutor) aggregate(result *sqltypes.Result) {
 	result.RemoveColumns(deIdxs...)
 }
 
-func (executor *AggregateExecutor) keysEqual(row1, row2 []sqltypes.Value, groups []planner.Aggregator) bool {
+func keysEqual(row1, row2 []sqltypes.Value, groups []planner.Aggregator) bool {
 	for _, v := range groups {
 		cmp := sqltypes.NullsafeCompare(row1[v.Index], row2[v.Index])
 		if cmp != 0 {

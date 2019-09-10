@@ -27,6 +27,8 @@ test:
 	@$(MAKE) testoptimizer
 	@$(MAKE) testplanner
 	@$(MAKE) testexecutor
+	@$(MAKE) testengine
+	@$(MAKE) testoperator
 	@$(MAKE) testbackend
 	@$(MAKE) testproxy
 	@$(MAKE) testaudit
@@ -52,6 +54,10 @@ testplanner:
 	go test -v planner
 testexecutor:
 	go test -v executor
+testengine:
+	go test -v executor/engine
+testoperator:
+	go test -v executor/engine/operator
 testbackend:
 	go test -v -race backend
 testproxy:
@@ -87,6 +93,8 @@ allpkgs =	xbase\
 			optimizer\
 			planner\
 			executor\
+			executor/engine\
+			executor/engine/operator\
 			backend\
 			proxy\
 			audit\

@@ -10,6 +10,7 @@ package executor
 
 import (
 	"backend"
+	"executor/engine"
 	"planner"
 	"xcontext"
 
@@ -40,8 +41,8 @@ func NewUnionExecutor(log *xlog.Log, plan planner.Plan, txn backend.Transaction)
 func (executor *UnionExecutor) Execute(ctx *xcontext.ResultContext) error {
 	log := executor.log
 	plan := executor.plan.(*planner.UnionPlan)
-	planEngine := buildEngine(log, plan.Root, executor.txn)
-	if err := planEngine.execute(ctx); err != nil {
+	planEngine := engine.BuildEngine(log, plan.Root, executor.txn)
+	if err := planEngine.Execute(ctx); err != nil {
 		return err
 	}
 	return nil

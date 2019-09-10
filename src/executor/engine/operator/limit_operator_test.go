@@ -6,7 +6,7 @@
  *
  */
 
-package executor
+package operator
 
 import (
 	"fmt"
@@ -19,13 +19,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
-	"github.com/xelabs/go-mysqlstack/xlog"
-
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
+	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
-func TestLimitExecutor(t *testing.T) {
+func TestLimitOperator(t *testing.T) {
 	r1 := &sqltypes.Result{
 		Fields: []*querypb.Field{
 			{
@@ -50,20 +49,6 @@ func TestLimitExecutor(t *testing.T) {
 				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("13")),
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("nice name13")),
 			},
-		},
-	}
-	r2 := &sqltypes.Result{
-		Fields: []*querypb.Field{
-			{
-				Name: "id",
-				Type: querypb.Type_INT32,
-			},
-			{
-				Name: "name",
-				Type: querypb.Type_VARCHAR,
-			},
-		},
-		Rows: [][]sqltypes.Value{
 			{
 				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("21")),
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("nice name21")),
@@ -74,7 +59,6 @@ func TestLimitExecutor(t *testing.T) {
 			},
 		},
 	}
-	r3 := &sqltypes.Result{}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
@@ -86,13 +70,8 @@ func TestLimitExecutor(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Create scatter and query handler.
-	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	scatter, _, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
-	// Add querys.
-	fakedbs.AddQuery("select id, name from sbtest.A0 as A where id > 8 order by id asc limit 1", r1)
-	fakedbs.AddQuery("select id, name from sbtest.A2 as A where id > 8 order by id asc limit 1", r2)
-	fakedbs.AddQuery("select id, name from sbtest.A4 as A where id > 8 order by id asc limit 1", r3)
-	fakedbs.AddQuery("select id, name from sbtest.A8 as A where id > 8 order by id asc limit 1", r3)
 
 	querys := []string{
 		"select id, name from A where id>8 order by id limit 1",
@@ -113,10 +92,11 @@ func TestLimitExecutor(t *testing.T) {
 		txn, err := scatter.CreateTransaction()
 		assert.Nil(t, err)
 		defer txn.Finish()
-		executor := NewSelectExecutor(log, plan, txn)
 		{
 			ctx := xcontext.NewResultContext()
-			err := executor.Execute(ctx)
+			ctx.Results = &sqltypes.Result{}
+			ctx.Results = r1
+			err = ExecSubPlan(log, plan.Root, ctx)
 			assert.Nil(t, err)
 			want := results[i]
 			got := fmt.Sprintf("%v", ctx.Results.Rows)
