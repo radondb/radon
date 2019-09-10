@@ -6,7 +6,7 @@
  *
  */
 
-package executor
+package engine
 
 import (
 	"fmt"
@@ -19,13 +19,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
-	"github.com/xelabs/go-mysqlstack/xlog"
-
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
+	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
-func TestOrderByExecutor(t *testing.T) {
+func TestMergeEngine(t *testing.T) {
 	r1 := &sqltypes.Result{
 		Fields: []*querypb.Field{
 			{
@@ -113,10 +112,10 @@ func TestOrderByExecutor(t *testing.T) {
 		txn, err := scatter.CreateTransaction()
 		assert.Nil(t, err)
 		defer txn.Finish()
-		executor := NewSelectExecutor(log, plan, txn)
+		planEngine := BuildEngine(log, plan.Root, txn)
 		{
 			ctx := xcontext.NewResultContext()
-			err := executor.Execute(ctx)
+			err := planEngine.Execute(ctx)
 			assert.Nil(t, err)
 			want := results[i]
 			got := fmt.Sprintf("%v", ctx.Results.Rows)

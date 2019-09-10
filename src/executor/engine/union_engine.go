@@ -6,13 +6,14 @@
  *
  */
 
-package executor
+package engine
 
 import (
 	"errors"
 	"sync"
 
 	"backend"
+	"executor/engine/operator"
 	"planner"
 	"xcontext"
 
@@ -43,14 +44,14 @@ func NewUnionEngine(log *xlog.Log, node *planner.UnionNode, txn backend.Transact
 	}
 }
 
-// execute used to execute the executor.
-func (u *UnionEngine) execute(ctx *xcontext.ResultContext) error {
+// Execute used to execute the executor.
+func (u *UnionEngine) Execute(ctx *xcontext.ResultContext) error {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	allErrors := make([]error, 0, 2)
 	oneExec := func(exec PlanEngine, ctx *xcontext.ResultContext) {
 		defer wg.Done()
-		if err := exec.execute(ctx); err != nil {
+		if err := exec.Execute(ctx); err != nil {
 			mu.Lock()
 			allErrors = append(allErrors, err)
 			mu.Unlock()
@@ -95,7 +96,7 @@ func (u *UnionEngine) execute(ctx *xcontext.ResultContext) error {
 		ctx.Results.Rows = lctx.Results.Rows
 		ctx.Results.RowsAffected = lctx.Results.RowsAffected
 	}
-	return execSubPlan(u.log, u.node, ctx)
+	return operator.ExecSubPlan(u.log, u.node, ctx)
 }
 
 // execBindVars used to execute querys with bindvas.

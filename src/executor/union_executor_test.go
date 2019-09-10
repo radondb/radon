@@ -20,9 +20,26 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/xlog"
+
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
-func TestSelectExecutorErr(t *testing.T) {
+func TestUnionExecutorErr(t *testing.T) {
+	r1 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "id",
+				Type: querypb.Type_INT32,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("5")),
+			},
+		},
+	}
+
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
 
@@ -36,17 +53,21 @@ func TestSelectExecutorErr(t *testing.T) {
 	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
 	// desc
-	fakedbs.AddQueryErrorPattern("select .*", errors.New("mock.execute.error"))
+	fakedbs.AddQuery("select * from sbtest.A8 as A where id = 2", r1)
+	fakedbs.AddQueryErrorPattern("select id from sbtest.B1 as B where id = 1", errors.New("mock.execute.error"))
 
 	querys := []string{
-		"select * from A",
+		"select * from A where id = 2 union select id from B where id = 1 order by id",
+	}
+	wants := []string{
+		"mock.execute.error (errno 1105) (sqlstate HY000)",
 	}
 
-	for _, query := range querys {
+	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		plan := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), route)
 		err = plan.Build()
 		assert.Nil(t, err)
 		log.Debug("plan:%+v", plan.JSON())
@@ -54,11 +75,13 @@ func TestSelectExecutorErr(t *testing.T) {
 		txn, err := scatter.CreateTransaction()
 		assert.Nil(t, err)
 		defer txn.Finish()
-		executor := NewSelectExecutor(log, plan, txn)
+		executor := NewUnionExecutor(log, plan, txn)
 		{
 			ctx := xcontext.NewResultContext()
 			err := executor.Execute(ctx)
 			assert.NotNil(t, err)
+			got := err.Error()
+			assert.Equal(t, wants[i], got)
 		}
 	}
 }

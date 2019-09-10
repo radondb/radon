@@ -30,12 +30,13 @@ func TestExecutor1(t *testing.T) {
 	fakedbs.AddQueryPattern("create table sbtest.A.*", fakedb.Result3)
 	fakedbs.AddQueryPattern("create database.*", fakedb.Result3)
 	fakedbs.AddQueryPattern("select.*", fakedb.Result3)
+	fakedbs.AddQueryPattern("checksum.*", fakedb.Result3)
 
 	database := "sbtest"
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig())
+	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
 
 	planTree := planner.NewPlanTree()
@@ -84,13 +85,39 @@ func TestExecutor1(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	// update
+	// select
 	{
 		query := "select * from A  where a=2"
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
 		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		err = plan.Build()
+		assert.Nil(t, err)
+		err = planTree.Add(plan)
+		assert.Nil(t, err)
+	}
+
+	// union
+	{
+		query := "select a from A where a=2 union select b from B"
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+
+		plan := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), route)
+		err = plan.Build()
+		assert.Nil(t, err)
+		err = planTree.Add(plan)
+		assert.Nil(t, err)
+	}
+
+	// others
+	{
+		query := "checksum table A"
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+
+		plan := planner.NewOthersPlan(log, database, query, node, route)
 		err = plan.Build()
 		assert.Nil(t, err)
 		err = planTree.Add(plan)
