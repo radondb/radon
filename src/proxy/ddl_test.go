@@ -27,6 +27,17 @@ func TestProxyDDLDB(t *testing.T) {
 	defer cleanup()
 	address := proxy.Address()
 
+	// create database querys
+	querys := []string{
+		"create database test1 charset default",
+		"create database test2 character set default",
+		"create database test3 charset utf8mb4",
+		"create database test4 character set latin1",
+		"create database test5 collate latin1_swedish_ci",
+		"create database if not exists test6 collate utf8mb4_unicode_ci charset utf8mb4",
+		"create database if not exists test7 collate utf8mb4_unicode_ci charset utf8mb4 charset utf8mb4 collate utf8mb4_unicode_ci",
+	}
+
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern(".* database .*", &sqltypes.Result{})
@@ -36,9 +47,10 @@ func TestProxyDDLDB(t *testing.T) {
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
-		query := "create database test"
-		_, err = client.FetchAll(query, -1)
-		assert.Nil(t, err)
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
 	}
 
 	// create database again.
@@ -77,6 +89,39 @@ func TestProxyDDLDB(t *testing.T) {
 		want := "Access denied; lacking privileges for database mysql (errno 1227) (sqlstate 42000)"
 		got := err.Error()
 		assert.Equal(t, want, got)
+	}
+}
+
+func TestProxyDDLDBError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// create database querys, error from mysql
+	querysError := []string{
+		// In Radon, utf8m/latin1 are parsed successfully, we just treat them as
+		// normal strings, but in mysql, they are not correct character set, so
+		// we still treat the sql next are not correct.
+		"create database test3 charset utf8m",  // utf8m-->utf8mb4
+		"create database test4 collate latin1", // latin1-->latin1_swedish_ci
+		// ERROR 1253 (42000): COLLATION 'latin1_swedish_ci' is not valid for CHARACTER SET 'utf8mb4'
+		"create database if not exists test5 character set utf8mb4 charset utf8mb4 collate utf8mb4_unicode_ci",
+	}
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryErrorPattern(".* database .*", errors.New("create database error"))
+	}
+
+	// create database and return error.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		for _, query := range querysError {
+			_, err = client.FetchAll(query, -1)
+			assert.NotNil(t, err)
+		}
 	}
 }
 

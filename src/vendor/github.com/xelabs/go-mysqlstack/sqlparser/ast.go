@@ -548,18 +548,19 @@ func (node *Checksum) WalkSubtree(visit Visit) error {
 // Table is set for AlterStr, DropStr, RenameStr.
 // NewName is set for AlterStr, CreateStr, RenameStr.
 type DDL struct {
-	Action        string
-	Engine        string
-	Charset       string
-	IndexName     string
-	PartitionName string
-	BackendName   string
-	IfExists      bool
-	IfNotExists   bool
-	Table         TableName
-	NewName       TableName
-	Database      TableIdent
-	TableSpec     *TableSpec
+	Action          string
+	Engine          string
+	Charset         string
+	IndexName       string
+	PartitionName   string
+	BackendName     string
+	IfExists        bool
+	IfNotExists     bool
+	Table           TableName
+	NewName         TableName
+	Database        TableIdent
+	DatabaseOptions DatabaseOptionListOpt
+	TableSpec       *TableSpec
 
 	// Tables is set if Action is DropStr.
 	Tables TableNames
@@ -601,6 +602,7 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 			ifnotexists = " if not exists"
 		}
 		buf.Myprintf("%s%s %s", node.Action, ifnotexists, node.Database.String())
+		node.DatabaseOptions.Format(buf)
 	case DropDBStr:
 		exists := ""
 		if node.IfExists {
@@ -657,6 +659,26 @@ func (node *DDL) WalkSubtree(visit Visit) error {
 		node.NewName,
 		node.Tables,
 	)
+}
+
+// DatabaseOption represents database option.
+// See: https://dev.mysql.com/doc/refman/5.7/en/create-database.html
+type DatabaseOption struct {
+	Value            string
+	CharsetOrCollate string
+}
+
+type DatabaseOptionList []*DatabaseOption
+
+type DatabaseOptionListOpt struct {
+	DBOptList DatabaseOptionList
+}
+
+// Format formats the node
+func (optList DatabaseOptionListOpt) Format(buf *TrackedBuffer) {
+	for _, dbOpt := range optList.DBOptList {
+		buf.Myprintf(" %s %s", dbOpt.CharsetOrCollate, dbOpt.Value)
+	}
 }
 
 // TableOptions represents the table options.

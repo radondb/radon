@@ -19,6 +19,8 @@ package sqlparser
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDDL1(t *testing.T) {
@@ -488,6 +490,60 @@ func TestDDL1(t *testing.T) {
 			output: "create database if not exists test",
 		},
 
+		// Create database with option issue #478
+		{
+			input:  "create database test charset utf8mxx",
+			output: "create database test charset utf8mxx",
+		},
+		{
+			input:  "create database test character set latin1xxx",
+			output: "create database test character set latin1xxx",
+		},
+		{
+			input:  "create database test charset default",
+			output: "create database test charset default",
+		},
+		{
+			input:  "create database test character set default",
+			output: "create database test character set default",
+		},
+		{
+			input:  "create database test charset utf8mb4",
+			output: "create database test charset utf8mb4",
+		},
+		{
+			input:  "create database test character set latin1",
+			output: "create database test character set latin1",
+		},
+		{
+			input:  "create database test collate latin1_swedish_ci",
+			output: "create database test collate latin1_swedish_ci",
+		},
+		{
+			input:  "create database test collate default charset default",
+			output: "create database test collate default charset default",
+		},
+		{
+			input:  "create database test  charset default collate default",
+			output: "create database test charset default collate default",
+		},
+		{
+			input:  "create database if not exists test  charset default collate default",
+			output: "create database if not exists test charset default collate default",
+		},
+		{
+			input:  "create database if not exists test collate utf8mb4_bin",
+			output: "create database if not exists test collate utf8mb4_bin",
+		},
+		{
+			input:  "create database if not exists test collate utf8mb4_unicode_ci charset utf8mb4",
+			output: "create database if not exists test collate utf8mb4_unicode_ci charset utf8mb4",
+		},
+		{
+			input:  "create database if not exists test collate utf8mb4_unicode_ci charset utf8mb4 charset utf8mb4",
+			output: "create database if not exists test collate utf8mb4_unicode_ci charset utf8mb4 charset utf8mb4",
+		},
+
 		// Alter engine.
 		{
 			input:  "alter table test engine=tokudb",
@@ -674,5 +730,35 @@ func TestDDL1(t *testing.T) {
 		if ddl.output != got {
 			t.Errorf("want:\n%s\ngot:\n%s", ddl.output, got)
 		}
+	}
+}
+
+func TestDDL1ParseError(t *testing.T) {
+	invalidSQL := []struct {
+		input  string
+		output string
+	}{
+		{
+			input:  "create database test1 char set default", // char-->charset
+			output: "syntax error at position 27 near 'char'",
+		},
+		{
+			input:  "create database test2 character default", // character-->character set
+			output: "syntax error at position 40 near 'default'",
+		},
+		{
+			input:  "create database test4 collate ", // collate_name should not be empty
+			output: "syntax error at position 31",
+		},
+		{
+			input:  "create database test4 charset ", // charset_name should not be empty
+			output: "syntax error at position 31",
+		},
+	}
+
+	for _, ddl := range invalidSQL {
+		sql := strings.TrimSpace(ddl.input)
+		_, err := Parse(sql)
+		assert.Equal(t, ddl.output, err.Error())
 	}
 }

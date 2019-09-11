@@ -103,6 +103,9 @@ func forceEOF(yylex interface{}) {
   columnOptionListOpt ColumnOptionListOpt
   columnOptionList  ColumnOptionList
   columnOption      *ColumnOption
+  databaseOptionListOpt DatabaseOptionListOpt
+  databaseOptionList  DatabaseOptionList
+  databaseOption      *DatabaseOption
 }
 
 %token LEX_ERROR
@@ -269,6 +272,7 @@ func forceEOF(yylex interface{}) {
 %type <columnType> int_type decimal_type numeric_type time_type char_type
 %type <optVal> length_opt column_default_opt on_update_opt column_comment_opt
 %type <str> charset_opt collate_opt charset_option engine_option autoincrement_option tabletype_option
+%type <str> collate_name_or_default opt_charset opt_equal opt_default charset_name_or_default
 %type <boolVal> unsigned_opt zero_fill_opt
 %type <LengthScaleOption> float_length_opt decimal_length_opt
 %type <boolVal> null_opt auto_increment_opt
@@ -286,6 +290,9 @@ func forceEOF(yylex interface{}) {
 %type <columnOptionListOpt> column_option_list_opt
 %type <columnOptionList> column_option_list
 %type <columnOption> column_option
+%type <databaseOptionListOpt> database_option_list_opt
+%type <databaseOptionList> database_option_list
+%type <databaseOption> database_option
 
 %start any_command
 
@@ -460,18 +467,97 @@ create_statement:
     $1.TableSpec.Options.Type = SingleTableType
     $$ = $1
   }
-| CREATE DATABASE not_exists_opt table_id
+| CREATE DATABASE not_exists_opt table_id database_option_list_opt
   {
     var ifnotexists bool
     if $3 != 0 {
       ifnotexists= true
     }
-    $$ = &DDL{Action: CreateDBStr, IfNotExists:ifnotexists, Database: $4}
+    $$ = &DDL{Action: CreateDBStr, IfNotExists:ifnotexists, Database: $4, DatabaseOptions: $5}
   }
 | CREATE constraint_opt INDEX ID ON table_name ddl_force_eof
   {
     // Change this to an alter statement
     $$ = &DDL{Action: CreateIndexStr, IndexName:string($4), Table: $6, NewName:$6}
+  }
+
+database_option_list_opt:
+  {
+    $$.DBOptList = []*DatabaseOption{}
+  }
+| database_option_list
+  {
+    $$.DBOptList = $1
+  }
+
+database_option_list:
+  database_option
+  {
+    $$ = append($$, $1)
+  }
+| database_option_list database_option
+  {
+    $$ = append($1, $2)
+  }
+
+database_option:
+    opt_default COLLATE opt_equal collate_name_or_default
+    {
+        $$ = &DatabaseOption{
+            CharsetOrCollate: string($2),
+            Value: $4,
+        }
+    }
+|   opt_default opt_charset opt_equal charset_name_or_default
+    {
+        $$ = &DatabaseOption{
+            CharsetOrCollate: string($2),
+            Value: $4,
+        }
+    }
+
+opt_default:
+{}
+| DEFAULT
+{}
+
+opt_equal:
+{}
+| '='
+{}
+
+opt_charset:
+CHARSET
+  {
+    $$ = string($1)
+  }
+| CHARACTER SET
+  {
+    $$ = "character set"
+  }
+
+collate_name_or_default:
+ID
+  {
+    $$ = string($1)
+  }
+| DEFAULT
+  {
+    $$ = "default"
+  }
+
+charset_name_or_default:
+ID
+  {
+    $$ = string($1)
+  }
+| BINARY
+  {
+    $$ = string($1)
+  }
+| DEFAULT
+  {
+    $$ = "default" 
   }
 
 create_table_prefix:
