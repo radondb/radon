@@ -1300,3 +1300,27 @@ func TestProxyDDLCreateTableDistributed(t *testing.T) {
 		assert.NotNil(t, err)
 	}
 }
+
+func TestProxyDDLUnsupportedAlter(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("alter table .*", &sqltypes.Result{})
+	}
+
+	// alter table a ORDER BY i.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "alter table a ORDER BY i"
+		_, err = client.FetchAll(query, -1)
+		want := "unsupported.query:alter table a ORDER BY i (errno 1105) (sqlstate HY000)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+}

@@ -365,7 +365,7 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		}
 		return r, nil
 	default:
-		log.Error("spanner.ddl[%v, %+v].access.denied", query, node)
-		return nil, sqldb.NewSQLErrorf(sqldb.ER_SPECIFIC_ACCESS_DENIED_ERROR, "Access denied; you don't have the privilege for %v operation", ddl.Action)
+		log.Error("spanner.unsupported[%s].from.session[%v]", query, session.ID())
+		return nil, sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query:%v", query)
 	}
 }
