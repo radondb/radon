@@ -5,7 +5,7 @@
 # OverView
 RadonDB is an open source, Cloud-native MySQL database for unlimited scalability and performance.
 
-## what is RadonDB?
+## What is RadonDB?
 
 RadonDB is a cloud-native database based on MySQL，and architected in fully distributed cluster that enable unlimited scalability (scale-out), capacity and performance. It supported distributed transaction that ensure high data consistency, and leveraged MySQL as storage engine for trusted data reliability. RadonDB is compatible with MySQL protocol, and sup-porting automatic table sharding as well as batch of automation feature for simplifying the maintenance and operation workflow.
 
