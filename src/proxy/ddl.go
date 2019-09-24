@@ -280,6 +280,9 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 			}
 		}
 
+		// After sqlparser.String(ddl), the quote '`' in table name will be removed, but the colName with quote '`' will be reserved. e.g.:
+		// sql: create table `db`.`tbl`(`col` int ....
+		// after string(): create table db.tbl(`col` int ....
 		r, err := spanner.ExecuteDDL(session, database, sqlparser.String(ddl), node)
 		if err != nil {
 			// Try to drop table.

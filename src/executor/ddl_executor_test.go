@@ -29,7 +29,7 @@ func TestDDLExecutor(t *testing.T) {
 	// Create scatter and query handler.
 	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
-	fakedbs.AddQueryPattern("create table `sbtest`.`A.*", fakedb.Result3)
+	fakedbs.AddQueryPattern("create table sbtest.A.*", fakedb.Result3)
 	fakedbs.AddQueryPattern("create database.*", fakedb.Result3)
 
 	route, cleanup := router.MockNewRouter(log)
@@ -41,27 +41,6 @@ func TestDDLExecutor(t *testing.T) {
 	// create table
 	{
 		query := "create table A(a int)"
-		node, err := sqlparser.Parse(query)
-		assert.Nil(t, err)
-
-		plan := planner.NewDDLPlan(log, database, query, node.(*sqlparser.DDL), route)
-		err = plan.Build()
-		assert.Nil(t, err)
-
-		txn, err := scatter.CreateTransaction()
-		assert.Nil(t, err)
-		defer txn.Finish()
-		executor := NewDDLExecutor(log, plan, txn)
-		{
-			ctx := xcontext.NewResultContext()
-			err := executor.Execute(ctx)
-			assert.Nil(t, err)
-		}
-	}
-
-	// create database
-	{
-		query := "create database sbtest"
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
