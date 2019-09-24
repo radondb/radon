@@ -125,6 +125,31 @@ func TestProxyDDLDBError(t *testing.T) {
 	}
 }
 
+// For issue #484: remove router.db when create db failed
+func TestProxyCreateDBError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryErrorPattern("create database .*", errors.New("ERROR 1253 (42000): COLLATION 'utf8mb4_unicode_ci' is not valid for CHARACTER SET 'latin1'"))
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test_charset charset latin1 collate utf8mb4_unicode_ci"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+		// db: test_charset had been removed
+		assert.Nil(t, proxy.router.Schemas["test_charset"])
+	}
+}
+
 func TestProxyDDLTable(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)

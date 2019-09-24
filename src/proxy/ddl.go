@@ -192,7 +192,13 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		if err := route.CreateDatabase(database); err != nil {
 			return nil, err
 		}
-		return spanner.ExecuteScatter(query)
+		qr, err := spanner.ExecuteScatter(query)
+		if err != nil {
+			// If we got err, try to drop database.
+			route.DropDatabase(database)
+			return nil, err
+		}
+		return qr, nil
 	case sqlparser.DropDBStr:
 		if node.IfExists && !checkDatabaseExists(database, route) {
 			return &sqltypes.Result{}, nil
