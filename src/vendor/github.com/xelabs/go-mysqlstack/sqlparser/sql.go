@@ -607,7 +607,11 @@ var yyExca = [...]int{
 	-2, 455,
 }
 
+const yyNprod = 682
 const yyPrivate = 57344
+
+var yyTokenNames []string
+var yyStates []string
 
 const yyLast = 7874
 
@@ -2459,7 +2463,7 @@ yydefault:
 			yyDollar[1].ddl.Action = CreateTableStr
 			yyDollar[1].ddl.TableSpec = yyDollar[2].TableSpec
 			yyDollar[1].ddl.PartitionName = string(yyDollar[7].bytes)
-			yyDollar[1].ddl.TableSpec.Options.Type = PartitionTableType
+			yyDollar[1].ddl.TableSpec.Options.Type = PartitionTableHash
 			yyVAL.statement = yyDollar[1].ddl
 		}
 	case 43:

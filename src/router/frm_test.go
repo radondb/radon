@@ -85,7 +85,7 @@ func TestFrmTable(t *testing.T) {
 	// Add partition table.
 	{
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t3_partition", "shardkey1", TableTypePartition, backends, nil)
+		err := router.CreateTable("test", "t3_partition", "shardkey1", TableTypePartitionHash, backends, nil)
 		assert.Nil(t, err)
 	}
 

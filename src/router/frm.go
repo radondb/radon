@@ -22,8 +22,11 @@ import (
 const (
 	TableTypeSingle    = "single"
 	TableTypeGlobal    = "global"
-	TableTypePartition = "partition"
 	TableTypeUnknow    = "unknow"
+
+	TableTypePartitionHash  = "hash"
+	TableTypePartitionList  = "list"
+	TableTypePartitionRange = "range"
 )
 
 // writeTableFrmData used to write table's json schema to file.
@@ -217,7 +220,7 @@ func (r *Router) CreateTable(db, table, shardKey string, tableType string, backe
 		if tableConf, err = r.SingleUniform(table, backends); err != nil {
 			return err
 		}
-	case TableTypePartition:
+	case TableTypePartitionHash:
 		if tableConf, err = r.HashUniform(table, shardKey, backends); err != nil {
 			return err
 		}

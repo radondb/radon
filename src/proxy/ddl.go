@@ -227,11 +227,11 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		checkEngine(ddl)
 
 		switch ddl.TableSpec.Options.Type {
-		case sqlparser.PartitionTableType, sqlparser.NormalTableType:
+		case sqlparser.PartitionTableHash, sqlparser.NormalTableType:
 			if shardKey, err = tryGetShardKey(ddl); err != nil {
 				return nil, err
 			}
-			tableType = router.TableTypePartition
+			tableType = router.TableTypePartitionHash
 		case sqlparser.GlobalTableType:
 			tableType = router.TableTypeGlobal
 		case sqlparser.SingleTableType:
