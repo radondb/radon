@@ -54,7 +54,7 @@ func (r *Router) removeTableFrmData(db string, table string) error {
 	log := r.log
 	dir := path.Join(r.metadir, db)
 	file := path.Join(dir, fmt.Sprintf("%s.json", table))
-	log.Warning("frm.remove.file[%v].for.[db:%s, table:%s]", db, table, file)
+	log.Warning("frm.remove.file[%v].for.[db:%s, table:%s]", file, db, table)
 	return os.Remove(file)
 }
 

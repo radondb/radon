@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"router"
@@ -66,160 +65,212 @@ func NewDDLPlan(log *xlog.Log, database string, query string, node *sqlparser.DD
 	}
 }
 
-// Build used to build DDL distributed querys.
-// sqlparser.DDL is a simple grammar ast, it just parses database and table name in the prefix.
-func (p *DDLPlan) Build() error {
+// checkUnsupportedOperations used to check whether we do unsupported operations when shardtype is HASH/LIST.
+func (p *DDLPlan) checkUnsupportedOperations(database, table string) error {
 	node := p.node
-
-	switch node.Action {
-	case sqlparser.CreateDBStr:
-		p.ReqMode = xcontext.ReqScatter
-		return nil
-	default:
-		table := node.Table.Name.String()
-		database := p.database
-		if !node.Table.Qualifier.IsEmpty() {
-			database = node.Table.Qualifier.String()
-		}
-
-		// Get the shard key.
-		shardKey, err := p.router.ShardKey(database, table)
-		if err != nil {
-			return err
-		}
-		// Unsupported operations check if shardtype is HASH.
-		if shardKey != "" {
-			switch node.Action {
-			case sqlparser.AlterDropColumnStr:
-				if shardKey == node.DropColumnName {
-					return errors.New("unsupported: cannot.drop.the.column.on.shard.key")
-				}
-			case sqlparser.AlterModifyColumnStr:
-				if shardKey == node.ModifyColumnDef.Name.String() {
-					return errors.New("unsupported: cannot.modify.the.column.on.shard.key")
-				}
-				// constraint check in column definition
-				if node.ModifyColumnDef.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
-					node.ModifyColumnDef.Type.UniqueKeyOpt == sqlparser.ColKeyUniqueKey {
+	// Get the shard key.
+	shardKey, err := p.router.ShardKey(database, table)
+	if err != nil {
+		return err
+	}
+	// Unsupported operations check when shardtype is HASH/LIST.
+	if shardKey != "" {
+		switch node.Action {
+		case sqlparser.AlterDropColumnStr:
+			if shardKey == node.DropColumnName {
+				return errors.New("unsupported: cannot.drop.the.column.on.shard.key")
+			}
+		case sqlparser.AlterModifyColumnStr:
+			if shardKey == node.ModifyColumnDef.Name.String() {
+				return errors.New("unsupported: cannot.modify.the.column.on.shard.key")
+			}
+			// constraint check in column definition
+			if node.ModifyColumnDef.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
+				node.ModifyColumnDef.Type.UniqueKeyOpt == sqlparser.ColKeyUniqueKey {
+				err := fmt.Sprintf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
+				return errors.New(err)
+			}
+		case sqlparser.AlterAddColumnStr:
+			// constraint check in column definition
+			for _, col := range node.TableSpec.Columns {
+				if col.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
+					col.Type.UniqueKeyOpt == sqlparser.ColKeyUniqueKey {
 					err := fmt.Sprintf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
 					return errors.New(err)
 				}
-			case sqlparser.AlterAddColumnStr:
-				//constraint check in column definition
-				for _, col := range node.TableSpec.Columns {
-					if col.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
-						col.Type.UniqueKeyOpt == sqlparser.ColKeyUniqueKey {
-						err := fmt.Sprintf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
-						return errors.New(err)
-					}
-				}
-				// constraint check in index definition
-				for _, index := range node.TableSpec.Indexes {
-					info := index.Info
-					if info.Unique || info.Primary {
-						err := fmt.Sprintf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
-						return errors.New(err)
-					}
+			}
+			// constraint check in index definition
+			for _, index := range node.TableSpec.Indexes {
+				info := index.Info
+				if info.Unique || info.Primary {
+					err := fmt.Sprintf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
+					return errors.New(err)
 				}
 			}
-		}
-
-		segments, err := p.router.Lookup(database, table, nil, nil)
-		if err != nil {
-			return err
-		}
-		for _, segment := range segments {
-			var query string
-
-			orgSegTable := segment.Table
-			var rawQuery string
-			var re *regexp.Regexp
-			var segTable string
-			if node.Table.Qualifier.IsEmpty() {
-				segTable = fmt.Sprintf("`%s`.`%s`", database, orgSegTable)
-				rawQuery = strings.Replace(p.RawQuery, "`", "", -1)
-				// \b: https://www.regular-expressions.info/wordboundaries.html
-				re, _ = regexp.Compile(fmt.Sprintf(`\b(%s)\b`, table))
-			} else {
-				segTable = fmt.Sprintf("`%s`.`%s`", database, orgSegTable)
-				newTable := fmt.Sprintf("%s.%s", database, table)
-				rawQuery = strings.Replace(p.RawQuery, "`", "", -1)
-				re, _ = regexp.Compile(fmt.Sprintf(`\b(%s)\b`, newTable))
-			}
-
-			// avoid the name of the column is the same as the table name, eg, issues/438
-			// just replace the first place.
-			var count = 0
-			var occurrence = 1
-			query = re.ReplaceAllStringFunc(rawQuery, func(m string) string {
-				count = count + 1
-				if count == occurrence {
-					return segTable
-				}
-				return m
-			})
-
-			if node.Action == sqlparser.RenameStr {
-				var segQuery string
-				var segToTable string
-				var re *regexp.Regexp
-				pos := strings.Index(query, segTable)
-				pos += len(segTable)
-
-				if !node.NewName.Qualifier.IsEmpty() {
-					toDatabase := node.NewName.Qualifier.String()
-					if toDatabase != database {
-						err := fmt.Sprintf("unsupported: Database is not equal[%s:%s]", database, toDatabase)
-						return errors.New(err)
-					}
-				}
-
-				toTable := node.NewName.Name.String()
-				// just to the shardtable, the suffix with "_0001" is valid
-				if shardKey != "" {
-					splits := strings.SplitN(orgSegTable, "_", -1)
-					suffix := splits[len(splits)-1]
-					segToTable = toTable + "_" + suffix
-				} else {
-					segToTable = toTable
-				}
-
-				if node.NewName.Qualifier.IsEmpty() {
-					segToTable = fmt.Sprintf("`%s`.`%s`", database, segToTable)
-					segQuery = strings.Replace(query[pos:], "`", "", -1)
-					// \b: https://www.regular-expressions.info/wordboundaries.html
-					re, _ = regexp.Compile(fmt.Sprintf(`\b(%s)\b`, toTable))
-				} else {
-					segToTable = fmt.Sprintf("`%s`.`%s`", database, segToTable)
-					newToTable := fmt.Sprintf("%s.%s", database, toTable)
-					segQuery = strings.Replace(query[pos:], "`", "", -1)
-					re, _ = regexp.Compile(fmt.Sprintf(`\b(%s)\b`, newToTable))
-				}
-
-				// avoid the name of the column is the same as the table name, eg, issues/438
-				// just replace the first place.
-				var count = 0
-				var occurrence = 1
-				toQuery := re.ReplaceAllStringFunc(segQuery, func(m string) string {
-					count = count + 1
-					if count == occurrence {
-						return segToTable
-					}
-					return m
-				})
-
-				query = query[:pos] + toQuery
-			}
-
-			tuple := xcontext.QueryTuple{
-				Query:   query,
-				Backend: segment.Backend,
-				Range:   segment.Range.String(),
-			}
-			p.Querys = append(p.Querys, tuple)
 		}
 	}
 	return nil
+}
+
+// commonImpl used to build distributed querys for create/alter.
+func (p *DDLPlan) commonImpl() error {
+	oldNode := p.node
+	oldTable := oldNode.Table.Name.String()
+	database := p.database
+	if !oldNode.Table.Qualifier.IsEmpty() {
+		database = oldNode.Table.Qualifier.String()
+	}
+	if err := p.checkUnsupportedOperations(database, oldTable); err != nil {
+		return err
+	}
+
+	segments, err := p.router.Lookup(database, oldTable, nil, nil)
+	if err != nil {
+		return err
+	}
+	for _, segment := range segments {
+		// Rewrite ddl ast, replace oldTable to segment table(new table) and format a new query
+		newNode := *oldNode
+		newTable := segment.Table
+		buf := sqlparser.NewTrackedBuffer(nil)
+		newNode.Table = sqlparser.TableName{
+			Name:      sqlparser.NewTableIdent(newTable),
+			Qualifier: sqlparser.NewTableIdent(database),
+		}
+		newNode.NewName = newNode.Table
+		newNode.Format(buf)
+		newQuery := buf.String()
+
+		tuple := xcontext.QueryTuple{
+			Query:   newQuery,
+			Backend: segment.Backend,
+			Range:   segment.Range.String(),
+		}
+		p.Querys = append(p.Querys, tuple)
+	}
+	return nil
+}
+
+// dropTblImpl used to build distributed querys for: drop table t1
+func (p *DDLPlan) dropTblImpl() error {
+	oldNode := p.node
+	oldTable := oldNode.Table.Name.String()
+	database := p.database
+	if !oldNode.Table.Qualifier.IsEmpty() {
+		database = oldNode.Table.Qualifier.String()
+	}
+
+	segments, err := p.router.Lookup(database, oldTable, nil, nil)
+	if err != nil {
+		return err
+	}
+	for _, segment := range segments {
+		// Rewrite ddl ast, replace oldTable to segment table(new table) and format a new query
+		newNode := *oldNode
+		newTable := segment.Table
+		buf := sqlparser.NewTrackedBuffer(nil)
+		// Now we just drop a table once a time, here can be optimized with proxy/ddl.go in the future
+		newNode.Tables = sqlparser.TableNames{
+			sqlparser.TableName{
+				Name:      sqlparser.NewTableIdent(newTable),
+				Qualifier: sqlparser.NewTableIdent(database),
+			},
+		}
+		newNode.Format(buf)
+		newQuery := buf.String()
+
+		tuple := xcontext.QueryTuple{
+			Query:   newQuery,
+			Backend: segment.Backend,
+			Range:   segment.Range.String(),
+		}
+		p.Querys = append(p.Querys, tuple)
+	}
+	return nil
+}
+
+// renameImpl used to build distributed querys for rename oldTbl to newTbl.
+func (p *DDLPlan) renameImpl() error {
+	oldNode := p.node
+	// Check if fromDatabase and toDatabase is same or not.
+	fromDatabase := p.database
+	if !oldNode.Table.Qualifier.IsEmpty() {
+		fromDatabase = oldNode.Table.Qualifier.String()
+	}
+	if toDatabase := oldNode.NewName.Qualifier.String(); toDatabase != "" && toDatabase != fromDatabase {
+		// toDatabase must equal to fromDatabase if not empty
+		err := fmt.Sprintf("unsupported: Database is not equal[%s:%s]", fromDatabase, toDatabase)
+		return errors.New(err)
+	}
+
+	oldFromTable := oldNode.Table.Name.String()
+	oldToTable := oldNode.NewName.Name.String()
+	segments, err := p.router.Lookup(fromDatabase, oldFromTable, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	for _, segment := range segments {
+		// Get newFromTable and newToTable
+		newFromTable := segment.Table
+		var newToTable string
+		shardKey, err := p.router.ShardKey(fromDatabase, oldFromTable)
+		if err != nil {
+			return err
+		}
+		if shardKey != "" {
+			// just to the shardtable, the suffix with "_0001" is valid
+			splits := strings.SplitN(segment.Table, "_", -1)
+			suffix := splits[len(splits)-1]
+			newToTable = oldToTable + "_" + suffix
+		} else {
+			newToTable = oldToTable
+		}
+
+		// Rewrite rename ast, replace oldFromTable to newFromTable and oldToTable to newToTable, then format to a new query
+		newNode := *oldNode
+		buf := sqlparser.NewTrackedBuffer(nil)
+		newNode.Table = sqlparser.TableName{
+			Name:      sqlparser.NewTableIdent(newFromTable),
+			Qualifier: sqlparser.NewTableIdent(fromDatabase),
+		}
+		newNode.NewName = sqlparser.TableName{
+			Name:      sqlparser.NewTableIdent(newToTable),
+			Qualifier: sqlparser.NewTableIdent(fromDatabase),
+		}
+		newNode.Format(buf)
+		newQuery := buf.String()
+
+		tuple := xcontext.QueryTuple{
+			Query:   newQuery,
+			Backend: segment.Backend,
+			Range:   segment.Range.String(),
+		}
+		p.Querys = append(p.Querys, tuple)
+	}
+	return nil
+}
+
+// Build used to build DDL distributed querys.
+// sqlparser.DDL is a simple grammar ast, it just parses database and table name in the prefix.
+// In our sql syntax in sql.y, alter will be changed to rename in case next:
+// ALTER ignore_opt TABLE table_name RENAME to_opt table_name
+// {
+//   Change this to a rename statement
+//   $$ = &DDL{Action: RenameStr, Table: $4, NewName: $7}
+// }
+func (p *DDLPlan) Build() error {
+	var err error
+
+	switch p.node.Action {
+	case sqlparser.DropTableStr:
+		err = p.dropTblImpl()
+	case sqlparser.RenameStr:
+		err = p.renameImpl()
+	default:
+		err = p.commonImpl()
+	}
+	return err
 }
 
 // Type returns the type of the plan.
@@ -241,6 +292,8 @@ func (p *DDLPlan) JSON() string {
 		RawQuery:   p.RawQuery,
 		Partitions: parts,
 	}
+	// If exp include escape, json will add '\' before it.
+	// e.g.: "\n\t tbl \n" will be "\\n\\t tbl \\n"
 	bout, err := json.MarshalIndent(exp, "", "\t")
 	if err != nil {
 		return err.Error()

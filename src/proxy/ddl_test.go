@@ -473,8 +473,8 @@ func TestProxyDropTables(t *testing.T) {
 		fakedbs.AddQueryPattern("show tables from .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("alter table .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("drop table `db1`.*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("drop table `db2`.*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("drop table db1.*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("drop table db2.*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("truncate table .*", &sqltypes.Result{})
 	}
 
@@ -1240,7 +1240,7 @@ func TestProxyDDLAlterRename(t *testing.T) {
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("alter table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("rename table .*", &sqltypes.Result{})
 	}
 
 	// create database.
@@ -1272,53 +1272,6 @@ func TestProxyDDLAlterRename(t *testing.T) {
 			got := err.Error()
 			assert.Equal(t, wants[i], got)
 		}
-	}
-}
-
-func TestProxyDDLAlterRename2(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedbs, proxy, cleanup := MockProxy(log)
-	defer cleanup()
-	address := proxy.Address()
-
-	// fakedbs.
-	{
-		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
-		//fakedbs.AddQueryPattern("alter table .*", &sqltypes.Result{})
-	}
-
-	querys := []string{
-		"create table t1(id int, b int) partition by hash(id)",
-	}
-
-	// create sbtest table.
-	{
-		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
-		assert.Nil(t, err)
-		query := "create database test"
-		_, err = client.FetchAll(query, -1)
-		assert.Nil(t, err)
-	}
-
-	{
-		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
-		assert.Nil(t, err)
-		for _, query := range querys {
-			_, err = client.FetchAll(query, -1)
-			assert.Nil(t, err)
-		}
-	}
-
-	{
-		fakedbs.AddQueryErrorPattern("alter table .*", errors.New("mock.mysql.alter.table.error"))
-		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
-		assert.Nil(t, err)
-		query := "alter table t1 rename t2"
-		_, err = client.FetchAll(query, -1)
-		want := "mock.mysql.alter.table.error (errno 1105) (sqlstate HY000)"
-		got := err.Error()
-		assert.Equal(t, want, got)
 	}
 }
 
