@@ -589,7 +589,7 @@ const (
 	TruncateTableStr        = "truncate table"
 	SingleTableType         = "singletable"
 	GlobalTableType         = "globaltable"
-	PartitionTableType      = "partitiontable"
+	PartitionTableHash      = "partitiontableHash"
 	NormalTableType         = "normaltable"
 )
 

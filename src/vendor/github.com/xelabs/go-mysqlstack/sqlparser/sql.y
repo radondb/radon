@@ -456,7 +456,7 @@ create_statement:
     $1.Action = CreateTableStr
     $1.TableSpec = $2
     $1.PartitionName = string($7)
-    $1.TableSpec.Options.Type = PartitionTableType
+    $1.TableSpec.Options.Type = PartitionTableHash
     $$ = $1
   }
 | create_table_prefix table_spec DISTRIBUTED BY openb ID closeb ddl_force_eof
