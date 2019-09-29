@@ -24,6 +24,21 @@ func TestValid(t *testing.T) {
 		input  string
 		output string
 	}{{
+		input:  "select /*non_reserved_keyword*/ `status` from t",
+		output: "select /*non_reserved_keyword*/ `status` from t",
+	}, {
+		input:  "select /*non_reserved_keyword*/ status from t",
+		output: "select /*non_reserved_keyword*/ `status` from t",
+	}, {
+		input:  "select /*non_reserved_keyword*/ bool from t",
+		output: "select /*non_reserved_keyword*/ `bool` from t",
+	}, {
+		input:  "select /*non_reserved_keyword*/ datetime from t",
+		output: "select /*non_reserved_keyword*/ `datetime` from t",
+	}, {
+		input:  "select /*non_reserved_keyword*/ enum from t",
+		output: "select /*non_reserved_keyword*/ `enum` from t",
+	}, {
 		input:  "select 1",
 		output: "select 1 from dual",
 	}, {

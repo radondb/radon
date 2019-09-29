@@ -260,7 +260,7 @@ func forceEOF(yylex interface{}) {
 %type <byt> exists_opt not_exists_opt
 %type <empty> non_rename_operation to_opt index_opt constraint_opt
 %type <bytes> reserved_keyword non_reserved_keyword
-%type <colIdent> sql_id reserved_sql_id col_alias as_ci_opt
+%type <colIdent> sql_id reserved_sql_id col_alias as_ci_opt col_id
 %type <tableIdent> table_id reserved_table_id table_alias as_opt_id
 %type <empty> as_opt
 %type <empty> force_eof ddl_force_eof
@@ -451,19 +451,19 @@ create_statement:
     $1.TableSpec = $2
     $$ = $1
   }
-| create_table_prefix table_spec PARTITION BY HASH openb ID closeb ddl_force_eof
+| create_table_prefix table_spec PARTITION BY HASH openb col_id closeb ddl_force_eof
   {
     $1.Action = CreateTableStr
     $1.TableSpec = $2
-    $1.PartitionName = string($7)
+    $1.PartitionName = $7.val
     $1.TableSpec.Options.Type = PartitionTableHash
     $$ = $1
   }
-| create_table_prefix table_spec DISTRIBUTED BY openb ID closeb ddl_force_eof
+| create_table_prefix table_spec DISTRIBUTED BY openb col_id closeb ddl_force_eof
   {
     $1.Action = CreateTableStr
     $1.TableSpec = $2
-    $1.BackendName = string($6)
+    $1.BackendName = $6.val
     $1.TableSpec.Options.Type = SingleTableType
     $$ = $1
   }
@@ -642,7 +642,7 @@ table_column_list:
   }
 
 column_definition:
-  ID column_type column_option_list_opt
+  col_id column_type column_option_list_opt
   {
     $2.NotNull = $3.GetColumnOption(ColumnOptionNotNull).NotNull
     $2.Autoincrement = $3.GetColumnOption(ColumnOptionAutoincrement).Autoincrement
@@ -651,7 +651,17 @@ column_definition:
     $2.OnUpdate= $3.GetColumnOption(ColumnOptionOnUpdate).OnUpdate
     $2.PrimaryKeyOpt = $3.GetColumnOption(ColumnOptionKeyPrimaryOpt).PrimaryKeyOpt
     $2.UniqueKeyOpt = $3.GetColumnOption(ColumnOptionKeyUniqueOpt).UniqueKeyOpt
-    $$ = &ColumnDefinition{Name: NewColIdent(string($1)), Type: $2}
+    $$ = &ColumnDefinition{Name: $1, Type: $2}
+  }
+
+col_id:
+  ID
+  {
+    $$ = NewColIdent(string($1))
+  }
+| non_reserved_keyword
+  {
+    $$ = NewColIdent(string($1))
   }
 
 column_type:
@@ -1265,9 +1275,15 @@ show_statement_type:
     }
   }
 | non_reserved_keyword
-{
+  {
     $$ = ShowUnsupportedStr
-}
+    switch v := string($1); v {
+    case ShowStatusStr:
+      $$ = v
+    default:
+      $$ = ShowUnsupportedStr
+    }
+  }
 
 show_statement:
   SHOW show_statement_type force_eof
@@ -1305,10 +1321,6 @@ show_statement:
 | SHOW BINLOG EVENTS binlog_from_opt limit_opt force_eof
   {
     $$ = &Show{Type: ShowBinlogEventsStr, From: $4, Limit: $5 }
-  }
-| SHOW STATUS force_eof
-  {
-    $$ = &Show{Type: ShowStatusStr}
   }
 | SHOW TABLE STATUS database_from_opt force_eof
   {
@@ -2673,9 +2685,12 @@ reserved_keyword:
 | ASC
 | AUTO_INCREMENT
 | BETWEEN
+| BIGINT
 | BINARY
+| BLOB
 | BY
 | CASE
+| CHAR
 | CHARACTER
 | CHARSET
 | COLLATE
@@ -2688,6 +2703,7 @@ reserved_keyword:
 | CURRENT_TIMESTAMP
 | DATABASE
 | DATABASES
+| DECIMAL
 | DEFAULT
 | DELETE
 | DESC
@@ -2714,6 +2730,8 @@ reserved_keyword:
 | INDEX
 | INNER
 | INSERT
+| INT
+| INTEGER
 | INTERVAL
 | INTO
 | IS
@@ -2725,19 +2743,28 @@ reserved_keyword:
 | LOCALTIME
 | LOCALTIMESTAMP
 | LOCK
+| LONGBLOB
+| LONGTEXT
 | MATCH
+| MEDIUMBLOB
+| MEDIUMINT
+| MEDIUMTEXT
 | MOD
 | NATURAL
 | NEXT // next should be doable as non-reserved, but is not due to the special `select next num_val` query that vitess supports
 | NOT
 | NULL
+| NUMERIC
 | OFF
 | ON
+| OPTIMIZE
 | OR
 | ORDER
 | OUTER
 | QUERYZ
+| PRIMARY
 | PROCESSLIST
+| REAL
 | REGEXP
 | RENAME
 | REPLACE
@@ -2746,15 +2773,20 @@ reserved_keyword:
 | SEPARATOR
 | SET
 | SHOW
+| SMALLINT
 | STRAIGHT_JOIN
 | TABLE
 | TABLES
+| TINYBLOB
+| TINYINT
+| TINYTEXT
 | THEN
 | TO
 | TRUE
 | TXNZ
 | UNION
 | UNIQUE
+| UNSIGNED
 | UPDATE
 | USE
 | USING
@@ -2762,9 +2794,13 @@ reserved_keyword:
 | UTC_TIME
 | UTC_TIMESTAMP
 | VALUES
+| VARBINARY
+| VARCHAR
 | VERSIONS
+| WITH
 | WHEN
 | WHERE
+| ZEROFILL
 
 /*
   These are non-reserved Vitess, because they don't cause conflicts in the grammar.
@@ -2775,15 +2811,11 @@ reserved_keyword:
 */
 non_reserved_keyword:
   AGAINST
-| BIGINT
 | BIT
-| BLOB
 | BOOL
-| CHAR
 | COMMENT_KEYWORD
 | DATE
 | DATETIME
-| DECIMAL
 | DOUBLE
 | DUPLICATE
 | ENUM
@@ -2792,47 +2824,28 @@ non_reserved_keyword:
 | FLOAT_TYPE
 | FULLTEXT
 | GLOBAL
-| INT
-| INTEGER
 | JSON
 | LANGUAGE
 | LAST_INSERT_ID
-| LONGBLOB
-| LONGTEXT
-| MEDIUMBLOB
-| MEDIUMINT
-| MEDIUMTEXT
 | MODE
 | NCHAR
-| NUMERIC
 | OFFSET
-| OPTIMIZE
-| PRIMARY
 | QUERY
-| REAL
 | REPAIR
 | SHARE
 | SIGNED
-| SMALLINT
 | SINGLE
+| STATUS
 | TEXT
 | TIME
 | TIMESTAMP
-| TINYBLOB
-| TINYINT
-| TINYTEXT
 | TRUNCATE
-| UNSIGNED
 | UNUSED
-| VARBINARY
-| VARCHAR
 | VIEW
 | VITESS_KEYSPACES
 | VITESS_SHARDS
 | VSCHEMA_TABLES
-| WITH
 | YEAR
-| ZEROFILL
 | RADON
 | ATTACH
 | DETACH

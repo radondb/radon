@@ -127,6 +127,56 @@ func TestDDL1(t *testing.T) {
 				"	`name` varchar(10)\n" +
 				") engine=tokudb default charset=utf8",
 		},
+		{
+			input: "create table t (\n" +
+				"	`status` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") partition by hash(`status`)",
+			output: "create table t (\n" +
+				"	`status` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
+		{
+			input: "create table t (\n" +
+				"	status int primary key comment '/*non_reserved_keyword*/',\n" +
+				"	`name` varchar(10)\n" +
+				") partition by hash(status)",
+			output: "create table t (\n" +
+				"	`status` int comment '/*non_reserved_keyword*/' primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
+		{
+			input: "create table t (\n" +
+				"	bool int primary key comment '/*non_reserved_keyword*/',\n" +
+				"	`name` varchar(10)\n" +
+				") partition by hash(bool)",
+			output: "create table t (\n" +
+				"	`bool` int comment '/*non_reserved_keyword*/' primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
+		{
+			input: "create table t (\n" +
+				"	enum int primary key comment '/*non_reserved_keyword*/',\n" +
+				"	`name` varchar(10)\n" +
+				") partition by hash(enum)",
+			output: "create table t (\n" +
+				"	`enum` int comment '/*non_reserved_keyword*/' primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
+		{
+			input: "create table t (\n" +
+				"	datetime int primary key comment '/*non_reserved_keyword*/',\n" +
+				"	`name` varchar(10)\n" +
+				") partition by hash(datetime)",
+			output: "create table t (\n" +
+				"	`datetime` int comment '/*non_reserved_keyword*/' primary key,\n" +
+				"	`name` varchar(10)\n" +
+				")",
+		},
 
 		// GLOBAL.
 		{
@@ -600,6 +650,24 @@ func TestDDL1(t *testing.T) {
 				"	`name` varchar(100)\n" +
 				")",
 		},
+		{
+			input: "alter table test add column(status int primary key)",
+			output: "alter table test add column (\n" +
+				"	`status` int primary key\n" +
+				")",
+		},
+		{
+			input: "alter table test add column(bool int primary key)",
+			output: "alter table test add column (\n" +
+				"	`bool` int primary key\n" +
+				")",
+		},
+		{
+			input: "alter table test add column(datetime int primary key)",
+			output: "alter table test add column (\n" +
+				"	`datetime` int primary key\n" +
+				")",
+		},
 		// for issue #190
 		{
 			input: "alter table test add column(id int not null, name varchar(100) auto_increment, col3 int primary key, col4 int comment 'RadonDB', col5 int unique key)",
@@ -753,6 +821,38 @@ func TestDDL1ParseError(t *testing.T) {
 		{
 			input:  "create database test4 charset ", // charset_name should not be empty
 			output: "syntax error at position 31",
+		},
+		// test some non_reserved_keyword moved to reserved_keyword, issue:https://github.com/radondb/radon/pull/496
+		// e.g.: bigint,blob,char,decimal,integer...
+		{
+			input: "create table t (\n" +
+				"	bigint int primary key,\n" +
+				") partition by hash(id)",
+			output: "syntax error at position 25 near 'bigint'",
+		},
+		{
+			input: "create table t (\n" +
+				"	blob int primary key,\n" +
+				") partition by hash(id)",
+			output: "syntax error at position 23 near 'blob'",
+		},
+		{
+			input: "create table t (\n" +
+				"	char int primary key,\n" +
+				") partition by hash(id)",
+			output: "syntax error at position 23 near 'char'",
+		},
+		{
+			input: "create table t (\n" +
+				"	decimal int primary key,\n" +
+				") partition by hash(id)",
+			output: "syntax error at position 26 near 'decimal'",
+		},
+		{
+			input: "create table t (\n" +
+				"	integer int primary key,\n" +
+				") partition by hash(id)",
+			output: "syntax error at position 26 near 'integer'",
 		},
 	}
 
