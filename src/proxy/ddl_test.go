@@ -304,6 +304,24 @@ func TestProxyDDLTable(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
+	// create table with non_reserved_keyword key word.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table sbtest.sbtx(status int, bool int, datetime datetime, enum char) partition by hash(status)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// drop single table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "drop table sbtest.sbtx"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
 	// alter test table engine.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
@@ -624,6 +642,7 @@ func TestProxyDDLColumn(t *testing.T) {
 		"alter table t2 modify column id bigint",
 		"alter table t2 add column(c3 bigint not null key primary key unique not null key not null comment 'RadonDB', c4 int)",
 		"alter table t2 add column(c5 timestamp ON UPDATE CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' not null key primary key unique not null key not null comment 'RadonDB', c6 int)",
+		"alter table t2 add column(status int, bool int, datetime datetime, enum char)",
 	}
 	queryerr := []string{
 		"alter table t1 drop column id",
