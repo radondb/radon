@@ -110,7 +110,7 @@ func TestDDL1(t *testing.T) {
 			input: "create table test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
-				") ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=utf8mb4 PARTITION BY HASH(id)",
+				") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 PARTITION BY HASH(id)",
 			output: "create table test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
@@ -178,6 +178,61 @@ func TestDDL1(t *testing.T) {
 				")",
 		},
 
+		// For issue: https://github.com/radondb/radon/issues/486
+		{
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb comment='comment option' default charset=utf8 partition by hash(id)",
+			output: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") comment='comment option' engine=tokudb default charset=utf8",
+		},
+
+		{
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine='tokudb' comment='comment option' default charset='utf8' global",
+			output: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") comment='comment option' engine='tokudb' default charset='utf8'",
+		},
+
+		{
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") single engine=tokudb comment='comment option' default charset utf8",
+			output: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") comment='comment option' engine=tokudb default charset=utf8",
+		},
+
+		{
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb comment 'comment option' charset \"utf8\" partition by hash(id)",
+			output: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") comment='comment option' engine=tokudb default charset='utf8'",
+		},
+
+		{
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb comment='comment option' character set 'utf8' partition by hash(id)",
+			output: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") comment='comment option' engine=tokudb default charset='utf8'",
+		},
 		// GLOBAL.
 		{
 			input: "create table test.t (\n" +
@@ -853,6 +908,34 @@ func TestDDL1ParseError(t *testing.T) {
 				"	integer int primary key,\n" +
 				") partition by hash(id)",
 			output: "syntax error at position 26 near 'integer'",
+		},
+		{ // Duplicate keyword
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb engine=tokudb comment 'comment option' charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'engine', the option should only be appeared just one time in RadonDB. at position 145 near 'partition'",
+		},
+		{ // Duplicate keyword
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb comment 'comment option' comment 'radondb' charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'comment', the option should only be appeared just one time in RadonDB. at position 149 near 'partition'",
+		},
+		{ // The content of comment should be quoted with \' or \"
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb comment option charset \"utf8\" partition by hash(id)",
+			output: "syntax error at position 96 near 'option'",
+		},
+		{ // Keyword "single" used with "partition" at the same time
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") single engine=tokudb comment 'str' charset \"utf8\" partition by hash(id)",
+			output: "SINGLE or GLOBAL should not be used simultaneously with PARTITION at position 140",
 		},
 	}
 
