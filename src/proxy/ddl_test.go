@@ -254,6 +254,36 @@ func TestProxyDDLTable(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
+	// create table with table_options
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		querys := []string{
+			"create table if not exists t4(a int, b int) SINGLE comment 'comment test' charset='utf8'",
+			"create table if not exists t5(a int, b int) Global default charset utf8",
+			"create table if not exists t6(a int key, b int) default character set='utf8' comment 'test' engine innodb",
+		}
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
+	}
+
+	// drop tables.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		querys := []string{
+			"drop table t4",
+			"drop table t5",
+			"drop table t6",
+		}
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
+	}
+
 	// check test.tables.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")

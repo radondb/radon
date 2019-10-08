@@ -681,8 +681,79 @@ func (optList DatabaseOptionListOpt) Format(buf *TrackedBuffer) {
 	}
 }
 
-// TableOptions represents the table options.
+// TableOptionType is the type for table_options
+type TableOptionType int
+
+const (
+	TableOptionNone TableOptionType = iota
+	TableOptionComment
+	TableOptionEngine
+	TableOptionCharset
+	TableOptionTableType
+)
+
+// TableOption represents the table options.
+// See https://dev.mysql.com/doc/refman/5.7/en/create-table.html
+type TableOption struct {
+	Type TableOptionType
+	Val  *SQLVal
+}
+
+type TableOptionList []*TableOption
+
+type TableOptionListOpt struct {
+	TblOptList TableOptionList
+}
+
+// Although each option can be appeared many times in MySQL, we make a constraint
+// that each option should only be appeared just one time in RadonDB.
+func (tblOptList *TableOptionListOpt) CheckIfTableOptDuplicate() string {
+	var optOnce = map[TableOptionType]bool{
+		TableOptionComment:   false,
+		TableOptionEngine:    false,
+		TableOptionCharset:   false,
+		TableOptionTableType: false,
+	}
+	for _, opt := range tblOptList.TblOptList {
+		switch opt.Type {
+		case TableOptionComment:
+			if optOnce[TableOptionComment] {
+				return "Duplicate table option for keyword 'comment', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionComment] = true
+		case TableOptionEngine:
+			if optOnce[TableOptionEngine] {
+				return "Duplicate table option for keyword 'engine', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionEngine] = true
+		case TableOptionCharset:
+			if optOnce[TableOptionCharset] {
+				return "Duplicate table option for keyword 'charset', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionCharset] = true
+		case TableOptionTableType:
+			if optOnce[TableOptionTableType] {
+				return "Duplicate table option for keyword 'single or global', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionTableType] = true
+		}
+	}
+	return ""
+}
+
+func (tblOptList *TableOptionListOpt) GetTableOptValByType(optType TableOptionType) *SQLVal {
+	for _, opt := range tblOptList.TblOptList {
+		if opt.Type == optType {
+			return opt.Val
+		}
+	}
+
+	return nil
+}
+
+// TableOptions is used by TableSpec
 type TableOptions struct {
+	Comment string
 	Engine  string
 	Charset string
 	Type    string
@@ -690,10 +761,12 @@ type TableOptions struct {
 
 // Format formats the node.
 func (opts TableOptions) Format(buf *TrackedBuffer) {
+	if opts.Comment != "" {
+		buf.Myprintf(" comment=%s", opts.Comment)
+	}
 	if opts.Engine != "" {
 		buf.Myprintf(" engine=%s", opts.Engine)
 	}
-
 	if opts.Charset != "" {
 		buf.Myprintf(" default charset=%s", opts.Charset)
 	}
@@ -1868,6 +1941,7 @@ const (
 	HexNum
 	HexVal
 	ValArg
+	StrValWithoutQuote
 )
 
 // SQLVal represents a single value.
@@ -1879,6 +1953,11 @@ type SQLVal struct {
 // NewStrVal builds a new StrVal.
 func NewStrVal(in []byte) *SQLVal {
 	return &SQLVal{Type: StrVal, Val: in}
+}
+
+// NewStrValWithoutQuote builds a new string that will be output without quote later in Format.
+func NewStrValWithoutQuote(in []byte) *SQLVal {
+	return &SQLVal{Type: StrValWithoutQuote, Val: in}
 }
 
 // NewIntVal builds a new IntVal.
@@ -1911,7 +1990,7 @@ func (node *SQLVal) Format(buf *TrackedBuffer) {
 	switch node.Type {
 	case StrVal:
 		sqltypes.MakeTrusted(sqltypes.VarBinary, node.Val).EncodeSQL(buf)
-	case IntVal, FloatVal, HexNum:
+	case IntVal, FloatVal, HexNum, StrValWithoutQuote:
 		buf.Myprintf("%s", []byte(node.Val))
 	case HexVal:
 		buf.Myprintf("X'%s'", []byte(node.Val))

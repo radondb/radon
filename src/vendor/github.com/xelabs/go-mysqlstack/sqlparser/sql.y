@@ -89,7 +89,9 @@ func forceEOF(yylex interface{}) {
   convertType   *ConvertType
   aliasedTableName *AliasedTableExpr
   TableSpec  *TableSpec
-  TableOptions TableOptions
+  TableOptionListOpt TableOptionListOpt
+  TableOptionList    TableOptionList
+  tableOption        *TableOption
   columnType    ColumnType
   colPrimaryKeyOpt   ColumnPrimaryKeyOption
   colUniqueKeyOpt    ColumnUniqueKeyOption
@@ -270,8 +272,9 @@ func forceEOF(yylex interface{}) {
 %type <str> show_statement_type
 %type <columnType> column_type
 %type <columnType> int_type decimal_type numeric_type time_type char_type
-%type <optVal> length_opt column_default_opt on_update_opt column_comment_opt
-%type <str> charset_opt collate_opt charset_option engine_option autoincrement_option tabletype_option
+%type <optVal> length_opt column_default_opt on_update_opt column_comment_opt table_comment_opt engine_option charset_option tabletype_option
+%type <str> charset_opt collate_opt
+%type <optVal> id_or_string
 %type <str> collate_name_or_default opt_charset opt_equal opt_default charset_name_or_default
 %type <boolVal> unsigned_opt zero_fill_opt
 %type <LengthScaleOption> float_length_opt decimal_length_opt
@@ -283,7 +286,9 @@ func forceEOF(yylex interface{}) {
 %type <indexDefinition> index_definition
 %type <str> index_or_key
 %type <TableSpec> table_spec table_column_list
-%type <TableOptions> table_option_list
+%type <TableOptionListOpt> table_option_list_opt
+%type <TableOptionList> table_option_list
+%type <tableOption> table_option
 %type <indexInfo> index_info
 %type <indexColumn> index_column
 %type <indexColumns> index_column_list
@@ -455,16 +460,26 @@ create_statement:
   {
     $1.Action = CreateTableStr
     $1.TableSpec = $2
-    $1.PartitionName = $7.val
-    $1.TableSpec.Options.Type = PartitionTableHash
+    $1.PartitionName = $7.String()
+    if $2.Options.Type == GlobalTableType || $2.Options.Type == SingleTableType {
+      yylex.Error("SINGLE or GLOBAL should not be used simultaneously with PARTITION")
+      return 1
+    } else {
+      $1.TableSpec.Options.Type = PartitionTableHash
+    }
     $$ = $1
   }
 | create_table_prefix table_spec DISTRIBUTED BY openb col_id closeb ddl_force_eof
   {
     $1.Action = CreateTableStr
     $1.TableSpec = $2
-    $1.BackendName = $6.val
-    $1.TableSpec.Options.Type = SingleTableType
+    $1.BackendName = $6.String()
+    if $2.Options.Type == GlobalTableType || $2.Options.Type == SingleTableType {
+      yylex.Error("SINGLE or GLOBAL should not be used simultaneously with DISTRIBUTED")
+      return 1
+    } else {
+      $1.TableSpec.Options.Type = SingleTableType
+    }
     $$ = $1
   }
 | CREATE DATABASE not_exists_opt table_id database_option_list_opt
@@ -572,59 +587,121 @@ create_table_prefix:
   }
 
 table_spec:
-  '(' table_column_list ')' table_option_list
+  '(' table_column_list ')' table_option_list_opt
   {
     $$ = $2
-    $$.Options = $4
+
+    if len($4.TblOptList) != 0 {
+      if str := $4.CheckIfTableOptDuplicate(); str != "" {
+          yylex.Error(str)
+          return 1
+      }
+      if val := $4.GetTableOptValByType(TableOptionComment); val != nil {
+        $$.Options.Comment = String(val)
+      }
+      if val := $4.GetTableOptValByType(TableOptionEngine); val != nil {
+        $$.Options.Engine  = String(val)
+      }
+      if val := $4.GetTableOptValByType(TableOptionCharset); val != nil {
+        $$.Options.Charset = String(val)
+      }
+      if val := $4.GetTableOptValByType(TableOptionTableType); val != nil {
+        $$.Options.Type    = String(val)
+      }
+    }
+    if $$.Options.Type == "" {
+      $$.Options.Type  = NormalTableType
+    }
+  }
+
+table_option_list_opt:
+  {
+    $$.TblOptList = []*TableOption{}
+  }
+| table_option_list
+  {
+    $$.TblOptList = $1
   }
 
 table_option_list:
- engine_option autoincrement_option charset_option tabletype_option
+table_option
   {
-    $$.Engine = $1
-    $$.Charset = $3
-    $$.Type = $4
+    $$ = append($$, $1)
+  }
+| table_option_list table_option
+  {
+    $$ = append($1, $2)
   }
 
-engine_option:
+table_option:
+table_comment_opt
+  {
+    $$ = &TableOption{
+        Type: TableOptionComment,
+        Val: $1,
+    }
+  }
+| engine_option
+  {
+    $$ = &TableOption{
+        Type: TableOptionEngine,
+        Val: $1,
+    }
+  }
+| charset_option
+  {
+    $$ = &TableOption{
+        Type: TableOptionCharset,
+        Val: $1,
+    }
+  }
+| tabletype_option
+  {
+    $$ = &TableOption{
+        Type: TableOptionTableType,
+        Val: $1,
+    }
+  }
+
+id_or_string:
+  ID
+{
+    // Normal str as a identify, without quote
+    $$ = NewStrValWithoutQuote($1)
+}
+| STRING
+{
+    // Str with Quote, it will be parsed by Lex begin with quote \' or \"
+    $$ = NewStrVal($1)
+}
+
+table_comment_opt:
+COMMENT_KEYWORD opt_equal STRING
  {
-   $$=""
+   $$ = NewStrVal($3)
  }
-| ENGINE '=' ID
+
+engine_option:
+ENGINE opt_equal id_or_string
  {
-   $$ = string($3)
+   $$ = $3
  }
 
 charset_option:
+opt_default opt_charset opt_equal id_or_string
  {
-    $$=""
- }
-| DEFAULT CHARSET '=' ID
- {
-   $$ = string($4)
- }
-
-autoincrement_option:
- {
-    $$=""
- }
-| AUTO_INCREMENT '=' INTEGRAL
- {
+   $$ = $4
  }
 
 tabletype_option:
+GLOBAL
  {
-    $$= NormalTableType
- }
-| GLOBAL
- {
-   $$ = GlobalTableType
+   $$ = NewStrValWithoutQuote([]byte(GlobalTableType))
  }
 | SINGLE
  {
-   $$ = SingleTableType
+   $$ = NewStrValWithoutQuote([]byte(SingleTableType))
  }
-
 
 table_column_list:
   column_definition

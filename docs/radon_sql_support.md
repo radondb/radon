@@ -110,9 +110,10 @@ Query OK, 0 rows affected (0.01 sec)
 ```
  CREATE TABLE [IF NOT EXISTS] table_name
     (create_definition,...)
-    [ENGINE={InnoDB|TokuDB}]
-    [DEFAULT CHARSET=(charset)]
-    [PARTITION BY HASH(shard-key)|SINGLE|GLOBAL]
+      ENGINE [=] {InnoDB|TokuDB}
+    | [DEFAULT] {CHARSET | CHARACTER SET} [=] charset_name
+    | COMMENT [=] 'string'
+    | {PARTITION BY HASH(shard-key)|SINGLE|GLOBAL}
 ```
 
 `Instructions`
@@ -128,7 +129,7 @@ Query OK, 0 rows affected (0.01 sec)
   except for TYPE `BINARY/NULL`)
 * The partition mode is HASH, which is evenly distributed across the partitions according to the partition key
  `HASH value`
-* table_options only support `ENGINE` and `CHARSET`，Others are automatically ignored
+* table_options only support `ENGINE` `CHARSET` and `COMMENT`，Others are automatically ignored
 * The default engine for partition table is `InnoDB`
 * The default character set for partition table `UTF-8`
 * Does not support PRIMARY/UNIQUE constraints for non-partitioned keys, returning errors directly
@@ -168,7 +169,7 @@ Create Table: CREATE TABLE `t2` (
 /*!GLOBAL*/
 1 row in set (0.047 sec)
 
-mysql> CREATE TABLE t3(id int, age int) SINGLE;
+mysql> CREATE TABLE t3(id int, age int) SINGLE COMMENT 'HELLO RADON';
 Query OK, 0 rows affected (1.80 sec)
 
 mysql> show create table t3\G
@@ -177,7 +178,7 @@ mysql> show create table t3\G
 Create Table: CREATE TABLE `t3` (
   `id` int(11) DEFAULT NULL,
   `age` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT 'HELLO RADON'
 /*!SINGLE*/
 1 row in set (0.093 sec)
 
