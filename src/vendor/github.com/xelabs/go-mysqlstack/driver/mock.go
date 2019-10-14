@@ -170,6 +170,11 @@ func (th *TestHandler) ServerVersion() string {
 	return "FakeDB"
 }
 
+// SetServerVersion implements the interface.
+func (th *TestHandler) SetServerVersion() {
+	return
+}
+
 // NewSession implements the interface.
 func (th *TestHandler) NewSession(s *Session) {
 	th.mu.Lock()

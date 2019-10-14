@@ -20,9 +20,9 @@ import (
 )
 
 const (
-	TableTypeSingle    = "single"
-	TableTypeGlobal    = "global"
-	TableTypeUnknow    = "unknow"
+	TableTypeSingle = "single"
+	TableTypeGlobal = "global"
+	TableTypeUnknow = "unknow"
 
 	TableTypePartitionHash  = "hash"
 	TableTypePartitionList  = "list"

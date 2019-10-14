@@ -49,6 +49,21 @@ var (
 			},
 		},
 	}
+
+	resultVersion560 = &sqltypes.Result{
+		RowsAffected: 2,
+		Fields: []*querypb.Field{
+			{
+				Name: "version",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("5.6.0")),
+			},
+		},
+	}
 )
 
 func TestProxyAuthSessionCheck(t *testing.T) {
@@ -58,7 +73,7 @@ func TestProxyAuthSessionCheck(t *testing.T) {
 	address := proxy.Address()
 	iptable := proxy.IPTable()
 
-	fakedbs.AddQuery("select left(version(), 3) as version", resultVersion57)
+	fakedbs.AddQuery("select version() as version", resultVersion57)
 
 	// IPTables.
 	{
@@ -89,7 +104,7 @@ func TestProxyAuth(t *testing.T) {
 	defer cleanup()
 	address := proxy.Address()
 
-	fakedbs.AddQuery("select left(version(), 3) as version", resultVersion57)
+	fakedbs.AddQuery("select version() as version", resultVersion57)
 
 	// Select mysql.user error.
 	{
@@ -142,7 +157,7 @@ func TestProxyAuthMySQLVersion(t *testing.T) {
 	address := proxy.Address()
 
 	fakedbs.ResetAll()
-	fakedbs.AddQuery("select left(version(), 3) as version", resultVersion56)
+	fakedbs.AddQuery("select version() as version", resultVersion56)
 
 	// Select mysql.user error.
 	{
@@ -154,8 +169,26 @@ func TestProxyAuthMySQLVersion(t *testing.T) {
 
 	{
 		fakedbs.ResetAll()
-		fakedbs.AddQuery("select left(version(), 3) as version", &sqltypes.Result{})
+		fakedbs.AddQuery("select version() as version", &sqltypes.Result{})
 		_, err := driver.NewConn("mockx", "mockx", address, "", "utf8")
 		assert.NotNil(t, err)
+	}
+}
+
+func TestProxyAuthMySQLVersionToLower(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	fakedbs.ResetAll()
+	fakedbs.AddQuery("select version() as version", resultVersion560)
+
+	// Select mysql.user error.
+	{
+		_, err := driver.NewConn("mockx", "mockx", address, "", "utf8")
+		want := "Access denied for user 'mockx' (errno 1045) (sqlstate 28000)"
+		got := err.Error()
+		assert.Equal(t, want, got)
 	}
 }

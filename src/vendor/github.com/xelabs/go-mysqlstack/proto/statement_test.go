@@ -164,8 +164,8 @@ func TestStatementExecuteUnPackError(t *testing.T) {
 // https://dev.mysql.com/doc/internals/en/com-stmt-execute.html
 // test about new-params-bound-flag about 0 1
 func TestStatementExecuteBatchUnPackStatementExecute(t *testing.T) {
-	data := []byte{/*23,*/18, 0, 0, 0, 128, 1, 0, 0, 0, 0, 1, 1, 128, 1}
-	data2 := []byte{/*23,*/18, 0, 0, 0, 128, 1, 0, 0, 0, 0, 0, 1, 128, 1}
+	data := []byte{ /*23,*/ 18, 0, 0, 0, 128, 1, 0, 0, 0, 0, 1, 1, 128, 1}
+	data2 := []byte{ /*23,*/ 18, 0, 0, 0, 128, 1, 0, 0, 0, 0, 0, 1, 128, 1}
 
 	var dataBatch [][]byte
 	dataBatch = append(dataBatch, data)
