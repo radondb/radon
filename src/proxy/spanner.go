@@ -15,6 +15,7 @@ import (
 	"monitor"
 	"plugins"
 	"router"
+	"sync"
 	"xbase"
 	"xbase/sync2"
 
@@ -36,6 +37,7 @@ type Spanner struct {
 	diskChecker   *DiskCheck
 	manager       *Manager
 	readonly      sync2.AtomicBool
+	mu            sync.RWMutex
 	serverVersion string
 }
 
@@ -115,10 +117,31 @@ func (spanner *Spanner) SessionDec(s *driver.Session) {
 
 // ServerVersion impl -- returns server version of Radon when greeting.
 func (spanner *Spanner) ServerVersion() string {
+	spanner.mu.RLock()
+	defer spanner.mu.RUnlock()
 	if spanner.serverVersion == "" {
-		spanner.serverVersion = "RadonDB"
+		spanner.serverVersion = defaultMySQLVersionStr
 	}
 	return spanner.serverVersion
+}
+
+// SetServerVersion used to set serverVersion.
+func (spanner *Spanner) SetServerVersion() {
+	version, err := getBackendVersion(spanner)
+	if err != nil {
+		return
+	}
+
+	// get the org ServerVersion and tag
+	orgServerVersion, err := parseVersionString(spanner.ServerVersion(), true)
+	if version.equal(orgServerVersion) {
+		return
+	}
+	version.Tag = orgServerVersion.Tag
+
+	spanner.mu.Lock()
+	defer spanner.mu.Unlock()
+	spanner.serverVersion = version.toStr()
 }
 
 func (spanner *Spanner) isTwoPC() bool {

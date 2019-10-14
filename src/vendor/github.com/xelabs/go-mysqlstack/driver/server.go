@@ -28,6 +28,7 @@ import (
 // Handler interface.
 type Handler interface {
 	ServerVersion() string
+	SetServerVersion()
 	NewSession(session *Session)
 	SessionInc(session *Session)
 	SessionDec(session *Session)
@@ -53,8 +54,6 @@ type Listener struct {
 
 	// Incrementing ID for connection id.
 	connectionID uint32
-
-	serverVersion string
 }
 
 // NewListener creates a new Listener.
@@ -70,7 +69,6 @@ func NewListener(log *xlog.Log, address string, handler Handler) (*Listener, err
 		handler:       handler,
 		listener:      listener,
 		connectionID:  1,
-		serverVersion: handler.ServerVersion(),
 	}, nil
 }
 
@@ -85,7 +83,7 @@ func (l *Listener) Accept() {
 		}
 		ID := l.connectionID
 		l.connectionID++
-		go l.handle(conn, ID, l.serverVersion)
+		go l.handle(conn, ID)
 	}
 }
 
@@ -136,7 +134,7 @@ func (l *Listener) parserComStatementExecute(data []byte, session *Session) (*St
 }
 
 // handle is called in a go routine for each client connection.
-func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
+func (l *Listener) handle(conn net.Conn, ID uint32) {
 	var err error
 	var data []byte
 	var authPkt []byte
@@ -150,7 +148,11 @@ func (l *Listener) handle(conn net.Conn, ID uint32, serverVersion string) {
 			log.Error("server.handle.panic:\n%v\n%s", x, debug.Stack())
 		}
 	}()
-	session := newSession(log, ID, l.serverVersion, conn)
+
+	// set server version if backend MySQL version is different.
+	l.handler.SetServerVersion()
+
+	session := newSession(log, ID, l.handler.ServerVersion(), conn)
 	// Session check.
 	if err = l.handler.SessionCheck(session); err != nil {
 		log.Warning("session[%v].check.failed.error:%+v", ID, err)
