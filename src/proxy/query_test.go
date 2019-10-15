@@ -639,3 +639,27 @@ func TestProxyQueryTxnUnion_428(t *testing.T) {
 		}
 	}
 }
+
+func TestProxyQueryFixJdbcPanic495(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+	querys := []string{
+		"SET NAMES utf8",
+	}
+
+	fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+	fakedbs.AddQueryErrorPattern("SET NAMES .*", errors.New("SET.NAMES.error"))
+	{
+		client, err := driver.NewConn("mock", "mock", address, " ", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			// panic:  err.Error() will return "EOF"
+			assert.NotEqual(t, "EOF", err.Error())
+		}
+	}
+}

@@ -56,7 +56,9 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 	// Support for JDBC/Others driver.
 	if spanner.isConnectorFilter(query) {
 		qr, err := spanner.handleJDBCShows(session, query, nil)
-		qr.Warnings = 1
+		if err == nil {
+			qr.Warnings = 1
+		}
 		return returnQuery(qr, callback, err)
 	}
 
