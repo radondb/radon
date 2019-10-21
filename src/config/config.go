@@ -166,9 +166,10 @@ type BackendsConfig struct {
 
 // PartitionConfig tuple.
 type PartitionConfig struct {
-	Table   string `json:"table"`
-	Segment string `json:"segment"`
-	Backend string `json:"backend"`
+	Table     string `json:"table"`
+	Segment   string `json:"segment"`
+	Backend   string `json:"backend"`
+	ListValue string `json:"listvalue"`
 }
 
 // AutoIncrement tuple.

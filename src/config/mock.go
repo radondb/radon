@@ -28,6 +28,11 @@ var (
 			ShardKey:   "id",
 			Partitions: MockPartitionBConfig,
 		},
+		&TableConfig{
+			Name:       "L",
+			ShardKey:   "id",
+			Partitions: MockPartitionLConfig,
+		},
 	}
 
 	// MockPartitionAConfig config.
@@ -70,6 +75,16 @@ var (
 			Table:   "B3",
 			Segment: "8-16",
 			Backend: "backend2",
+		},
+	}
+
+	// MockPartitionLConfig ...
+	MockPartitionLConfig = []*PartitionConfig{
+		&PartitionConfig{
+			Table:     "L1",
+			Segment:   "",
+			Backend:   "backend2",
+			ListValue: "2",
 		},
 	}
 

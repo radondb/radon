@@ -219,6 +219,28 @@ func TestReadTableConfig(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
+func TestReadTableConfigList(t *testing.T) {
+	data := `{
+	"name": "L",
+	"shardtype": "",
+	"shardkey": "id",
+	"partitions": [
+		{
+			"table": "L1",
+			"segment": "",
+			"backend": "backend2",
+			"listvalue": "2"
+		}
+	]
+}`
+
+	table, err := ReadTableConfig(data)
+	assert.Nil(t, err)
+	want := MockTablesConfig[2]
+	got := table
+	assert.Equal(t, want, got)
+}
+
 func TestRouterConfigUnmarshalJSON(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	tmpDir := getTmpDir("", "radon_config_", log)
