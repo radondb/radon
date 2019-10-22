@@ -312,6 +312,26 @@ func TestRouterShardKey(t *testing.T) {
 	}
 }
 
+func TestRouterPartitionType(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+	assert.NotNil(t, router)
+
+	{
+		// add router of sbtest.A
+		err := router.addTable("sbtest", MockTableAConfig())
+		assert.Nil(t, err)
+
+		_, err = router.PartitionType("sbtest", "B")
+		assert.NotNil(t, err)
+
+		partitionType, err := router.PartitionType("sbtest", "A")
+		assert.Nil(t, err)
+		assert.EqualValues(t, methodTypeHash, partitionType)
+	}
+}
+
 func TestRouterShardKeyError(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)
