@@ -239,13 +239,22 @@ func (r *Router) getTable(database string, tableName string) (*Table, error) {
 	return table, nil
 }
 
-// ShardKey used to lookup shardkey from given database and table name
+// ShardKey used to lookup shardkey from given database and table name.
 func (r *Router) ShardKey(database string, tableName string) (string, error) {
 	table, err := r.getTable(database, tableName)
 	if err != nil {
 		return "", err
 	}
 	return table.ShardKey, nil
+}
+
+// PartitionType used to get PartitionType from given database and table name.
+func (r *Router) PartitionType(database string, tableName string) (MethodType, error) {
+	table, err := r.getTable(database, tableName)
+	if err != nil {
+		return "", err
+	}
+	return table.Partition.Type(), nil
 }
 
 // TableConfig returns the config by database and tableName.
