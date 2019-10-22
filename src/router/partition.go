@@ -45,6 +45,7 @@ type Segment struct {
 // Partition interface.
 type Partition interface {
 	Build() error
+	Type() MethodType
 	Lookup(start *sqlparser.SQLVal, end *sqlparser.SQLVal) ([]Segment, error)
 	GetIndex(sqlval *sqlparser.SQLVal) (int, error)
 	GetSegments() []Segment
