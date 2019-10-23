@@ -15,6 +15,7 @@ import (
 	"config"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -353,5 +354,113 @@ func TestRouterComputeSingleError(t *testing.T) {
 		backends := []string{"backend1"}
 		_, err := router.SingleUniform("", backends)
 		assert.NotNil(t, err)
+	}
+}
+
+func TestRouterComputeListError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+
+	// Shardkey is NULL.
+	{
+		assert.NotNil(t, router)
+		_, err := router.ListUniform("t1", "", sqlparser.PartitionOptions{})
+		assert.NotNil(t, err)
+	}
+
+	// Table is NULL.
+	{
+		assert.NotNil(t, router)
+		_, err := router.ListUniform("", "i", sqlparser.PartitionOptions{})
+		assert.NotNil(t, err)
+	}
+
+	// different backends with the same list value.
+	{
+		partitionDef := sqlparser.PartitionOptions{
+			&sqlparser.PartitionDefinition{
+				Backend: "node1",
+				Row:     sqlparser.ValTuple{sqlparser.NewStrVal([]byte("1"))},
+			},
+			&sqlparser.PartitionDefinition{
+				Backend: "node2",
+				Row:     sqlparser.ValTuple{sqlparser.NewIntVal([]byte("1"))},
+			},
+		}
+
+		assert.NotNil(t, router)
+		_, err := router.ListUniform("t1", "i", partitionDef)
+		assert.NotNil(t, err)
+	}
+
+	// empty PartitionOptions
+	{
+		assert.NotNil(t, router)
+		_, err := router.ListUniform("t1", "i", sqlparser.PartitionOptions{})
+		assert.NotNil(t, err)
+	}
+}
+
+func TestRouterComputeList(t *testing.T) {
+	datas := `{
+	"name": "l",
+	"shardtype": "LIST",
+	"shardkey": "id",
+	"partitions": [
+		{
+			"table": "l_0000",
+			"segment": "",
+			"backend": "node1",
+			"listvalue": "2"
+		},
+		{
+			"table": "l_0001",
+			"segment": "",
+			"backend": "node2",
+			"listvalue": "4"
+		},
+		{
+			"table": "l_0002",
+			"segment": "",
+			"backend": "node3",
+			"listvalue": "6"
+		}
+	]
+}`
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+	assert.NotNil(t, router)
+
+	partitionDef := sqlparser.PartitionOptions{
+		&sqlparser.PartitionDefinition{
+			Backend: "node1",
+			Row:     sqlparser.ValTuple{sqlparser.NewStrVal([]byte("2"))},
+		},
+		&sqlparser.PartitionDefinition{
+			Backend: "node2",
+			Row:     sqlparser.ValTuple{sqlparser.NewIntVal([]byte("4"))},
+		},
+		&sqlparser.PartitionDefinition{
+			Backend: "node3",
+			Row:     sqlparser.ValTuple{sqlparser.NewIntVal([]byte("6"))},
+		},
+	}
+
+	got, err := router.ListUniform("l", "id", partitionDef)
+	assert.Nil(t, err)
+	want, err := config.ReadTableConfig(datas)
+	assert.Nil(t, err)
+
+	assert.EqualValues(t, got.Name, want.Name)
+	assert.EqualValues(t, got.ShardKey, want.ShardKey)
+	assert.EqualValues(t, got.ShardType, want.ShardType)
+	for _, gotPartition := range got.Partitions {
+		for _, wantPartition := range want.Partitions {
+			if wantPartition.Backend == gotPartition.Backend {
+				assert.EqualValues(t, wantPartition.ListValue, gotPartition.ListValue)
+			}
+		}
 	}
 }

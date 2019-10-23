@@ -14,7 +14,10 @@ import (
 	"path"
 	"testing"
 
+	"config"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -79,6 +82,23 @@ func TestFrmTable(t *testing.T) {
 	{
 		backends := []string{"backend1", "backend2"}
 		err := router.CreateTable("test", "t3_single", "", TableTypeSingle, backends, nil)
+		assert.Nil(t, err)
+	}
+
+	// Add list table.
+	{
+		partitionDef := sqlparser.PartitionOptions{
+			&sqlparser.PartitionDefinition{
+				Backend: "node1",
+				Row:     sqlparser.ValTuple{sqlparser.NewStrVal([]byte("2"))},
+			},
+			&sqlparser.PartitionDefinition{
+				Backend: "node2",
+				Row:     sqlparser.ValTuple{sqlparser.NewIntVal([]byte("4"))},
+			},
+		}
+
+		err := router.CreateListTable("test", "l", "id", TableTypePartitionList, partitionDef, nil)
 		assert.Nil(t, err)
 	}
 
@@ -472,4 +492,50 @@ func TestFrmCheckTable(t *testing.T) {
 	router.CheckTable("test", "t1")
 	router.CheckTable("test1", "t1")
 	router.CheckTable("test", "t3")
+}
+
+func TestFrmTableCreateListTable(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+
+	router.CreateDatabase("test")
+
+	// Add 1.
+	{
+		tmpRouter := router
+		backends := []string{"backend1", "backend2", "backend3"}
+		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		assert.Nil(t, err)
+		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
+	}
+
+	// Add list table.
+	{
+		partitionDef := sqlparser.PartitionOptions{
+			&sqlparser.PartitionDefinition{
+				Backend: "node1",
+				Row:     sqlparser.ValTuple{sqlparser.NewStrVal([]byte("2"))},
+			},
+			&sqlparser.PartitionDefinition{
+				Backend: "node2",
+				Row:     sqlparser.ValTuple{sqlparser.NewIntVal([]byte("4"))},
+			},
+		}
+
+		err := router.CreateListTable("test", "l", "id", TableTypePartitionList, partitionDef, nil)
+		assert.Nil(t, err)
+
+		err = router.CreateListTable("test", "l", "", TableTypePartitionList, partitionDef, nil)
+		assert.NotNil(t, err)
+
+		err = router.CreateListTable("test", "l", "", TableTypePartitionHash, partitionDef, nil)
+		assert.NotNil(t, err)
+
+		err = router.CreateListTable("test", "l", "id", TableTypePartitionList, sqlparser.PartitionOptions{}, nil)
+		assert.NotNil(t, err)
+
+		err = router.CreateListTable("test", "l", "id", TableTypePartitionList, partitionDef, &Extra{&config.AutoIncrement{"id"}})
+		assert.NotNil(t, err)
+	}
 }

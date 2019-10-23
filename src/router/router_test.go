@@ -329,6 +329,9 @@ func TestRouterPartitionType(t *testing.T) {
 		partitionType, err := router.PartitionType("sbtest", "A")
 		assert.Nil(t, err)
 		assert.EqualValues(t, methodTypeHash, partitionType)
+
+		isHash := router.IsPartitionHash(methodTypeHash)
+		assert.Equal(t, true, isHash)
 	}
 }
 
@@ -507,7 +510,7 @@ func TestRouterGetSegments(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
-	err := router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig(), MockTableSConfig())
+	err := router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig(), MockTableSConfig(), MockTableListConfig())
 	assert.Nil(t, err)
 	// hash.
 	{
@@ -550,6 +553,18 @@ func TestRouterGetSegments(t *testing.T) {
 		segments, err := router.GetSegments("sbtest", "S", []int{})
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(segments))
+	}
+	//list.
+	{
+		segments, err := router.GetSegments("sbtest", "L", []int{0})
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(segments))
+	}
+	//list all segments.
+	{
+		segments, err := router.GetSegments("sbtest", "L", []int{})
+		assert.Nil(t, err)
+		assert.Equal(t, 3, len(segments))
 	}
 }
 
@@ -641,4 +656,17 @@ func TestRouterGetRenameTableConfig(t *testing.T) {
 
 	_, err = router.getRenameTableConfig("sbtest", "A", "A")
 	assert.NotNil(t, err)
+}
+
+func TestRouterIsPartitionHash(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+
+	// sbtest with tables.
+	err := router.AddForTest("sbtest", MockTableMConfig())
+	assert.Nil(t, err)
+
+	isHash := router.IsPartitionHash(methodTypeHash)
+	assert.Equal(t, true, isHash)
 }

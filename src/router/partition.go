@@ -40,6 +40,9 @@ type Segment struct {
 	Backend string `json:",omitempty"`
 	// key range of this segment.
 	Range KeyRange `json:",omitempty"`
+
+	// partition list value.
+	ListValue string `json:",omitempty"`
 }
 
 // Partition interface.

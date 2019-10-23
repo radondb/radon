@@ -96,7 +96,7 @@ func TestVersionFunction(t *testing.T) {
 	MySQLVersion := serverVersion{5, 7, 25, ""}
 	MySQLVersion8 := serverVersion{8, 0, 3, ""}
 
-	MySQLVersions := []serverVersion {
+	MySQLVersions := []serverVersion{
 		{4, 0, 0, ""},
 		{5, 0, 0, ""},
 		{5, 6, 0, ""},

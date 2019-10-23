@@ -16,4 +16,5 @@ const (
 	methodTypeHash   = "HASH"
 	methodTypeGlobal = "GLOBAL"
 	methodTypeSingle = "SINGLE"
+	methodTypeList   = "LIST"
 )
