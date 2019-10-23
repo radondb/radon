@@ -17,12 +17,13 @@ import (
 	"config"
 
 	"github.com/pkg/errors"
+	"github.com/xelabs/go-mysqlstack/sqlparser"
 )
 
 const (
-	TableTypeSingle = "single"
-	TableTypeGlobal = "global"
-	TableTypeUnknow = "unknow"
+	TableTypeSingle  = "single"
+	TableTypeGlobal  = "global"
+	TableTypeUnknown = "unknown"
 
 	TableTypePartitionHash  = "hash"
 	TableTypePartitionList  = "list"
@@ -228,6 +229,48 @@ func (r *Router) CreateTable(db, table, shardKey string, tableType string, backe
 		if tableConf, err = r.HashUniform(table, shardKey, backends); err != nil {
 			return err
 		}
+	}
+
+	if extra != nil {
+		tableConf.AutoIncrement = extra.AutoIncrement
+	}
+
+	// add config to router.
+	if err = r.addTable(db, tableConf); err != nil {
+		log.Error("frm.create.add.route.error:%v", err)
+		return err
+	}
+	if err = r.writeTableFrmData(db, table, tableConf); err != nil {
+		log.Error("frm.create.table[db:%v, table:%v].file.error:%+v", db, tableConf.Name, err)
+		return err
+	}
+
+	if err = config.UpdateVersion(r.metadir); err != nil {
+		log.Panicf("frm.create.table.update.version.error:%v", err)
+		return err
+	}
+	return nil
+}
+
+// CreateListTable used to add a list table to router and flush the schema to disk.
+func (r *Router) CreateListTable(db, table, shardKey string, tableType string,
+	partitionDef sqlparser.PartitionOptions, extra *Extra) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var err error
+	var tableConf *config.TableConfig
+	log := r.log
+
+	switch tableType {
+	case TableTypePartitionList:
+		if tableConf, err = r.ListUniform(table, shardKey, partitionDef); err != nil {
+			return err
+		}
+
+	default:
+		err := errors.Errorf("tableType is unsupported: %s", tableType)
+		return err
 	}
 
 	if extra != nil {

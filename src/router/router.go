@@ -125,6 +125,12 @@ func (r *Router) addTable(db string, tbl *config.TableConfig) error {
 			return err
 		}
 		table.Partition = single
+	case methodTypeList:
+		list := NewList(r.log, tbl)
+		if err := list.Build(); err != nil {
+			return err
+		}
+		table.Partition = list
 	default:
 		return errors.Errorf("router.unsupport.shardtype:[%v]", tbl.ShardType)
 	}
@@ -195,7 +201,7 @@ func (r *Router) clear() {
 	r.Schemas = make(map[string]*Schema)
 }
 
-// DatabaseACL used to check wheather the database is a system database.
+// DatabaseACL used to check whether the database is a system database.
 func (r *Router) DatabaseACL(database string) error {
 	if ok := r.dbACL.Allow(database); !ok {
 		r.log.Warning("router.database.acl.check.fail[db:%s]", database)
@@ -204,9 +210,14 @@ func (r *Router) DatabaseACL(database string) error {
 	return nil
 }
 
-// IsSystemDB used to check wheather the database is a system database.
+// IsSystemDB used to check whether the database is a system database.
 func (r *Router) IsSystemDB(database string) bool {
 	return r.dbACL.IsSystemDB(database)
+}
+
+// IsPartitionHash used to check whether the partitionType is hash.
+func (r *Router) IsPartitionHash(partitionType MethodType) bool {
+	return partitionType == methodTypeHash
 }
 
 func (r *Router) getTable(database string, tableName string) (*Table, error) {

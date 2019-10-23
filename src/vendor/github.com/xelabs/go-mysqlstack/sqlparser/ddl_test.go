@@ -263,8 +263,8 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") PARTITION BY LIST(c1) (" +
-			    "PARTITION p0 VALUES IN (1,4,7)," +
-			    "PARTITION p1 VALUES IN (2,5,8) )",
+				"PARTITION p0 VALUES IN (1,4,7)," +
+				"PARTITION p1 VALUES IN (2,5,8) )",
 			output: "create table test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
