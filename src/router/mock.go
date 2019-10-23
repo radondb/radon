@@ -368,7 +368,67 @@ func MockTableSConfig() *config.TableConfig {
 	}
 }
 
-// MockTableAConfig config.
+// MockTableListConfig config, list shardtype.
+func MockTableListConfig() *config.TableConfig {
+	mock := &config.TableConfig{
+		Name:       "L",
+		ShardType:  "LIST",
+		ShardKey:   "id",
+		Partitions: make([]*config.PartitionConfig, 0, 16),
+	}
+	L101 := &config.PartitionConfig{
+		Table:     "L_0000",
+		Segment:   "",
+		Backend:   "backend1",
+		ListValue: "1",
+	}
+	L102 := &config.PartitionConfig{
+		Table:     "L_0001",
+		Segment:   "",
+		Backend:   "backend2",
+		ListValue: "5",
+	}
+	L103 := &config.PartitionConfig{
+		Table:     "L_0002",
+		Segment:   "",
+		Backend:   "backend2",
+		ListValue: "6",
+	}
+	mock.Partitions = append(mock.Partitions, L101, L102, L103)
+	return mock
+}
+
+// MockTableList1Config config, list shardtype.
+func MockTableList1Config() *config.TableConfig {
+	mock := &config.TableConfig{
+		Name:       "L1",
+		ShardType:  "LIST",
+		ShardKey:   "id",
+		Partitions: make([]*config.PartitionConfig, 0, 16),
+	}
+	L101 := &config.PartitionConfig{
+		Table:     "L1_0000",
+		Segment:   "",
+		Backend:   "backend1",
+		ListValue: "1",
+	}
+	L102 := &config.PartitionConfig{
+		Table:     "L1_0001",
+		Segment:   "",
+		Backend:   "backend2",
+		ListValue: "5",
+	}
+	L103 := &config.PartitionConfig{
+		Table:     "L1_0002",
+		Segment:   "",
+		Backend:   "backend2",
+		ListValue: "6",
+	}
+	mock.Partitions = append(mock.Partitions, L101, L102, L103)
+	return mock
+}
+
+// MockTableRConfig config.
 func MockTableRConfig() *config.TableConfig {
 	mock := &config.TableConfig{
 		Name:       "R",

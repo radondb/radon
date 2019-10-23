@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -79,6 +80,23 @@ func TestFrmTable(t *testing.T) {
 	{
 		backends := []string{"backend1", "backend2"}
 		err := router.CreateTable("test", "t3_single", "", TableTypeSingle, backends, nil)
+		assert.Nil(t, err)
+	}
+
+	// Add list table.
+	{
+		partitionDef := sqlparser.PartitionOptions{
+			&sqlparser.PartitionDefinition{
+				Backend: "node1",
+				Row:     sqlparser.ValTuple{sqlparser.NewStrVal([]byte("2"))},
+			},
+			&sqlparser.PartitionDefinition{
+				Backend: "node2",
+				Row:     sqlparser.ValTuple{sqlparser.NewIntVal([]byte("4"))},
+			},
+		}
+
+		err := router.CreateListTable("test", "l", "id", TableTypePartitionList, partitionDef, nil)
 		assert.Nil(t, err)
 	}
 
