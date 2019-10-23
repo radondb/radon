@@ -212,7 +212,7 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		table := ddl.Table.Name.String()
 		backends := scatter.Backends()
 		shardKey := ddl.PartitionName
-		tableType := router.TableTypeUnknow
+		tableType := router.TableTypeUnknown
 
 		if !checkDatabaseExists(database, route) {
 			return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, database)
