@@ -158,7 +158,8 @@ func (j *JoinNode) pushFilter(filters []exprInfo) error {
 			j.noTableFilter = append(j.noTableFilter, filter.expr)
 			continue
 		}
-		// if left join's right node is null condition will not be pushed down.
+		// if left join's right node with
+		// "is null" condition will not be pushed down.
 		if j.IsLeftJoin {
 			if ok, nullFunc := checkIsWithNull(filter, rightTbs); ok {
 				j.rightNull = append(j.rightNull, nullFunc)

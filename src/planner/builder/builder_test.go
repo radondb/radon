@@ -1083,3 +1083,91 @@ func TestGenerateFieldQuery(t *testing.T) {
 	want := "select :A_id + B.id from sbtest.B1 as B where 1 != 1"
 	assert.Equal(t, want, got)
 }
+
+
+func TestSelectPlanList(t *testing.T) {
+	querys := []string{
+		"select 1, sum(a),avg(a),a,b from sbtest.L where id>1 group by a,b order by a desc limit 10 offset 100",
+		"select L.a, L.b from L join L1 on L.a = L1.a where L1.id=1",
+		"select L.a, L.b from L, L1 where L.a = L1.a and L1.id=1",
+		"select L.a, L.b from L, L1 where L.a = L1.a and L1.id=1 and L.id=1",
+	}
+
+	wants := []int{
+		3,
+		4,
+		4,
+		1,
+	}
+
+	{
+		log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+		database := "sbtest"
+
+		route, cleanup := router.MockNewRouter(log)
+		defer cleanup()
+
+		err := route.AddForTest(database, router.MockTableListConfig(), router.MockTableList1Config())
+		assert.Nil(t, err)
+		for i, query := range querys {
+			node, err := sqlparser.Parse(query)
+			assert.Nil(t, err)
+
+			// plan build
+			{
+				log.Info("--select.query:%+v", query)
+				plan, err := BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+				assert.Nil(t, err)
+				want := wants[i]
+				assert.Equal(t, want, len(plan.GetQuery()))
+			}
+		}
+	}
+}
+
+func TestSelectSupportedPlanList(t *testing.T) {
+	querys := []string{
+		"select id,rand(id) from L",
+		"select now() as time, count(1), avg(id), sum(b) from L",
+		"select avg(id + 1) from L",
+		"select concat(str1,str2) from L",
+		"select A.id from A join L on A.id=L.id where A.id=1",
+		"select A.id from A,L,L as C where L.id = 1 and A.id=C.id and A.id=1",
+		"select L.id from L,L as B where L.id=B.id and L.a=1",
+		"select L.id from L join B on L.id = B.id join G on G.id=L.id and L.id>1 and G.id=5",
+		"select A.id from A left join L on A.id=L.id where L.str is null",
+		"select A.id from A left join L on A.id=L.id where L.str<=>null",
+		"select A.id from A left join L on A.id=L.id where null<=>L.str",
+		"select A.id from A join L on A.id >= L.id join G on G.id<=A.id",
+		"select L.id from L join B on L.id >= B.id join G on G.id<=L.id",
+
+		"select /*+nested+*/ A.id from A join L on A.id=L.id right join G on G.id=L.id and A.a>L.a",
+		"select /*+nested+*/ A.id from (A,L) left join G on A.id =G.id and A.a>L.a",
+		"select /*+nested+*/ A.id from A join L on A.id=L.id right join G on G.id=A.id where concat(L.str,A.str) is null",
+		"select /*+nested+*/ A.id from A join L on A.id >= L.id join G on G.id<=A.id where concat(L.str,A.str) is null",
+		"select /*+nested+*/ A.id from A join L on A.id = L.id join G on G.id<=A.id+L.id",
+		"select /*+nested+*/ A.id from A join L on A.id = L.id join G on A.id+L.id<=G.id",
+		"select /*+nested+*/ A.id from G join (A,L) on A.id+L.id<=G.id",
+		"select /*+nested+*/ A.id from G join (A,L) on G.id<=A.id+L.id",
+		"select /*+nested+*/ sum(A.id) from A join L on A.id=L.id",
+		"select /*+nested+*/ A.id from G,A,L where A.id=L.id having G.id=L.id and L.a=1 and 1=1",
+		"select COALESCE(L.b, ''), IF(L.b IS NULL, FALSE, TRUE) AS spent from L left join B on L.a=B.a",
+		"select COALESCE(L.b, ''), IF(L.b IS NULL, FALSE, TRUE) AS spent from A join L on A.a=L.a",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(),
+		router.MockTableGConfig(), router.MockTableListConfig())
+	assert.Nil(t, err)
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		_, err = BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+		assert.Nil(t, err)
+	}
+}
