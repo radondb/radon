@@ -66,7 +66,7 @@ func (p *UnionPlan) Build() error {
 		return err
 	}
 
-	p.Root.buildQuery(p.Root.getReferredTables())
+	p.Root.buildQuery(p.Root.getReferTables())
 	return nil
 }
 
@@ -214,9 +214,9 @@ func union(log *xlog.Log, router *router.Router, database string, left, right Pl
 			lm.ReqMode = rm.ReqMode
 		}
 		lm.Sel = node
-		for k, v := range rm.getReferredTables() {
+		for k, v := range rm.getReferTables() {
 			v.parent = lm
-			lm.referredTables[k] = v
+			lm.referTables[k] = v
 		}
 		return lm, nil
 	}

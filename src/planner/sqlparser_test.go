@@ -532,7 +532,7 @@ func TestSQLSelectAggregator(t *testing.T) {
 				switch exp.(type) {
 				case *sqlparser.AliasedExpr:
 					expr := exp.(*sqlparser.AliasedExpr)
-					tuple, _, _ := parserSelectExpr(expr, p.getReferredTables())
+					tuple, _, _ := parserSelectExpr(expr, p.getReferTables())
 					tuples = append(tuples, tuple)
 				}
 			}
@@ -574,7 +574,7 @@ func TestSQLSelectRewritten(t *testing.T) {
 			switch exp.(type) {
 			case *sqlparser.AliasedExpr:
 				expr := exp.(*sqlparser.AliasedExpr)
-				tuple, _, _ := parserSelectExpr(expr, p.getReferredTables())
+				tuple, _, _ := parserSelectExpr(expr, p.getReferTables())
 				tuples = append(tuples, tuple)
 			}
 		}

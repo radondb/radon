@@ -58,7 +58,7 @@ func (j *JoinEngine) Execute(ctx *xcontext.ResultContext) error {
 	}
 
 	maxrow := j.txn.MaxJoinRows()
-	if j.node.Strategy == planner.NestedLoop {
+	if j.node.Strategy == planner.NestLoop {
 		joinVars := make(map[string]*querypb.BindVariable)
 		if err := j.execBindVars(ctx, joinVars, true); err != nil {
 			return err
