@@ -40,7 +40,7 @@ func TestScanTableExprs(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 
-		tbMaps := m.getReferredTables()
+		tbMaps := m.getReferTables()
 		tbInfo := tbMaps["A"]
 		assert.Equal(t, 1, len(tbMaps))
 		assert.Equal(t, m, tbInfo.parent)
@@ -59,7 +59,7 @@ func TestScanTableExprs(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 
-		tbMaps := m.getReferredTables()
+		tbMaps := m.getReferTables()
 		tbInfo := tbMaps["B"]
 		assert.Equal(t, 2, len(tbMaps))
 		assert.Equal(t, m, tbInfo.parent)
@@ -81,7 +81,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.False(t, j.IsLeftJoin)
 		assert.Equal(t, 1, len(j.tableFilter))
 
-		tbMaps := j.getReferredTables()
+		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["A"]
 
 		m, ok := j.Left.(*MergeNode)
@@ -108,7 +108,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.True(t, j.IsLeftJoin)
 		assert.Equal(t, 0, len(j.tableFilter))
 
-		tbMaps := j.getReferredTables()
+		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["A"]
 
 		m, ok := j.Left.(*MergeNode)
@@ -163,7 +163,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.True(t, j.IsLeftJoin)
 		assert.Equal(t, 0, len(j.tableFilter))
 
-		tbMaps := j.getReferredTables()
+		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["A"]
 
 		m, ok := j.Right.(*MergeNode)
@@ -171,7 +171,7 @@ func TestScanTableExprs(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, 2, len(m.getReferredTables()))
+		assert.Equal(t, 2, len(m.getReferTables()))
 		assert.Equal(t, 0, len(m.index))
 		assert.True(t, m.hasParen)
 		assert.NotNil(t, j.otherJoinOn)
@@ -193,7 +193,7 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		tbMaps := m.getReferredTables()
+		tbMaps := m.getReferTables()
 		assert.Equal(t, 2, len(tbMaps))
 		tbInfo := tbMaps["A"]
 		assert.Equal(t, m, tbInfo.parent)
@@ -213,14 +213,14 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 3, len(j.getReferredTables()))
+		assert.Equal(t, 3, len(j.getReferTables()))
 		assert.False(t, j.hasParen)
 
 		j2, ok := j.Right.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		assert.Equal(t, 2, len(j2.getReferredTables()))
+		assert.Equal(t, 2, len(j2.getReferTables()))
 		assert.True(t, j2.hasParen)
 	}
 	// can merge shard tables and global table.
@@ -236,7 +236,7 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		tbMaps := m.getReferredTables()
+		tbMaps := m.getReferTables()
 		assert.Equal(t, 3, len(tbMaps))
 		tbInfo := tbMaps["B"]
 		assert.Equal(t, m, tbInfo.parent)
@@ -260,7 +260,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.False(t, j.IsLeftJoin)
 		assert.Equal(t, 1, len(j.noTableFilter))
 		assert.Equal(t, 1, len(j.tableFilter))
-		tbMaps := j.getReferredTables()
+		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["A"]
 
 		m, ok := j.Left.(*MergeNode)
@@ -283,7 +283,7 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		tbMaps := m.getReferredTables()
+		tbMaps := m.getReferTables()
 		assert.Equal(t, 2, len(tbMaps))
 		assert.Equal(t, []int{2323}, m.index)
 		assert.Equal(t, 2, len(m.Sel.(*sqlparser.Select).From))
@@ -302,7 +302,7 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		tbMaps := m.getReferredTables()
+		tbMaps := m.getReferTables()
 		assert.Equal(t, 3, len(tbMaps))
 		tbInfo := tbMaps["B"]
 		assert.Equal(t, m, tbInfo.parent)
@@ -320,7 +320,7 @@ func TestScanTableExprs(t *testing.T) {
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
-		tbMaps := m.getReferredTables()
+		tbMaps := m.getReferTables()
 		assert.Equal(t, 3, len(tbMaps))
 		tbInfo := tbMaps["B"]
 		assert.Equal(t, m, tbInfo.parent)
@@ -340,7 +340,7 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.otherFilter))
 		assert.Equal(t, 1, len(j.joinOn))
-		tbMaps := j.getReferredTables()
+		tbMaps := j.getReferTables()
 		assert.Equal(t, 3, len(tbMaps))
 		tbInfo := tbMaps["B"]
 

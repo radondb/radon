@@ -16,10 +16,10 @@ import (
 
 // PlanNode interface.
 type PlanNode interface {
-	buildQuery(tbInfos map[string]*TableInfo)
+	buildQuery(tbInfos map[string]*tableInfo)
 	Children() *PlanTree
 	getFields() []selectTuple
-	getReferredTables() map[string]*TableInfo
+	getReferTables() map[string]*tableInfo
 	GetQuery() []xcontext.QueryTuple
 	pushOrderBy(sel sqlparser.SelectStatement) error
 	pushLimit(sel sqlparser.SelectStatement) error
@@ -65,7 +65,7 @@ func findLCA(h, p1, p2 SelectNode) SelectNode {
 }
 
 // getOneTableInfo get a tableInfo.
-func getOneTableInfo(tbInfos map[string]*TableInfo) (string, *TableInfo) {
+func getOneTableInfo(tbInfos map[string]*tableInfo) (string, *tableInfo) {
 	for tb, tbInfo := range tbInfos {
 		return tb, tbInfo
 	}
@@ -74,7 +74,7 @@ func getOneTableInfo(tbInfos map[string]*TableInfo) (string, *TableInfo) {
 
 // procure requests for the specified column from the plan
 // and returns the join var name for it.
-func procure(tbInfos map[string]*TableInfo, col *sqlparser.ColName) string {
+func procure(tbInfos map[string]*tableInfo, col *sqlparser.ColName) string {
 	var joinVar string
 	field := col.Name.String()
 	table := col.Qualifier.Name.String()

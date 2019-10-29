@@ -94,7 +94,7 @@ func TestParserWhereOrJoinExprs(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		_, _, err = parserWhereOrJoinExprs(sel.Where.Expr, p.getReferredTables())
+		_, _, err = parserWhereOrJoinExprs(sel.Where.Expr, p.getReferTables())
 		assert.Nil(t, err)
 	}
 }
@@ -127,7 +127,7 @@ func TestWhereFilters(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		joins, filters, err := parserWhereOrJoinExprs(sel.Where.Expr, p.getReferredTables())
+		joins, filters, err := parserWhereOrJoinExprs(sel.Where.Expr, p.getReferTables())
 		assert.Nil(t, err)
 
 		err = p.pushFilter(filters)
@@ -168,7 +168,7 @@ func TestWhereFiltersError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		joins, filters, err := parserWhereOrJoinExprs(sel.Where.Expr, p.getReferredTables())
+		joins, filters, err := parserWhereOrJoinExprs(sel.Where.Expr, p.getReferTables())
 		assert.Nil(t, err)
 
 		err = p.pushFilter(filters)
@@ -227,7 +227,7 @@ func TestCheckGroupBy(t *testing.T) {
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferredTables(), ok)
+		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferTables(), ok)
 		assert.Nil(t, err)
 		assert.Equal(t, wants[i], len(groups))
 	}
@@ -266,7 +266,7 @@ func TestCheckGroupByError(t *testing.T) {
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
-		_, err = checkGroupBy(sel.GroupBy, fields, route, p.getReferredTables(), ok)
+		_, err = checkGroupBy(sel.GroupBy, fields, route, p.getReferTables(), ok)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}
@@ -305,7 +305,7 @@ func TestCheckDistinct(t *testing.T) {
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
-		_, err = checkDistinct(sel, nil, fields, route, p.getReferredTables(), ok)
+		_, err = checkDistinct(sel, nil, fields, route, p.getReferTables(), ok)
 		assert.Nil(t, err)
 		assert.Equal(t, wants[i], len(sel.GroupBy))
 	}
@@ -342,7 +342,7 @@ func TestCheckDistinctError(t *testing.T) {
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
-		_, err = checkDistinct(sel, nil, fields, route, p.getReferredTables(), ok)
+		_, err = checkDistinct(sel, nil, fields, route, p.getReferTables(), ok)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}
@@ -377,7 +377,7 @@ func TestSelectExprs(t *testing.T) {
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferredTables(), ok)
+		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferTables(), ok)
 		assert.Nil(t, err)
 
 		err = p.pushSelectExprs(fields, groups, sel, aggTyp)
@@ -420,7 +420,7 @@ func TestSelectExprsError(t *testing.T) {
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferredTables(), ok)
+		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferTables(), ok)
 		assert.Nil(t, err)
 
 		err = p.pushSelectExprs(fields, groups, sel, aggTyp)
@@ -453,7 +453,7 @@ func TestParserHaving(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		havings, err := parserHaving(sel.Having.Expr, p.getReferredTables())
+		havings, err := parserHaving(sel.Having.Expr, p.getReferTables())
 		assert.Nil(t, err)
 
 		err = p.pushHaving(havings)
@@ -491,7 +491,7 @@ func TestParserHavingError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		havings, err := parserHaving(sel.Having.Expr, p.getReferredTables())
+		havings, err := parserHaving(sel.Having.Expr, p.getReferTables())
 		if err != nil {
 			got := err.Error()
 			assert.Equal(t, wants[i], got)

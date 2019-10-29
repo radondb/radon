@@ -17,8 +17,8 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
-// TableInfo represents one table information.
-type TableInfo struct {
+// tableInfo represents one table information.
+type tableInfo struct {
 	// database.
 	database string
 	// table's name.
@@ -82,7 +82,7 @@ func scanTableExpr(log *xlog.Log, router *router.Router, database string, tableE
 	return p, err
 }
 
-// scanAliasedTableExpr produces the table's TableInfo by the AliasedTableExpr, and build a MergeNode subtree.
+// scanAliasedTableExpr produces the table's tableInfo by the AliasedTableExpr, and build a MergeNode subtree.
 func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tableExpr *sqlparser.AliasedTableExpr) (SelectNode, error) {
 	var err error
 	mn := newMergeNode(log, r)
@@ -91,7 +91,7 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 		if expr.Qualifier.IsEmpty() {
 			expr.Qualifier = sqlparser.NewTableIdent(database)
 		}
-		tn := &TableInfo{
+		tn := &tableInfo{
 			database: expr.Qualifier.String(),
 			Segments: make([]router.Segment, 0, 16),
 		}
@@ -125,9 +125,9 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 		tn.parent = mn
 		tn.alias = tableExpr.As.String()
 		if tn.alias != "" {
-			mn.referredTables[tn.alias] = tn
+			mn.referTables[tn.alias] = tn
 		} else {
-			mn.referredTables[tn.tableName] = tn
+			mn.referTables[tn.tableName] = tn
 		}
 	case *sqlparser.Subquery:
 		err = errors.New("unsupported: subquery.in.select")
@@ -165,21 +165,21 @@ func join(log *xlog.Log, lpn, rpn SelectNode, joinExpr *sqlparser.JoinTableExpr,
 	var otherJoinOn []filterTuple
 	var err error
 
-	referredTables := make(map[string]*TableInfo)
-	for k, v := range lpn.getReferredTables() {
-		referredTables[k] = v
+	referTables := make(map[string]*tableInfo)
+	for k, v := range lpn.getReferTables() {
+		referTables[k] = v
 	}
-	for k, v := range rpn.getReferredTables() {
-		if _, ok := referredTables[k]; ok {
+	for k, v := range rpn.getReferTables() {
+		if _, ok := referTables[k]; ok {
 			return nil, errors.Errorf("unsupported: not.unique.table.or.alias:'%s'", k)
 		}
-		referredTables[k] = v
+		referTables[k] = v
 	}
 	if joinExpr != nil {
 		if joinExpr.On == nil {
 			joinExpr = nil
 		} else {
-			if joinOn, otherJoinOn, err = parserWhereOrJoinExprs(joinExpr.On, referredTables); err != nil {
+			if joinOn, otherJoinOn, err = parserWhereOrJoinExprs(joinExpr.On, referTables); err != nil {
 				return nil, err
 			}
 			for i, jt := range joinOn {
@@ -217,13 +217,13 @@ func join(log *xlog.Log, lpn, rpn SelectNode, joinExpr *sqlparser.JoinTableExpr,
 			}
 			// if join on condition's cols are both shardkey, and the tables have same shards.
 			for _, jt := range joinOn {
-				if isSameShard(lmn.referredTables, rmn.referredTables, jt.left, jt.right) {
+				if isSameShard(lmn.referTables, rmn.referTables, jt.left, jt.right) {
 					return mergeRoutes(lmn, rmn, joinExpr, otherJoinOn)
 				}
 			}
 		}
 	}
-	jn := newJoinNode(log, lpn, rpn, router, joinExpr, joinOn, referredTables)
+	jn := newJoinNode(log, lpn, rpn, router, joinExpr, joinOn, referTables)
 	lpn.setParent(jn)
 	rpn.setParent(jn)
 	if jn.IsLeftJoin {
@@ -251,9 +251,9 @@ func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJo
 		lSel.From = sqlparser.TableExprs{joinExpr}
 	}
 
-	for k, v := range rmn.getReferredTables() {
+	for k, v := range rmn.getReferTables() {
 		v.parent = lmn
-		lmn.referredTables[k] = v
+		lmn.referTables[k] = v
 	}
 	if rSel.Where != nil {
 		lSel.AddWhere(rSel.Where.Expr)
@@ -267,7 +267,7 @@ func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJo
 }
 
 // isSameShard used to judge lcn|rcn contain shardkey and have same shards.
-func isSameShard(ltb, rtb map[string]*TableInfo, lcn, rcn *sqlparser.ColName) bool {
+func isSameShard(ltb, rtb map[string]*tableInfo, lcn, rcn *sqlparser.ColName) bool {
 	lt := ltb[lcn.Qualifier.Name.String()]
 	if lt.shardKey == "" || lt.shardKey != lcn.Name.String() {
 		return false

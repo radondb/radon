@@ -141,7 +141,7 @@ func TestAggregatePlan(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, canPush, aggTyp)
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferTables(), ok)
 		assert.Nil(t, err)
 		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups, true)
 		// plan build
@@ -285,7 +285,7 @@ func TestAggregatePlanUpperCase(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, canPush, aggTyp)
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferTables(), ok)
 		assert.Nil(t, err)
 		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups, true)
 		// plan build
@@ -344,7 +344,7 @@ func TestAggregatePlanHaving(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, canPush, aggTyp)
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferTables(), ok)
 		assert.Nil(t, err)
 		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups, true)
 		// plan build
@@ -388,7 +388,7 @@ func TestAggregatePlanUnsupported(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, canPush, aggTyp)
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferTables(), ok)
 		if err == nil {
 			plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups, aggTyp != notPush)
 			err := plan.Build()
@@ -483,7 +483,7 @@ func TestAggregatePlans(t *testing.T) {
 		assert.Nil(t, err)
 		//assert.Equal(t, canPush, aggTyp)
 		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferredTables(), ok)
+		groups, err := checkGroupBy(node.GroupBy, tuples, route, p.getReferTables(), ok)
 		assert.Nil(t, err)
 		plan := NewAggregatePlan(log, node.SelectExprs, tuples, groups, aggTyp != notPush)
 		// plan build

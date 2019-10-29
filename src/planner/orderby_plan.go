@@ -44,13 +44,13 @@ type OrderByPlan struct {
 	log      *xlog.Log
 	node     sqlparser.OrderBy
 	tuples   []selectTuple
-	tbInfos  map[string]*TableInfo
+	tbInfos  map[string]*tableInfo
 	OrderBys []OrderBy `json:"OrderBy(s)"`
 	typ      PlanType
 }
 
 // NewOrderByPlan used to create OrderByPlan.
-func NewOrderByPlan(log *xlog.Log, node sqlparser.OrderBy, tuples []selectTuple, tbInfos map[string]*TableInfo) *OrderByPlan {
+func NewOrderByPlan(log *xlog.Log, node sqlparser.OrderBy, tuples []selectTuple, tbInfos map[string]*tableInfo) *OrderByPlan {
 	return &OrderByPlan{
 		log:     log,
 		node:    node,

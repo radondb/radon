@@ -55,7 +55,7 @@ func hasSubquery(node sqlparser.SQLNode) bool {
 	return has
 }
 
-func checkTbName(tbInfos map[string]*TableInfo, node sqlparser.SQLNode) error {
+func checkTbName(tbInfos map[string]*tableInfo, node sqlparser.SQLNode) error {
 	return sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
 		if col, ok := node.(*sqlparser.ColName); ok {
 			tableName := col.Qualifier.Name.String()
@@ -241,7 +241,7 @@ type selectTuple struct {
 }
 
 // parserSelectExpr parses the AliasedExpr to select tuple.
-func parserSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*TableInfo) (*selectTuple, bool, error) {
+func parserSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*tableInfo) (*selectTuple, bool, error) {
 	funcName := ""
 	field := ""
 	aggrField := ""
@@ -318,7 +318,7 @@ func parserSelectExprs(exprs sqlparser.SelectExprs, root SelectNode) ([]selectTu
 	hasAggs := false
 	hasDist := false
 	aggType := nullAgg
-	tbInfos := root.getReferredTables()
+	tbInfos := root.getReferTables()
 	_, isMergeNode := root.(*MergeNode)
 	for _, expr := range exprs {
 		switch exp := expr.(type) {
@@ -378,7 +378,7 @@ func setAggregatorType(hasAggr, hasDist, isMergeNode bool) aggrType {
 }
 
 // checkTbInNode used to check whether the filter's referTables in the tbInfos.
-func checkTbInNode(referTables []string, tbInfos map[string]*TableInfo) bool {
+func checkTbInNode(referTables []string, tbInfos map[string]*tableInfo) bool {
 	if len(referTables) == 0 {
 		return true
 	}
@@ -510,7 +510,7 @@ type joinTuple struct {
 // eg: 't1.a=t2.a and t1.b=2'.
 // t1.a=t2.a paser in joinTuple.
 // t1.b=2 paser in filterTuple, t1.b col, 2 val.
-func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo) ([]joinTuple, []filterTuple, error) {
+func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]joinTuple, []filterTuple, error) {
 	filters := splitAndExpression(nil, exprs)
 	var joins []joinTuple
 	var wheres []filterTuple
@@ -610,12 +610,12 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*TableInfo)
 func checkJoinOn(lpn, rpn SelectNode, join joinTuple) (joinTuple, error) {
 	lt := join.left.Qualifier.Name.String()
 	rt := join.right.Qualifier.Name.String()
-	if _, ok := lpn.getReferredTables()[lt]; ok {
-		if _, ok := rpn.getReferredTables()[rt]; !ok {
+	if _, ok := lpn.getReferTables()[lt]; ok {
+		if _, ok := rpn.getReferTables()[rt]; !ok {
 			return join, errors.New("unsupported: join.on.condition.should.cross.left-right.tables")
 		}
 	} else {
-		if _, ok := lpn.getReferredTables()[rt]; !ok {
+		if _, ok := lpn.getReferTables()[rt]; !ok {
 			return join, errors.New("unsupported: join.on.condition.should.cross.left-right.tables")
 		}
 		join.left, join.right = join.right, join.left
@@ -624,7 +624,7 @@ func checkJoinOn(lpn, rpn SelectNode, join joinTuple) (joinTuple, error) {
 }
 
 // checkGroupBy used to check groupby.
-func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.Router, tbInfos map[string]*TableInfo, canOpt bool) ([]selectTuple, error) {
+func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.Router, tbInfos map[string]*tableInfo, canOpt bool) ([]selectTuple, error) {
 	var groupTuples []selectTuple
 	hasShard := false
 	for _, expr := range exprs {
@@ -686,7 +686,7 @@ func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.
 }
 
 // checkDistinct used to check the distinct, and convert distinct to groupby.
-func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router *router.Router, tbInfos map[string]*TableInfo, canOpt bool) ([]selectTuple, error) {
+func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router *router.Router, tbInfos map[string]*tableInfo, canOpt bool) ([]selectTuple, error) {
 	// field in grouby must be contained in the select exprs, that mains groups is a subset of fields.
 	// if has groupby, neednot process distinct again.
 	if node.Distinct == "" || len(node.GroupBy) > 0 {
@@ -737,7 +737,7 @@ func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router 
 
 // parserHaving used to check the having exprs and parser into tuples.
 // unsupport: `select t2.id as tmp, t1.id from t2,t1 having tmp=1`.
-func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*TableInfo) ([]filterTuple, error) {
+func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]filterTuple, error) {
 	filters := splitAndExpression(nil, exprs)
 	var tuples []filterTuple
 
@@ -792,7 +792,7 @@ type nullExpr struct {
 }
 
 // checkIsWithNull used to check whether `tb.col is null` or `tb.col<=> null`.
-func checkIsWithNull(filter filterTuple, tbInfos map[string]*TableInfo) (bool, nullExpr) {
+func checkIsWithNull(filter filterTuple, tbInfos map[string]*tableInfo) (bool, nullExpr) {
 	if !checkTbInNode(filter.referTables, tbInfos) {
 		return false, nullExpr{}
 	}
@@ -818,7 +818,7 @@ func checkIsWithNull(filter filterTuple, tbInfos map[string]*TableInfo) (bool, n
 }
 
 // checkShard used to check whether the col is shardkey.
-func checkShard(table, col string, tbInfos map[string]*TableInfo, router *router.Router) (bool, error) {
+func checkShard(table, col string, tbInfos map[string]*tableInfo, router *router.Router) (bool, error) {
 	tbInfo, ok := tbInfos[table]
 	if !ok {
 		return false, errors.Errorf("unsupported: unknown.column.'%s.%s'.in.field.list", table, col)
@@ -835,7 +835,7 @@ func checkShard(table, col string, tbInfos map[string]*TableInfo, router *router
 }
 
 // getIndex used to get index from router.
-func getIndex(router *router.Router, tbInfo *TableInfo, val *sqlparser.SQLVal) error {
+func getIndex(router *router.Router, tbInfo *tableInfo, val *sqlparser.SQLVal) error {
 	idx, err := router.GetIndex(tbInfo.database, tbInfo.tableName, val)
 	if err != nil {
 		return err
