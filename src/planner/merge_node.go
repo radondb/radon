@@ -35,7 +35,7 @@ type MergeNode struct {
 	// length of the route.
 	routeLen int
 	// referred tables' tableInfo map.
-	referredTables map[string]*TableInfo
+	referTables map[string]*tableInfo
 	// whether has parenthese in FROM clause.
 	hasParen bool
 	// parent node in the plan tree.
@@ -60,18 +60,18 @@ type MergeNode struct {
 // newMergeNode used to create MergeNode.
 func newMergeNode(log *xlog.Log, router *router.Router) *MergeNode {
 	return &MergeNode{
-		log:            log,
-		router:         router,
-		referredTables: make(map[string]*TableInfo),
-		filters:        make(map[sqlparser.Expr]int),
-		children:       NewPlanTree(),
-		ReqMode:        xcontext.ReqNormal,
+		log:         log,
+		router:      router,
+		referTables: make(map[string]*tableInfo),
+		filters:     make(map[sqlparser.Expr]int),
+		children:    NewPlanTree(),
+		ReqMode:     xcontext.ReqNormal,
 	}
 }
 
-// getReferredTables get the referredTables.
-func (m *MergeNode) getReferredTables() map[string]*TableInfo {
-	return m.referredTables
+// getReferTables get the referTables.
+func (m *MergeNode) getReferTables() map[string]*tableInfo {
+	return m.referTables
 }
 
 // getFields get the fields.
@@ -100,7 +100,7 @@ func (m *MergeNode) pushFilter(filters []filterTuple) error {
 	for _, filter := range filters {
 		m.addWhere(filter.expr)
 		if len(filter.referTables) == 1 {
-			tbInfo := m.referredTables[filter.referTables[0]]
+			tbInfo := m.referTables[filter.referTables[0]]
 			if tbInfo.shardKey != "" && len(filter.vals) > 0 {
 				if nameMatch(filter.col, filter.referTables[0], tbInfo.shardKey) {
 					for _, val := range filter.vals {
@@ -151,7 +151,7 @@ func (m *MergeNode) pushEqualCmpr(joins []joinTuple) SelectNode {
 // calcRoute used to calc the route.
 func (m *MergeNode) calcRoute() (SelectNode, error) {
 	var err error
-	for _, tbInfo := range m.referredTables {
+	for _, tbInfo := range m.referTables {
 		if m.nonGlobalCnt == 0 {
 			segments, err := m.router.Lookup(tbInfo.database, tbInfo.tableName, nil, nil)
 			if err != nil {
@@ -201,7 +201,7 @@ func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser
 		}
 		if len(groups) == 0 {
 			if len(node.OrderBy) > 0 {
-				orderPlan := NewOrderByPlan(m.log, node.OrderBy, m.fields, m.referredTables)
+				orderPlan := NewOrderByPlan(m.log, node.OrderBy, m.fields, m.referTables)
 				if err := orderPlan.Build(); err != nil {
 					return err
 				}
@@ -243,7 +243,7 @@ func (m *MergeNode) pushOrderBy(sel sqlparser.SelectStatement) error {
 	node := m.Sel.(*sqlparser.Select)
 	if len(sel.(*sqlparser.Select).OrderBy) > 0 {
 		node.OrderBy = sel.(*sqlparser.Select).OrderBy
-		orderPlan := NewOrderByPlan(m.log, node.OrderBy, m.fields, m.referredTables)
+		orderPlan := NewOrderByPlan(m.log, node.OrderBy, m.fields, m.referTables)
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}
@@ -289,7 +289,7 @@ func (m *MergeNode) Order() int {
 }
 
 // buildQuery used to build the QueryTuple.
-func (m *MergeNode) buildQuery(tbInfos map[string]*TableInfo) {
+func (m *MergeNode) buildQuery(tbInfos map[string]*tableInfo) {
 	var Range string
 	if sel, ok := m.Sel.(*sqlparser.Select); ok {
 		for expr := range m.filters {
@@ -307,7 +307,7 @@ func (m *MergeNode) buildQuery(tbInfos map[string]*TableInfo) {
 		case *sqlparser.ColName:
 			tableName := node.Qualifier.Name.String()
 			if tableName != "" {
-				if _, ok := m.referredTables[tableName]; !ok {
+				if _, ok := m.referTables[tableName]; !ok {
 					joinVar := procure(tbInfos, node)
 					buf.Myprintf("%a", ":"+joinVar)
 					return
@@ -320,7 +320,7 @@ func (m *MergeNode) buildQuery(tbInfos map[string]*TableInfo) {
 	for i := 0; i < m.routeLen; i++ {
 		// Rewrite the shard table's name.
 		backend := m.backend
-		for _, tbInfo := range m.referredTables {
+		for _, tbInfo := range m.referTables {
 			if tbInfo.shardKey == "" {
 				continue
 			}
@@ -361,7 +361,7 @@ func (m *MergeNode) GenerateFieldQuery() *sqlparser.ParsedQuery {
 		case *sqlparser.ColName:
 			tableName := node.Qualifier.Name.String()
 			if tableName != "" {
-				if _, ok := m.referredTables[tableName]; !ok {
+				if _, ok := m.referTables[tableName]; !ok {
 					buf.Myprintf("%a", ":"+node.Qualifier.Name.CompliantName()+"_"+node.Name.CompliantName())
 					return
 				}

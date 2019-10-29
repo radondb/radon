@@ -23,7 +23,7 @@ type UnionNode struct {
 	Typ      string
 	children *PlanTree
 	// referred tables' tableInfo map.
-	referredTables map[string]*TableInfo
+	referTables map[string]*tableInfo
 }
 
 func newUnionNode(log *xlog.Log, left, right PlanNode, typ string) *UnionNode {
@@ -37,7 +37,7 @@ func newUnionNode(log *xlog.Log, left, right PlanNode, typ string) *UnionNode {
 }
 
 // buildQuery used to build the QueryTuple.
-func (u *UnionNode) buildQuery(tbInfos map[string]*TableInfo) {
+func (u *UnionNode) buildQuery(tbInfos map[string]*tableInfo) {
 	u.Left.buildQuery(tbInfos)
 	u.Right.buildQuery(tbInfos)
 }
@@ -47,9 +47,9 @@ func (u *UnionNode) Children() *PlanTree {
 	return u.children
 }
 
-// getReferredTables get the referredTables.
-func (u *UnionNode) getReferredTables() map[string]*TableInfo {
-	return u.referredTables
+// getReferTables get the referTables.
+func (u *UnionNode) getReferTables() map[string]*tableInfo {
+	return u.referTables
 }
 
 // GetQuery used to get the Querys.
@@ -67,7 +67,7 @@ func (u *UnionNode) getFields() []selectTuple {
 func (u *UnionNode) pushOrderBy(sel sqlparser.SelectStatement) error {
 	node := sel.(*sqlparser.Union)
 	if len(node.OrderBy) > 0 {
-		orderPlan := NewOrderByPlan(u.log, node.OrderBy, u.getFields(), u.referredTables)
+		orderPlan := NewOrderByPlan(u.log, node.OrderBy, u.getFields(), u.referTables)
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}

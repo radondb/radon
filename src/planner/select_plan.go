@@ -77,7 +77,7 @@ func (p *SelectPlan) analyze() error {
 		return err
 	}
 
-	tbInfos := p.Root.getReferredTables()
+	tbInfos := p.Root.getReferTables()
 	if node.Where != nil {
 		joins, filters, err := parserWhereOrJoinExprs(node.Where.Expr, tbInfos)
 		if err != nil {
@@ -154,7 +154,7 @@ func (p *SelectPlan) Build() error {
 		return err
 	}
 
-	p.Root.buildQuery(p.Root.getReferredTables())
+	p.Root.buildQuery(p.Root.getReferTables())
 	return nil
 }
 
@@ -206,7 +206,7 @@ func (p *SelectPlan) JSON() string {
 			joins.Strategy = "Cartesian Join"
 		case SortMerge:
 			joins.Strategy = "Sort Merge Join"
-		case NestedLoop:
+		case NestLoop:
 			joins.Strategy = "Nested Loop Join"
 		}
 		if j.IsLeftJoin {
