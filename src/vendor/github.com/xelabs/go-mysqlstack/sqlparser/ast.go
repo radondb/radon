@@ -1275,6 +1275,16 @@ func (node SelectExprs) WalkSubtree(visit Visit) error {
 type SelectExpr interface {
 	iSelectExpr()
 	SQLNode
+	// clone used to copy a new SelectExpr.
+	clone() SelectExpr
+}
+
+// CloneSelectExpr used to copy a new SelectExpr.
+func CloneSelectExpr(node SelectExpr) SelectExpr {
+	if node == nil {
+		return nil
+	}
+	return node.clone()
 }
 
 func (*StarExpr) iSelectExpr()    {}
@@ -1305,6 +1315,12 @@ func (node *StarExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *StarExpr) clone() SelectExpr {
+	return &StarExpr{
+		TableName: node.TableName,
+	}
+}
+
 // AliasedExpr defines an aliased SELECT expression.
 type AliasedExpr struct {
 	Expr Expr
@@ -1331,6 +1347,13 @@ func (node *AliasedExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *AliasedExpr) clone() SelectExpr {
+	return &AliasedExpr{
+		Expr: CloneExpr(node.Expr),
+		As:   node.As,
+	}
+}
+
 // Nextval defines the NEXT VALUE expression.
 type Nextval struct {
 	Expr Expr
@@ -1344,6 +1367,12 @@ func (node Nextval) Format(buf *TrackedBuffer) {
 // WalkSubtree walks the nodes of the subtree.
 func (node Nextval) WalkSubtree(visit Visit) error {
 	return Walk(visit, node.Expr)
+}
+
+func (node Nextval) clone() SelectExpr {
+	return Nextval{
+		Expr: CloneExpr(node.Expr),
+	}
 }
 
 // Columns represents an insert column list.
@@ -1656,6 +1685,12 @@ func (node *Where) WalkSubtree(visit Visit) error {
 type Expr interface {
 	iExpr()
 	SQLNode
+	// replace replaces any subexpression that matches
+	// from with to. The implementation can use the
+	// replaceExprs convenience function.
+	replace(from, to Expr) bool
+	// clone used to copy a new Expr.
+	clone() Expr
 }
 
 func (*AndExpr) iExpr()          {}
@@ -1685,6 +1720,43 @@ func (*ConvertUsingExpr) iExpr() {}
 func (*MatchExpr) iExpr()        {}
 func (*GroupConcatExpr) iExpr()  {}
 func (*Default) iExpr()          {}
+
+// ReplaceExpr finds the from expression from root
+// and replaces it with to. If from matches root,
+// then to is returned.
+func ReplaceExpr(root, from, to Expr) Expr {
+	if root == from {
+		return to
+	}
+	root.replace(from, to)
+	return root
+}
+
+// replaceExprs is a convenience function used by implementors
+// of the replace method.
+func replaceExprs(from, to Expr, exprs ...*Expr) bool {
+	for _, expr := range exprs {
+		if *expr == nil {
+			continue
+		}
+		if *expr == from {
+			*expr = to
+			return true
+		}
+		if (*expr).replace(from, to) {
+			return true
+		}
+	}
+	return false
+}
+
+// CloneExpr used to copy a new Expr.
+func CloneExpr(node Expr) Expr {
+	if node == nil {
+		return nil
+	}
+	return node.clone()
+}
 
 // Exprs represents a list of value expressions.
 // It's not a valid expression because it's not parenthesized.
@@ -1731,6 +1803,17 @@ func (node *AndExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *AndExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Left, &node.Right)
+}
+
+func (node *AndExpr) clone() Expr {
+	return &AndExpr{
+		Left:  CloneExpr(node.Left),
+		Right: CloneExpr(node.Right),
+	}
+}
+
 // OrExpr represents an OR expression.
 type OrExpr struct {
 	Left, Right Expr
@@ -1751,6 +1834,17 @@ func (node *OrExpr) WalkSubtree(visit Visit) error {
 		node.Left,
 		node.Right,
 	)
+}
+
+func (node *OrExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Left, &node.Right)
+}
+
+func (node *OrExpr) clone() Expr {
+	return &OrExpr{
+		Left:  CloneExpr(node.Left),
+		Right: CloneExpr(node.Right),
+	}
 }
 
 // NotExpr represents a NOT expression.
@@ -1774,6 +1868,16 @@ func (node *NotExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *NotExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Expr)
+}
+
+func (node *NotExpr) clone() Expr {
+	return &NotExpr{
+		Expr: CloneExpr(node.Expr),
+	}
+}
+
 // ParenExpr represents a parenthesized boolean expression.
 type ParenExpr struct {
 	Expr Expr
@@ -1793,6 +1897,16 @@ func (node *ParenExpr) WalkSubtree(visit Visit) error {
 		visit,
 		node.Expr,
 	)
+}
+
+func (node *ParenExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Expr)
+}
+
+func (node *ParenExpr) clone() Expr {
+	return &ParenExpr{
+		Expr: CloneExpr(node.Expr),
+	}
 }
 
 // ComparisonExpr represents a two-value comparison expression.
@@ -1842,6 +1956,19 @@ func (node *ComparisonExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *ComparisonExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Left, &node.Right, &node.Escape)
+}
+
+func (node *ComparisonExpr) clone() Expr {
+	return &ComparisonExpr{
+		Operator: node.Operator,
+		Left:     CloneExpr(node.Left),
+		Right:    CloneExpr(node.Right),
+		Escape:   CloneExpr(node.Escape),
+	}
+}
+
 // RangeCond represents a BETWEEN or a NOT BETWEEN expression.
 type RangeCond struct {
 	Operator string
@@ -1871,6 +1998,19 @@ func (node *RangeCond) WalkSubtree(visit Visit) error {
 		node.From,
 		node.To,
 	)
+}
+
+func (node *RangeCond) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Left, &node.From, &node.To)
+}
+
+func (node *RangeCond) clone() Expr {
+	return &RangeCond{
+		Operator: node.Operator,
+		Left:     CloneExpr(node.Left),
+		From:     CloneExpr(node.From),
+		To:       CloneExpr(node.To),
+	}
 }
 
 // IsExpr represents an IS ... or an IS NOT ... expression.
@@ -1905,6 +2045,17 @@ func (node *IsExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *IsExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Expr)
+}
+
+func (node *IsExpr) clone() Expr {
+	return &IsExpr{
+		Operator: node.Operator,
+		Expr:     CloneExpr(node.Expr),
+	}
+}
+
 // ExistsExpr represents an EXISTS expression.
 type ExistsExpr struct {
 	Subquery *Subquery
@@ -1924,6 +2075,14 @@ func (node *ExistsExpr) WalkSubtree(visit Visit) error {
 		visit,
 		node.Subquery,
 	)
+}
+
+func (node *ExistsExpr) replace(from, to Expr) bool {
+	return false
+}
+
+func (node *ExistsExpr) clone() Expr {
+	return nil
 }
 
 // ValType specifies the type for SQLVal.
@@ -2006,6 +2165,17 @@ func (node *SQLVal) WalkSubtree(visit Visit) error {
 	return nil
 }
 
+func (node *SQLVal) replace(from, to Expr) bool {
+	return false
+}
+
+func (node *SQLVal) clone() Expr {
+	return &SQLVal{
+		Type: node.Type,
+		Val:  node.Val,
+	}
+}
+
 // HexDecode decodes the hexval into bytes.
 func (node *SQLVal) HexDecode() ([]byte, error) {
 	dst := make([]byte, hex.DecodedLen(len([]byte(node.Val))))
@@ -2029,6 +2199,14 @@ func (node *NullVal) WalkSubtree(visit Visit) error {
 	return nil
 }
 
+func (node *NullVal) replace(from, to Expr) bool {
+	return false
+}
+
+func (node *NullVal) clone() Expr {
+	return &NullVal{}
+}
+
 // BoolVal is true or false.
 type BoolVal bool
 
@@ -2044,6 +2222,14 @@ func (node BoolVal) Format(buf *TrackedBuffer) {
 // WalkSubtree walks the nodes of the subtree.
 func (node BoolVal) WalkSubtree(visit Visit) error {
 	return nil
+}
+
+func (node BoolVal) replace(from, to Expr) bool {
+	return false
+}
+
+func (node BoolVal) clone() Expr {
+	return node
 }
 
 // ColName represents a column name.
@@ -2075,6 +2261,17 @@ func (node *ColName) WalkSubtree(visit Visit) error {
 		node.Name,
 		node.Qualifier,
 	)
+}
+
+func (node *ColName) replace(from, to Expr) bool {
+	return false
+}
+
+func (node *ColName) clone() Expr {
+	return &ColName{
+		Name:      node.Name,
+		Qualifier: node.Qualifier,
+	}
 }
 
 // Equal returns true if the column names match.
@@ -2110,6 +2307,24 @@ func (node ValTuple) WalkSubtree(visit Visit) error {
 	return Walk(visit, Exprs(node))
 }
 
+func (node ValTuple) replace(from, to Expr) bool {
+	for i := range node {
+		if replaceExprs(from, to, &node[i]) {
+			return true
+		}
+	}
+	return false
+}
+
+func (node ValTuple) clone() Expr {
+	var tuple ValTuple
+	for _, e := range node {
+		exp := CloneExpr(e)
+		tuple = append(tuple, exp)
+	}
+	return tuple
+}
+
 // Subquery represents a subquery.
 type Subquery struct {
 	Select SelectStatement
@@ -2131,6 +2346,14 @@ func (node *Subquery) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *Subquery) replace(from, to Expr) bool {
+	return false
+}
+
+func (node *Subquery) clone() Expr {
+	return nil
+}
+
 // ListArg represents a named list argument.
 type ListArg []byte
 
@@ -2142,6 +2365,14 @@ func (node ListArg) Format(buf *TrackedBuffer) {
 // WalkSubtree walks the nodes of the subtree.
 func (node ListArg) WalkSubtree(visit Visit) error {
 	return nil
+}
+
+func (node ListArg) replace(from, to Expr) bool {
+	return false
+}
+
+func (node ListArg) clone() Expr {
+	return node
 }
 
 // BinaryExpr represents a binary value expression.
@@ -2182,6 +2413,18 @@ func (node *BinaryExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *BinaryExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Left, &node.Right)
+}
+
+func (node *BinaryExpr) clone() Expr {
+	return &BinaryExpr{
+		Operator: node.Operator,
+		Left:     CloneExpr(node.Left),
+		Right:    CloneExpr(node.Right),
+	}
+}
+
 // UnaryExpr represents a unary value expression.
 type UnaryExpr struct {
 	Operator string
@@ -2217,6 +2460,17 @@ func (node *UnaryExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *UnaryExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Expr)
+}
+
+func (node *UnaryExpr) clone() Expr {
+	return &UnaryExpr{
+		Operator: node.Operator,
+		Expr:     CloneExpr(node.Expr),
+	}
+}
+
 // IntervalExpr represents a date-time INTERVAL expression.
 type IntervalExpr struct {
 	Expr Expr
@@ -2239,6 +2493,17 @@ func (node *IntervalExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *IntervalExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Expr)
+}
+
+func (node *IntervalExpr) clone() Expr {
+	return &IntervalExpr{
+		Expr: CloneExpr(node.Expr),
+		Unit: node.Unit,
+	}
+}
+
 // CollateExpr represents dynamic collate operator.
 type CollateExpr struct {
 	Expr    Expr
@@ -2259,6 +2524,17 @@ func (node *CollateExpr) WalkSubtree(visit Visit) error {
 		visit,
 		node.Expr,
 	)
+}
+
+func (node *CollateExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Expr)
+}
+
+func (node *CollateExpr) clone() Expr {
+	return &CollateExpr{
+		Expr:    CloneExpr(node.Expr),
+		Charset: node.Charset,
+	}
 }
 
 // FuncExpr represents a function call.
@@ -2295,6 +2571,34 @@ func (node *FuncExpr) WalkSubtree(visit Visit) error {
 		node.Name,
 		node.Exprs,
 	)
+}
+
+func (node *FuncExpr) replace(from, to Expr) bool {
+	for _, sel := range node.Exprs {
+		aliased, ok := sel.(*AliasedExpr)
+		if !ok {
+			continue
+		}
+		if replaceExprs(from, to, &aliased.Expr) {
+			return true
+		}
+	}
+	return false
+}
+
+func (node *FuncExpr) clone() Expr {
+	var exprs SelectExprs
+	for _, e := range node.Exprs {
+		exp := CloneSelectExpr(e)
+		exprs = append(exprs, exp)
+	}
+
+	return &FuncExpr{
+		Qualifier: node.Qualifier,
+		Name:      node.Name,
+		Distinct:  node.Distinct,
+		Exprs:     exprs,
+	}
 }
 
 // Aggregates is a map of all aggregate functions.
@@ -2347,6 +2651,48 @@ func (node *GroupConcatExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *GroupConcatExpr) replace(from, to Expr) bool {
+	for _, sel := range node.Exprs {
+		aliased, ok := sel.(*AliasedExpr)
+		if !ok {
+			continue
+		}
+		if replaceExprs(from, to, &aliased.Expr) {
+			return true
+		}
+	}
+	for _, order := range node.OrderBy {
+		if replaceExprs(from, to, &order.Expr) {
+			return true
+		}
+	}
+	return false
+}
+
+func (node *GroupConcatExpr) clone() Expr {
+	var exprs SelectExprs
+	for _, e := range node.Exprs {
+		exp := CloneSelectExpr(e)
+		exprs = append(exprs, exp)
+	}
+
+	var orders OrderBy
+	for _, order := range node.OrderBy {
+		o := &Order{
+			Expr:      CloneExpr(order.Expr),
+			Direction: order.Direction,
+		}
+		orders = append(orders, o)
+	}
+
+	return &GroupConcatExpr{
+		Distinct:  node.Distinct,
+		Exprs:     exprs,
+		OrderBy:   orders,
+		Separator: node.Separator,
+	}
+}
+
 // ValuesFuncExpr represents a function call.
 type ValuesFuncExpr struct {
 	Name     ColIdent
@@ -2377,6 +2723,17 @@ func (node *ValuesFuncExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *ValuesFuncExpr) replace(from, to Expr) bool {
+	return false
+}
+
+func (node *ValuesFuncExpr) clone() Expr {
+	return &ValuesFuncExpr{
+		Name:     node.Name,
+		Resolved: CloneExpr(node.Resolved),
+	}
+}
+
 // ConvertExpr represents a call to CONVERT(expr, type)
 // or it's equivalent CAST(expr AS type). Both are rewritten to the former.
 type ConvertExpr struct {
@@ -2401,6 +2758,17 @@ func (node *ConvertExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *ConvertExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Expr)
+}
+
+func (node *ConvertExpr) clone() Expr {
+	return &ConvertExpr{
+		Expr: CloneExpr(node.Expr),
+		Type: node.Type,
+	}
+}
+
 // ConvertUsingExpr represents a call to CONVERT(expr USING charset).
 type ConvertUsingExpr struct {
 	Expr Expr
@@ -2421,6 +2789,17 @@ func (node *ConvertUsingExpr) WalkSubtree(visit Visit) error {
 		visit,
 		node.Expr,
 	)
+}
+
+func (node *ConvertUsingExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Expr)
+}
+
+func (node *ConvertUsingExpr) clone() Expr {
+	return &ConvertUsingExpr{
+		Expr: CloneExpr(node.Expr),
+		Type: node.Type,
+	}
 }
 
 // ConvertType represents the type in call to CONVERT(expr, type)
@@ -2489,6 +2868,33 @@ func (node *MatchExpr) WalkSubtree(visit Visit) error {
 	)
 }
 
+func (node *MatchExpr) replace(from, to Expr) bool {
+	for _, sel := range node.Columns {
+		aliased, ok := sel.(*AliasedExpr)
+		if !ok {
+			continue
+		}
+		if replaceExprs(from, to, &aliased.Expr) {
+			return true
+		}
+	}
+	return replaceExprs(from, to, &node.Expr)
+}
+
+func (node *MatchExpr) clone() Expr {
+	var exprs SelectExprs
+	for _, e := range node.Columns {
+		exp := CloneSelectExpr(e)
+		exprs = append(exprs, exp)
+	}
+
+	return &MatchExpr{
+		Columns: exprs,
+		Expr:    CloneExpr(node.Expr),
+		Option:  node.Option,
+	}
+}
+
 // CaseExpr represents a CASE expression.
 type CaseExpr struct {
 	Expr  Expr
@@ -2527,6 +2933,32 @@ func (node *CaseExpr) WalkSubtree(visit Visit) error {
 	return Walk(visit, node.Else)
 }
 
+func (node *CaseExpr) replace(from, to Expr) bool {
+	for _, when := range node.Whens {
+		if replaceExprs(from, to, &when.Cond, &when.Val) {
+			return true
+		}
+	}
+	return replaceExprs(from, to, &node.Expr, &node.Else)
+}
+
+func (node *CaseExpr) clone() Expr {
+	var whens []*When
+	for _, when := range node.Whens {
+		w := &When{
+			Cond: CloneExpr(when.Cond),
+			Val:  CloneExpr(when.Val),
+		}
+		whens = append(whens, w)
+	}
+
+	return &CaseExpr{
+		Expr:  CloneExpr(node.Expr),
+		Whens: whens,
+		Else:  CloneExpr(node.Else),
+	}
+}
+
 // Default represents a DEFAULT expression.
 type Default struct {
 	ColName string
@@ -2543,6 +2975,16 @@ func (node *Default) Format(buf *TrackedBuffer) {
 // WalkSubtree walks the nodes of the subtree.
 func (node *Default) WalkSubtree(visit Visit) error {
 	return nil
+}
+
+func (node *Default) replace(from, to Expr) bool {
+	return false
+}
+
+func (node *Default) clone() Expr {
+	return &Default{
+		ColName: node.ColName,
+	}
 }
 
 // When represents a WHEN sub-expression.
