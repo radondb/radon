@@ -261,6 +261,7 @@ func TestJoinEngine(t *testing.T) {
 	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A8 as A order by A.name asc", r3)
 	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name from sbtest.A8 as A where A.id = 2", r14)
 	fakedbs.AddQuery("select A.id, A.name from sbtest.A8 as A where 1 != 1", r12)
+	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name from sbtest.A8 as A where A.id = 3", r12)
 	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A0 as A", r11)
 	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A2 as A", r3)
 	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A4 as A", r3)
@@ -284,6 +285,7 @@ func TestJoinEngine(t *testing.T) {
 	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.B1 as B where B.id = 1 and 'nice' = B.name", r21)
 	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.b1 as b where b.id = 1 and 'nil' = b.name", r21)
 	fakedbs.AddQuery("select b.name, b.id from sbtest.b1 as b where 1 != 1", r21)
+	fakedbs.AddQuery("select b.name, null + b.id as id from sbtest.b1 as b where 1 != 1", r21)
 
 	querys := []string{
 		"select A.id, B.name from A right join B on A.id=B.id where A.id > 2",
@@ -305,6 +307,7 @@ func TestJoinEngine(t *testing.T) {
 		"select /*+nested+*/ A.id, A.name, B.name, B.id from B join A on A.name=B.name where A.id = 2 and B.id = 1 order by A.id limit 1",
 		"select /*+nested+*/ A.id, B.name, B.id, A.name from A left join B on A.name=B.name and A.id>2 where B.name is null and B.id = 1 order by A.id",
 		"select /*+nested+*/ A.id, A.name, B.name, B.id from G,A,B where G.a=A.a and A.name=B.name and A.id=2 and B.id=1",
+		"select /*+nested+*/ B.name, A.id+B.id as id from A join B on A.name=B.name where A.id = 3",
 	}
 	results := []string{
 		"[[3 go] [5 lang]]",
@@ -323,6 +326,7 @@ func TestJoinEngine(t *testing.T) {
 		"[[4 lang 5 lang]]",
 		"[[6 lang 5 lang 1]]",
 		"[[4 lang 5] [4 go 3]]",
+		"[]",
 		"[]",
 		"[]",
 		"[]",

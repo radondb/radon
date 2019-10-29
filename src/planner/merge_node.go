@@ -351,3 +351,26 @@ func (m *MergeNode) buildQuery(tbInfos map[string]*TableInfo) {
 func (m *MergeNode) GetQuery() []xcontext.QueryTuple {
 	return m.Querys
 }
+
+// GenerateFieldQuery generates a query with an impossible where.
+// This will be used on the RHS node to fetch field info if the LHS
+// returns no result.
+func (m *MergeNode) GenerateFieldQuery() *sqlparser.ParsedQuery {
+	formatter := func(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
+		switch node := node.(type) {
+		case *sqlparser.ColName:
+			tableName := node.Qualifier.Name.String()
+			if tableName != "" {
+				if _, ok := m.referredTables[tableName]; !ok {
+					buf.Myprintf("%a", ":"+node.Qualifier.Name.CompliantName()+"_"+node.Name.CompliantName())
+					return
+				}
+			}
+		}
+		sqlparser.FormatImpossibleQuery(buf, node)
+	}
+
+	buf := sqlparser.NewTrackedBuffer(formatter)
+	formatter(buf, m.Sel)
+	return buf.ParsedQuery()
+}

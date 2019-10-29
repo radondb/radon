@@ -124,3 +124,48 @@ func TestMergeEngine(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateQueryErr(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	assert.Nil(t, err)
+
+	// Create scatter.
+	scatter, _, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+
+	query := "select /*+nested+*/ B.name, A.id+B.id as id from A join B on A.name=B.name where A.id = 3"
+	want := "missing bind var A_id"
+
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+
+	plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+	err = plan.Build()
+	assert.Nil(t, err)
+	log.Debug("plan:%+v", plan.JSON())
+
+	txn, err := scatter.CreateTransaction()
+	assert.Nil(t, err)
+	defer txn.Finish()
+
+	ctx := xcontext.NewResultContext()
+	planEngine := BuildEngine(log, plan.Root, txn)
+	{
+		err = planEngine.(*JoinEngine).right.getFields(ctx, nil)
+		assert.NotNil(t, err)
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+	{
+		err = planEngine.(*JoinEngine).right.execBindVars(ctx, nil, true)
+		assert.NotNil(t, err)
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+}
