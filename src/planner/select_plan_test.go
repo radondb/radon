@@ -1078,3 +1078,25 @@ func TestSelectPlanJoinErr(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateFieldQuery(t *testing.T) {
+	query := "select /*+nested+*/ A.id+B.id from A join B on A.name=B.name"
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+	plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+	err = plan.Build()
+	assert.Nil(t, err)
+
+	got := plan.Root.(*JoinNode).Right.(*MergeNode).GenerateFieldQuery().Query
+	want := "select :A_id + B.id from sbtest.B1 as B where 1 != 1"
+	assert.Equal(t, want, got)
+}

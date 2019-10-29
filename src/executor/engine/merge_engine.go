@@ -90,9 +90,10 @@ func (m *MergeEngine) getFields(ctx *xcontext.ResultContext, bindVars map[string
 	var err error
 
 	query := m.node.Querys[len(m.node.Querys)-1]
-	buf := sqlparser.NewTrackedBuffer(nil)
-	sqlparser.FormatImpossibleQuery(buf, m.node.Sel)
-	query.Query = buf.String()
+	query.Query, err = m.node.GenerateFieldQuery().GenerateQuery(bindVars, nil)
+	if err != nil {
+		return err
+	}
 
 	reqCtx := xcontext.NewRequestContext()
 	reqCtx.Mode = xcontext.ReqNormal
