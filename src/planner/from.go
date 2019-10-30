@@ -161,8 +161,8 @@ func scanJoinTableExpr(log *xlog.Log, router *router.Router, database string, jo
 // If can be merged, left and right merge into one MergeNode.
 // else build a JoinNode, the two nodes become new joinnode's Left and Right.
 func join(log *xlog.Log, lpn, rpn SelectNode, joinExpr *sqlparser.JoinTableExpr, router *router.Router) (SelectNode, error) {
-	var joinOn []joinTuple
-	var otherJoinOn []filterTuple
+	var joinOn []exprInfo
+	var otherJoinOn []exprInfo
 	var err error
 
 	referTables := make(map[string]*tableInfo)
@@ -217,7 +217,7 @@ func join(log *xlog.Log, lpn, rpn SelectNode, joinExpr *sqlparser.JoinTableExpr,
 			}
 			// if join on condition's cols are both shardkey, and the tables have same shards.
 			for _, jt := range joinOn {
-				if isSameShard(lmn.referTables, rmn.referTables, jt.left, jt.right) {
+				if isSameShard(lmn.referTables, rmn.referTables, jt.cols[0], jt.cols[1]) {
 					return mergeRoutes(lmn, rmn, joinExpr, otherJoinOn)
 				}
 			}
@@ -235,7 +235,7 @@ func join(log *xlog.Log, lpn, rpn SelectNode, joinExpr *sqlparser.JoinTableExpr,
 }
 
 // mergeRoutes merges two MergeNode.
-func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJoinOn []filterTuple) (*MergeNode, error) {
+func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJoinOn []exprInfo) (*MergeNode, error) {
 	var err error
 	lSel := lmn.Sel.(*sqlparser.Select)
 	rSel := rmn.Sel.(*sqlparser.Select)

@@ -95,14 +95,14 @@ func (m *MergeNode) setParenthese(hasParen bool) {
 }
 
 // pushFilter used to push the filters.
-func (m *MergeNode) pushFilter(filters []filterTuple) error {
+func (m *MergeNode) pushFilter(filters []exprInfo) error {
 	var err error
 	for _, filter := range filters {
 		m.addWhere(filter.expr)
 		if len(filter.referTables) == 1 {
 			tbInfo := m.referTables[filter.referTables[0]]
 			if tbInfo.shardKey != "" && len(filter.vals) > 0 {
-				if nameMatch(filter.col, filter.referTables[0], tbInfo.shardKey) {
+				if nameMatch(filter.cols[0], filter.referTables[0], tbInfo.shardKey) {
 					for _, val := range filter.vals {
 						if err = getIndex(m.router, tbInfo, val); err != nil {
 							return err
@@ -129,7 +129,7 @@ func (m *MergeNode) addHaving(expr sqlparser.Expr) {
 }
 
 // setWhereFilter used to push the where filters.
-func (m *MergeNode) setWhereFilter(filter filterTuple) {
+func (m *MergeNode) setWhereFilter(filter exprInfo) {
 	m.addWhere(filter.expr)
 }
 
@@ -141,7 +141,7 @@ func (m *MergeNode) setNoTableFilter(exprs []sqlparser.Expr) {
 }
 
 // pushEqualCmpr used to push the 'join' type filters.
-func (m *MergeNode) pushEqualCmpr(joins []joinTuple) SelectNode {
+func (m *MergeNode) pushEqualCmpr(joins []exprInfo) SelectNode {
 	for _, joinFilter := range joins {
 		m.addWhere(joinFilter.expr)
 	}
@@ -231,7 +231,7 @@ func (m *MergeNode) pushSelectExpr(field selectTuple) (int, error) {
 }
 
 // pushHaving used to push having exprs.
-func (m *MergeNode) pushHaving(havings []filterTuple) error {
+func (m *MergeNode) pushHaving(havings []exprInfo) error {
 	for _, filter := range havings {
 		m.addHaving(filter.expr)
 	}
