@@ -77,7 +77,7 @@ type JoinNode struct {
 	// the returned result fields.
 	fields []selectTuple
 	// join on condition tuples.
-	joinOn []joinTuple
+	joinOn []exprInfo
 	// eg: from t1 join t2 on t1.a=t2.b, 't1.a' put in LeftKeys, 't2.a' in RightKeys.
 	LeftKeys, RightKeys []JoinKey
 	// eg: t1 join t2 on t1.a>t2.a, 't1.a>t2.a' parser into CmpFilter.
@@ -88,7 +88,7 @@ type JoinNode struct {
 	 * parser into otherFilter, else into joinOn. '1=1' parser into noTableFilter. 't2.b>2' into
 	 * tableFilter. 't2.str is null' into rightNull.
 	 */
-	tableFilter, otherFilter []filterTuple
+	tableFilter, otherFilter []exprInfo
 	noTableFilter            []sqlparser.Expr
 	otherJoinOn              *otherJoin
 	rightNull                []nullExpr
@@ -104,7 +104,7 @@ type JoinNode struct {
 	// eg: select * from t1 join t2 on t1.a=t2.a where t1.a=1
 	// `t1.a` in LeftKeys, `t1.a=1` in tableFilter. in the map,
 	// key is 0(index is 0), value is tableFilter(`t1.a=1`).
-	keyFilters map[int][]filterTuple
+	keyFilters map[int][]exprInfo
 	// isHint defines whether has /*+nested+*/.
 	isHint bool
 	order  int
@@ -115,7 +115,7 @@ type JoinNode struct {
 
 // newJoinNode used to create JoinNode.
 func newJoinNode(log *xlog.Log, Left, Right SelectNode, router *router.Router, joinExpr *sqlparser.JoinTableExpr,
-	joinOn []joinTuple, referTables map[string]*tableInfo) *JoinNode {
+	joinOn []exprInfo, referTables map[string]*tableInfo) *JoinNode {
 	isLeftJoin := false
 	if joinExpr != nil && joinExpr.Join == sqlparser.LeftJoinStr {
 		isLeftJoin = true
@@ -127,7 +127,7 @@ func newJoinNode(log *xlog.Log, Left, Right SelectNode, router *router.Router, j
 		router:      router,
 		joinExpr:    joinExpr,
 		joinOn:      joinOn,
-		keyFilters:  make(map[int][]filterTuple),
+		keyFilters:  make(map[int][]exprInfo),
 		Vars:        make(map[string]int),
 		referTables: referTables,
 		IsLeftJoin:  isLeftJoin,
@@ -151,7 +151,7 @@ func (j *JoinNode) setParenthese(hasParen bool) {
 }
 
 // pushFilter used to push the filters.
-func (j *JoinNode) pushFilter(filters []filterTuple) error {
+func (j *JoinNode) pushFilter(filters []exprInfo) error {
 	var err error
 	rightTbs := j.Right.getReferTables()
 	for _, filter := range filters {
@@ -169,12 +169,12 @@ func (j *JoinNode) pushFilter(filters []filterTuple) error {
 		if len(filter.referTables) == 1 {
 			tb := filter.referTables[0]
 			tbInfo := j.referTables[tb]
-			if filter.col == nil {
+			if len(filter.cols) != 1 {
 				tbInfo.parent.setWhereFilter(filter)
 			} else {
 				j.tableFilter = append(j.tableFilter, filter)
 				if len(filter.vals) > 0 && tbInfo.shardKey != "" {
-					if nameMatch(filter.col, tb, tbInfo.shardKey) {
+					if nameMatch(filter.cols[0], tb, tbInfo.shardKey) {
 						for _, val := range filter.vals {
 							if err = getIndex(j.router, tbInfo, val); err != nil {
 								return err
@@ -215,7 +215,7 @@ func (j *JoinNode) setParent(p SelectNode) {
 }
 
 // setWhereFilter set the otherFilter.
-func (j *JoinNode) setWhereFilter(filter filterTuple) {
+func (j *JoinNode) setWhereFilter(filter exprInfo) {
 	j.otherFilter = append(j.otherFilter, filter)
 }
 
@@ -233,11 +233,11 @@ type otherJoin struct {
 	// filter belong to the left node.
 	left []selectTuple
 	// filter belong to the right node.
-	right, others []filterTuple
+	right, others []exprInfo
 }
 
 // setOtherJoin use to process the otherjoinon.
-func (j *JoinNode) setOtherJoin(filters []filterTuple) {
+func (j *JoinNode) setOtherJoin(filters []exprInfo) {
 	j.otherJoinOn = &otherJoin{}
 	i := 0
 	for _, filter := range filters {
@@ -326,7 +326,7 @@ func (j *JoinNode) pushOtherJoin(idx *int) error {
 // pushEqualCmpr used to push the equal Comparison type filters.
 // eg: 'select * from t1, t2 where t1.a=t2.a and t1.b=2'.
 // 't1.a=t2.a' is the 'join' type filters.
-func (j *JoinNode) pushEqualCmpr(joins []joinTuple) SelectNode {
+func (j *JoinNode) pushEqualCmpr(joins []exprInfo) SelectNode {
 	for i, joinFilter := range joins {
 		var parent SelectNode
 		ltb := j.referTables[joinFilter.referTables[0]]
@@ -340,7 +340,7 @@ func (j *JoinNode) pushEqualCmpr(joins []joinTuple) SelectNode {
 			join, _ := checkJoinOn(node.Left, node.Right, joinFilter)
 			if lmn, ok := node.Left.(*MergeNode); ok {
 				if rmn, ok := node.Right.(*MergeNode); ok {
-					if isSameShard(lmn.referTables, rmn.referTables, join.left, join.right) {
+					if isSameShard(lmn.referTables, rmn.referTables, join.cols[0], join.cols[1]) {
 						mn, _ := mergeRoutes(lmn, rmn, node.joinExpr, nil)
 						mn.setParent(node.parent)
 						mn.setParenthese(node.hasParen)
@@ -376,7 +376,7 @@ func (j *JoinNode) pushEqualCmpr(joins []joinTuple) SelectNode {
 				}
 			}
 			if node.IsLeftJoin {
-				node.setWhereFilter(filterTuple{expr: join.expr, referTables: join.referTables})
+				node.setWhereFilter(exprInfo{expr: join.expr, referTables: join.referTables})
 			} else {
 				node.joinOn = append(node.joinOn, join)
 				if node.joinExpr != nil {
@@ -443,19 +443,19 @@ func (j *JoinNode) calcRoute() (SelectNode, error) {
 // eg: select t1.a,t2.a from t1 join t2 on t1.a=t2.a where t1.a=1;
 // push: select t1.a from t1 where t1.a=1 order by t1.a asc;
 //       select t2.a from t2 where t2.a=1 order by t2.a asc;
-func (j *JoinNode) buildKeyFilter(filter filterTuple, isFind bool) bool {
-	table := filter.col.Qualifier.Name.String()
-	field := filter.col.Name.String()
+func (j *JoinNode) buildKeyFilter(filter exprInfo, isFind bool) bool {
+	table := filter.cols[0].Qualifier.Name.String()
+	field := filter.cols[0].Name.String()
 	find := false
 	if _, ok := j.Left.getReferTables()[filter.referTables[0]]; ok {
 		for i, join := range j.joinOn {
-			lt := join.left.Qualifier.Name.String()
-			lc := join.left.Name.String()
+			lt := join.cols[0].Qualifier.Name.String()
+			lc := join.cols[0].Name.String()
 			if lt == table && lc == field {
 				j.keyFilters[i] = append(j.keyFilters[i], filter)
 				if len(filter.vals) > 0 {
-					rt := join.right.Qualifier.Name.String()
-					rc := join.right.Name.String()
+					rt := join.cols[1].Qualifier.Name.String()
+					rc := join.cols[1].Name.String()
 					tbInfo := j.referTables[rt]
 					if tbInfo.shardKey == rc {
 						for _, val := range filter.vals {
@@ -474,13 +474,13 @@ func (j *JoinNode) buildKeyFilter(filter filterTuple, isFind bool) bool {
 		}
 	} else {
 		for i, join := range j.joinOn {
-			rt := join.right.Qualifier.Name.String()
-			rc := join.right.Name.String()
+			rt := join.cols[1].Qualifier.Name.String()
+			rc := join.cols[1].Name.String()
 			if rt == table && rc == field {
 				j.keyFilters[i] = append(j.keyFilters[i], filter)
 				if len(filter.vals) > 0 {
-					lt := join.left.Qualifier.Name.String()
-					lc := join.left.Name.String()
+					lt := join.cols[0].Qualifier.Name.String()
+					lc := join.cols[0].Name.String()
 					tbInfo := j.referTables[lt]
 					if tbInfo.shardKey == lc {
 						for _, val := range filter.vals {
@@ -565,7 +565,7 @@ func (j *JoinNode) pushNullExprs(idx *int) error {
 }
 
 // pushOtherFilters used to push otherFilter.
-func (j *JoinNode) pushOtherFilters(filters []filterTuple, idx *int, isOtherJoin bool) error {
+func (j *JoinNode) pushOtherFilters(filters []exprInfo, idx *int, isOtherJoin bool) error {
 	for _, filter := range filters {
 		var err error
 		var lidx, ridx int
@@ -725,8 +725,8 @@ func (j *JoinNode) handleJoinOn() {
 	for _, join := range j.joinOn {
 		var leftKey, rightKey JoinKey
 		if j.isHint {
-			lt := join.left.Qualifier.Name.String()
-			rt := join.right.Qualifier.Name.String()
+			lt := join.cols[0].Qualifier.Name.String()
+			rt := join.cols[1].Qualifier.Name.String()
 			ltb := j.referTables[lt]
 			rtb := j.referTables[rt]
 			m := ltb.parent
@@ -734,15 +734,15 @@ func (j *JoinNode) handleJoinOn() {
 				m = rtb.parent
 			}
 			m.addWhere(join.expr)
-			leftKey = JoinKey{Field: join.left.Name.String(),
+			leftKey = JoinKey{Field: join.cols[0].Name.String(),
 				Table: lt,
 			}
-			rightKey = JoinKey{Field: join.right.Name.String(),
+			rightKey = JoinKey{Field: join.cols[1].Name.String(),
 				Table: rt,
 			}
 		} else {
-			leftKey = j.buildOrderBy(join.left, j.Left, nil)
-			rightKey = j.buildOrderBy(join.right, j.Right, nil)
+			leftKey = j.buildOrderBy(join.cols[0], j.Left, nil)
+			rightKey = j.buildOrderBy(join.cols[1], j.Right, nil)
 		}
 		j.LeftKeys = append(j.LeftKeys, leftKey)
 		j.RightKeys = append(j.RightKeys, rightKey)
@@ -803,11 +803,11 @@ func (j *JoinNode) buildOrderBy(expr sqlparser.Expr, node SelectNode, idx *int) 
 }
 
 // pushHaving used to push having exprs.
-func (j *JoinNode) pushHaving(havings []filterTuple) error {
+func (j *JoinNode) pushHaving(havings []exprInfo) error {
 	for _, filter := range havings {
 		if len(filter.referTables) == 0 {
-			j.Left.pushHaving([]filterTuple{filter})
-			j.Right.pushHaving([]filterTuple{filter})
+			j.Left.pushHaving([]exprInfo{filter})
+			j.Right.pushHaving([]exprInfo{filter})
 		} else if len(filter.referTables) == 1 {
 			tbInfo := j.referTables[filter.referTables[0]]
 			tbInfo.parent.addHaving(filter.expr)
@@ -911,8 +911,8 @@ func (j *JoinNode) buildQuery(tbInfos map[string]*tableInfo) {
 		field := j.RightKeys[i].Field
 		tbInfo := j.referTables[table]
 		for _, filter := range filters {
-			filter.col.Qualifier.Name = sqlparser.NewTableIdent(table)
-			filter.col.Name = sqlparser.NewColIdent(field)
+			filter.cols[0].Qualifier.Name = sqlparser.NewTableIdent(table)
+			filter.cols[0].Name = sqlparser.NewColIdent(field)
 			tbInfo.parent.filters[filter.expr] = 0
 		}
 	}
@@ -924,8 +924,8 @@ func (j *JoinNode) buildQuery(tbInfos map[string]*tableInfo) {
 		field := j.LeftKeys[i].Field
 		tbInfo := j.referTables[table]
 		for _, filter := range filters {
-			filter.col.Qualifier.Name = sqlparser.NewTableIdent(table)
-			filter.col.Name = sqlparser.NewColIdent(field)
+			filter.cols[0].Qualifier.Name = sqlparser.NewTableIdent(table)
+			filter.cols[0].Name = sqlparser.NewColIdent(field)
 			tbInfo.parent.filters[filter.expr] = 0
 		}
 	}

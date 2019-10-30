@@ -645,7 +645,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 		"unsupported: orderby[b].should.in.select.list",
 		"unsupported: limit.offset.or.counts.must.be.IntVal",
 		"unsupported: expr[count(*)].in.having.clause",
-		"unsupported: unknown.table.'B'.in.clause",
+		"unsupported: unknown.column.'B.a'.in.clause",
 		"unsupported: invalid.use.of.group.function[count]",
 		"unsupported: 'round(avg(id))'.contain.aggregate.in.select.exprs",
 		"unsupported: group_concat.in.select.exprs",
