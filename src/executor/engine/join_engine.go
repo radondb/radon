@@ -101,7 +101,7 @@ func (j *JoinEngine) Execute(ctx *xcontext.ResultContext) error {
 	return operator.ExecSubPlan(j.log, j.node, ctx)
 }
 
-// execBindVars used to execute querys with bindvas.
+// execBindVars used to execute querys with bindvars.
 func (j *JoinEngine) execBindVars(ctx *xcontext.ResultContext, bindVars map[string]*querypb.BindVariable, wantfields bool) error {
 	var err error
 	lctx := xcontext.NewResultContext()
@@ -115,16 +115,15 @@ func (j *JoinEngine) execBindVars(ctx *xcontext.ResultContext, bindVars map[stri
 	}
 
 	for _, lrow := range lctx.Results.Rows {
-		blend := true
+		leftMatch := true
 		matchCnt := 0
 		for _, idx := range j.node.LeftTmpCols {
-			vn := lrow[idx].ToNative()
-			if vn.(int64) == 0 {
-				blend = false
+			if !sqltypes.CastToBool(lrow[idx]) {
+				leftMatch = false
 				break
 			}
 		}
-		if blend {
+		if leftMatch {
 			for k, col := range j.node.Vars {
 				joinVars[k] = sqltypes.ValueBindVariable(lrow[col])
 			}

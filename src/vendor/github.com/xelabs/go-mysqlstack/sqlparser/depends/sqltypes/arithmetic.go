@@ -538,3 +538,31 @@ func Cast(v Value, typ querypb.Type) (Value, error) {
 	// go through full validation.
 	return NewValue(typ, v.val)
 }
+
+func isNumZero(v numeric) bool {
+	switch v.typ {
+	case Uint64:
+		return v.uval == 0
+	case Int64:
+		return v.ival == 0
+	case Float64:
+		return v.fval == 0
+	case Decimal:
+		return v.dval.IsZero()
+	}
+	panic("unreachable")
+}
+
+// CastToBool used to cast the Value to a boolean.
+func CastToBool(v Value) bool {
+	if v.IsNull() {
+		return false
+	}
+
+	lv, err := newNumeric(v)
+	if err != nil {
+		return false
+	}
+
+	return !isNumZero(lv)
+}

@@ -143,17 +143,16 @@ func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *planner.JoinNode,
 			return
 		}
 
-		blend := true
+		leftMatch := true
 		matchCnt := 0
 		for _, idx := range node.LeftTmpCols {
-			vn := lrow[idx].ToNative()
-			if vn == nil || vn.(int64) == 0 {
-				blend = false
+			if !sqltypes.CastToBool(lrow[idx]) {
+				leftMatch = false
 				break
 			}
 		}
 
-		if blend {
+		if leftMatch {
 			for _, rrow := range rrows {
 				match := true
 				for _, filter := range node.CmpFilter {
