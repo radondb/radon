@@ -1250,3 +1250,57 @@ func TestMax(t *testing.T) {
 		}
 	}
 }
+
+func TestCastToBool(t *testing.T) {
+	tcases := []struct {
+		v   Value
+		out bool
+	}{{
+		v:   NewInt64(12),
+		out: true,
+	}, {
+		v:   NewInt64(0),
+		out: false,
+	}, {
+		v:   NewUint64(1),
+		out: true,
+	}, {
+		v:   NewUint64(0),
+		out: false,
+	}, {
+		v:   NewFloat64(1),
+		out: true,
+	}, {
+		v:   NewFloat64(0),
+		out: false,
+	}, {
+		v:   testVal(Decimal, "0"),
+		out: false,
+	}, {
+		v:   testVal(Decimal, "1.2"),
+		out: true,
+	}, {
+		v:   testVal(VarChar, "1"),
+		out: true,
+	}, {
+		v:   testVal(VarChar, "0"),
+		out: false,
+	}, {
+		v:   testVal(VarChar, "1.2"),
+		out: true,
+	}, {
+		v:   testVal(VarChar, "abcd"),
+		out: false,
+	}, {
+		v:   NULL,
+		out: false,
+	}, {
+		v:   testVal(Uint64, "1.2"),
+		out: false,
+	}}
+
+	for _, tcase := range tcases {
+		got := CastToBool(tcase.v)
+		assert.Equal(t, tcase.out, got)
+	}
+}
