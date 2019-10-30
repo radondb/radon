@@ -28,16 +28,16 @@ type PlanNode interface {
 // SelectNode interface.
 type SelectNode interface {
 	PlanNode
-	pushFilter(filters []filterTuple) error
+	pushFilter(filters []exprInfo) error
 	setParent(p SelectNode)
-	setWhereFilter(filter filterTuple)
+	setWhereFilter(filter exprInfo)
 	setNoTableFilter(exprs []sqlparser.Expr)
 	setParenthese(hasParen bool)
-	pushEqualCmpr(joins []joinTuple) SelectNode
+	pushEqualCmpr(joins []exprInfo) SelectNode
 	calcRoute() (SelectNode, error)
 	pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, aggTyp aggrType) error
 	pushSelectExpr(field selectTuple) (int, error)
-	pushHaving(havings []filterTuple) error
+	pushHaving(havings []exprInfo) error
 	pushMisc(sel *sqlparser.Select)
 	reOrder(int)
 	Order() int

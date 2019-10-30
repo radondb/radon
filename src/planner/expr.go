@@ -487,46 +487,35 @@ func convertToLeftJoin(joinExpr *sqlparser.JoinTableExpr) {
 	joinExpr.Join = sqlparser.LeftJoinStr
 }
 
-type filterTuple struct {
+type exprInfo struct {
 	// filter expr.
 	expr sqlparser.Expr
 	// referred tables.
 	referTables []string
 	// colname in the filter expr.
-	col *sqlparser.ColName
+	cols []*sqlparser.ColName
 	// val in the filter expr.
 	vals []*sqlparser.SQLVal
 }
 
-type joinTuple struct {
-	// join expr.
-	expr *sqlparser.ComparisonExpr
-	// referred tables.
-	referTables []string
-	left, right *sqlparser.ColName
-}
-
 // parserWhereOrJoinExprs parser exprs in where or join on conditions.
 // eg: 't1.a=t2.a and t1.b=2'.
-// t1.a=t2.a paser in joinTuple.
-// t1.b=2 paser in filterTuple, t1.b col, 2 val.
-func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]joinTuple, []filterTuple, error) {
+// t1.a=t2.a paser in joins.
+// t1.b=2 paser in wheres, t1.b col, 2 val.
+func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]exprInfo, []exprInfo, error) {
 	filters := splitAndExpression(nil, exprs)
-	var joins []joinTuple
-	var wheres []filterTuple
+	var joins, wheres []exprInfo
 
 	for _, filter := range filters {
-		var col *sqlparser.ColName
+		var cols []*sqlparser.ColName
 		var vals []*sqlparser.SQLVal
-		count := 0
 		filter = skipParenthesis(filter)
 		filter = convertOrToIn(filter)
 		referTables := make([]string, 0, 4)
 		err := sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
 			switch node := node.(type) {
 			case *sqlparser.ColName:
-				count++
-				col = node
+				cols = append(cols, node)
 				tableName := node.Qualifier.Name.String()
 				if tableName == "" {
 					if len(tbInfos) == 1 {
@@ -536,7 +525,7 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo)
 					}
 				} else {
 					if _, ok := tbInfos[tableName]; !ok {
-						return false, errors.Errorf("unsupported: unknown.table.'%s'.in.clause", tableName)
+						return false, errors.Errorf("unsupported: unknown.column.'%s.%s'.in.clause", tableName, node.Name.String())
 					}
 				}
 
@@ -546,6 +535,8 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo)
 					}
 				}
 				referTables = append(referTables, tableName)
+			case *sqlparser.Subquery:
+				return false, errors.New("unsupported: subqueries.in.select")
 			}
 			return true, nil
 		}, filter)
@@ -553,9 +544,6 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo)
 			return nil, nil, err
 		}
 
-		if count != 1 {
-			col = nil
-		}
 		condition, ok := filter.(*sqlparser.ComparisonExpr)
 		if ok {
 			lc, lok := condition.Left.(*sqlparser.ColName)
@@ -563,7 +551,7 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo)
 			switch condition.Operator {
 			case sqlparser.EqualStr:
 				if lok && rok && lc.Qualifier != rc.Qualifier {
-					tuple := joinTuple{condition, referTables, lc, rc}
+					tuple := exprInfo{condition, referTables, []*sqlparser.ColName{lc, rc}, nil}
 					joins = append(joins, tuple)
 					continue
 				}
@@ -576,6 +564,7 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo)
 				if rok {
 					if sqlVal, ok := condition.Left.(*sqlparser.SQLVal); ok {
 						vals = append(vals, sqlVal)
+						condition.Left, condition.Right = condition.Right, condition.Left
 					}
 				}
 			case sqlparser.InStr:
@@ -598,18 +587,18 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo)
 				}
 			}
 		}
-		tuple := filterTuple{filter, referTables, col, vals}
+		tuple := exprInfo{filter, referTables, cols, vals}
 		wheres = append(wheres, tuple)
 	}
 
 	return joins, wheres, nil
 }
 
-// checkJoinOn use to check the join on conditions, according to lpn|rpn to  determine join.left|right.
+// checkJoinOn use to check the join on conditions, according to lpn|rpn to  determine join.cols[0]|cols[1].
 // eg: select * from t1 join t2 on t1.a=t2.a join t3 on t2.b=t1.b. 't2.b=t1.b' is forbidden.
-func checkJoinOn(lpn, rpn SelectNode, join joinTuple) (joinTuple, error) {
-	lt := join.left.Qualifier.Name.String()
-	rt := join.right.Qualifier.Name.String()
+func checkJoinOn(lpn, rpn PlanNode, join exprInfo) (exprInfo, error) {
+	lt := join.cols[0].Qualifier.Name.String()
+	rt := join.cols[1].Qualifier.Name.String()
 	if _, ok := lpn.getReferTables()[lt]; ok {
 		if _, ok := rpn.getReferTables()[rt]; !ok {
 			return join, errors.New("unsupported: join.on.condition.should.cross.left-right.tables")
@@ -618,7 +607,7 @@ func checkJoinOn(lpn, rpn SelectNode, join joinTuple) (joinTuple, error) {
 		if _, ok := lpn.getReferTables()[rt]; !ok {
 			return join, errors.New("unsupported: join.on.condition.should.cross.left-right.tables")
 		}
-		join.left, join.right = join.right, join.left
+		join.cols[0], join.cols[1] = join.cols[1], join.cols[0]
 	}
 	return join, nil
 }
@@ -737,9 +726,9 @@ func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router 
 
 // parserHaving used to check the having exprs and parser into tuples.
 // unsupport: `select t2.id as tmp, t1.id from t2,t1 having tmp=1`.
-func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]filterTuple, error) {
+func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]exprInfo, error) {
 	filters := splitAndExpression(nil, exprs)
-	var tuples []filterTuple
+	var tuples []exprInfo
 
 	for _, filter := range filters {
 		filter = skipParenthesis(filter)
@@ -778,7 +767,7 @@ func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]filter
 			return nil, err
 		}
 
-		tuple := filterTuple{filter, referTables, nil, nil}
+		tuple := exprInfo{filter, referTables, nil, nil}
 		tuples = append(tuples, tuple)
 	}
 
@@ -792,7 +781,7 @@ type nullExpr struct {
 }
 
 // checkIsWithNull used to check whether `tb.col is null` or `tb.col<=> null`.
-func checkIsWithNull(filter filterTuple, tbInfos map[string]*tableInfo) (bool, nullExpr) {
+func checkIsWithNull(filter exprInfo, tbInfos map[string]*tableInfo) (bool, nullExpr) {
 	if !checkTbInNode(filter.referTables, tbInfos) {
 		return false, nullExpr{}
 	}
