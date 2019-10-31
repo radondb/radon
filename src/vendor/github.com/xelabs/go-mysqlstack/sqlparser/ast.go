@@ -544,6 +544,15 @@ func (node *Checksum) WalkSubtree(visit Visit) error {
 	return nil
 }
 
+// PartitionDefinition defines a single partition.
+type PartitionDefinition struct {
+	Backend string
+	Row     ValTuple
+}
+
+// PartitionOptions specifies the partition options.
+type PartitionOptions []*PartitionDefinition
+
 // DDL represents a CREATE, ALTER, DROP or RENAME statement.
 // Table is set for AlterStr, DropStr, RenameStr.
 // NewName is set for AlterStr, CreateStr, RenameStr.
@@ -568,6 +577,9 @@ type DDL struct {
 	// table column operation
 	DropColumnName  string
 	ModifyColumnDef *ColumnDefinition
+
+	// Partition options.
+	PartitionOptions PartitionOptions
 }
 
 // DDL strings.
@@ -589,8 +601,9 @@ const (
 	TruncateTableStr        = "truncate table"
 	SingleTableType         = "singletable"
 	GlobalTableType         = "globaltable"
-	PartitionTableHash      = "partitiontableHash"
+	PartitionTableHash      = "partitiontablehash"
 	NormalTableType         = "normaltable"
+	PartitionTableList      = "partitiontablelist"
 )
 
 // Format formats the node.
