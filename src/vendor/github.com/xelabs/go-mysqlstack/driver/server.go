@@ -64,11 +64,11 @@ func NewListener(log *xlog.Log, address string, handler Handler) (*Listener, err
 	}
 
 	return &Listener{
-		log:           log,
-		address:       address,
-		handler:       handler,
-		listener:      listener,
-		connectionID:  1,
+		log:          log,
+		address:      address,
+		handler:      handler,
+		listener:     listener,
+		connectionID: 1,
 	}, nil
 }
 

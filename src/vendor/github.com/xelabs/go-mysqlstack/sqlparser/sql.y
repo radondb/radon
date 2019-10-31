@@ -108,6 +108,8 @@ func forceEOF(yylex interface{}) {
   databaseOptionListOpt DatabaseOptionListOpt
   databaseOptionList  DatabaseOptionList
   databaseOption      *DatabaseOption
+  partitionDefinition *PartitionDefinition
+  partitionDefinitions []*PartitionDefinition
 }
 
 %token LEX_ERROR
@@ -193,7 +195,7 @@ func forceEOF(yylex interface{}) {
 %token <bytes> UNUSED
 
 // RadonDB
-%token <empty> PARTITION PARTITIONS HASH XA DISTRIBUTED
+%token <empty> PARTITION PARTITIONS HASH LIST XA DISTRIBUTED
 %type <statement> truncate_statement xa_statement explain_statement kill_statement transaction_statement radon_statement
 %token <bytes> ENGINES VERSIONS PROCESSLIST QUERYZ TXNZ KILL ENGINE SINGLE
 // Transaction Tokens
@@ -298,6 +300,8 @@ func forceEOF(yylex interface{}) {
 %type <databaseOptionListOpt> database_option_list_opt
 %type <databaseOptionList> database_option_list
 %type <databaseOption> database_option
+%type <partitionDefinition> partition_definition
+%type <partitionDefinitions> partition_definitions
 
 %start any_command
 
@@ -448,6 +452,21 @@ set_session_or_global:
     $$ = GlobalStr
   }
 
+partition_definitions:
+  partition_definition
+  {
+    $$ = []*PartitionDefinition{$1}
+  }
+| partition_definitions ',' partition_definition
+  {
+    $$ = append($1, $3)
+  }
+
+partition_definition:
+  PARTITION ID VALUES IN row_tuple
+  {
+    $$ = &PartitionDefinition{Backend: string($2), Row: $5}
+  }
 
 create_statement:
   create_table_prefix table_spec
@@ -467,6 +486,15 @@ create_statement:
     } else {
       $1.TableSpec.Options.Type = PartitionTableHash
     }
+    $$ = $1
+  }
+| create_table_prefix table_spec PARTITION BY LIST openb col_id closeb openb partition_definitions closeb ddl_force_eof
+  {
+    $1.Action = CreateTableStr
+    $1.TableSpec = $2
+    $1.PartitionName = $7.String()
+    $1.TableSpec.Options.Type = PartitionTableList
+    $1.PartitionOptions = $10
     $$ = $1
   }
 | create_table_prefix table_spec DISTRIBUTED BY openb col_id closeb ddl_force_eof
