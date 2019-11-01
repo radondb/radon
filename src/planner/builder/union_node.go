@@ -6,7 +6,7 @@
  *
  */
 
-package planner
+package builder
 
 import (
 	"xcontext"
@@ -21,18 +21,17 @@ type UnionNode struct {
 	Left, Right PlanNode
 	// Union Type.
 	Typ      string
-	children *PlanTree
+	children []ChildPlan
 	// referred tables' tableInfo map.
 	referTables map[string]*tableInfo
 }
 
 func newUnionNode(log *xlog.Log, left, right PlanNode, typ string) *UnionNode {
 	return &UnionNode{
-		log:      log,
-		Left:     left,
-		Right:    right,
-		Typ:      typ,
-		children: NewPlanTree(),
+		log:   log,
+		Left:  left,
+		Right: right,
+		Typ:   typ,
 	}
 }
 
@@ -43,7 +42,7 @@ func (u *UnionNode) buildQuery(tbInfos map[string]*tableInfo) {
 }
 
 // Children returns the children of the plan.
-func (u *UnionNode) Children() *PlanTree {
+func (u *UnionNode) Children() []ChildPlan {
 	return u.children
 }
 
@@ -71,7 +70,7 @@ func (u *UnionNode) pushOrderBy(sel sqlparser.SelectStatement) error {
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}
-		u.children.Add(orderPlan)
+		u.children = append(u.children, orderPlan)
 	}
 	return nil
 }
@@ -84,7 +83,7 @@ func (u *UnionNode) pushLimit(sel sqlparser.SelectStatement) error {
 		if err := limitPlan.Build(); err != nil {
 			return err
 		}
-		u.children.Add(limitPlan)
+		u.children = append(u.children, limitPlan)
 	}
 	return nil
 }

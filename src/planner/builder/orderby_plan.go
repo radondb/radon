@@ -6,7 +6,7 @@
  *
  */
 
-package planner
+package builder
 
 import (
 	"encoding/json"
@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	_ Plan = &OrderByPlan{}
+	_ ChildPlan = &OrderByPlan{}
 )
 
 // Direction type.
@@ -46,7 +46,7 @@ type OrderByPlan struct {
 	tuples   []selectTuple
 	tbInfos  map[string]*tableInfo
 	OrderBys []OrderBy `json:"OrderBy(s)"`
-	typ      PlanType
+	typ      ChildType
 }
 
 // NewOrderByPlan used to create OrderByPlan.
@@ -56,7 +56,7 @@ func NewOrderByPlan(log *xlog.Log, node sqlparser.OrderBy, tuples []selectTuple,
 		node:    node,
 		tuples:  tuples,
 		tbInfos: tbInfos,
-		typ:     PlanTypeOrderby,
+		typ:     ChildTypeOrderby,
 	}
 }
 
@@ -117,7 +117,7 @@ func (p *OrderByPlan) Build() error {
 }
 
 // Type returns the type of the plan.
-func (p *OrderByPlan) Type() PlanType {
+func (p *OrderByPlan) Type() ChildType {
 	return p.typ
 }
 
@@ -128,14 +128,4 @@ func (p *OrderByPlan) JSON() string {
 		return err.Error()
 	}
 	return string(bout)
-}
-
-// Children returns the children of the plan.
-func (p *OrderByPlan) Children() *PlanTree {
-	return nil
-}
-
-// Size returns the memory size.
-func (p *OrderByPlan) Size() int {
-	return 0
 }

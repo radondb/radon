@@ -172,7 +172,6 @@ func TestDeletePlan(t *testing.T) {
 			want := results[i]
 			assert.Equal(t, want, got)
 			assert.Equal(t, PlanTypeDelete, plan.Type())
-			assert.Nil(t, plan.Children())
 		}
 	}
 }

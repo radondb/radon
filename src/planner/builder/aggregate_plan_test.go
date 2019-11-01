@@ -6,7 +6,7 @@
  *
  */
 
-package planner
+package builder
 
 import (
 	"router"
@@ -152,10 +152,11 @@ func TestAggregatePlan(t *testing.T) {
 			got := plan.JSON()
 			log.Debug(got)
 			assert.Equal(t, want, got)
-			assert.True(t, nil == plan.Children())
+
 			assert.Equal(t, 13, len(plan.NormalAggregators()))
 			assert.Equal(t, 3, len(plan.GroupAggregators()))
 			assert.False(t, plan.Empty())
+			assert.Equal(t, ChildTypeAggregate, plan.Type())
 		}
 	}
 }
@@ -296,7 +297,7 @@ func TestAggregatePlanUpperCase(t *testing.T) {
 			got := plan.JSON()
 			log.Debug(got)
 			assert.Equal(t, want, got)
-			assert.True(t, nil == plan.Children())
+
 			assert.Equal(t, 13, len(plan.NormalAggregators()))
 			assert.Equal(t, 3, len(plan.GroupAggregators()))
 			assert.False(t, plan.Empty())
@@ -355,7 +356,7 @@ func TestAggregatePlanHaving(t *testing.T) {
 			got := plan.JSON()
 			log.Debug(got)
 			assert.Equal(t, want, got)
-			assert.True(t, nil == plan.Children())
+
 			assert.Equal(t, 1, len(plan.NormalAggregators()))
 			assert.Equal(t, 1, len(plan.GroupAggregators()))
 			assert.False(t, plan.Empty())
@@ -494,7 +495,7 @@ func TestAggregatePlans(t *testing.T) {
 			got := plan.JSON()
 			log.Debug(got)
 			assert.Equal(t, want, got)
-			assert.True(t, nil == plan.Children())
+
 			assert.False(t, plan.Empty())
 		}
 	}

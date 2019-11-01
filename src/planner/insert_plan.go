@@ -107,8 +107,8 @@ func (p *InsertPlan) Build() error {
 
 	// Check the OnDup.
 	if len(node.OnDup) > 0 {
-		// analyze shardkey changing.
-		if isShardKeyChanging(sqlparser.UpdateExprs(node.OnDup), shardKey) {
+		// analyze whether update shardkey.
+		if isUpdateShardKey(sqlparser.UpdateExprs(node.OnDup), shardKey) {
 			return errors.New("unsupported: cannot.update.shard.key")
 		}
 	}
@@ -202,11 +202,6 @@ func (p *InsertPlan) JSON() string {
 		return err.Error()
 	}
 	return common.BytesToString(bout)
-}
-
-// Children returns the children of the plan.
-func (p *InsertPlan) Children() *PlanTree {
-	return nil
 }
 
 // Size returns the memory size.

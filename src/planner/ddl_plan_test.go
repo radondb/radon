@@ -76,7 +76,6 @@ func TestDDLPlan1(t *testing.T) {
 			got := plan.JSON()
 			log.Info(got)
 			assert.Equal(t, want, got)
-			assert.True(t, nil == plan.Children())
 		}
 
 		// type
@@ -131,7 +130,6 @@ func TestDROPPlan(t *testing.T) {
 				got := plan.JSON()
 				log.Info(got)
 				assert.Equal(t, want, got)
-				assert.True(t, nil == plan.Children())
 			}
 
 			// type
@@ -323,7 +321,6 @@ func TestDDLPlanWithQuote(t *testing.T) {
 			want := results[i]
 			got := plan.JSON()
 			assert.Equal(t, want, got)
-			assert.True(t, nil == plan.Children())
 		}
 	}
 }
@@ -366,7 +363,6 @@ func TestDDLPlanWithSameColumn(t *testing.T) {
 			want := results[i]
 			got := plan.JSON()
 			assert.Equal(t, want, got)
-			assert.True(t, nil == plan.Children())
 		}
 	}
 }
@@ -413,7 +409,6 @@ func TestDDLPlanWithRename(t *testing.T) {
 			want := results[i]
 			got := plan.JSON()
 			assert.Equal(t, want, got)
-			assert.True(t, nil == plan.Children())
 		}
 	}
 }
@@ -448,7 +443,6 @@ func TestDDLPlanWithRenameNoshard(t *testing.T) {
 			want := results[i]
 			got := plan.JSON()
 			assert.Equal(t, want, got)
-			assert.True(t, nil == plan.Children())
 		}
 	}
 }

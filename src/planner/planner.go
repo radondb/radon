@@ -8,15 +8,12 @@
 
 package planner
 
-import ()
-
 // Plan interface.
 type Plan interface {
 	Build() error
 	Type() PlanType
 	JSON() string
 	Size() int
-	Children() *PlanTree
 }
 
 // PlanTree is a container for all plans

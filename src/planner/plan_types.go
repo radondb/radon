@@ -27,21 +27,6 @@ const (
 	// PlanTypeSelect enum.
 	PlanTypeSelect PlanType = "PlanTypeSelect"
 
-	// PlanTypeOrderby enum.
-	PlanTypeOrderby PlanType = "PlanTypeOrderby"
-
-	// PlanTypeLimit enum.
-	PlanTypeLimit PlanType = "PlanTypeLimit"
-
-	// PlanTypeAggregate enum.
-	PlanTypeAggregate PlanType = "PlanTypeAggregate"
-
-	// PlanTypeJoin enum.
-	PlanTypeJoin PlanType = "PlanTypeJoin"
-
-	// PlanTypeDistinct enum.
-	PlanTypeDistinct PlanType = "PlanTypeDistinct"
-
 	// PlanTypeUnion enum.
 	PlanTypeUnion PlanType = "PlanTypeUnion"
 

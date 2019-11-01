@@ -9,7 +9,7 @@
 package operator
 
 import (
-	"planner"
+	"planner/builder"
 	"xcontext"
 
 	"github.com/xelabs/go-mysqlstack/xlog"
@@ -21,22 +21,22 @@ type Operator interface {
 }
 
 // ExecSubPlan used to execute all the children plan.
-func ExecSubPlan(log *xlog.Log, node planner.PlanNode, ctx *xcontext.ResultContext) error {
+func ExecSubPlan(log *xlog.Log, node builder.PlanNode, ctx *xcontext.ResultContext) error {
 	subPlanTree := node.Children()
 	if subPlanTree != nil {
-		for _, subPlan := range subPlanTree.Plans() {
+		for _, subPlan := range subPlanTree {
 			switch subPlan.Type() {
-			case planner.PlanTypeAggregate:
+			case builder.ChildTypeAggregate:
 				aggrOperator := NewAggregateOperator(log, subPlan)
 				if err := aggrOperator.Execute(ctx); err != nil {
 					return err
 				}
-			case planner.PlanTypeOrderby:
+			case builder.ChildTypeOrderby:
 				orderByOperator := NewOrderByOperator(log, subPlan)
 				if err := orderByOperator.Execute(ctx); err != nil {
 					return err
 				}
-			case planner.PlanTypeLimit:
+			case builder.ChildTypeLimit:
 				limitOperator := NewLimitOperator(log, subPlan)
 				if err := limitOperator.Execute(ctx); err != nil {
 					return err

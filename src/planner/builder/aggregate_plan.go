@@ -6,7 +6,7 @@
  *
  */
 
-package planner
+package builder
 
 import (
 	"encoding/json"
@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	_ Plan = &AggregatePlan{}
+	_ ChildPlan = &AggregatePlan{}
 )
 
 // Aggregator tuple.
@@ -42,7 +42,7 @@ type AggregatePlan struct {
 	groupAggrs  []Aggregator
 
 	// type
-	typ PlanType
+	typ ChildType
 	// IsPushDown whether aggfunc can be pushed down.
 	IsPushDown bool
 }
@@ -54,7 +54,7 @@ func NewAggregatePlan(log *xlog.Log, exprs []sqlparser.SelectExpr, tuples, group
 		tuples:     tuples,
 		groups:     groups,
 		rewritten:  exprs,
-		typ:        PlanTypeAggregate,
+		typ:        ChildTypeAggregate,
 		IsPushDown: isPushDown,
 	}
 }
@@ -142,7 +142,7 @@ func (p *AggregatePlan) Build() error {
 }
 
 // Type returns the type of the plan.
-func (p *AggregatePlan) Type() PlanType {
+func (p *AggregatePlan) Type() ChildType {
 	return p.typ
 }
 
@@ -167,11 +167,6 @@ func (p *AggregatePlan) JSON() string {
 	return string(bout)
 }
 
-// Children returns the children of the plan.
-func (p *AggregatePlan) Children() *PlanTree {
-	return nil
-}
-
 // NormalAggregators returns the aggregators.
 func (p *AggregatePlan) NormalAggregators() []Aggregator {
 	return p.normalAggrs
@@ -190,9 +185,4 @@ func (p *AggregatePlan) ReWritten() sqlparser.SelectExprs {
 // Empty returns the aggregator number more than zero.
 func (p *AggregatePlan) Empty() bool {
 	return (len(p.normalAggrs) == 0 && len(p.groupAggrs) == 0)
-}
-
-// Size returns the memory size.
-func (p *AggregatePlan) Size() int {
-	return 0
 }

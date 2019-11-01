@@ -6,7 +6,7 @@
  *
  */
 
-package planner
+package builder
 
 import (
 	"encoding/json"
@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	_ Plan = &LimitPlan{}
+	_ ChildPlan = &LimitPlan{}
 )
 
 // LimitPlan represents order-by plan.
@@ -33,7 +33,7 @@ type LimitPlan struct {
 	Limit     int
 
 	// type
-	typ PlanType
+	typ ChildType
 }
 
 // NewLimitPlan used to create LimitPlan.
@@ -41,7 +41,7 @@ func NewLimitPlan(log *xlog.Log, node *sqlparser.Limit) *LimitPlan {
 	return &LimitPlan{
 		log:  log,
 		node: node,
-		typ:  PlanTypeLimit,
+		typ:  ChildTypeLimit,
 	}
 }
 
@@ -104,7 +104,7 @@ func (p *LimitPlan) Build() error {
 }
 
 // Type returns the type of the plan.
-func (p *LimitPlan) Type() PlanType {
+func (p *LimitPlan) Type() ChildType {
 	return p.typ
 }
 
@@ -117,17 +117,7 @@ func (p *LimitPlan) JSON() string {
 	return string(bout)
 }
 
-// Children returns the children of the plan.
-func (p *LimitPlan) Children() *PlanTree {
-	return nil
-}
-
 // ReWritten used to re-write the limit clause.
 func (p *LimitPlan) ReWritten() *sqlparser.Limit {
 	return p.rewritten
-}
-
-// Size returns the memory size.
-func (p *LimitPlan) Size() int {
-	return 0
 }

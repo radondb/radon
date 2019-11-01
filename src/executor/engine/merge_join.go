@@ -12,7 +12,7 @@ import (
 	"sort"
 	"sync"
 
-	"planner"
+	"planner/builder"
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -25,9 +25,9 @@ const (
 )
 
 // sortMergeJoin used to join `lres` and `rres` to `res`.
-func sortMergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode, maxrow int) error {
+func sortMergeJoin(lres, rres, res *sqltypes.Result, node *builder.JoinNode, maxrow int) error {
 	var wg sync.WaitGroup
-	sort := func(keys []planner.JoinKey, res *sqltypes.Result) {
+	sort := func(keys []builder.JoinKey, res *sqltypes.Result) {
 		defer wg.Done()
 		sort.Slice(res.Rows, func(i, j int) bool {
 			for _, key := range keys {
@@ -50,7 +50,7 @@ func sortMergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode, max
 }
 
 // mergeJoin used to join the sorted results.
-func mergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode, maxrow int) error {
+func mergeJoin(lres, rres, res *sqltypes.Result, node *builder.JoinNode, maxrow int) error {
 	var err error
 	lrows, lidx := fetchSameKeyRows(lres.Rows, node.LeftKeys, 0)
 	rrows, ridx := fetchSameKeyRows(rres.Rows, node.RightKeys, 0)
@@ -97,7 +97,7 @@ func mergeJoin(lres, rres, res *sqltypes.Result, node *planner.JoinNode, maxrow 
 }
 
 // fetchSameKeyRows used to fetch the same joinkey values' rows.
-func fetchSameKeyRows(rows [][]sqltypes.Value, joins []planner.JoinKey, index int) ([][]sqltypes.Value, int) {
+func fetchSameKeyRows(rows [][]sqltypes.Value, joins []builder.JoinKey, index int) ([][]sqltypes.Value, int) {
 	var chunk [][]sqltypes.Value
 	if index >= len(rows) {
 		return nil, index
@@ -122,7 +122,7 @@ func fetchSameKeyRows(rows [][]sqltypes.Value, joins []planner.JoinKey, index in
 	return chunk, index
 }
 
-func keysEqual(row1, row2 []sqltypes.Value, joins []planner.JoinKey) bool {
+func keysEqual(row1, row2 []sqltypes.Value, joins []builder.JoinKey) bool {
 	for _, join := range joins {
 		cmp := sqltypes.NullsafeCompare(row1[join.Index], row2[join.Index])
 		if cmp != 0 {
@@ -133,7 +133,7 @@ func keysEqual(row1, row2 []sqltypes.Value, joins []planner.JoinKey) bool {
 }
 
 // concatLeftAndRight used to concat thle left and right results, handle otherJoinOn|rightNull|OtherFilter.
-func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *planner.JoinNode, res *sqltypes.Result, maxrow int) error {
+func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *builder.JoinNode, res *sqltypes.Result, maxrow int) error {
 	var err error
 	var mu sync.Mutex
 	p := newCalcPool(joinWorkers)
@@ -247,7 +247,7 @@ func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *planner.JoinNode,
 	return err
 }
 
-func concatLeftAndNil(lrows [][]sqltypes.Value, node *planner.JoinNode, res *sqltypes.Result, maxrow int) error {
+func concatLeftAndNil(lrows [][]sqltypes.Value, node *builder.JoinNode, res *sqltypes.Result, maxrow int) error {
 	if node.IsLeftJoin && !node.HasRightFilter {
 		for _, row := range lrows {
 			res.Rows = append(res.Rows, joinRows(row, nil, node.Cols))

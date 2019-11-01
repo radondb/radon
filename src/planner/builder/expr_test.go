@@ -6,11 +6,12 @@
  *
  */
 
-package planner
+package builder
 
 import (
-	"router"
 	"testing"
+
+	"router"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -42,7 +43,7 @@ func TestGetDMLRouting(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		n := node.(*sqlparser.Select)
 		assert.Nil(t, err)
-		got, err := getDMLRouting(database, "B", "id", n.Where, route)
+		got, err := GetDMLRouting(database, "B", "id", n.Where, route)
 		assert.Nil(t, err)
 		assert.Equal(t, want[i], len(got))
 	}
@@ -610,7 +611,7 @@ func TestPushLimit(t *testing.T) {
 
 		err = p.pushLimit(sel)
 		assert.Nil(t, err)
-		assert.Equal(t, 1, len(p.Children().children))
+		assert.Equal(t, 1, len(p.Children()))
 	}
 }
 

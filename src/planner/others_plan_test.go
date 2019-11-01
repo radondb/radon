@@ -89,10 +89,21 @@ func TestOthersPlanChecksumTable(t *testing.T) {
 		}
 	]
 }`,
+		`{
+	"RawQuery": "checksum table G",
+	"Partitions": [
+		{
+			"Query": "checksum table G",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
 	}
 	querys := []string{
 		"checksum table A",
 		"checksum table sbtest.A",
+		"checksum table G",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -101,7 +112,7 @@ func TestOthersPlanChecksumTable(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig())
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 	planTree := NewPlanTree()
 	for i, query := range querys {
@@ -121,7 +132,6 @@ func TestOthersPlanChecksumTable(t *testing.T) {
 			want := results[i]
 			assert.Equal(t, want, got)
 			assert.Equal(t, PlanTypeOthers, plan.Type())
-			assert.Nil(t, plan.Children())
 		}
 	}
 }
