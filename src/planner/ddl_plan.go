@@ -248,11 +248,6 @@ func (p *DDLPlan) JSON() string {
 	return common.BytesToString(bout)
 }
 
-// Children returns the children of the plan.
-func (p *DDLPlan) Children() *PlanTree {
-	return nil
-}
-
 // Size returns the memory size.
 func (p *DDLPlan) Size() int {
 	size := len(p.RawQuery)

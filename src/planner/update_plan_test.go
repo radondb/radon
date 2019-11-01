@@ -106,7 +106,6 @@ func TestUpdatePlan(t *testing.T) {
 			want := results[i]
 			assert.Equal(t, want, got)
 			assert.Equal(t, PlanTypeUpdate, plan.Type())
-			assert.Nil(t, plan.Children())
 		}
 	}
 }

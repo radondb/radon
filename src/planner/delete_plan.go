@@ -11,6 +11,7 @@ package planner
 import (
 	"encoding/json"
 
+	"planner/builder"
 	"router"
 	"xcontext"
 
@@ -97,7 +98,7 @@ func (p *DeletePlan) Build() error {
 	}
 
 	// Get the routing segments info.
-	segments, err := getDMLRouting(database, table, shardkey, node.Where, p.router)
+	segments, err := builder.GetDMLRouting(database, table, shardkey, node.Where, p.router)
 	if err != nil {
 		return err
 	}
@@ -140,11 +141,6 @@ func (p *DeletePlan) JSON() string {
 		return err.Error()
 	}
 	return common.BytesToString(bout)
-}
-
-// Children returns the children of the plan.
-func (p *DeletePlan) Children() *PlanTree {
-	return nil
 }
 
 // Size returns the memory size.

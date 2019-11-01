@@ -134,11 +134,6 @@ func (p *OthersPlan) JSON() string {
 	return common.BytesToString(bout)
 }
 
-// Children returns the children of the plan.
-func (p *OthersPlan) Children() *PlanTree {
-	return nil
-}
-
 // Size returns the memory size.
 func (p *OthersPlan) Size() int {
 	return 0

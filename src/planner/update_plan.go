@@ -11,6 +11,7 @@ package planner
 import (
 	"encoding/json"
 
+	"planner/builder"
 	"router"
 	"xcontext"
 
@@ -24,7 +25,7 @@ var (
 	_ Plan = &UpdatePlan{}
 )
 
-// UpdatePlan represents delete plan
+// UpdatePlan represents update plan.
 type UpdatePlan struct {
 	log *xlog.Log
 
@@ -96,13 +97,13 @@ func (p *UpdatePlan) Build() error {
 		return err
 	}
 
-	// analyze shardkey changing.
-	if isShardKeyChanging(node.Exprs, shardkey) {
+	// analyze whether update shardkey.
+	if isUpdateShardKey(node.Exprs, shardkey) {
 		return errors.New("unsupported: cannot.update.shard.key")
 	}
 
 	// Get the routing segments info.
-	segments, err := getDMLRouting(database, table, shardkey, node.Where, p.router)
+	segments, err := builder.GetDMLRouting(database, table, shardkey, node.Where, p.router)
 	if err != nil {
 		return err
 	}
@@ -145,11 +146,6 @@ func (p *UpdatePlan) JSON() string {
 		return err.Error()
 	}
 	return common.BytesToString(bout)
-}
-
-// Children returns the children of the plan.
-func (p *UpdatePlan) Children() *PlanTree {
-	return nil
 }
 
 // Size returns the memory size.

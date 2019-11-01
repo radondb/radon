@@ -44,6 +44,8 @@ func TestPlanner(t *testing.T) {
 		assert.Nil(t, err)
 		planSize := planTree.Size()
 		log.Info("planSize: %v", planSize)
+		len := len(planTree.Plans())
+		assert.Equal(t, 64, len)
 	}
 }
 

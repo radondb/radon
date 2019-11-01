@@ -12,6 +12,7 @@ import (
 	"executor"
 	"optimizer"
 	"planner"
+	"planner/builder"
 	"xcontext"
 
 	"github.com/pkg/errors"
@@ -185,7 +186,7 @@ func (spanner *Spanner) ExecuteStreamFetch(session *driver.Session, database str
 	if err := plan.Build(); err != nil {
 		return err
 	}
-	m, ok := plan.Root.(*planner.MergeNode)
+	m, ok := plan.Root.(*builder.MergeNode)
 	if !ok {
 		return errors.New("ExecuteStreamFetch.unsupport.cross-shard.join")
 	}

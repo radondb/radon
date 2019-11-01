@@ -6,7 +6,7 @@
  *
  */
 
-package planner
+package builder
 
 import (
 	"fmt"
@@ -69,7 +69,7 @@ type JoinNode struct {
 	// parent node in the plan tree.
 	parent SelectNode
 	// children plans in select(such as: orderby, limit..).
-	children *PlanTree
+	children []ChildPlan
 	// Cols defines which columns from left or right results used to build the return result.
 	// For results coming from left, the values go as -1, -2, etc. For right, they're 1, 2, etc.
 	// If Cols is {-1, -2, 1, 2}, it means the returned result is {Left0, Left1, Right0, Right1}.
@@ -131,7 +131,6 @@ func newJoinNode(log *xlog.Log, Left, Right SelectNode, router *router.Router, j
 		Vars:        make(map[string]int),
 		referTables: referTables,
 		IsLeftJoin:  isLeftJoin,
-		children:    NewPlanTree(),
 	}
 }
 
@@ -512,7 +511,7 @@ func (j *JoinNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.
 		if err := aggrPlan.Build(); err != nil {
 			return err
 		}
-		j.children.Add(aggrPlan)
+		j.children = append(j.children, aggrPlan)
 		fields = aggrPlan.tuples
 	}
 	for _, tuple := range fields {
@@ -849,7 +848,7 @@ func (j *JoinNode) pushOrderBy(sel sqlparser.SelectStatement) error {
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}
-		j.children.Add(orderPlan)
+		j.children = append(j.children, orderPlan)
 	}
 
 	return nil
@@ -858,11 +857,8 @@ func (j *JoinNode) pushOrderBy(sel sqlparser.SelectStatement) error {
 // pushLimit used to push limit.
 func (j *JoinNode) pushLimit(sel sqlparser.SelectStatement) error {
 	limitPlan := NewLimitPlan(j.log, sel.(*sqlparser.Select).Limit)
-	if err := limitPlan.Build(); err != nil {
-		return err
-	}
-	j.children.Add(limitPlan)
-	return nil
+	j.children = append(j.children, limitPlan)
+	return limitPlan.Build()
 }
 
 // pushMisc used tp push miscelleaneous constructs.
@@ -878,7 +874,7 @@ func (j *JoinNode) pushMisc(sel *sqlparser.Select) {
 }
 
 // Children returns the children of the plan.
-func (j *JoinNode) Children() *PlanTree {
+func (j *JoinNode) Children() []ChildPlan {
 	return j.children
 }
 

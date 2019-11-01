@@ -11,7 +11,7 @@ package operator
 import (
 	"sort"
 
-	"planner"
+	"planner/builder"
 	"xcontext"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
@@ -26,11 +26,11 @@ var (
 // Including: COUNT/MAX/MIN/SUM/AVG/GROUPBY.
 type AggregateOperator struct {
 	log  *xlog.Log
-	plan planner.Plan
+	plan builder.ChildPlan
 }
 
 // NewAggregateOperator creates new AggregateOperator.
-func NewAggregateOperator(log *xlog.Log, plan planner.Plan) *AggregateOperator {
+func NewAggregateOperator(log *xlog.Log, plan builder.ChildPlan) *AggregateOperator {
 	return &AggregateOperator{
 		log:  log,
 		plan: plan,
@@ -52,7 +52,7 @@ func (operator *AggregateOperator) Execute(ctx *xcontext.ResultContext) error {
 //     select b from tb group by b.          √
 func (operator *AggregateOperator) aggregate(result *sqltypes.Result) {
 	var deIdxs []int
-	plan := operator.plan.(*planner.AggregatePlan)
+	plan := operator.plan.(*builder.AggregatePlan)
 	if plan.Empty() {
 		return
 	}
@@ -124,7 +124,7 @@ func (operator *AggregateOperator) aggregate(result *sqltypes.Result) {
 	result.RemoveColumns(deIdxs...)
 }
 
-func keysEqual(row1, row2 []sqltypes.Value, groups []planner.Aggregator) bool {
+func keysEqual(row1, row2 []sqltypes.Value, groups []builder.Aggregator) bool {
 	for _, v := range groups {
 		cmp := sqltypes.NullsafeCompare(row1[v.Index], row2[v.Index])
 		if cmp != 0 {

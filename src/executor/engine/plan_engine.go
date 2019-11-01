@@ -10,7 +10,7 @@ package engine
 
 import (
 	"backend"
-	"planner"
+	"planner/builder"
 	"xcontext"
 
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
@@ -25,17 +25,17 @@ type PlanEngine interface {
 }
 
 // BuildEngine used to build the executor tree.
-func BuildEngine(log *xlog.Log, plan planner.PlanNode, txn backend.Transaction) PlanEngine {
+func BuildEngine(log *xlog.Log, plan builder.PlanNode, txn backend.Transaction) PlanEngine {
 	var engine PlanEngine
 	switch node := plan.(type) {
-	case *planner.MergeNode:
+	case *builder.MergeNode:
 		engine = NewMergeEngine(log, node, txn)
-	case *planner.JoinNode:
+	case *builder.JoinNode:
 		joinEngine := NewJoinEngine(log, node, txn)
 		joinEngine.left = BuildEngine(log, node.Left, txn)
 		joinEngine.right = BuildEngine(log, node.Right, txn)
 		engine = joinEngine
-	case *planner.UnionNode:
+	case *builder.UnionNode:
 		unionEngine := NewUnionEngine(log, node, txn)
 		unionEngine.left = BuildEngine(log, node.Left, txn)
 		unionEngine.right = BuildEngine(log, node.Right, txn)

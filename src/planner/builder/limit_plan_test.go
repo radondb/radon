@@ -6,7 +6,7 @@
  *
  */
 
-package planner
+package builder
 
 import (
 	"testing"
@@ -51,8 +51,8 @@ func TestLimitPlan(t *testing.T) {
 			want := results[i]
 			got := plan.JSON()
 			assert.Equal(t, want, got)
-			assert.True(t, nil == plan.Children())
-			assert.Equal(t, PlanTypeLimit, plan.Type())
+
+			assert.Equal(t, ChildTypeLimit, plan.Type())
 		}
 	}
 }
