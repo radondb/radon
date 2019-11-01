@@ -11,7 +11,7 @@ package engine
 import (
 	"backend"
 	"executor/engine/operator"
-	"planner"
+	"planner/builder"
 	"xcontext"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -26,12 +26,12 @@ var (
 // MergeEngine represents merge executor.
 type MergeEngine struct {
 	log  *xlog.Log
-	node *planner.MergeNode
+	node *builder.MergeNode
 	txn  backend.Transaction
 }
 
 // NewMergeEngine creates the new merge executor.
-func NewMergeEngine(log *xlog.Log, node *planner.MergeNode, txn backend.Transaction) *MergeEngine {
+func NewMergeEngine(log *xlog.Log, node *builder.MergeNode, txn backend.Transaction) *MergeEngine {
 	return &MergeEngine{
 		log:  log,
 		node: node,

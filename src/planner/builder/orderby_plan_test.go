@@ -6,11 +6,12 @@
  *
  */
 
-package planner
+package builder
 
 import (
-	"router"
 	"testing"
+
+	"router"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -50,7 +51,7 @@ func TestOrderByPlan(t *testing.T) {
 		{
 			err := plan.Build()
 			assert.Nil(t, err)
-			log.Debug("%v,%v,%s", plan.Type(), plan.Children(), plan.JSON())
+			log.Debug("%v,%s", plan.Type(), plan.JSON())
 		}
 		log.Debug("\n")
 	}

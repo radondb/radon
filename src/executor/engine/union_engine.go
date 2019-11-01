@@ -14,7 +14,7 @@ import (
 
 	"backend"
 	"executor/engine/operator"
-	"planner"
+	"planner/builder"
 	"xcontext"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
@@ -30,13 +30,13 @@ var (
 // UnionEngine represents merge executor.
 type UnionEngine struct {
 	log         *xlog.Log
-	node        *planner.UnionNode
+	node        *builder.UnionNode
 	left, right PlanEngine
 	txn         backend.Transaction
 }
 
 // NewUnionEngine creates the new union executor.
-func NewUnionEngine(log *xlog.Log, node *planner.UnionNode, txn backend.Transaction) *UnionEngine {
+func NewUnionEngine(log *xlog.Log, node *builder.UnionNode, txn backend.Transaction) *UnionEngine {
 	return &UnionEngine{
 		log:  log,
 		node: node,

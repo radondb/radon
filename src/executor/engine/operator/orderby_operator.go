@@ -11,7 +11,7 @@ package operator
 import (
 	"sort"
 
-	"planner"
+	"planner/builder"
 	"xcontext"
 
 	"github.com/pkg/errors"
@@ -26,11 +26,11 @@ var (
 // OrderByOperator represents order by operator.
 type OrderByOperator struct {
 	log  *xlog.Log
-	plan planner.Plan
+	plan builder.ChildPlan
 }
 
 // NewOrderByOperator creates new orderby operator.
-func NewOrderByOperator(log *xlog.Log, plan planner.Plan) *OrderByOperator {
+func NewOrderByOperator(log *xlog.Log, plan builder.ChildPlan) *OrderByOperator {
 	return &OrderByOperator{
 		log:  log,
 		plan: plan,
@@ -41,7 +41,7 @@ func NewOrderByOperator(log *xlog.Log, plan planner.Plan) *OrderByOperator {
 func (operator *OrderByOperator) Execute(ctx *xcontext.ResultContext) error {
 	var err error
 	rs := ctx.Results
-	plan := operator.plan.(*planner.OrderByPlan)
+	plan := operator.plan.(*builder.OrderByPlan)
 
 	sort.Slice(rs.Rows, func(i, j int) bool {
 		// If there are any errors below, the function sets
@@ -70,7 +70,7 @@ func (operator *OrderByOperator) Execute(ctx *xcontext.ResultContext) error {
 			if cmp == 0 {
 				continue
 			}
-			if orderby.Direction == planner.DESC {
+			if orderby.Direction == builder.DESC {
 				cmp = -cmp
 			}
 			return cmp < 0

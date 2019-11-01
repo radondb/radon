@@ -6,7 +6,7 @@
  *
  */
 
-package planner
+package builder
 
 import (
 	"config"

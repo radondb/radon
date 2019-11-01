@@ -13,7 +13,7 @@ import (
 
 	"backend"
 	"executor/engine/operator"
-	"planner"
+	"planner/builder"
 	"xcontext"
 
 	"github.com/pkg/errors"
@@ -29,13 +29,13 @@ var (
 // JoinEngine represents join executor.
 type JoinEngine struct {
 	log         *xlog.Log
-	node        *planner.JoinNode
+	node        *builder.JoinNode
 	left, right PlanEngine
 	txn         backend.Transaction
 }
 
 // NewJoinEngine creates the new join executor.
-func NewJoinEngine(log *xlog.Log, node *planner.JoinNode, txn backend.Transaction) *JoinEngine {
+func NewJoinEngine(log *xlog.Log, node *builder.JoinNode, txn backend.Transaction) *JoinEngine {
 	return &JoinEngine{
 		log:  log,
 		node: node,
@@ -58,7 +58,7 @@ func (j *JoinEngine) Execute(ctx *xcontext.ResultContext) error {
 	}
 
 	maxrow := j.txn.MaxJoinRows()
-	if j.node.Strategy == planner.NestLoop {
+	if j.node.Strategy == builder.NestLoop {
 		joinVars := make(map[string]*querypb.BindVariable)
 		if err := j.execBindVars(ctx, joinVars, true); err != nil {
 			return err
@@ -86,9 +86,9 @@ func (j *JoinEngine) Execute(ctx *xcontext.ResultContext) error {
 			err = concatLeftAndNil(lctx.Results.Rows, j.node, ctx.Results, maxrow)
 		} else {
 			switch j.node.Strategy {
-			case planner.SortMerge:
+			case builder.SortMerge:
 				err = sortMergeJoin(lctx.Results, rctx.Results, ctx.Results, j.node, maxrow)
-			case planner.Cartesian:
+			case builder.Cartesian:
 				err = cartesianProduct(lctx.Results, rctx.Results, ctx.Results, j.node, maxrow)
 			}
 		}
@@ -236,7 +236,7 @@ func combineVars(bv1, bv2 map[string]*querypb.BindVariable) map[string]*querypb.
 }
 
 // cartesianProduct used to produce cartesian product.
-func cartesianProduct(lres, rres, res *sqltypes.Result, node *planner.JoinNode, maxrow int) error {
+func cartesianProduct(lres, rres, res *sqltypes.Result, node *builder.JoinNode, maxrow int) error {
 	res.Rows = make([][]sqltypes.Value, 0, len(lres.Rows)*len(rres.Rows))
 	for _, lrow := range lres.Rows {
 		for _, rrow := range rres.Rows {

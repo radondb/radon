@@ -6,14 +6,15 @@
  *
  */
 
-package planner
+package builder
 
 import (
 	"fmt"
 	"reflect"
-	"router"
 	"strconv"
 	"testing"
+
+	"router"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -596,43 +597,6 @@ func TestSQLSelectRewritten(t *testing.T) {
 		buf := sqlparser.NewTrackedBuffer(nil)
 		rewritten.Format(buf)
 		log.Debug("--newquery:%s", buf.String())
-	}
-}
-
-func TestSQLSelectJoin(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-
-	querys := []string{
-		"select a,b,c from t",
-		"select a,b,c from t where b=c",
-		"select a.id from a,b where a.id=b.id",
-		"select u1.id, u2.id from user u1 left join user u2 on u2.id = u1.col where u1.id = 1",
-		"select 1 from t1 right outer join t2 on a = b",
-	}
-
-	for _, query := range querys {
-		log.Debug("query:%s", query)
-		sel, err := sqlparser.Parse(query)
-		assert.Nil(t, err)
-		node := sel.(*sqlparser.Select)
-		for _, tab := range node.From {
-			switch tab.(type) {
-			case *sqlparser.AliasedTableExpr:
-				if len(node.From) > 1 && node.Where != nil {
-					if err := checkComparison(node.Where.Expr); err != nil {
-						log.Error("error:%+v", err)
-					}
-				}
-			case *sqlparser.ParenTableExpr:
-				log.Debug("ParenTableExpr %+v", tab)
-			case *sqlparser.JoinTableExpr:
-				ajoin := tab.(*sqlparser.JoinTableExpr)
-				if err := checkComparison(ajoin.On); err != nil {
-					log.Error("error:%+v", err)
-				}
-			}
-		}
-		log.Debug("\n")
 	}
 }
 

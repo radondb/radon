@@ -6,7 +6,7 @@
  *
  */
 
-package planner
+package builder
 
 import (
 	"math/rand"
@@ -41,7 +41,7 @@ type MergeNode struct {
 	// parent node in the plan tree.
 	parent SelectNode
 	// children plans in select(such as: orderby, limit..).
-	children *PlanTree
+	children []ChildPlan
 	// query and backend tuple
 	Querys []xcontext.QueryTuple
 	// querys with bind locations.
@@ -64,7 +64,6 @@ func newMergeNode(log *xlog.Log, router *router.Router) *MergeNode {
 		router:      router,
 		referTables: make(map[string]*tableInfo),
 		filters:     make(map[sqlparser.Expr]int),
-		children:    NewPlanTree(),
 		ReqMode:     xcontext.ReqNormal,
 	}
 }
@@ -205,7 +204,7 @@ func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser
 				if err := orderPlan.Build(); err != nil {
 					return err
 				}
-				m.children.Add(orderPlan)
+				m.children = append(m.children, orderPlan)
 			}
 			return nil
 		}
@@ -216,7 +215,7 @@ func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser
 		if err := aggrPlan.Build(); err != nil {
 			return err
 		}
-		m.children.Add(aggrPlan)
+		m.children = append(m.children, aggrPlan)
 		node.SelectExprs = aggrPlan.ReWritten()
 	}
 	return nil
@@ -247,7 +246,7 @@ func (m *MergeNode) pushOrderBy(sel sqlparser.SelectStatement) error {
 		if err := orderPlan.Build(); err != nil {
 			return err
 		}
-		m.children.Add(orderPlan)
+		m.children = append(m.children, orderPlan)
 	}
 	return nil
 }
@@ -258,7 +257,7 @@ func (m *MergeNode) pushLimit(sel sqlparser.SelectStatement) error {
 	if err := limitPlan.Build(); err != nil {
 		return err
 	}
-	m.children.Add(limitPlan)
+	m.children = append(m.children, limitPlan)
 	if len(m.Sel.(*sqlparser.Select).GroupBy) == 0 {
 		// Rewrite the limit clause.
 		m.Sel.SetLimit(limitPlan.ReWritten())
@@ -274,7 +273,7 @@ func (m *MergeNode) pushMisc(sel *sqlparser.Select) {
 }
 
 // Children returns the children of the plan.
-func (m *MergeNode) Children() *PlanTree {
+func (m *MergeNode) Children() []ChildPlan {
 	return m.children
 }
 

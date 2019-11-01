@@ -10,13 +10,13 @@ package planner
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"strings"
 
+	"planner/builder"
 	"router"
 	"xcontext"
 
-	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/xlog"
@@ -45,7 +45,7 @@ type SelectPlan struct {
 	// type
 	typ PlanType
 
-	Root SelectNode
+	Root builder.PlanNode
 }
 
 // NewSelectPlan used to create SelectPlan.
@@ -60,102 +60,16 @@ func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser
 	}
 }
 
-// analyze used to check the 'select' is at the support level, and get the db, table, etc..
-// Unsupports:
-// 1. subquery.
-func (p *SelectPlan) analyze() error {
-	var err error
-	log := p.log
-	node := p.node
-
-	// Check subquery.
-	if hasSubquery(node) {
-		return errors.New("unsupported: subqueries.in.select")
-	}
-
-	if p.Root, err = scanTableExprs(log, p.router, p.database, node.From); err != nil {
-		return err
-	}
-
-	tbInfos := p.Root.getReferTables()
-	if node.Where != nil {
-		joins, filters, err := parserWhereOrJoinExprs(node.Where.Expr, tbInfos)
-		if err != nil {
-			return err
-		}
-		if err = p.Root.pushFilter(filters); err != nil {
-			return err
-		}
-		p.Root = p.Root.pushEqualCmpr(joins)
-	}
-	if p.Root, err = p.Root.calcRoute(); err != nil {
-		return err
-	}
-
-	mn, ok := p.Root.(*MergeNode)
-	if ok && mn.routeLen == 1 {
-		sel := mn.Sel.(*sqlparser.Select)
-		node.From = sel.From
-		node.Where = sel.Where
-		if err = checkTbName(tbInfos, node); err != nil {
-			return err
-		}
-		mn.Sel = node
-		return nil
-	}
-
-	p.Root.pushMisc(node)
-
-	var groups []selectTuple
-	fields, aggTyp, err := parserSelectExprs(node.SelectExprs, p.Root)
-	if err != nil {
-		return err
-	}
-
-	if groups, err = checkGroupBy(node.GroupBy, fields, p.router, tbInfos, ok); err != nil {
-		return err
-	}
-
-	if groups, err = checkDistinct(node, groups, fields, p.router, tbInfos, ok); err != nil {
-		return err
-	}
-
-	if err = p.Root.pushSelectExprs(fields, groups, node, aggTyp); err != nil {
-		return err
-	}
-
-	if node.Having != nil {
-		havings, err := parserHaving(node.Having.Expr, tbInfos)
-		if err != nil {
-			return err
-		}
-		if err = p.Root.pushHaving(havings); err != nil {
-			return err
-		}
-	}
-
-	if err = p.Root.pushOrderBy(node); err != nil {
-		return err
-	}
-	// Limit SubPlan.
-	if node.Limit != nil {
-		if err = p.Root.pushLimit(node); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Build used to build distributed querys.
 // For now, we don't support subquery in select.
 func (p *SelectPlan) Build() error {
+	var err error
 	// Check subquery.
-	if err := p.analyze(); err != nil {
-		return err
+	if hasSubquery(p.node) {
+		return errors.New("unsupported: subqueries.in.select")
 	}
-
-	p.Root.buildQuery(p.Root.getReferTables())
-	return nil
+	p.Root, err = builder.BuildNode(p.log, p.router, p.database, p.node)
+	return err
 }
 
 // Type returns the type of the plan.
@@ -186,33 +100,21 @@ func (p *SelectPlan) JSON() string {
 		Limit       *limit                `json:",omitempty"`
 	}
 
-	// Project.
-	var prefix, project string
-	tuples := p.Root.getFields()
-	for _, tuple := range tuples {
-		field := tuple.field
-		if tuple.alias != "" {
-			field = tuple.alias
-		}
-		project = fmt.Sprintf("%s%s%s", project, prefix, field)
-		prefix = ", "
-	}
-
 	var joins *join
-	if j, ok := p.Root.(*JoinNode); ok {
+	if j, ok := p.Root.(*builder.JoinNode); ok {
 		joins = &join{}
 		switch j.Strategy {
-		case Cartesian:
+		case builder.Cartesian:
 			joins.Strategy = "Cartesian Join"
-		case SortMerge:
+		case builder.SortMerge:
 			joins.Strategy = "Sort Merge Join"
-		case NestLoop:
+		case builder.NestLoop:
 			joins.Strategy = "Nested Loop Join"
 		}
 		if j.IsLeftJoin {
 			joins.Type = "LEFT JOIN"
 		} else {
-			if j.Strategy == Cartesian {
+			if j.Strategy == builder.Cartesian {
 				joins.Type = "CROSS JOIN"
 			} else {
 				joins.Type = "INNER JOIN"
@@ -225,18 +127,18 @@ func (p *SelectPlan) JSON() string {
 	var hashGroup []string
 	var gatherMerge []string
 	var lim *limit
-	for _, sub := range p.Root.Children().Plans() {
+	for _, sub := range p.Root.Children() {
 		switch sub.Type() {
-		case PlanTypeAggregate:
-			plan := sub.(*AggregatePlan)
-			for _, aggr := range plan.normalAggrs {
+		case builder.ChildTypeAggregate:
+			plan := sub.(*builder.AggregatePlan)
+			for _, aggr := range plan.NormalAggregators() {
 				aggregate = append(aggregate, aggr.Field)
 			}
-			for _, aggr := range plan.groupAggrs {
+			for _, aggr := range plan.GroupAggregators() {
 				hashGroup = append(hashGroup, aggr.Field)
 			}
-		case PlanTypeOrderby:
-			plan := sub.(*OrderByPlan)
+		case builder.ChildTypeOrderby:
+			plan := sub.(*builder.OrderByPlan)
 			for _, order := range plan.OrderBys {
 				field := order.Field
 				if order.Table != "" {
@@ -244,13 +146,13 @@ func (p *SelectPlan) JSON() string {
 				}
 				gatherMerge = append(gatherMerge, field)
 			}
-		case PlanTypeLimit:
-			plan := sub.(*LimitPlan)
+		case builder.ChildTypeLimit:
+			plan := sub.(*builder.LimitPlan)
 			lim = &limit{Offset: plan.Offset, Limit: plan.Limit}
 		}
 	}
 
-	exp := &explain{Project: project,
+	exp := &explain{Project: builder.GetProject(p.Root),
 		RawQuery:    p.RawQuery,
 		Partitions:  p.Root.GetQuery(),
 		Join:        joins,
@@ -264,11 +166,6 @@ func (p *SelectPlan) JSON() string {
 		return err.Error()
 	}
 	return common.BytesToString(bout)
-}
-
-// Children returns the children of the plan.
-func (p *SelectPlan) Children() *PlanTree {
-	return p.Root.Children()
 }
 
 // Size returns the memory size.
