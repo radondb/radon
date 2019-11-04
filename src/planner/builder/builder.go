@@ -93,7 +93,7 @@ func processSelect(log *xlog.Log, router *router.Router, database string, node *
 	}
 
 	if node.Having != nil {
-		havings, err := parserHaving(node.Having.Expr, tbInfos)
+		havings, err := parserHaving(node.Having.Expr, tbInfos, root.getFields())
 		if err != nil {
 			return nil, err
 		}

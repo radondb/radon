@@ -9,6 +9,7 @@
 package builder
 
 import (
+	"fmt"
 	"router"
 
 	"github.com/pkg/errors"
@@ -295,34 +296,40 @@ func checkJoinOn(lpn, rpn PlanNode, join exprInfo) (exprInfo, error) {
 }
 
 // parserHaving used to check the having exprs and parser into tuples.
-// unsupport: `select t2.id as tmp, t1.id from t2,t1 having tmp=1`.
-func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]exprInfo, error) {
+// unsupport: `select sum(t2.id) as tmp, t1.id from t2,t1 having tmp=1`.
+func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo, fields []selectTuple) ([]exprInfo, error) {
 	filters := splitAndExpression(nil, exprs)
 	var tuples []exprInfo
 
 	for _, filter := range filters {
 		filter = skipParenthesis(filter)
-		referTables := make([]string, 0, 4)
+		tuple := exprInfo{filter, nil, nil, nil}
 		err := sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
 			switch node := node.(type) {
 			case *sqlparser.ColName:
+				tuple.cols = append(tuple.cols, node)
 				tableName := node.Qualifier.Name.String()
-				if tableName == "" {
-					if len(tbInfos) == 1 {
-						tableName, _ = getOneTableInfo(tbInfos)
-					} else {
-						return false, errors.Errorf("unsupported: unknown.column.'%s'.in.having.clause", node.Name.String())
+				colName := node.Name.String()
+				inField, field := checkInTuple(colName, tableName, fields)
+				if !inField {
+					col := colName
+					if tableName != "" {
+						col = fmt.Sprintf("%s.%s", tableName, colName)
 					}
-				} else {
-					if _, ok := tbInfos[tableName]; !ok {
-						return false, errors.Errorf("unsupported: unknown.table.'%s'.in.having.clause", tableName)
-					}
+					return false, errors.Errorf("unsupported: unknown.column.'%s'.in.having.clause", col)
+				}
+				if field.aggrFuc != "" {
+					return false, errors.Errorf("unsupported: aggregation.in.having.clause")
 				}
 
-				if isContainKey(tableName, referTables) {
-					return true, nil
+				for _, tb := range field.info.referTables {
+					if isContainKey(tb, tuple.referTables) {
+						continue
+					}
+					tuple.referTables = append(tuple.referTables, tb)
 				}
-				referTables = append(referTables, tableName)
+
+				return true, nil
 			case *sqlparser.FuncExpr:
 				if node.IsAggregate() {
 					buf := sqlparser.NewTrackedBuffer(nil)
@@ -336,7 +343,6 @@ func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]exprIn
 			return nil, err
 		}
 
-		tuple := exprInfo{filter, referTables, nil, nil}
 		tuples = append(tuples, tuple)
 	}
 

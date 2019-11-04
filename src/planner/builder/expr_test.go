@@ -433,9 +433,10 @@ func TestSelectExprsError(t *testing.T) {
 func TestParserHaving(t *testing.T) {
 	querys := []string{
 		"select * from A where A.id=1 having concat(str1,str2) = 'sansi'",
-		"select * from G, A where G.id=A.id having A.id=1",
-		"select * from A, B where A.id=B.id having A.a=1 and 1=1",
-		"select * from A,G,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
+		"select A.id from G, A where G.id=A.id having A.id=1",
+		"select A.a from A, B where A.id=B.id having A.a=1 and 1=1",
+		"select G.id, B.id, B.a from A,G,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
+		"select A.a from A,B where A.id=1 having a>1",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
@@ -454,7 +455,13 @@ func TestParserHaving(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		havings, err := parserHaving(sel.Having.Expr, p.getReferTables())
+		fields, aggTyp, err := parserSelectExprs(sel.SelectExprs, p)
+		assert.Nil(t, err)
+
+		err = p.pushSelectExprs(fields, nil, sel, aggTyp)
+		assert.Nil(t, err)
+
+		havings, err := parserHaving(sel.Having.Expr, p.getReferTables(), p.getFields())
 		assert.Nil(t, err)
 
 		err = p.pushHaving(havings)
@@ -464,16 +471,14 @@ func TestParserHaving(t *testing.T) {
 
 func TestParserHavingError(t *testing.T) {
 	querys := []string{
-		"select * from G,A,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
-		"select * from A,B where A.id=1 having sum(B.id)>10",
-		"select * from A,B where A.id=1 having a>1",
-		"select * from A,B where A.id=1 having C.a>1",
+		"select G.id, B.id, B.a from G,A,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
+		"select B.id from A,B where A.id=1 having sum(B.id)>10",
+		"select A.a from A,B where A.id=1 having C.a>1",
 	}
 	wants := []string{
 		"unsupported: havings.'G.id = B.id'.in.cross-shard.join",
 		"unsupported: expr[sum(B.id)].in.having.clause",
-		"unsupported: unknown.column.'a'.in.having.clause",
-		"unsupported: unknown.table.'C'.in.having.clause",
+		"unsupported: unknown.column.'C.a'.in.having.clause",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
@@ -492,7 +497,13 @@ func TestParserHavingError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		havings, err := parserHaving(sel.Having.Expr, p.getReferTables())
+		fields, aggTyp, err := parserSelectExprs(sel.SelectExprs, p)
+		assert.Nil(t, err)
+
+		err = p.pushSelectExprs(fields, nil, sel, aggTyp)
+		assert.Nil(t, err)
+
+		havings, err := parserHaving(sel.Having.Expr, p.getReferTables(), p.getFields())
 		if err != nil {
 			got := err.Error()
 			assert.Equal(t, wants[i], got)

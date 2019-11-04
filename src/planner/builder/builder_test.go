@@ -61,36 +61,36 @@ func TestProcessSelect(t *testing.T) {
 				}},
 		},
 		{
-			query:   "select id, sum(a) as A from A group by id having A>1000",
+			query:   "select id, sum(a) as A from A group by id having id>1000",
 			project: "id, A",
 			out: []xcontext.QueryTuple{
 				{
-					Query:   "select id, sum(a) as A from sbtest.A1 as A group by id having A > 1000 order by id asc",
+					Query:   "select id, sum(a) as A from sbtest.A1 as A group by id having id > 1000 order by id asc",
 					Backend: "backend1",
 					Range:   "[0-32)",
 				},
 				{
-					Query:   "select id, sum(a) as A from sbtest.A2 as A group by id having A > 1000 order by id asc",
+					Query:   "select id, sum(a) as A from sbtest.A2 as A group by id having id > 1000 order by id asc",
 					Backend: "backend2",
 					Range:   "[32-64)",
 				},
 				{
-					Query:   "select id, sum(a) as A from sbtest.A3 as A group by id having A > 1000 order by id asc",
+					Query:   "select id, sum(a) as A from sbtest.A3 as A group by id having id > 1000 order by id asc",
 					Backend: "backend3",
 					Range:   "[64-96)",
 				},
 				{
-					Query:   "select id, sum(a) as A from sbtest.A4 as A group by id having A > 1000 order by id asc",
+					Query:   "select id, sum(a) as A from sbtest.A4 as A group by id having id > 1000 order by id asc",
 					Backend: "backend4",
 					Range:   "[96-256)",
 				},
 				{
-					Query:   "select id, sum(a) as A from sbtest.A5 as A group by id having A > 1000 order by id asc",
+					Query:   "select id, sum(a) as A from sbtest.A5 as A group by id having id > 1000 order by id asc",
 					Backend: "backend5",
 					Range:   "[256-512)",
 				},
 				{
-					Query:   "select id, sum(a) as A from sbtest.A6 as A group by id having A > 1000 order by id asc",
+					Query:   "select id, sum(a) as A from sbtest.A6 as A group by id having id > 1000 order by id asc",
 					Backend: "backend6",
 					Range:   "[512-4096)",
 				}},
@@ -409,35 +409,35 @@ func TestSelectDatabaseIsNull(t *testing.T) {
 				}},
 		},
 		{
-			query: "select id, sum(a) as A from sbtest.A group by id having A>1000",
+			query: "select id, sum(a) as A from sbtest.A group by id having id>1000",
 			out: []xcontext.QueryTuple{
 				{
-					Query:   "select id, sum(a) as A from sbtest.A1 as A group by id having A > 1000 order by id asc",
+					Query:   "select id, sum(a) as A from sbtest.A1 as A group by id having id > 1000 order by id asc",
 					Backend: "backend1",
 					Range:   "[0-32)",
 				},
 				{
-					Query:   "select id, sum(a) as A from sbtest.A2 as A group by id having A > 1000 order by id asc",
+					Query:   "select id, sum(a) as A from sbtest.A2 as A group by id having id > 1000 order by id asc",
 					Backend: "backend2",
 					Range:   "[32-64)",
 				},
 				{
-					Query:   "select id, sum(a) as A from sbtest.A3 as A group by id having A > 1000 order by id asc",
+					Query:   "select id, sum(a) as A from sbtest.A3 as A group by id having id > 1000 order by id asc",
 					Backend: "backend3",
 					Range:   "[64-96)",
 				},
 				{
-					Query:   "select id, sum(a) as A from sbtest.A4 as A group by id having A > 1000 order by id asc",
+					Query:   "select id, sum(a) as A from sbtest.A4 as A group by id having id > 1000 order by id asc",
 					Backend: "backend4",
 					Range:   "[96-256)",
 				},
 				{
-					Query:   "select id, sum(a) as A from sbtest.A5 as A group by id having A > 1000 order by id asc",
+					Query:   "select id, sum(a) as A from sbtest.A5 as A group by id having id > 1000 order by id asc",
 					Backend: "backend5",
 					Range:   "[256-512)",
 				},
 				{
-					Query:   "select id, sum(a) as A from sbtest.A6 as A group by id having A > 1000 order by id asc",
+					Query:   "select id, sum(a) as A from sbtest.A6 as A group by id having id > 1000 order by id asc",
 					Backend: "backend6",
 					Range:   "[512-4096)",
 				}},
@@ -499,7 +499,7 @@ func TestSelectUnsupported(t *testing.T) {
 		"select A.id from A join B on A.id = B.id join G on A.id+B.id<=G.id",
 		"select A.id from G join (A,B) on A.id+B.id<=G.id",
 		"select A.id from G join (A,B) on G.id<=A.id+B.id",
-		"select A.id as tmp, B.id from A,B having tmp=1",
+		"select sum(A.id) as tmp, B.id from A,B having tmp=1",
 		"select COALESCE(B.b, ''), IF(B.b IS NULL, FALSE, TRUE) AS spent from A left join B on A.a=B.a",
 		"select A.a as b from A order by A.b",
 		"select a+1 from A order by a+1",
@@ -537,7 +537,7 @@ func TestSelectUnsupported(t *testing.T) {
 		"unsupported: expr.'A.id + B.id'.in.cross-shard.join",
 		"unsupported: expr.'A.id + B.id'.in.cross-shard.join",
 		"unsupported: expr.'A.id + B.id'.in.cross-shard.join",
-		"unsupported: unknown.column.'tmp'.in.having.clause",
+		"unsupported: aggregation.in.having.clause",
 		"unsupported: expr.'COALESCE(B.b, '')'.in.cross-shard.left.join",
 		"unsupported: orderby[A.b].should.in.select.list",
 		"unsupported: orderby:[a + 1].type.should.be.colname",
@@ -573,7 +573,7 @@ func TestSelectUnsupported(t *testing.T) {
 
 func TestSelectSupported(t *testing.T) {
 	querys := []string{
-		"select id,rand(id) from A",
+		"select id,rand(id),str1,str2 from A having concat(str1,str2) is null",
 		"select now() as time, count(1), avg(id), sum(b) from A",
 		"select avg(id + 1) from A",
 		"select concat(str1,str2) from A",
@@ -594,7 +594,7 @@ func TestSelectSupported(t *testing.T) {
 		"select /*+nested+*/ A.id from G join (A,B) on A.id+B.id<=G.id",
 		"select /*+nested+*/ A.id from G join (A,B) on G.id<=A.id+B.id",
 		"select /*+nested+*/ sum(A.id) from A join B on A.id=B.id",
-		"select /*+nested+*/ A.id from G,A,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
+		"select /*+nested+*/ B.id,G.id,B.a from G,A,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
 		"select COALESCE(A.b, ''), IF(A.b IS NULL, FALSE, TRUE) AS spent from A left join B on A.a=B.a",
 		"select COALESCE(B.b, ''), IF(B.b IS NULL, FALSE, TRUE) AS spent from A join B on A.a=B.a",
 		"select A.id from A left join B on B.id+1=A.id where B.str1+B.str2 is null",
