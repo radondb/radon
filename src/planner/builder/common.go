@@ -44,6 +44,15 @@ func checkTbInNode(referTables []string, tbInfos map[string]*tableInfo) bool {
 	return true
 }
 
+func isContainKey(a string, b []string) bool {
+	for _, c := range b {
+		if c == a {
+			return true
+		}
+	}
+	return false
+}
+
 // getIndex used to get index from router.
 func getIndex(router *router.Router, tbInfo *tableInfo, val *sqlparser.SQLVal) error {
 	idx, err := router.GetIndex(tbInfo.database, tbInfo.tableName, val)
@@ -95,7 +104,7 @@ func procure(tbInfos map[string]*tableInfo, col *sqlparser.ColName) string {
 	index := -1
 	for i, tuple := range tuples {
 		if tuple.isCol {
-			if field == tuple.field && table == tuple.referTables[0] {
+			if field == tuple.field && table == tuple.info.referTables[0] {
 				index = i
 				break
 			}
@@ -104,9 +113,10 @@ func procure(tbInfos map[string]*tableInfo, col *sqlparser.ColName) string {
 	// key not in the select fields.
 	if index == -1 {
 		tuple := selectTuple{
-			expr:        &sqlparser.AliasedExpr{Expr: col},
-			field:       field,
-			referTables: []string{table},
+			expr:  &sqlparser.AliasedExpr{Expr: col},
+			info:  exprInfo{col, []string{table}, []*sqlparser.ColName{col}, nil},
+			field: field,
+			isCol: true,
 		}
 		index, _ = node.pushSelectExpr(tuple)
 	}

@@ -57,10 +57,8 @@ func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo)
 					}
 				}
 
-				for _, tb := range referTables {
-					if tb == tableName {
-						return true, nil
-					}
+				if isContainKey(tableName, referTables) {
+					return true, nil
 				}
 				referTables = append(referTables, tableName)
 			case *sqlparser.Subquery:
@@ -272,10 +270,8 @@ func getTbInExpr(expr sqlparser.Expr) []string {
 		switch node := node.(type) {
 		case *sqlparser.ColName:
 			tableName := node.Qualifier.Name.String()
-			for _, tb := range referTables {
-				if tb == tableName {
-					return true, nil
-				}
+			if isContainKey(tableName, referTables) {
+				return true, nil
 			}
 			referTables = append(referTables, tableName)
 		}
@@ -339,10 +335,9 @@ func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]exprIn
 						return false, errors.Errorf("unsupported: unknown.table.'%s'.in.having.clause", tableName)
 					}
 				}
-				for _, tb := range referTables {
-					if tb == tableName {
-						return true, nil
-					}
+
+				if isContainKey(tableName, referTables) {
+					return true, nil
 				}
 				referTables = append(referTables, tableName)
 			case *sqlparser.FuncExpr:
