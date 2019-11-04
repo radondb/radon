@@ -81,15 +81,14 @@ type JoinNode struct {
 	// eg: t1 join t2 on t1.a>t2.a, 't1.a>t2.a' parser into CmpFilter.
 	CmpFilter []Comparison
 	/*
-	 * eg: 't1 left join t2 on t1.a=t2.a and t1.b=2' where t1.c=t2.c and 1=1 and t2.b>2 where
-	 * t2.str is null. 't1.b=2' will parser into otherJoinOn, IsLeftJoin is true, 't1.c=t2.c'
-	 * parser into otherFilter, else into joinOn. '1=1' parser into noTableFilter. 't2.b>2' into
-	 * tableFilter. 't2.str is null' into rightNull.
+	 * eg: 't1 left join t2 on t1.a=t2.a and t1.b=2' where t1.c=t2.c and 1=1 and t2.b>2 where t2.str is null.
+	 * 't1.b=2' will parser into otherJoinOn, IsLeftJoin is true, 't1.c=t2.c' parser into otherFilter, else
+	 * into joinOn. '1=1' parser into noTableFilter. 't2.str is null' into rightNull.
 	 */
-	tableFilter, otherFilter []exprInfo
-	noTableFilter            []sqlparser.Expr
-	otherJoinOn              *otherJoin
-	rightNull                []selectTuple
+	otherFilter   []exprInfo
+	noTableFilter []sqlparser.Expr
+	otherJoinOn   *otherJoin
+	rightNull     []selectTuple
 	// whether is left join.
 	IsLeftJoin bool
 	// whether the right node has filters in left join.
@@ -98,11 +97,6 @@ type JoinNode struct {
 	LeftTmpCols []int
 	// record the `rightNull`'s index in right.fields.
 	RightTmpCols []int
-	// keyFilters based on LeftKeys、RightKeys and tableFilter.
-	// eg: select * from t1 join t2 on t1.a=t2.a where t1.a=1
-	// `t1.a` in LeftKeys, `t1.a=1` in tableFilter. in the map,
-	// key is 0(index is 0), value is tableFilter(`t1.a=1`).
-	keyFilters map[int][]exprInfo
 	// isHint defines whether has /*+nested+*/.
 	isHint bool
 	order  int
@@ -125,7 +119,6 @@ func newJoinNode(log *xlog.Log, Left, Right SelectNode, router *router.Router, j
 		router:      router,
 		joinExpr:    joinExpr,
 		joinOn:      joinOn,
-		keyFilters:  make(map[int][]exprInfo),
 		Vars:        make(map[string]int),
 		referTables: referTables,
 		IsLeftJoin:  isLeftJoin,
@@ -169,15 +162,8 @@ func (j *JoinNode) pushFilter(filters []exprInfo) error {
 			if len(filter.cols) != 1 {
 				tbInfo.parent.setWhereFilter(filter)
 			} else {
-				j.tableFilter = append(j.tableFilter, filter)
-				if len(filter.vals) > 0 && tbInfo.shardKey != "" {
-					if nameMatch(filter.cols[0], tb, tbInfo.shardKey) {
-						for _, val := range filter.vals {
-							if err = getIndex(j.router, tbInfo, val); err != nil {
-								return err
-							}
-						}
-					}
+				if err := j.pushKeyFilter(filter, filter.cols[0].Qualifier.Name.String(), filter.cols[0].Name.String()); err != nil {
+					return err
 				}
 			}
 		} else {
@@ -204,6 +190,68 @@ func (j *JoinNode) pushFilter(filters []exprInfo) error {
 		}
 	}
 	return err
+}
+
+// pushKeyFilter used to build the keyFilter based on the tableFilter and joinOn.
+// eg: select t1.a,t2.a from t1 join t2 on t1.a=t2.a where t1.a=1;
+// push: select t1.a from t1 where t1.a=1 order by t1.a asc;
+//       select t2.a from t2 where t2.a=1 order by t2.a asc;
+func (j *JoinNode) pushKeyFilter(filter exprInfo, table, field string) error {
+	var tb, col string
+	var err error
+	find := false
+	if _, ok := j.Left.getReferTables()[table]; ok {
+		for _, join := range j.joinOn {
+			lt := join.cols[0].Qualifier.Name.String()
+			lc := join.cols[0].Name.String()
+			if lt == table && lc == field {
+				tb = join.cols[1].Qualifier.Name.String()
+				col = join.cols[1].Name.String()
+				find = true
+				break
+			}
+		}
+
+		if err = j.Left.pushKeyFilter(filter, table, field); err != nil {
+			return err
+		}
+
+		if find {
+			// replace the colname.
+			origin := *(filter.cols[0])
+			filter.cols[0].Name = sqlparser.NewColIdent(col)
+			filter.cols[0].Qualifier = sqlparser.TableName{Name: sqlparser.NewTableIdent(tb)}
+			if err = j.Right.pushKeyFilter(filter, tb, col); err != nil {
+				return err
+			}
+			// recovery the colname in exprisson.
+			*(filter.cols[0]) = origin
+		}
+	} else {
+		for _, join := range j.joinOn {
+			rt := join.cols[1].Qualifier.Name.String()
+			rc := join.cols[1].Name.String()
+			if rt == table && rc == field {
+				tb = join.cols[0].Qualifier.Name.String()
+				col = join.cols[0].Name.String()
+				find = true
+				break
+			}
+		}
+		if err = j.Right.pushKeyFilter(filter, table, field); err != nil {
+			return err
+		}
+		if find {
+			origin := *(filter.cols[0])
+			filter.cols[0].Name = sqlparser.NewColIdent(col)
+			filter.cols[0].Qualifier = sqlparser.TableName{Name: sqlparser.NewTableIdent(tb)}
+			if err = j.Left.pushKeyFilter(filter, tb, col); err != nil {
+				return err
+			}
+			*(filter.cols[0]) = origin
+		}
+	}
+	return nil
 }
 
 // setParent set the parent node.
@@ -339,9 +387,6 @@ func (j *JoinNode) pushEqualCmpr(joins []exprInfo) SelectNode {
 						mn.setParent(node.parent)
 						mn.setParenthese(node.hasParen)
 
-						for _, filter := range node.tableFilter {
-							mn.setWhereFilter(filter)
-						}
 						for _, filter := range node.otherFilter {
 							mn.setWhereFilter(filter)
 						}
@@ -388,12 +433,6 @@ func (j *JoinNode) pushEqualCmpr(joins []exprInfo) SelectNode {
 // calcRoute used to calc the route.
 func (j *JoinNode) calcRoute() (SelectNode, error) {
 	var err error
-	for _, filter := range j.tableFilter {
-		if !j.buildKeyFilter(filter, false) {
-			tbInfo := j.referTables[filter.referTables[0]]
-			tbInfo.parent.setWhereFilter(filter)
-		}
-	}
 	if j.Left, err = j.Left.calcRoute(); err != nil {
 		return j, err
 	}
@@ -416,11 +455,6 @@ func (j *JoinNode) calcRoute() (SelectNode, error) {
 				for _, filter := range j.otherFilter {
 					mn.setWhereFilter(filter)
 				}
-				for _, filters := range j.keyFilters {
-					for _, filter := range filters {
-						mn.setWhereFilter(filter)
-					}
-				}
 				mn.setNoTableFilter(j.noTableFilter)
 				if j.joinExpr == nil && len(j.joinOn) > 0 {
 					mn.pushEqualCmpr(j.joinOn)
@@ -431,68 +465,6 @@ func (j *JoinNode) calcRoute() (SelectNode, error) {
 	}
 
 	return j, nil
-}
-
-// buildKeyFilter used to build the keyFilter based on the tableFilter and joinOn.
-// eg: select t1.a,t2.a from t1 join t2 on t1.a=t2.a where t1.a=1;
-// push: select t1.a from t1 where t1.a=1 order by t1.a asc;
-//       select t2.a from t2 where t2.a=1 order by t2.a asc;
-func (j *JoinNode) buildKeyFilter(filter exprInfo, isFind bool) bool {
-	table := filter.cols[0].Qualifier.Name.String()
-	field := filter.cols[0].Name.String()
-	find := false
-	if _, ok := j.Left.getReferTables()[filter.referTables[0]]; ok {
-		for i, join := range j.joinOn {
-			lt := join.cols[0].Qualifier.Name.String()
-			lc := join.cols[0].Name.String()
-			if lt == table && lc == field {
-				j.keyFilters[i] = append(j.keyFilters[i], filter)
-				if len(filter.vals) > 0 {
-					rt := join.cols[1].Qualifier.Name.String()
-					rc := join.cols[1].Name.String()
-					tbInfo := j.referTables[rt]
-					if tbInfo.shardKey == rc {
-						for _, val := range filter.vals {
-							if err := getIndex(j.router, tbInfo, val); err != nil {
-								panic(err)
-							}
-						}
-					}
-				}
-				find = true
-				break
-			}
-		}
-		if jn, ok := j.Left.(*JoinNode); ok {
-			return jn.buildKeyFilter(filter, find || isFind)
-		}
-	} else {
-		for i, join := range j.joinOn {
-			rt := join.cols[1].Qualifier.Name.String()
-			rc := join.cols[1].Name.String()
-			if rt == table && rc == field {
-				j.keyFilters[i] = append(j.keyFilters[i], filter)
-				if len(filter.vals) > 0 {
-					lt := join.cols[0].Qualifier.Name.String()
-					lc := join.cols[0].Name.String()
-					tbInfo := j.referTables[lt]
-					if tbInfo.shardKey == lc {
-						for _, val := range filter.vals {
-							if err := getIndex(j.router, tbInfo, val); err != nil {
-								panic(err)
-							}
-						}
-					}
-				}
-				find = true
-				break
-			}
-		}
-		if jn, ok := j.Right.(*JoinNode); ok {
-			return jn.buildKeyFilter(filter, find || isFind)
-		}
-	}
-	return find || isFind
 }
 
 // pushSelectExprs used to push the select fields.
@@ -865,29 +837,9 @@ func (j *JoinNode) buildQuery(tbInfos map[string]*tableInfo) {
 		}
 	}
 
-	for i, filters := range j.keyFilters {
-		table := j.RightKeys[i].Table
-		field := j.RightKeys[i].Field
-		tbInfo := j.referTables[table]
-		for _, filter := range filters {
-			filter.cols[0].Qualifier.Name = sqlparser.NewTableIdent(table)
-			filter.cols[0].Name = sqlparser.NewColIdent(field)
-			tbInfo.parent.filters[filter.expr] = 0
-		}
-	}
 	j.Right.setNoTableFilter(j.noTableFilter)
 	j.Right.buildQuery(tbInfos)
 
-	for i, filters := range j.keyFilters {
-		table := j.LeftKeys[i].Table
-		field := j.LeftKeys[i].Field
-		tbInfo := j.referTables[table]
-		for _, filter := range filters {
-			filter.cols[0].Qualifier.Name = sqlparser.NewTableIdent(table)
-			filter.cols[0].Name = sqlparser.NewColIdent(field)
-			tbInfo.parent.filters[filter.expr] = 0
-		}
-	}
 	j.Left.setNoTableFilter(j.noTableFilter)
 	j.Left.buildQuery(tbInfos)
 }
