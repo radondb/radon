@@ -179,7 +179,7 @@ func join(log *xlog.Log, lpn, rpn SelectNode, joinExpr *sqlparser.JoinTableExpr,
 		if joinExpr.On == nil {
 			joinExpr = nil
 		} else {
-			if joinOn, otherJoinOn, err = parserWhereOrJoinExprs(joinExpr.On, referTables); err != nil {
+			if joinOn, otherJoinOn, err = parseWhereOrJoinExprs(joinExpr.On, referTables); err != nil {
 				return nil, err
 			}
 			for i, jt := range joinOn {

@@ -44,7 +44,7 @@ func TestOrderByPlan(t *testing.T) {
 		node := tree.(*sqlparser.Select)
 		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		tuples, _, err := parserSelectExprs(node.SelectExprs, p)
+		tuples, _, err := parseSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
 		plan := NewOrderByPlan(log, node.OrderBy, tuples, p.getReferTables())
 		// plan build
@@ -80,7 +80,7 @@ func TestOrderByPlanError(t *testing.T) {
 		node := tree.(*sqlparser.Select)
 		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		tuples, _, err := parserSelectExprs(node.SelectExprs, p)
+		tuples, _, err := parseSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
 		plan := NewOrderByPlan(log, node.OrderBy, tuples, p.getReferTables())
 		// plan build

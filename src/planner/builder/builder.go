@@ -47,7 +47,7 @@ func processSelect(log *xlog.Log, router *router.Router, database string, node *
 
 	tbInfos := root.getReferTables()
 	if node.Where != nil {
-		joins, filters, err := parserWhereOrJoinExprs(node.Where.Expr, tbInfos)
+		joins, filters, err := parseWhereOrJoinExprs(node.Where.Expr, tbInfos)
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +75,7 @@ func processSelect(log *xlog.Log, router *router.Router, database string, node *
 	root.pushMisc(node)
 
 	var groups []selectTuple
-	fields, aggTyp, err := parserSelectExprs(node.SelectExprs, root)
+	fields, aggTyp, err := parseSelectExprs(node.SelectExprs, root)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func processSelect(log *xlog.Log, router *router.Router, database string, node *
 	}
 
 	if node.Having != nil {
-		havings, err := parserHaving(node.Having.Expr, tbInfos)
+		havings, err := parseHaving(node.Having.Expr, tbInfos)
 		if err != nil {
 			return nil, err
 		}
