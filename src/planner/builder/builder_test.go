@@ -180,7 +180,7 @@ func TestProcessSelect(t *testing.T) {
 			project: "id",
 			out: []xcontext.QueryTuple{
 				{
-					Query:   "select A.id, A.a + 1 as tmpo_0 from sbtest.A6 as A where A.id = 1 order by tmpo_0 asc",
+					Query:   "select A.id, A.a + 1 as tmpc_0 from sbtest.A6 as A where A.id = 1 order by tmpc_0 asc",
 					Backend: "backend6",
 					Range:   "[512-4096)",
 				},
@@ -597,6 +597,7 @@ func TestSelectSupported(t *testing.T) {
 		"select /*+nested+*/ A.id from G,A,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
 		"select COALESCE(A.b, ''), IF(A.b IS NULL, FALSE, TRUE) AS spent from A left join B on A.a=B.a",
 		"select COALESCE(B.b, ''), IF(B.b IS NULL, FALSE, TRUE) AS spent from A join B on A.a=B.a",
+		"select A.id from A left join B on B.id+1=A.id where B.str1+B.str2 is null",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))

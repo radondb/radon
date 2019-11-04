@@ -183,29 +183,57 @@ type nullExpr struct {
 }
 
 // checkIsWithNull used to check whether `tb.col is null` or `tb.col<=> null`.
-func checkIsWithNull(filter exprInfo, tbInfos map[string]*tableInfo) (bool, nullExpr) {
+func checkIsWithNull(filter exprInfo, tbInfos map[string]*tableInfo) (bool, selectTuple) {
 	if !checkTbInNode(filter.referTables, tbInfos) {
-		return false, nullExpr{}
+		return false, selectTuple{}
 	}
 	if exp, ok := filter.expr.(*sqlparser.IsExpr); ok {
 		if exp.Operator == sqlparser.IsNullStr {
-			return true, nullExpr{exp.Expr, filter.referTables}
+			return true, parserExpr(exp.Expr)
 		}
 	}
 
 	if exp, ok := filter.expr.(*sqlparser.ComparisonExpr); ok {
 		if exp.Operator == sqlparser.NullSafeEqualStr {
 			if _, ok := exp.Left.(*sqlparser.NullVal); ok {
-				return true, nullExpr{exp.Right, filter.referTables}
+				return true, parserExpr(exp.Right)
 			}
 
 			if _, ok := exp.Right.(*sqlparser.NullVal); ok {
-				return true, nullExpr{exp.Left, filter.referTables}
+				return true, parserExpr(exp.Left)
 			}
 		}
 	}
 
-	return false, nullExpr{}
+	return false, selectTuple{}
+}
+
+// parserExpr used to parser the expr to selectTuple.
+func parserExpr(expr sqlparser.Expr) selectTuple {
+	tuple := selectTuple{expr: &sqlparser.AliasedExpr{Expr: expr}, info: exprInfo{expr: expr}}
+	sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
+		switch node := node.(type) {
+		case *sqlparser.ColName:
+			tableName := node.Qualifier.Name.String()
+			if node == expr {
+				tuple.isCol = true
+				tuple.field = node.Name.String()
+			}
+			tuple.info.cols = append(tuple.info.cols, node)
+			if isContainKey(tableName, tuple.info.referTables) {
+				return true, nil
+			}
+			tuple.info.referTables = append(tuple.info.referTables, tableName)
+		}
+		return true, nil
+	}, expr)
+
+	if tuple.field == "" {
+		buf := sqlparser.NewTrackedBuffer(nil)
+		expr.Format(buf)
+		tuple.field = buf.String()
+	}
+	return tuple
 }
 
 // decomposeAvg decomposes avg(a) to sum(a) and count(a).

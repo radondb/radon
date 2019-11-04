@@ -9,6 +9,7 @@
 package builder
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -55,6 +56,8 @@ type MergeNode struct {
 	order   int
 	// Mode.
 	ReqMode xcontext.RequestMode
+	// aliasIndex is the tmp col's alias index.
+	aliasIndex int
 }
 
 // newMergeNode used to create MergeNode.
@@ -223,6 +226,12 @@ func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser
 
 // pushSelectExpr used to push the select field, called by JoinNode.pushSelectExpr.
 func (m *MergeNode) pushSelectExpr(field selectTuple) (int, error) {
+	if !field.isCol && field.alias == "tmpc" {
+		field.alias = fmt.Sprintf("%s_%d", field.alias, m.aliasIndex)
+		field.expr.(*sqlparser.AliasedExpr).As = sqlparser.NewColIdent(field.alias)
+		m.aliasIndex++
+	}
+
 	node := m.Sel.(*sqlparser.Select)
 	node.SelectExprs = append(node.SelectExprs, field.expr)
 	m.fields = append(m.fields, field)

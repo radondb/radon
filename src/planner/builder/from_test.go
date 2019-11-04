@@ -120,8 +120,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, 0, len(m.index))
 		assert.NotNil(t, j.otherJoinOn)
 
-		i := 0
-		err = j.pushOtherJoin(&i)
+		err = j.pushOtherJoin()
 		got := err.Error()
 		assert.Equal(t, "unsupported: clause.'A.b + B.b > 0'.in.cross-shard.join", got)
 	}
@@ -143,8 +142,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, 0, len(j.tableFilter))
 		assert.NotNil(t, j.otherJoinOn)
 
-		i := 0
-		err = j.pushOtherJoin(&i)
+		err = j.pushOtherJoin()
 		assert.Nil(t, err)
 	}
 	// right join2.
@@ -177,8 +175,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.True(t, m.hasParen)
 		assert.NotNil(t, j.otherJoinOn)
 
-		i := 0
-		err = j.pushOtherJoin(&i)
+		err = j.pushOtherJoin()
 		assert.Nil(t, err)
 	}
 	// can merge shard tables.

@@ -213,7 +213,7 @@ func TestSelectPlan(t *testing.T) {
 	"Project": "id",
 	"Partitions": [
 		{
-			"Query": "select A.id, A.a + 1 as tmpo_0 from sbtest.A6 as A where A.id = 1 order by tmpo_0 asc",
+			"Query": "select A.id, A.a + 1 as tmpc_0 from sbtest.A6 as A where A.id = 1 order by tmpc_0 asc",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
 		},
