@@ -38,8 +38,8 @@ type selectTuple struct {
 	distinct, isCol bool
 }
 
-// parserSelectExpr parses the AliasedExpr to select tuple.
-func parserSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*tableInfo) (*selectTuple, bool, error) {
+// parseSelectExpr parses the AliasedExpr to select tuple.
+func parseSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*tableInfo) (*selectTuple, bool, error) {
 	var cols []*sqlparser.ColName
 	var referTables []string
 	funcName := ""
@@ -112,7 +112,7 @@ func parserSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*tableInfo
 	return &selectTuple{expr, exprInfo{expr.Expr, referTables, cols, nil}, field, alias, funcName, aggrField, distinct, isCol}, hasAggregates, nil
 }
 
-func parserSelectExprs(exprs sqlparser.SelectExprs, root SelectNode) ([]selectTuple, aggrType, error) {
+func parseSelectExprs(exprs sqlparser.SelectExprs, root SelectNode) ([]selectTuple, aggrType, error) {
 	var tuples []selectTuple
 	hasAggs := false
 	hasDist := false
@@ -122,7 +122,7 @@ func parserSelectExprs(exprs sqlparser.SelectExprs, root SelectNode) ([]selectTu
 	for _, expr := range exprs {
 		switch exp := expr.(type) {
 		case *sqlparser.AliasedExpr:
-			tuple, hasAgg, err := parserSelectExpr(exp, tbInfos)
+			tuple, hasAgg, err := parseSelectExpr(exp, tbInfos)
 			if err != nil {
 				return nil, aggType, err
 			}
@@ -176,36 +176,58 @@ func setAggregatorType(hasAggr, hasDist, isMergeNode bool) aggrType {
 	return nullAgg
 }
 
-type nullExpr struct {
-	expr sqlparser.Expr
-	// referred tables.
-	referTables []string
-}
-
 // checkIsWithNull used to check whether `tb.col is null` or `tb.col<=> null`.
-func checkIsWithNull(filter exprInfo, tbInfos map[string]*tableInfo) (bool, nullExpr) {
+func checkIsWithNull(filter exprInfo, tbInfos map[string]*tableInfo) (bool, selectTuple) {
 	if !checkTbInNode(filter.referTables, tbInfos) {
-		return false, nullExpr{}
+		return false, selectTuple{}
 	}
 	if exp, ok := filter.expr.(*sqlparser.IsExpr); ok {
 		if exp.Operator == sqlparser.IsNullStr {
-			return true, nullExpr{exp.Expr, filter.referTables}
+			return true, parseExpr(exp.Expr)
 		}
 	}
 
 	if exp, ok := filter.expr.(*sqlparser.ComparisonExpr); ok {
 		if exp.Operator == sqlparser.NullSafeEqualStr {
 			if _, ok := exp.Left.(*sqlparser.NullVal); ok {
-				return true, nullExpr{exp.Right, filter.referTables}
+				return true, parseExpr(exp.Right)
 			}
 
 			if _, ok := exp.Right.(*sqlparser.NullVal); ok {
-				return true, nullExpr{exp.Left, filter.referTables}
+				return true, parseExpr(exp.Left)
 			}
 		}
 	}
 
-	return false, nullExpr{}
+	return false, selectTuple{}
+}
+
+// parseExpr used to parse the expr to selectTuple.
+func parseExpr(expr sqlparser.Expr) selectTuple {
+	tuple := selectTuple{expr: &sqlparser.AliasedExpr{Expr: expr}, info: exprInfo{expr: expr}}
+	sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
+		switch node := node.(type) {
+		case *sqlparser.ColName:
+			tableName := node.Qualifier.Name.String()
+			if node == expr {
+				tuple.isCol = true
+				tuple.field = node.Name.String()
+			}
+			tuple.info.cols = append(tuple.info.cols, node)
+			if isContainKey(tableName, tuple.info.referTables) {
+				return true, nil
+			}
+			tuple.info.referTables = append(tuple.info.referTables, tableName)
+		}
+		return true, nil
+	}, expr)
+
+	if tuple.field == "" {
+		buf := sqlparser.NewTrackedBuffer(nil)
+		expr.Format(buf)
+		tuple.field = buf.String()
+	}
+	return tuple
 }
 
 // decomposeAvg decomposes avg(a) to sum(a) and count(a).

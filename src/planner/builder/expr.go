@@ -26,11 +26,11 @@ type exprInfo struct {
 	vals []*sqlparser.SQLVal
 }
 
-// parserWhereOrJoinExprs parser exprs in where or join on conditions.
+// parseWhereOrJoinExprs parse exprs in where or join on conditions.
 // eg: 't1.a=t2.a and t1.b=2'.
 // t1.a=t2.a paser in joins.
 // t1.b=2 paser in wheres, t1.b col, 2 val.
-func parserWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]exprInfo, []exprInfo, error) {
+func parseWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]exprInfo, []exprInfo, error) {
 	filters := splitAndExpression(nil, exprs)
 	var joins, wheres []exprInfo
 
@@ -263,23 +263,6 @@ func convertOrToIn(node sqlparser.Expr) sqlparser.Expr {
 	return result
 }
 
-// getTbInExpr used to get the tbs from the expr.
-func getTbInExpr(expr sqlparser.Expr) []string {
-	var referTables []string
-	sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
-		switch node := node.(type) {
-		case *sqlparser.ColName:
-			tableName := node.Qualifier.Name.String()
-			if isContainKey(tableName, referTables) {
-				return true, nil
-			}
-			referTables = append(referTables, tableName)
-		}
-		return true, nil
-	}, expr)
-	return referTables
-}
-
 // convertToLeftJoin converts a right join into a left join.
 func convertToLeftJoin(joinExpr *sqlparser.JoinTableExpr) {
 	newExpr := joinExpr.LeftExpr
@@ -311,9 +294,9 @@ func checkJoinOn(lpn, rpn PlanNode, join exprInfo) (exprInfo, error) {
 	return join, nil
 }
 
-// parserHaving used to check the having exprs and parser into tuples.
+// parseHaving used to check the having exprs and parse into tuples.
 // unsupport: `select t2.id as tmp, t1.id from t2,t1 having tmp=1`.
-func parserHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]exprInfo, error) {
+func parseHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]exprInfo, error) {
 	filters := splitAndExpression(nil, exprs)
 	var tuples []exprInfo
 
