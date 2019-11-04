@@ -66,7 +66,7 @@ func TestParserSelectExprsSubquery(t *testing.T) {
 	sel := node.(*sqlparser.Select)
 	p, err := scanTableExprs(log, route, database, sel.From)
 	assert.Nil(t, err)
-	_, _, err = parserSelectExprs(sel.SelectExprs, p)
+	_, _, err = parseSelectExprs(sel.SelectExprs, p)
 	got := err.Error()
 	assert.Equal(t, want, got)
 }
@@ -95,7 +95,7 @@ func TestParserWhereOrJoinExprs(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		_, _, err = parserWhereOrJoinExprs(sel.Where.Expr, p.getReferTables())
+		_, _, err = parseWhereOrJoinExprs(sel.Where.Expr, p.getReferTables())
 		assert.Nil(t, err)
 	}
 }
@@ -128,7 +128,7 @@ func TestWhereFilters(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		joins, filters, err := parserWhereOrJoinExprs(sel.Where.Expr, p.getReferTables())
+		joins, filters, err := parseWhereOrJoinExprs(sel.Where.Expr, p.getReferTables())
 		assert.Nil(t, err)
 
 		err = p.pushFilter(filters)
@@ -169,7 +169,7 @@ func TestWhereFiltersError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		joins, filters, err := parserWhereOrJoinExprs(sel.Where.Expr, p.getReferTables())
+		joins, filters, err := parseWhereOrJoinExprs(sel.Where.Expr, p.getReferTables())
 		assert.Nil(t, err)
 
 		err = p.pushFilter(filters)
@@ -224,7 +224,7 @@ func TestCheckGroupBy(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
+		fields, _, err := parseSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
@@ -263,7 +263,7 @@ func TestCheckGroupByError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
+		fields, _, err := parseSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
@@ -302,7 +302,7 @@ func TestCheckDistinct(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
+		fields, _, err := parseSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
@@ -339,7 +339,7 @@ func TestCheckDistinctError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
+		fields, _, err := parseSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
@@ -374,7 +374,7 @@ func TestSelectExprs(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, aggTyp, err := parserSelectExprs(sel.SelectExprs, p)
+		fields, aggTyp, err := parseSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
@@ -417,7 +417,7 @@ func TestSelectExprsError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, aggTyp, err := parserSelectExprs(sel.SelectExprs, p)
+		fields, aggTyp, err := parseSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 
 		_, ok := p.(*MergeNode)
@@ -454,7 +454,7 @@ func TestParserHaving(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		havings, err := parserHaving(sel.Having.Expr, p.getReferTables())
+		havings, err := parseHaving(sel.Having.Expr, p.getReferTables())
 		assert.Nil(t, err)
 
 		err = p.pushHaving(havings)
@@ -492,7 +492,7 @@ func TestParserHavingError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		havings, err := parserHaving(sel.Having.Expr, p.getReferTables())
+		havings, err := parseHaving(sel.Having.Expr, p.getReferTables())
 		if err != nil {
 			got := err.Error()
 			assert.Equal(t, wants[i], got)
@@ -528,7 +528,7 @@ func TestPushOrderBy(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
+		fields, _, err := parseSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 		switch p := p.(type) {
 		case *MergeNode:
@@ -570,7 +570,7 @@ func TestPushOrderByError(t *testing.T) {
 		p, err := scanTableExprs(log, route, database, sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parserSelectExprs(sel.SelectExprs, p)
+		fields, _, err := parseSelectExprs(sel.SelectExprs, p)
 		assert.Nil(t, err)
 		switch p := p.(type) {
 		case *MergeNode:
