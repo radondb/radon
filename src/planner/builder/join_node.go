@@ -251,10 +251,10 @@ func (j *JoinNode) setOtherJoin(filters []exprInfo) {
 
 			alias := fmt.Sprintf("tmpc_%d", i)
 			tuple := selectTuple{
-				expr:        &sqlparser.AliasedExpr{Expr: filter.expr, As: sqlparser.NewColIdent(alias)},
-				field:       field,
-				alias:       alias,
-				referTables: filter.referTables,
+				expr:  &sqlparser.AliasedExpr{Expr: filter.expr, As: sqlparser.NewColIdent(alias)},
+				info:  filter,
+				field: field,
+				alias: alias,
 			}
 			j.otherJoinOn.left = append(j.otherJoinOn.left, tuple)
 			i++
@@ -642,7 +642,7 @@ func (j *JoinNode) pushOtherFilter(expr sqlparser.Expr, node SelectNode, tbs []s
 		tuples := node.getFields()
 		for i, tuple := range tuples {
 			if tuple.isCol {
-				if table == tuple.referTables[0] && field == tuple.field {
+				if table == tuple.info.referTables[0] && field == tuple.field {
 					index = i
 					break
 				}
@@ -664,10 +664,10 @@ func (j *JoinNode) pushOtherFilter(expr sqlparser.Expr, node SelectNode, tbs []s
 		}
 
 		tuple := selectTuple{
-			expr:        aliasExpr,
-			field:       field,
-			alias:       alias,
-			referTables: tbs,
+			expr:  aliasExpr,
+			info:  exprInfo{referTables: tbs},
+			field: field,
+			alias: alias,
 		}
 		index, err = node.pushSelectExpr(tuple)
 		if err != nil {
@@ -680,7 +680,7 @@ func (j *JoinNode) pushOtherFilter(expr sqlparser.Expr, node SelectNode, tbs []s
 
 // pushSelectExpr used to push the select field.
 func (j *JoinNode) pushSelectExpr(field selectTuple) (int, error) {
-	if checkTbInNode(field.referTables, j.Left.getReferTables()) {
+	if checkTbInNode(field.info.referTables, j.Left.getReferTables()) {
 		index, err := j.Left.pushSelectExpr(field)
 		if err != nil {
 			return -1, err
@@ -692,7 +692,7 @@ func (j *JoinNode) pushSelectExpr(field selectTuple) (int, error) {
 				return -1, errors.Errorf("unsupported: expr.'%s'.in.cross-shard.left.join", field.field)
 			}
 		}
-		if checkTbInNode(field.referTables, j.Right.getReferTables()) || j.isHint {
+		if checkTbInNode(field.info.referTables, j.Right.getReferTables()) || j.isHint {
 			index, err := j.Right.pushSelectExpr(field)
 			if err != nil {
 				return -1, err
@@ -759,7 +759,7 @@ func (j *JoinNode) buildOrderBy(expr sqlparser.Expr, node SelectNode, idx *int) 
 		table = exp.Qualifier.Name.String()
 		for i, tuple := range tuples {
 			if tuple.isCol {
-				if table == tuple.referTables[0] && field == tuple.field {
+				if table == tuple.info.referTables[0] && field == tuple.field {
 					index = i
 					break
 				}
@@ -783,10 +783,10 @@ func (j *JoinNode) buildOrderBy(expr sqlparser.Expr, node SelectNode, idx *int) 
 			(*idx)++
 		}
 		tuple := selectTuple{
-			expr:        aliasExpr,
-			field:       field,
-			alias:       alias,
-			referTables: []string{table},
+			expr:  aliasExpr,
+			field: field,
+			alias: alias,
+			info:  exprInfo{referTables: []string{table}},
 		}
 		index, _ = node.pushSelectExpr(tuple)
 	}
