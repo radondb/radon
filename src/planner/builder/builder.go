@@ -72,8 +72,6 @@ func processSelect(log *xlog.Log, router *router.Router, database string, node *
 		return root, nil
 	}
 
-	root.pushMisc(node)
-
 	var groups []selectTuple
 	fields, aggTyp, err := parserSelectExprs(node.SelectExprs, root)
 	if err != nil {
@@ -111,6 +109,8 @@ func processSelect(log *xlog.Log, router *router.Router, database string, node *
 			return nil, err
 		}
 	}
+
+	root.pushMisc(node)
 	return root, nil
 }
 

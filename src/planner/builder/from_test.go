@@ -119,8 +119,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.NotNil(t, j.otherJoinOn)
 
 		err = j.pushOtherJoin()
-		got := err.Error()
-		assert.Equal(t, "unsupported: clause.'A.b + B.b > 0'.in.cross-shard.join", got)
+		assert.Nil(t, err)
 	}
 	// right join1.
 	{

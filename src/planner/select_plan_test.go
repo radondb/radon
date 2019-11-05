@@ -189,16 +189,16 @@ func TestSelectPlan(t *testing.T) {
 	}
 }`,
 		`{
-	"RawQuery": "select /*+nested+*/ A.id from A join B on A.id = B.id where A.id = 1",
+	"RawQuery": "select A.id from A join B on A.id = B.id where A.id = 1 and concat(A.str,B.str) = 'golang'",
 	"Project": "id",
 	"Partitions": [
 		{
-			"Query": "select /*+nested+*/ A.id from sbtest.A6 as A where A.id = 1",
+			"Query": "select A.id, A.str from sbtest.A6 as A where A.id = 1",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
 		},
 		{
-			"Query": "select /*+nested+*/ 1 from sbtest.B1 as B where B.id = 1 and :A_id = B.id",
+			"Query": "select 1 from sbtest.B1 as B where B.id = 1 and concat(:A_str, B.str) = 'golang' and :A_id = B.id",
 			"Backend": "backend2",
 			"Range": "[512-4096)"
 		}
@@ -426,7 +426,7 @@ func TestSelectPlan(t *testing.T) {
 		"select A.id,B.id from A join B on A.id=B.id where A.id=1",
 		"select A.id from A join B where A.id=1",
 		"select A.id from A left join B on A.id=B.id and A.a=1 and B.b=2 and 1=1 where B.id=1",
-		"select /*+nested+*/ A.id from A join B on A.id = B.id where A.id = 1",
+		"select A.id from A join B on A.id = B.id where A.id = 1 and concat(A.str,B.str) = 'golang'",
 		"select A.id from A left join B on A.a+1=B.a where A.id=1",
 		"select B.id as a from B group by a",
 		"select avg(distinct id) as tmp,b,sum(id),count(id) from B group by b",

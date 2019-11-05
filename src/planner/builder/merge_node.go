@@ -140,11 +140,6 @@ func (m *MergeNode) addHaving(expr sqlparser.Expr) {
 	m.Sel.(*sqlparser.Select).AddHaving(expr)
 }
 
-// setWhereFilter used to push the where filters.
-func (m *MergeNode) setWhereFilter(filter exprInfo) {
-	m.addWhere(filter.expr)
-}
-
 // setNoTableFilter used to push the no table filters.
 func (m *MergeNode) setNoTableFilter(exprs []sqlparser.Expr) {
 	for _, expr := range exprs {

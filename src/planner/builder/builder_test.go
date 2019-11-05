@@ -160,16 +160,16 @@ func TestProcessSelect(t *testing.T) {
 		},
 
 		{
-			query:   "select /*+nested+*/ A.id from A join B on A.id = B.id where A.id = 1",
+			query:   "select A.id from A join B on A.id = B.id and concat(A.str,B.str) = 'golang' where A.id = 1",
 			project: "id",
 			out: []xcontext.QueryTuple{
 				{
-					Query:   "select /*+nested+*/ A.id from sbtest.A6 as A where A.id = 1",
+					Query:   "select A.id, A.str from sbtest.A6 as A where A.id = 1",
 					Backend: "backend6",
 					Range:   "[512-4096)",
 				},
 				{
-					Query:   "select /*+nested+*/ 1 from sbtest.B1 as B where B.id = 1 and :A_id = B.id",
+					Query:   "select 1 from sbtest.B1 as B where B.id = 1 and concat(:A_str, B.str) = 'golang' and :A_id = B.id",
 					Backend: "backend2",
 					Range:   "[512-4096)",
 				}},
@@ -489,25 +489,26 @@ func TestSelectUnsupported(t *testing.T) {
 		"select B.* from A",
 		"select * from A where a>1 having count(a) >3",
 		"select a,b from A group by B.a",
-		"select A.id,G.a as a, concat(B.str,G.str), 1 from A,B, A as G group by a",
 		"select *,avg(a) from A",
-		"select A.id from A join B on A.id=B.id right join G on G.id=A.id and A.a>B.a",
-		"select A.id from (A,B) left join G on A.id =G.id and A.a>B.a",
-		"select A.id from A join B on A.id=B.id right join G on G.id=A.id where concat(B.str,A.str) is null",
-		"select A.id from A join B on A.id >= B.id join G on G.id<=A.id where concat(B.str,A.str) is null",
-		"select A.id from A join B on A.id = B.id join G on G.id<=A.id+B.id",
-		"select A.id from A join B on A.id = B.id join G on A.id+B.id<=G.id",
-		"select A.id from G join (A,B) on A.id+B.id<=G.id",
-		"select A.id from G join (A,B) on G.id<=A.id+B.id",
 		"select sum(A.id) as tmp, B.id from A,B having tmp=1",
 		"select COALESCE(B.b, ''), IF(B.b IS NULL, FALSE, TRUE) AS spent from A left join B on A.a=B.a",
+		"select abs(B.a) AS spent,G.a from A left join B on A.a=B.a,G",
+		"select abs(B.a) AS spent,G.a from G,A left join B on A.a=B.a",
+		"select A.id from A left join B on A.id=B.id right join G on A.id = G.id where length(B.str) is null",
+		"select A.id from A left join B on A.id=B.id left join G on A.id = G.id and abs(B.a)",
+		"select A.id from A left join B on A.id=B.id join G on A.id = G.id and abs(B.a) > G.a",
+		"select A.id from A left join B on A.id=B.id join G on A.id = G.id and G.a < abs(B.a)",
+		"select A.id from A left join B on A.id=B.id left join G on A.id = G.id and G.a < abs(B.a)",
+		"select A.id from G, A left join B on A.id=B.id where G.a < abs(B.a)",
+		"select A.id from G, A left join B on A.id=B.id where abs(B.a) > G.a",
+		"select A.id from (G, A left join B on A.id=B.id),C where abs(B.a) > G.a",
+		"select A.id from C,(G, A left join B on A.id=B.id) where abs(B.a+B.b) > G.a",
 		"select A.a as b from A order by A.b",
 		"select a+1 from A order by a+1",
 		"select b as a from A group by A.a",
 		"select a+1 from A group by a+1",
 		"select count(distinct *) from A",
 		"select t1.a from G",
-		"select A.id from A join B on A.id=B.id where A.id in (1,2) or B.a=1",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
@@ -527,25 +528,26 @@ func TestSelectUnsupported(t *testing.T) {
 		"unsupported:  unknown.table.'B'.in.field.list",
 		"unsupported: expr[count(a)].in.having.clause",
 		"unsupported: unknow.table.in.group.by.field[B.a]",
-		"unsupported: expr.'concat(B.str, G.str)'.in.cross-shard.join",
 		"unsupported: exists.aggregate.and.'*'.select.exprs",
-		"unsupported: on.clause.'A.a > B.a'.in.cross-shard.join",
-		"unsupported: expr.'A.a > B.a'.in.cross-shard.join",
-		"unsupported: expr.'concat(B.str, A.str)'.in.cross-shard.join",
-		"unsupported: clause.'concat(B.str, A.str) is null'.in.cross-shard.join",
-		"unsupported: expr.'A.id + B.id'.in.cross-shard.join",
-		"unsupported: expr.'A.id + B.id'.in.cross-shard.join",
-		"unsupported: expr.'A.id + B.id'.in.cross-shard.join",
-		"unsupported: expr.'A.id + B.id'.in.cross-shard.join",
 		"unsupported: aggregation.in.having.clause",
 		"unsupported: expr.'COALESCE(B.b, '')'.in.cross-shard.left.join",
+		"unsupported: expr.'abs(B.a)'.in.cross-shard.left.join",
+		"unsupported: expr.'abs(B.a)'.in.cross-shard.left.join",
+		"unsupported: expr.'length(B.str)'.in.cross-shard.left.join",
+		"unsupported: expr.'abs(B.a)'.in.cross-shard.left.join",
+		"unsupported: expr.'abs(B.a)'.in.cross-shard.left.join",
+		"unsupported: expr.'abs(B.a)'.in.cross-shard.left.join",
+		"unsupported: expr.'abs(B.a)'.in.cross-shard.left.join",
+		"unsupported: expr.'abs(B.a)'.in.cross-shard.left.join",
+		"unsupported: expr.'abs(B.a)'.in.cross-shard.left.join",
+		"unsupported: expr.'abs(B.a)'.in.cross-shard.left.join",
+		"unsupported: expr.'abs(B.a + B.b)'.in.cross-shard.left.join",
 		"unsupported: orderby[A.b].should.in.select.list",
 		"unsupported: orderby:[a + 1].type.should.be.colname",
 		"unsupported: group.by.field[A.a].should.be.in.select.list",
 		"unsupported: group.by.[a + 1].type.should.be.colname",
 		"unsupported: syntax.error.at.'count(distinct *)'",
 		"unsupported: unknown.column.'t1.a'.in.exprs",
-		"unsupported: clause.'A.id in (1, 2) or B.a in (1)'.in.cross-shard.join",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -554,7 +556,7 @@ func TestSelectUnsupported(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig(), router.MockTableCConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
@@ -585,19 +587,21 @@ func TestSelectSupported(t *testing.T) {
 		"select A.id from A left join B on A.id=B.id where B.str<=>null",
 		"select A.id from A left join B on A.id=B.id where null<=>B.str",
 		"select A.id from A join B on A.id >= B.id join G on G.id<=A.id",
-		"select /*+nested+*/ A.id from A join B on A.id=B.id right join G on G.id=A.id and A.a>B.a",
-		"select /*+nested+*/ A.id from (A,B) left join G on A.id =G.id and A.a>B.a",
-		"select /*+nested+*/ A.id from A join B on A.id=B.id right join G on G.id=A.id where concat(B.str,A.str) is null",
-		"select /*+nested+*/ A.id from A join B on A.id >= B.id join G on G.id<=A.id where concat(B.str,A.str) is null",
-		"select /*+nested+*/ A.id from A join B on A.id = B.id join G on G.id<=A.id+B.id",
-		"select /*+nested+*/ A.id from A join B on A.id = B.id join G on A.id+B.id<=G.id",
-		"select /*+nested+*/ A.id from G join (A,B) on A.id+B.id<=G.id",
-		"select /*+nested+*/ A.id from G join (A,B) on G.id<=A.id+B.id",
-		"select /*+nested+*/ sum(A.id) from A join B on A.id=B.id",
-		"select /*+nested+*/ B.id,G.id,B.a from G,A,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
+		"select A.id from A join B on A.id=B.id right join G on G.id=A.id and A.a>B.a",
+		"select A.id from (A,B) left join G on A.id =G.id and A.a>B.a",
+		"select A.id from A join B on A.id=B.id right join G on G.id=A.id where concat(B.str,A.str) is null",
+		"select A.id from A join B on A.id >= B.id join G on G.id<=A.id where concat(B.str,A.str) is null",
+		"select A.id from A join B on A.id = B.id join G on G.id<=A.id+B.id",
+		"select A.id from A join B on A.id = B.id join G on A.id+B.id<=G.id",
+		"select A.id from G join (A,B) on A.id+B.id<=G.id",
+		"select A.id from G join (A,B) on G.id<=A.id+B.id",
+		"select sum(A.id) from A join B on A.id=B.id",
+		"select B.id,G.id,B.a from G,A,B where G.a+B.a>5 having G.id=B.id and B.a=1 and 1=1",
 		"select COALESCE(A.b, ''), IF(A.b IS NULL, FALSE, TRUE) AS spent from A left join B on A.a=B.a",
 		"select COALESCE(B.b, ''), IF(B.b IS NULL, FALSE, TRUE) AS spent from A join B on A.a=B.a",
 		"select A.id from A left join B on B.id+1=A.id where B.str1+B.str2 is null",
+		"select A.id from A join B on A.id=B.id where A.id in (1,2) or B.a=1",
+		"select A.id from A join B on A.id = B.id join G on A.id+B.id<=G.id where A.str + B.str is null",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -1081,6 +1085,6 @@ func TestGenerateFieldQuery(t *testing.T) {
 	assert.Nil(t, err)
 
 	got := plan.(*JoinNode).Right.(*MergeNode).GenerateFieldQuery().Query
-	want := "select :A_id + B.id from sbtest.B1 as B where 1 != 1"
+	want := "select :A_id + B.id as `A.id + B.id` from sbtest.B1 as B where 1 != 1"
 	assert.Equal(t, want, got)
 }

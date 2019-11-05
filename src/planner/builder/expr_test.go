@@ -143,48 +143,6 @@ func TestWhereFilters(t *testing.T) {
 	}
 }
 
-func TestWhereFiltersError(t *testing.T) {
-	querys := []string{
-		"select * from G,A,B where A.id=B.id and A.a + B.a > 0",
-		"select * from A join B on A.id=B.id join G on G.id=A.id where A.a + B.a > 0",
-	}
-	wants := []string{
-		"unsupported: clause.'A.a + B.a > 0'.in.cross-shard.join",
-		"unsupported: clause.'A.a + B.a > 0'.in.cross-shard.join",
-	}
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	database := "sbtest"
-
-	route, cleanup := router.MockNewRouter(log)
-	defer cleanup()
-
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
-	assert.Nil(t, err)
-
-	for i, query := range querys {
-		node, err := sqlparser.Parse(query)
-		assert.Nil(t, err)
-		sel := node.(*sqlparser.Select)
-
-		p, err := scanTableExprs(log, route, database, sel.From)
-		assert.Nil(t, err)
-
-		joins, filters, err := parserWhereOrJoinExprs(sel.Where.Expr, p.getReferTables())
-		assert.Nil(t, err)
-
-		err = p.pushFilter(filters)
-		assert.Nil(t, err)
-
-		p = p.pushEqualCmpr(joins)
-		p, err = p.calcRoute()
-		assert.Nil(t, err)
-
-		err = p.(*JoinNode).handleOthers()
-		got := err.Error()
-		assert.Equal(t, wants[i], got)
-	}
-}
-
 func TestCheckGroupBy(t *testing.T) {
 	querys := []string{
 		"select a,b from A group by a",
@@ -392,13 +350,9 @@ func TestSelectExprs(t *testing.T) {
 func TestSelectExprsError(t *testing.T) {
 	querys := []string{
 		"select sum(A.id) as s, G.a as a from A,G group by s",
-		"select A.id,G.a as a, concat(B.str,G.str), 1 from A,B, A as G group by a",
-		"select A.id,G.a as a, concat(A.str,B.str) from A join B on A.id=B.id join G on A.a=G.a",
 	}
 	wants := []string{
 		"unsupported: group.by.field[sum(A.id)].should.be.in.noaggregate.select.list",
-		"unsupported: expr.'concat(B.str, G.str)'.in.cross-shard.join",
-		"unsupported: expr.'concat(A.str, B.str)'.in.cross-shard.join",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"

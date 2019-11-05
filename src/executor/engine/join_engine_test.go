@@ -259,14 +259,14 @@ func TestJoinEngine(t *testing.T) {
 	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A2 as A order by A.name asc", r3)
 	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A4 as A order by A.name asc", r3)
 	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A8 as A order by A.name asc", r3)
-	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name from sbtest.A8 as A where A.id = 2", r14)
+	fakedbs.AddQuery("select A.id, A.name from sbtest.A8 as A where A.id = 5", r14)
 	fakedbs.AddQuery("select A.id, A.name from sbtest.A8 as A where 1 != 1", r12)
-	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name from sbtest.A8 as A where A.id = 3", r12)
-	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A0 as A", r11)
-	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A2 as A", r3)
-	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A4 as A", r3)
-	fakedbs.AddQuery("select /*+nested+*/ A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A8 as A", r3)
-	fakedbs.AddQuery("select /*+nested+*/ G.a from sbtest.G", r4)
+	fakedbs.AddQuery("select A.id, A.name from sbtest.A8 as A where A.id = 3", r12)
+	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A0 as A", r11)
+	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A2 as A", r3)
+	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A4 as A", r3)
+	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A8 as A", r3)
+	fakedbs.AddQuery("select G.a from sbtest.G", r4)
 
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B0 as B", r21)
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B1 as B", r22)
@@ -278,19 +278,19 @@ func TestJoinEngine(t *testing.T) {
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B1 as B where B.id > 2 and B.name = 's' order by B.id asc", r21)
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B0 as B where B.id > 2 order by B.id asc", r21)
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B1 as B where B.id > 2 order by B.id asc", r2)
-	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.B1 as B where B.id = 1 and 'go' = B.name", r21)
-	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.B1 as B where B.id = 1 and 'lang' = B.name", r2)
-	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.B1 as B where B.id = 1 and 'niu' = B.name", r21)
-	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.B1 as B where B.id = 1", r21)
-	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.B1 as B where B.id = 1 and 'nice' = B.name", r21)
-	fakedbs.AddQuery("select /*+nested+*/ B.name, B.id from sbtest.b1 as b where b.id = 1 and 'nil' = b.name", r21)
+	fakedbs.AddQuery("select B.name, B.id from sbtest.B1 as B where B.id = 1 and 'go' + b.name = 'golang'", r21)
+	fakedbs.AddQuery("select B.name, B.id from sbtest.B1 as B where B.id = 1 and 'lang' + b.name = 'golang'", r2)
+	fakedbs.AddQuery("select B.name, B.id from sbtest.B1 as B where B.id = 1 and 'niu' + b.name = 'golang'", r21)
+	fakedbs.AddQuery("select B.name, B.id from sbtest.B1 as B where B.id = 1", r21)
+	fakedbs.AddQuery("select B.name, B.id from sbtest.B1 as B where B.id = 1 and 'nice' + b.name = 'golang'", r21)
+	fakedbs.AddQuery("select B.name, B.id from sbtest.b1 as b where b.id = 1 and 'nil' + b.name = 'golang'", r21)
 	fakedbs.AddQuery("select b.name, b.id from sbtest.b1 as b where 1 != 1", r21)
 	fakedbs.AddQuery("select b.name, null + b.id as id from sbtest.b1 as b where 1 != 1", r21)
 
 	querys := []string{
 		"select A.id, B.name from A right join B on A.id=B.id where A.id > 2",
 		"select A.id, B.name from A join B on A.id=B.id where A.id > 2 limit 1",
-		"select A.id, B.name, B.id from A left join B on A.name=B.name and A.id > 2 order by A.id",
+		"select A.id, B.name, B.id, A.name from A left join B on A.name=B.name and A.id > 2 order by A.id",
 		"select A.id, B.name, B.id from A,B where A.id = 2",
 		"select A.id, B.name, B.id from A,B where A.id = 3",
 		"select A.id, B.name, B.id from B,A where A.id = 3",
@@ -303,16 +303,16 @@ func TestJoinEngine(t *testing.T) {
 		"select A.id, B.name, B.id, A.name from A join B on A.id<=B.id and A.name<=>B.name and A.id=2 and B.id=0 order by A.id",
 		"select A.id, B.name, B.id, A.name from A join B on A.id < B.id and A.name<=>B.name and A.id=2 and B.id=0 order by A.id",
 		"select A.id, B.name, B.id, A.name, A.id > 2 as tmpc_0 from A join B on A.name=B.name and A.id>=B.id and A.id > B.id order by A.id",
-		"select /*+nested+*/ A.id, B.name, B.id from A join B on A.name=B.name where A.id = 2 and B.id = 1 order by A.id limit 2",
-		"select /*+nested+*/ A.id, A.name, B.name, B.id from B join A on A.name=B.name where A.id = 2 and B.id = 1 order by A.id limit 1",
-		"select /*+nested+*/ A.id, B.name, B.id, A.name from A left join B on A.name=B.name and A.id>2 where B.name is null and B.id = 1 order by A.id",
-		"select /*+nested+*/ A.id, A.name, B.name, B.id from G,A,B where G.a=A.a and A.name=B.name and A.id=2 and B.id=1",
-		"select /*+nested+*/ B.name, A.id+B.id as id from A join B on A.name=B.name where A.id = 3",
+		"select A.id, B.name, B.id from A join B on A.name+B.name='golang' where A.id = 5 and B.id = 1 order by A.id limit 2",
+		"select A.id, A.name, B.name, B.id from B join A on A.name+B.name='golang' where A.id = 5 and B.id = 1 order by A.id limit 1",
+		"select A.id, B.name, B.id, A.name from A left join B on A.name+B.name='golang' and A.id>2 where B.name is null and B.id = 1 order by A.id",
+		"select A.id, A.name, B.name, B.id from G,A,B where G.a+A.a=1 and A.name=B.name and A.id=5 and B.id=1",
+		"select B.name, A.id+B.id as id from A join B on A.name=B.name where A.id = 3",
 	}
 	results := []string{
 		"[[3 go] [5 lang]]",
 		"[[3 go]]",
-		"[[3 go 3] [4  ] [5  ] [6  ] [6 lang 5]]",
+		"[[3 go 3 go] [4   lang] [5   nice] [6   nil] [6 lang 5 lang]]",
 		"[[3  3] [4  3] [5  3]]",
 		"[]",
 		"[]",
@@ -482,18 +482,18 @@ func TestMaxRowErr(t *testing.T) {
 	defer cleanup()
 	// desc
 	fakedbs.AddQuery("select a.id, a.name from sbtest.a8 as a where a.id = 3 order by a.id asc", r1)
-	fakedbs.AddQuery("select /*+nested+*/ a.id, a.name from sbtest.a8 as a where a.id = 3", r1)
-	fakedbs.AddQuery("select /*+nested+*/ b.id, b.name from sbtest.b1 as b where b.id = 3 and 3 = b.id", r1)
+	fakedbs.AddQuery("select a.id, a.name from sbtest.a8 as a where a.id = 3", r1)
+	fakedbs.AddQuery("select 3 + b.id as id, b.name from sbtest.b1 as b where b.id = 3 and 3 = b.id", r1)
 	fakedbs.AddQueryPattern("select b.id, b.name from .*", r2)
 	fakedbs.AddQueryPattern("select b.name, b.id from .*", r3)
 	fakedbs.AddQueryPattern("select s.id, s.name from .*", r1)
-	fakedbs.AddQueryPattern("select s.id, s.name = 'a' as tmpc_0 from .*", r4)
-	fakedbs.AddQueryPattern("select s.id, s.a = 'a' as tmpc_0 from .*", r5)
+	fakedbs.AddQueryPattern("select s.name = 'a' as tmpc_0, s.id from .*", r4)
+	fakedbs.AddQueryPattern("select s.a = 'a' as tmpc_0, s.id from .*", r5)
 
 	querys := []string{
 		"select A.id, A.name, B.name, B.id from A join B on A.id = B.id where A.id = 3",
 		"select S.id, S.name, B.id, B.name from S left join B on S.id = B.id and B.id = 2",
-		"select /*+nested+*/ A.id, A.name, B.id, B.name from A join B on A.id = B.id where A.id = 3",
+		"select A.id, A.name, A.id + B.id as id, B.name from A join B on A.id = B.id where A.id = 3",
 		"select S.id, S.name, B.name, B.id from S, B where B.id = 2",
 		"select S.id, S.name, B.name, B.id from S left join B on S.id > B.id",
 		"select B.name, B.id from S left join B on B.id = S.id and S.name = 'a'",
@@ -586,7 +586,7 @@ func TestMockErr(t *testing.T) {
 	querys := []string{
 		"select A.id, B.name from A right join B on A.id=B.id where A.id > 2 group by A.id",
 		"select a from A where A > 1 group by a",
-		"select /*+nested+*/ A.id, B.name, B.id from A join B on A.name=B.name where A.id = 2 and B.id = 1 group by A.id limit 1",
+		"select A.id, B.name, B.id from A join B on A.id+B.id=3 where A.id = 2 and B.id = 1 group by A.id limit 1",
 	}
 
 	for _, query := range querys {

@@ -31,7 +31,6 @@ type SelectNode interface {
 	pushFilter(filters []exprInfo) error
 	pushKeyFilter(filter exprInfo, table, field string) error
 	setParent(p SelectNode)
-	setWhereFilter(filter exprInfo)
 	setNoTableFilter(exprs []sqlparser.Expr)
 	setParenthese(hasParen bool)
 	pushEqualCmpr(joins []exprInfo) SelectNode
@@ -63,4 +62,28 @@ func findLCA(h, p1, p2 SelectNode) SelectNode {
 		return pr
 	}
 	return pl
+}
+
+func findParent(tables []string, node SelectNode) SelectNode {
+	var parent SelectNode
+	for _, tb := range tables {
+		tbInfo := node.getReferTables()[tb]
+		if parent == nil {
+			parent = tbInfo.parent
+			continue
+		}
+		if parent != tbInfo.parent {
+			parent = findLCA(node, parent, tbInfo.parent)
+		}
+	}
+	return parent
+}
+
+func handleFilter(s SelectNode, filter exprInfo) {
+	switch node := s.(type) {
+	case *JoinNode:
+		node.otherFilter = append(node.otherFilter, filter)
+	case *MergeNode:
+		node.addWhere(filter.expr)
+	}
 }

@@ -264,6 +264,23 @@ func convertOrToIn(node sqlparser.Expr) sqlparser.Expr {
 	return result
 }
 
+// getTbInExpr used to get the tbs from the expr.
+func getTbInExpr(expr sqlparser.Expr) []string {
+	var referTables []string
+	sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
+		switch node := node.(type) {
+		case *sqlparser.ColName:
+			tableName := node.Qualifier.Name.String()
+			if isContainKey(tableName, referTables) {
+				return true, nil
+			}
+			referTables = append(referTables, tableName)
+		}
+		return true, nil
+	}, expr)
+	return referTables
+}
+
 // convertToLeftJoin converts a right join into a left join.
 func convertToLeftJoin(joinExpr *sqlparser.JoinTableExpr) {
 	newExpr := joinExpr.LeftExpr
