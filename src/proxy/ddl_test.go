@@ -147,7 +147,7 @@ func TestProxyDDLTable(t *testing.T) {
 		assert.Nil(t, err)
 		query := "create table t1(a int, b int)"
 		_, err = client.FetchAll(query, -1)
-		want := "Unknown database '' (errno 1049) (sqlstate 42000)"
+		want := "No database selected (errno 1046) (sqlstate 3D000)"
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}
