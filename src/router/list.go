@@ -34,7 +34,7 @@ func (r *ListRange) Less(b KeyRange) bool {
 	return false
 }
 
-// List tuple.
+// List ...
 type List struct {
 	log *xlog.Log
 
@@ -58,7 +58,7 @@ func NewList(log *xlog.Log, conf *config.TableConfig) *List {
 	}
 }
 
-// Build used to build list bitmap from schema config
+// Build used to build list bitmap from schema config.
 func (list *List) Build() error {
 	for _, part := range list.conf.Partitions {
 		partition := Segment{
@@ -75,15 +75,15 @@ func (list *List) Build() error {
 	return nil
 }
 
-// Clear used to clean partitions
+// Clear used to clean partitions.
 func (list *List) Clear() error {
 	return nil
 }
 
 // Lookup used to lookup partition(s) through the sharding-key range
-// List.Lookup only supports the type uint64/string
+// List.Lookup only supports the type uint64/string.
 func (list *List) Lookup(start *sqlparser.SQLVal, end *sqlparser.SQLVal) ([]Segment, error) {
-	// if open interval we returns all partitions
+	// if open interval we returns all partitions.
 	if start == nil || end == nil {
 		return list.Segments, nil
 	}
@@ -93,7 +93,7 @@ func (list *List) Lookup(start *sqlparser.SQLVal, end *sqlparser.SQLVal) ([]Segm
 		return nil, errors.Errorf("list.lookup.key.type.must.be.same:[%v!=%v]", start.Type, end.Type)
 	}
 
-	// List just handle the equal
+	// List just handle the equal.
 	if bytes.Equal(start.Val, end.Val) {
 		idx, err := list.GetIndex(start)
 		if err != nil {
