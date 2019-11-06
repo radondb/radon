@@ -1142,7 +1142,7 @@ func TestProxyDDLDBPrivilegeN(t *testing.T) {
 	}
 }
 
-func TestProxyDDLGlobalSingleNormal(t *testing.T) {
+func TestProxyDDLGlobalSingleNormalList(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
@@ -1172,17 +1172,33 @@ func TestProxyDDLGlobalSingleNormal(t *testing.T) {
 		"CREATE TABLE t5(a int ,b int, primary key(a))",
 		"CREATE TABLE t6(a int ,b int, primary key(a, b))",
 		"create table t7(a int, b int unique)",
+
+		// partition list
+		"CREATE TABLE l(a int primary key,b int ) partition by list(a)(" +
+			"PARTITION backend1 VALUES IN (1)," +
+			"PARTITION backend2 VALUES IN (2));",
+		"CREATE TABLE l(a int primary key,b int ) partition by list(a)(" +
+			"PARTITION backend1 VALUES IN (1)," +
+			"PARTITION backend2 VALUES IN (2));",
+		"CREATE TABLE l(a int primary key,b int ) partition by list(b)(" +
+			"PARTITION backend1 VALUES IN (1)," +
+			"PARTITION backend2 VALUES IN (2));",
 	}
 
 	results := []string{
 		"",
 		"",
 		"",
-		"single.table.not.impl.yet (errno 1105) (sqlstate HY000)",
-		"The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication (errno 1105) (sqlstate HY000)",
 		"",
 		"The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication (errno 1105) (sqlstate HY000)",
 		"",
+		"The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication (errno 1105) (sqlstate HY000)",
+		"",
+
+		// partition list
+		"",
+		"router.add.db[test].table[l].exists (errno 1105) (sqlstate HY000)",
+		"The unique/primary constraint should be only defined on the sharding key column[b] (errno 1105) (sqlstate HY000)",
 	}
 
 	for i, query := range querys {
@@ -1333,6 +1349,8 @@ func TestProxyDDLCreateTableDistributed(t *testing.T) {
 
 	queryErrs := []string{
 		"create table t1(a int, b int) distributed by (node0)",
+		//querys have created it.
+		"create table t1(a int, b int) distributed by (backend0)",
 	}
 
 	for _, query := range querys {

@@ -75,6 +75,7 @@ func TestCtlV1ShardBalanceAdvice1(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := proxy.MockProxy(log)
 	defer cleanup()
+	address := proxy.Address()
 
 	rdbs := &sqltypes.Result{
 		Fields: []*querypb.Field{
@@ -139,12 +140,12 @@ func TestCtlV1ShardBalanceAdvice1(t *testing.T) {
 		Rows: [][]sqltypes.Value{
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test")),
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_00001")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_0001")),
 				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("6144")),
 			},
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test")),
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_00002")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_0002")),
 				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("2048")),
 			},
 		},
@@ -154,8 +155,27 @@ func TestCtlV1ShardBalanceAdvice1(t *testing.T) {
 	{
 		fakedbs.AddQuery("show databases", rdbs)
 		fakedbs.AddQuery("create database if not exists `test`", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQuerys("select round((sum(data_length) + sum(index_length)) / 1024/ 1024, 0)  as sizeinmb from information_schema.tables", r10, r11)
 		fakedbs.AddQuery("SELECT table_schema, table_name, ROUND((SUM(data_length+index_length)) / 1024/ 1024, 0) AS sizeMB FROM information_schema.TABLES GROUP BY table_name HAVING SUM(data_length + index_length)>10485760 ORDER BY (data_length + index_length) DESC", r2)
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 
 	{
@@ -171,7 +191,7 @@ func TestCtlV1ShardBalanceAdvice1(t *testing.T) {
 
 		got := recorded.Recorder.Body.String()
 		log.Debug(got)
-		assert.True(t, strings.Contains(got, `"to-datasize":3072,"to-user":"mock","to-password":"pwd","database":"test","table":"t1_00002","tablesize":2048`))
+		assert.True(t, strings.Contains(got, `"to-datasize":3072,"to-user":"mock","to-password":"pwd","database":"test","table":"t1_0002","tablesize":2048`))
 	}
 }
 
@@ -244,7 +264,7 @@ func TestCtlV1ShardBalanceAdviceGlobal(t *testing.T) {
 		Rows: [][]sqltypes.Value{
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("sbtest")),
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_00002")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_0002")),
 				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("6144")),
 			},
 			{
@@ -383,11 +403,11 @@ func TestCtlV1ShardBalanceAdviceSingle(t *testing.T) {
 	}
 }
 
-func TestCtlV1ShardBalanceAdviceGlobal1(t *testing.T) {
+func TestCtlV1ShardBalanceAdviceList(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := proxy.MockProxy(log)
 	defer cleanup()
-	proxy.Router().AddForTest("sbtest", router.MockTableGConfig())
+	proxy.Router().AddForTest("sbtest", router.MockTableListConfig())
 
 	rdbs := &sqltypes.Result{
 		Fields: []*querypb.Field{
@@ -452,13 +472,13 @@ func TestCtlV1ShardBalanceAdviceGlobal1(t *testing.T) {
 		Rows: [][]sqltypes.Value{
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("sbtest")),
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("G")),
-				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("2048")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_00002")),
+				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("6144")),
 			},
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("sbtest")),
-				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_00001")),
-				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("2096")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("L_0000")),
+				sqltypes.MakeTrusted(querypb.Type_DECIMAL, []byte("2048")),
 			},
 		},
 	}
@@ -467,6 +487,7 @@ func TestCtlV1ShardBalanceAdviceGlobal1(t *testing.T) {
 	{
 		fakedbs.AddQuery("show databases", rdbs)
 		fakedbs.AddQuery("create database if not exists `sbtest`", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQuerys("select round((sum(data_length) + sum(index_length)) / 1024/ 1024, 0)  as sizeinmb from information_schema.tables", r10, r11)
 		fakedbs.AddQuery("SELECT table_schema, table_name, ROUND((SUM(data_length+index_length)) / 1024/ 1024, 0) AS sizeMB FROM information_schema.TABLES GROUP BY table_name HAVING SUM(data_length + index_length)>10485760 ORDER BY (data_length + index_length) DESC", r2)
 	}
@@ -483,8 +504,7 @@ func TestCtlV1ShardBalanceAdviceGlobal1(t *testing.T) {
 		recorded.CodeIs(200)
 
 		got := recorded.Recorder.Body.String()
-		log.Debug(got)
-		assert.True(t, strings.Contains(got, `"to-datasize":3072,"to-user":"mock","to-password":"pwd","database":"sbtest","table":"t1_00001","tablesize":2096`))
+		assert.Equal(t, "null", got)
 	}
 }
 
@@ -1273,5 +1293,23 @@ func TestCtlV1Globals(t *testing.T) {
 		log.Debug(got)
 		want := "{\"schemas\":[{\"database\":\"sbtest\",\"tables\":[\"G\"]}]}"
 		assert.Equal(t, want, got)
+	}
+}
+
+func TestSubTableToTable(t *testing.T) {
+	testCases := []struct {
+		in, out string
+	}{
+		{"t", ""},
+		{"t1_0001", "t1"},
+		{"t2_000", ""},
+		{"t3_0000_0001", "t3_0000"},
+	}
+
+	for _, test := range testCases {
+		isSub, table := SubTableToTable(test.in)
+		if isSub || test.out != "" {
+			assert.Equal(t, test.out, table)
+		}
 	}
 }

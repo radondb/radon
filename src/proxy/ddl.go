@@ -232,6 +232,11 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 				return nil, err
 			}
 			tableType = router.TableTypePartitionHash
+		case sqlparser.PartitionTableList:
+			if shardKey, err = tryGetShardKey(ddl); err != nil {
+				return nil, err
+			}
+			tableType = router.TableTypePartitionList
 		case sqlparser.GlobalTableType:
 			tableType = router.TableTypeGlobal
 		case sqlparser.SingleTableType:
@@ -246,18 +251,30 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 			AutoIncrement: autoinc,
 		}
 
-		//TODO: a list of backends
-		if ddl.TableSpec.Options.Type == sqlparser.SingleTableType && ddl.BackendName != "" {
-			if isExist := scatter.CheckBackend(ddl.BackendName); !isExist {
-				log.Error("spanner.ddl.execute[%v].backend.doesn't.exist", query)
-				return nil, fmt.Errorf("create table distributed by backend '%s' doesn't exist", ddl.BackendName)
-			}
+		switch tableType {
+		case router.TableTypeSingle:
+			if ddl.BackendName != "" {
+				// TODO(andy): distributed by a list of backends
+				if isExist := scatter.CheckBackend(ddl.BackendName); !isExist {
+					log.Error("spanner.ddl.execute[%v].backend.doesn't.exist", query)
+					return nil, fmt.Errorf("create table distributed by backend '%s' doesn't exist", ddl.BackendName)
+				}
 
-			assignedBackends := []string{ddl.BackendName}
-			if err := route.CreateTable(database, table, shardKey, tableType, assignedBackends, extra); err != nil {
+				assignedBackends := []string{ddl.BackendName}
+				if err := route.CreateTable(database, table, shardKey, tableType, assignedBackends, extra); err != nil {
+					return nil, err
+				}
+			} else {
+				if err := route.CreateTable(database, table, shardKey, tableType, backends, extra); err != nil {
+					return nil, err
+				}
+			}
+		case router.TableTypePartitionList:
+			if err := route.CreateListTable(database, table, shardKey, tableType, ddl.PartitionOptions, extra); err != nil {
 				return nil, err
 			}
-		} else {
+
+		default:
 			if err := route.CreateTable(database, table, shardKey, tableType, backends, extra); err != nil {
 				return nil, err
 			}
