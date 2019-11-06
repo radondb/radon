@@ -1085,7 +1085,6 @@ func TestGenerateFieldQuery(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
-
 func TestSelectPlanList(t *testing.T) {
 	querys := []string{
 		"select 1, sum(a),avg(a),a,b from sbtest.L where id>1 group by a,b order by a desc limit 10 offset 100",

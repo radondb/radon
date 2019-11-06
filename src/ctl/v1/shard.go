@@ -10,6 +10,7 @@ package v1
 
 import (
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -18,6 +19,26 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
+
+var (
+	subtable = regexp.MustCompile("_[0-9]{4}$")
+)
+
+// SubTableToTable used to determine from is subtable or not; if it is, get the table from the subtable.
+func SubTableToTable(from string) (isSub bool, to string) {
+	isSub = false
+	to = ""
+
+	Suffix := subtable.FindAllStringSubmatch(from, -1)
+	lenSuffix := len(Suffix)
+	if lenSuffix == 0 {
+		return
+	}
+
+	isSub = true
+	to = strings.TrimSuffix(from, Suffix[0][lenSuffix-1])
+	return
+}
 
 // ShardzHandler impl.
 func ShardzHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFunc {
@@ -138,7 +159,7 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 
 	var tableSize float64
 	var database, table string
-	router := proxy.Router()
+	route := proxy.Router()
 	for _, row := range qr.Rows {
 		db := string(row[0].Raw())
 		tbl := string(row[1].Raw())
@@ -152,17 +173,20 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 
 		// Make sure the table is small enough.
 		if (min.size + tblSize) < (max.size - tblSize) {
-			// Filter the global and single table.
-			shardKey, err := router.ShardKey(db, tbl)
-			if err == nil && shardKey == "" {
-				log.Warning("api.v1.balance.advice.skip.global.and.single.table")
-				continue
+			isSub, t := SubTableToTable(tbl)
+			if isSub {
+				partitionType, err := route.PartitionType(db, t)
+				// The advice table just hash, Filter the global/single/list table.
+				if err == nil && route.IsPartitionHash(partitionType) {
+					//Find the advice table.
+					database = db
+					table = tbl
+					tableSize = tblSize
+					break
+				}
 			}
-			// Find the advice table.
-			database = db
-			table = tbl
-			tableSize = tblSize
-			break
+
+			log.Warning("api.v1.balance.advice.skip.table[%v]", tbl)
 		}
 	}
 
