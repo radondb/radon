@@ -29,6 +29,7 @@ type PlanNode interface {
 type SelectNode interface {
 	PlanNode
 	pushFilter(filters []exprInfo) error
+	pushKeyFilter(filter exprInfo, table, field string) error
 	setParent(p SelectNode)
 	setWhereFilter(filter exprInfo)
 	setNoTableFilter(exprs []sqlparser.Expr)

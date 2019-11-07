@@ -178,7 +178,7 @@ func TestSelectPlan(t *testing.T) {
 			"Range": "[512-4096)"
 		},
 		{
-			"Query": "select B.id from sbtest.B1 as B where 1 = 1 and B.b = 2 and B.id = 1 order by B.id asc",
+			"Query": "select B.id from sbtest.B1 as B where B.id = 1 and 1 = 1 and B.b = 2 order by B.id asc",
 			"Backend": "backend2",
 			"Range": "[512-4096)"
 		}
@@ -198,7 +198,7 @@ func TestSelectPlan(t *testing.T) {
 			"Range": "[512-4096)"
 		},
 		{
-			"Query": "select /*+nested+*/ 1 from sbtest.B1 as B where :A_id = B.id and B.id = 1",
+			"Query": "select /*+nested+*/ 1 from sbtest.B1 as B where B.id = 1 and :A_id = B.id",
 			"Backend": "backend2",
 			"Range": "[512-4096)"
 		}
@@ -329,7 +329,7 @@ func TestSelectPlan(t *testing.T) {
 	"Project": "sum(A.a), b",
 	"Partitions": [
 		{
-			"Query": "select sum(A.a), S.b from sbtest.A1 as A join sbtest.S on A.id = S.id where A.id = 0 group by S.b",
+			"Query": "select sum(A.a), S.b from sbtest.A1 as A join sbtest.S on A.id = S.id where A.id = 0 and S.id = 0 group by S.b",
 			"Backend": "backend1",
 			"Range": "[0-32)"
 		}
