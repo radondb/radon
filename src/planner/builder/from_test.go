@@ -80,7 +80,6 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.joinOn))
 		assert.False(t, j.IsLeftJoin)
-		assert.Equal(t, 1, len(j.tableFilter))
 
 		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["A"]
@@ -107,7 +106,6 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.joinOn))
 		assert.True(t, j.IsLeftJoin)
-		assert.Equal(t, 0, len(j.tableFilter))
 
 		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["A"]
@@ -139,7 +137,6 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.joinOn))
 		assert.True(t, j.IsLeftJoin)
-		assert.Equal(t, 0, len(j.tableFilter))
 		assert.NotNil(t, j.otherJoinOn)
 
 		err = j.pushOtherJoin()
@@ -160,7 +157,6 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.joinOn))
 		assert.True(t, j.IsLeftJoin)
-		assert.Equal(t, 0, len(j.tableFilter))
 
 		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["A"]
@@ -257,7 +253,6 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, 2, len(j.joinOn))
 		assert.False(t, j.IsLeftJoin)
 		assert.Equal(t, 1, len(j.noTableFilter))
-		assert.Equal(t, 1, len(j.tableFilter))
 		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["A"]
 
@@ -396,7 +391,6 @@ func TestScanTableExprsList(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.joinOn))
 		assert.False(t, j.IsLeftJoin)
-		assert.Equal(t, 1, len(j.tableFilter))
 
 		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["A"]
@@ -423,7 +417,6 @@ func TestScanTableExprsList(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.joinOn))
 		assert.True(t, j.IsLeftJoin)
-		assert.Equal(t, 0, len(j.tableFilter))
 
 		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["A"]
@@ -455,7 +448,6 @@ func TestScanTableExprsList(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.joinOn))
 		assert.True(t, j.IsLeftJoin)
-		assert.Equal(t, 0, len(j.tableFilter))
 		assert.NotNil(t, j.otherJoinOn)
 
 		err = j.pushOtherJoin()
@@ -476,8 +468,6 @@ func TestScanTableExprsList(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.joinOn))
 		assert.True(t, j.IsLeftJoin)
-		assert.Equal(t, 0, len(j.tableFilter))
-
 		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["A"]
 
@@ -554,7 +544,6 @@ func TestScanTableExprsList(t *testing.T) {
 		assert.Equal(t, 2, len(j.joinOn))
 		assert.False(t, j.IsLeftJoin)
 		assert.Equal(t, 1, len(j.noTableFilter))
-		assert.Equal(t, 1, len(j.tableFilter))
 		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["A"]
 
@@ -582,7 +571,6 @@ func TestScanTableExprsList(t *testing.T) {
 		assert.Equal(t, 0, len(j.joinOn))
 		assert.False(t, j.IsLeftJoin)
 		assert.Equal(t, 0, len(j.noTableFilter))
-		assert.Equal(t, 1, len(j.tableFilter))
 		tbMaps := j.getReferTables()
 		tbInfo := tbMaps["L"]
 
@@ -685,7 +673,6 @@ func TestScanTableExprsListErrorDebug(t *testing.T) {
 	assert.Equal(t, 0, len(j.joinOn))
 	assert.False(t, j.IsLeftJoin)
 	assert.Equal(t, 0, len(j.noTableFilter))
-	assert.Equal(t, 1, len(j.tableFilter))
 	tbMaps := j.getReferTables()
 	tbInfo := tbMaps["L"]
 
@@ -713,6 +700,7 @@ func TestScanTableExprsError(t *testing.T) {
 		"select * from G join A on G.id=A.id join B on A.a=G.a",
 		"select * from G join (A,B) on G.id=A.id and A.a=B.a",
 		"select * from G join A as G where G.id=1",
+		"select * from A join B on A.id=B.id and B.id=0x12",
 	}
 	wants := []string{
 		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
@@ -728,6 +716,7 @@ func TestScanTableExprsError(t *testing.T) {
 		"unsupported: join.on.condition.should.cross.left-right.tables",
 		"unsupported: join.on.condition.should.cross.left-right.tables",
 		"unsupported: not.unique.table.or.alias:'G'",
+		"hash.unsupported.key.type:[3]",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"

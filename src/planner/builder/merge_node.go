@@ -49,11 +49,7 @@ type MergeNode struct {
 	ParsedQuerys []*sqlparser.ParsedQuery
 	// the returned result fields, used in the Multiple Plan Tree.
 	fields []selectTuple
-	// filters record the filter, map struct for remove duplicate.
-	// eg: from t1 join t2 on t1.a=t2.a join t3 on t3.a=t2.a and t2.a=1.
-	// need avoid the duplicate filter `t2.a=1`.
-	filters map[sqlparser.Expr]int
-	order   int
+	order  int
 	// Mode.
 	ReqMode xcontext.RequestMode
 	// aliasIndex is the tmp col's alias index.
@@ -66,7 +62,6 @@ func newMergeNode(log *xlog.Log, router *router.Router) *MergeNode {
 		log:         log,
 		router:      router,
 		referTables: make(map[string]*tableInfo),
-		filters:     make(map[sqlparser.Expr]int),
 		ReqMode:     xcontext.ReqNormal,
 	}
 }
@@ -115,6 +110,21 @@ func (m *MergeNode) pushFilter(filters []exprInfo) error {
 		}
 	}
 	return err
+}
+
+func (m *MergeNode) pushKeyFilter(filter exprInfo, table, field string) error {
+	expr := sqlparser.CloneExpr(filter.expr)
+	m.addWhere(expr)
+
+	tbInfo := m.referTables[table]
+	if field == tbInfo.shardKey && len(filter.vals) > 0 {
+		for _, val := range filter.vals {
+			if err := getIndex(m.router, tbInfo, val); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // setParent set the parent node.
@@ -300,10 +310,6 @@ func (m *MergeNode) Order() int {
 func (m *MergeNode) buildQuery(tbInfos map[string]*tableInfo) {
 	var Range string
 	if sel, ok := m.Sel.(*sqlparser.Select); ok {
-		for expr := range m.filters {
-			m.addWhere(expr)
-		}
-
 		if len(sel.SelectExprs) == 0 {
 			sel.SelectExprs = append(sel.SelectExprs, &sqlparser.AliasedExpr{
 				Expr: sqlparser.NewIntVal([]byte("1"))})
