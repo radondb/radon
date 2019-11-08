@@ -74,36 +74,36 @@ func TestSelectPlan(t *testing.T) {
 	}
 }`,
 		`{
-	"RawQuery": "select id, sum(a) as A from A group by id having A\u003e1000",
+	"RawQuery": "select id, sum(a) as A from A group by id having id\u003e1000",
 	"Project": "id, A",
 	"Partitions": [
 		{
-			"Query": "select id, sum(a) as A from sbtest.A1 as A group by id having A \u003e 1000 order by id asc",
+			"Query": "select id, sum(a) as A from sbtest.A1 as A group by id having id \u003e 1000 order by id asc",
 			"Backend": "backend1",
 			"Range": "[0-32)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A2 as A group by id having A \u003e 1000 order by id asc",
+			"Query": "select id, sum(a) as A from sbtest.A2 as A group by id having id \u003e 1000 order by id asc",
 			"Backend": "backend2",
 			"Range": "[32-64)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A3 as A group by id having A \u003e 1000 order by id asc",
+			"Query": "select id, sum(a) as A from sbtest.A3 as A group by id having id \u003e 1000 order by id asc",
 			"Backend": "backend3",
 			"Range": "[64-96)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A4 as A group by id having A \u003e 1000 order by id asc",
+			"Query": "select id, sum(a) as A from sbtest.A4 as A group by id having id \u003e 1000 order by id asc",
 			"Backend": "backend4",
 			"Range": "[96-256)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A5 as A group by id having A \u003e 1000 order by id asc",
+			"Query": "select id, sum(a) as A from sbtest.A5 as A group by id having id \u003e 1000 order by id asc",
 			"Backend": "backend5",
 			"Range": "[256-512)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A6 as A group by id having A \u003e 1000 order by id asc",
+			"Query": "select id, sum(a) as A from sbtest.A6 as A group by id having id \u003e 1000 order by id asc",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
 		}
@@ -421,7 +421,7 @@ func TestSelectPlan(t *testing.T) {
 	}
 	querys := []string{
 		"select 1, sum(a),avg(a),a,b from sbtest.A where id>1 group by a,b order by A.a desc limit 10 offset 100",
-		"select id, sum(a) as A from A group by id having A>1000",
+		"select id, sum(a) as A from A group by id having id>1000",
 		"select id,a from sbtest.A where (a>1 and (id=1))",
 		"select A.id,B.id from A join B on A.id=B.id where A.id=1",
 		"select A.id from A join B where A.id=1",
