@@ -59,7 +59,7 @@ func parseWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) 
 					}
 				}
 
-				if isContainKey(tableName, referTables) {
+				if isContainKey(referTables, tableName) {
 					return true, nil
 				}
 				referTables = append(referTables, tableName)
@@ -323,7 +323,7 @@ func parseHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo, fields []s
 				}
 
 				for _, tb := range field.info.referTables {
-					if isContainKey(tb, tuple.referTables) {
+					if isContainKey(tuple.referTables, tb) {
 						continue
 					}
 					tuple.referTables = append(tuple.referTables, tb)
@@ -345,4 +345,21 @@ func parseHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo, fields []s
 	}
 
 	return tuples, nil
+}
+
+// getTbInExpr used to get the referred tables from the expr.
+func getTbInExpr(expr sqlparser.Expr) []string {
+	var referTables []string
+	sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
+		switch node := node.(type) {
+		case *sqlparser.ColName:
+			tableName := node.Qualifier.Name.String()
+			if isContainKey(referTables, tableName) {
+				return true, nil
+			}
+			referTables = append(referTables, tableName)
+		}
+		return true, nil
+	}, expr)
+	return referTables
 }

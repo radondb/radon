@@ -72,8 +72,6 @@ func processSelect(log *xlog.Log, router *router.Router, database string, node *
 		return root, nil
 	}
 
-	root.pushMisc(node)
-
 	var groups []selectTuple
 	fields, aggTyp, err := parseSelectExprs(node.SelectExprs, root)
 	if err != nil {
@@ -105,12 +103,15 @@ func processSelect(log *xlog.Log, router *router.Router, database string, node *
 	if err = root.pushOrderBy(node); err != nil {
 		return nil, err
 	}
+
 	// Limit SubPlan.
 	if node.Limit != nil {
 		if err = root.pushLimit(node); err != nil {
 			return nil, err
 		}
 	}
+
+	root.pushMisc(node)
 	return root, nil
 }
 

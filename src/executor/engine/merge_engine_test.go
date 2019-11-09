@@ -139,7 +139,7 @@ func TestGenerateQueryErr(t *testing.T) {
 	scatter, _, cleanup := backend.MockScatter(log, 10)
 	defer cleanup()
 
-	query := "select /*+nested+*/ B.name, A.id+B.id as id from A join B on A.name=B.name where A.id = 3"
+	query := "select B.name, A.id+B.id as id from A join B on A.name=B.name where A.id = 3"
 	want := "missing bind var A_id"
 
 	node, err := sqlparser.Parse(query)

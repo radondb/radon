@@ -44,9 +44,9 @@ func checkTbInNode(referTables []string, tbInfos map[string]*tableInfo) bool {
 	return true
 }
 
-func isContainKey(a string, b []string) bool {
-	for _, c := range b {
-		if c == a {
+func isContainKey(a []string, b string) bool {
+	for _, c := range a {
+		if c == b {
 			return true
 		}
 	}
