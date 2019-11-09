@@ -76,7 +76,7 @@ func parseSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*tableInfo)
 				}
 			}
 
-			if isContainKey(tableName, referTables) {
+			if isContainKey(referTables, tableName) {
 				return true, nil
 			}
 			referTables = append(referTables, tableName)
@@ -214,7 +214,7 @@ func parseExpr(expr sqlparser.Expr) selectTuple {
 				tuple.field = node.Name.String()
 			}
 			tuple.info.cols = append(tuple.info.cols, node)
-			if isContainKey(tableName, tuple.info.referTables) {
+			if isContainKey(tuple.info.referTables, tableName) {
 				return true, nil
 			}
 			tuple.info.referTables = append(tuple.info.referTables, tableName)
