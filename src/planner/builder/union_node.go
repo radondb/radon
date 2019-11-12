@@ -36,9 +36,9 @@ func newUnionNode(log *xlog.Log, left, right PlanNode, typ string) *UnionNode {
 }
 
 // buildQuery used to build the QueryTuple.
-func (u *UnionNode) buildQuery(tbInfos map[string]*tableInfo) {
-	u.Left.buildQuery(tbInfos)
-	u.Right.buildQuery(tbInfos)
+func (u *UnionNode) buildQuery(root PlanNode) {
+	u.Left.buildQuery(u.Left)
+	u.Right.buildQuery(u.Right)
 }
 
 // Children returns the children of the plan.

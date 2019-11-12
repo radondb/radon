@@ -132,7 +132,7 @@ func keysEqual(row1, row2 []sqltypes.Value, joins []builder.JoinKey) bool {
 	return true
 }
 
-// concatLeftAndRight used to concat thle left and right results, handle otherJoinOn|rightNull|OtherFilter.
+// concatLeftAndRight used to concat thle left and right results, handle otherLeftJoin|rightNull|OtherFilter.
 func concatLeftAndRight(lrows, rrows [][]sqltypes.Value, node *builder.JoinNode, res *sqltypes.Result, maxrow int) error {
 	var err error
 	var mu sync.Mutex
