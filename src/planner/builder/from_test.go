@@ -116,7 +116,7 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, m, tbInfo.parent)
 		assert.Equal(t, 0, len(m.index))
-		assert.NotNil(t, j.otherJoinOn)
+		assert.NotNil(t, j.otherLeftJoin)
 
 		err = j.pushOthers()
 		assert.Nil(t, err)
@@ -136,7 +136,7 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.joinOn))
 		assert.True(t, j.IsLeftJoin)
-		assert.NotNil(t, j.otherJoinOn)
+		assert.NotNil(t, j.otherLeftJoin)
 
 		err = j.pushOthers()
 		assert.Nil(t, err)
@@ -168,7 +168,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, 2, len(m.getReferTables()))
 		assert.Equal(t, 0, len(m.index))
 		assert.True(t, m.hasParen)
-		assert.NotNil(t, j.otherJoinOn)
+		assert.NotNil(t, j.otherLeftJoin)
 
 		err = j.pushOthers()
 		assert.Nil(t, err)
@@ -426,7 +426,7 @@ func TestScanTableExprsList(t *testing.T) {
 		}
 		assert.Equal(t, m, tbInfo.parent)
 		assert.Equal(t, 0, len(m.index))
-		assert.NotNil(t, j.otherJoinOn)
+		assert.NotNil(t, j.otherLeftJoin)
 
 		err = j.pushOthers()
 		assert.Nil(t, err)
@@ -446,7 +446,7 @@ func TestScanTableExprsList(t *testing.T) {
 		}
 		assert.Equal(t, 1, len(j.joinOn))
 		assert.True(t, j.IsLeftJoin)
-		assert.NotNil(t, j.otherJoinOn)
+		assert.NotNil(t, j.otherLeftJoin)
 
 		err = j.pushOthers()
 		assert.Nil(t, err)
@@ -477,7 +477,7 @@ func TestScanTableExprsList(t *testing.T) {
 		assert.Equal(t, 2, len(m.getReferTables()))
 		assert.Equal(t, 0, len(m.index))
 		assert.True(t, m.hasParen)
-		assert.NotNil(t, j.otherJoinOn)
+		assert.NotNil(t, j.otherLeftJoin)
 
 		err = j.pushOthers()
 		assert.Nil(t, err)

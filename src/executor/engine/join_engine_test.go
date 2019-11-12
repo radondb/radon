@@ -266,7 +266,7 @@ func TestJoinEngine(t *testing.T) {
 	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A2 as A", r3)
 	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A4 as A", r3)
 	fakedbs.AddQuery("select A.id, A.name, A.id > 2 as tmpc_0 from sbtest.A8 as A", r3)
-	fakedbs.AddQuery("select G.a from sbtest.G", r4)
+	fakedbs.AddQueryPattern("select G.a from .*", r4)
 
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B0 as B", r21)
 	fakedbs.AddQuery("select B.name, B.id from sbtest.B1 as B", r22)
@@ -308,6 +308,7 @@ func TestJoinEngine(t *testing.T) {
 		"select A.id, B.name, B.id, A.name from A left join B on A.name+B.name='golang' and A.id>2 where B.name is null and B.id = 1 order by A.id",
 		"select A.id, A.name, B.name, B.id from G,A,B where G.a+A.a=1 and A.name=B.name and A.id=5 and B.id=1",
 		"select B.name, A.id+B.id as id from A join B on A.name=B.name where A.id = 3",
+		"select A.id, B.name, B.id, G.a from A join B on A.id=5 and B.id=1 and 'lang'+B.name='golang' join G on G.name + A.name = 'golang'",
 	}
 	results := []string{
 		"[[3 go] [5 lang]]",
@@ -326,6 +327,7 @@ func TestJoinEngine(t *testing.T) {
 		"[[4 lang 5 lang]]",
 		"[[6 lang 5 lang 1]]",
 		"[[4 lang 5] [4 go 3]]",
+		"[]",
 		"[]",
 		"[]",
 		"[]",
