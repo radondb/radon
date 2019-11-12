@@ -48,6 +48,18 @@ type Comparison struct {
 	Exchange bool
 }
 
+// otherJoin record join conditions except the equal conditions in left join.
+type otherJoin struct {
+	// filters without tables.
+	noTables []sqlparser.Expr
+	// filters belong to JoinNode.Left.
+	left []selectTuple
+	// filters belong to the JoinNode.Right.
+	right []exprInfo
+	// filters cross-shard.
+	others []exprInfo
+}
+
 // JoinNode cannot be pushed down.
 type JoinNode struct {
 	log *xlog.Log
@@ -73,26 +85,31 @@ type JoinNode struct {
 	Cols []int `json:",omitempty"`
 	// the returned result fields.
 	fields []selectTuple
-	// join on condition tuples.
+	// the equal join conditions.
+	// eg: `t1.a=t2.a` in `t1 join t2 on t1.a=t2.a`.
 	joinOn []exprInfo
 	// eg: from t1 join t2 on t1.a=t2.b, 't1.a' put in LeftKeys, 't2.a' in RightKeys.
 	LeftKeys, RightKeys []JoinKey
-	// eg: t1 join t2 on t1.a>t2.a, 't1.a>t2.a' parser into CmpFilter.
+	// eg: t1 join t2 on t1.a>t2.a, 't1.a>t2.a' parse into CmpFilter.
 	CmpFilter []Comparison
 	/*
-	 * eg: 't1 left join t2 on t1.a=t2.a and t1.b=2' where t1.c=t2.c and 1=1 and t2.b>2 where t2.str is null.
-	 * 't1.b=2' will parser into otherJoinOn, IsLeftJoin is true, 't1.c=t2.c' parser into otherFilter, else
-	 * into joinOn. '1=1' parser into noTableFilter. 't2.str is null' into rightNull.
+	 * eg: 't1 left join t2 on t1.a=t2.a and t1.b=2' where t1.c=t2.c and 1=1 and t2.b>2 and t2.str is null.
+	 * 't1.b=2' will parse into otherLeftJoin. If join type is leftjoin, 't1.c=t2.c' parse into otherFilter,
+	 * otherwise parse into joinOn. '1=1' parse into noTableFilter. 't2.str is null' parse into rightNull.
 	 */
-	otherFilter   []exprInfo
+	// The cross-shard filters.
+	otherFilter []exprInfo
+	// The filters without tables, always true or false.
 	noTableFilter []sqlparser.Expr
-	otherJoinOn   *otherJoin
-	rightNull     []selectTuple
+	// The join conditions except for the equal condition in left join.
+	otherLeftJoin *otherJoin
+	// The null conditions belong to JoinNode.Right, when join type is left join.
+	rightNull []selectTuple
 	// whether is left join.
 	IsLeftJoin bool
 	// whether the right node has filters in left join.
 	HasRightFilter bool
-	// record the `otherJoin.left`'s index in left.fields.
+	// record the `otherLeftJoin.left`'s index in left.fields.
 	LeftTmpCols []int
 	// record the `rightNull`'s index in right.fields.
 	RightTmpCols []int
@@ -146,8 +163,9 @@ func (j *JoinNode) pushFilter(filters []exprInfo) error {
 			j.noTableFilter = append(j.noTableFilter, filter.expr)
 			continue
 		}
-		// if left join's right node with
-		// "is null" condition will not be pushed down.
+
+		// If left join's right node has "is null" condition, the condition
+		// will record in rightNull instead of push down.
 		if j.IsLeftJoin {
 			if ok, nullFunc := checkIsWithNull(filter, rightTbs); ok {
 				j.rightNull = append(j.rightNull, nullFunc)
@@ -254,24 +272,12 @@ func (j *JoinNode) setNoTableFilter(exprs []sqlparser.Expr) {
 	j.noTableFilter = append(j.noTableFilter, exprs...)
 }
 
-// otherJoin is the filter in leftjoin's on clause.
-// based on the plan tree,separate the otherjoinon.
-type otherJoin struct {
-	// noTables: no tables filter in otherjoinon.
-	// others: filter cross the left and right.
-	noTables []sqlparser.Expr
-	// filter belong to the left node.
-	left []selectTuple
-	// filter belong to the right node.
-	right, others []exprInfo
-}
-
-// setOtherJoin use to process the otherjoinon.
+// setOtherJoin separate filters into j.otherLeftJoin.
 func (j *JoinNode) setOtherJoin(filters []exprInfo) {
-	j.otherJoinOn = &otherJoin{}
+	j.otherLeftJoin = &otherJoin{}
 	for _, filter := range filters {
 		if len(filter.referTables) == 0 {
-			j.otherJoinOn.noTables = append(j.otherJoinOn.noTables, filter.expr)
+			j.otherLeftJoin.noTables = append(j.otherLeftJoin.noTables, filter.expr)
 			continue
 		}
 		if checkTbInNode(filter.referTables, j.Left.getReferTables()) {
@@ -286,26 +292,26 @@ func (j *JoinNode) setOtherJoin(filters []exprInfo) {
 				field: field,
 				alias: alias,
 			}
-			j.otherJoinOn.left = append(j.otherJoinOn.left, tuple)
+			j.otherLeftJoin.left = append(j.otherLeftJoin.left, tuple)
 		} else if checkTbInNode(filter.referTables, j.Right.getReferTables()) {
-			j.otherJoinOn.right = append(j.otherJoinOn.right, filter)
+			j.otherLeftJoin.right = append(j.otherLeftJoin.right, filter)
 		} else {
-			j.otherJoinOn.others = append(j.otherJoinOn.others, filter)
+			j.otherLeftJoin.others = append(j.otherLeftJoin.others, filter)
 		}
 	}
 }
 
-// pushOthers use to push otherjoin and otherFilter.
+// pushOthers use to push otherLeftJoin and otherFilter.
 // eg: select A.a from A left join B on A.id=B.id and 1=1 and A.c=1 and B.b='a';
 // push: select A.c=1 as tmpc_0,A.a,A.id from A order by A.id asc;
 //       select B.id from B where 1=1 and B.b='a' order by B.id asc;
 func (j *JoinNode) pushOthers() error {
-	if j.otherJoinOn != nil {
-		if len(j.otherJoinOn.noTables) > 0 {
-			j.Right.setNoTableFilter(j.otherJoinOn.noTables)
+	if j.otherLeftJoin != nil {
+		if len(j.otherLeftJoin.noTables) > 0 {
+			j.Right.setNoTableFilter(j.otherLeftJoin.noTables)
 		}
 
-		for _, field := range j.otherJoinOn.left {
+		for _, field := range j.otherLeftJoin.left {
 			index, err := j.Left.pushSelectExpr(field)
 			if err != nil {
 				return err
@@ -314,14 +320,14 @@ func (j *JoinNode) pushOthers() error {
 		}
 
 		// If its parent is JoinNode, add it to parent.otherFilter.
-		for _, filter := range j.otherJoinOn.right {
+		for _, filter := range j.otherLeftJoin.right {
 			parent := findParent(filter.referTables, j.Right)
 			addFilter(parent, filter)
 		}
 
-		if len(j.otherJoinOn.others) > 0 {
-			j.judgeStrategy(j.otherJoinOn.others)
-			if err := j.pushOtherFilters(j.otherJoinOn.others, true); err != nil {
+		if len(j.otherLeftJoin.others) > 0 {
+			j.judgeStrategy(j.otherLeftJoin.others)
+			if err := j.pushOtherFilters(j.otherLeftJoin.others, true); err != nil {
 				return err
 			}
 		}
@@ -331,9 +337,9 @@ func (j *JoinNode) pushOthers() error {
 	return j.pushOtherFilters(j.otherFilter, false)
 }
 
-// judgeStrategy judge the join strategy. SortMerge request the cross-shard expression
-// must be a `ComparisonExpr` and its `left|right`'s parent must be `MergeNode`.
-// Otherwise set the join strategy to NestLoop.
+// judgeStrategy judge the join strategy by analyze `otherLeftJoin.others` and `otherFilter`.
+// SortMerge request the cross-shard expression must be a `ComparisonExpr` and its `left`
+// and `right`'s parent must be `MergeNode`. Otherwise set the join strategy to NestLoop.
 func (j *JoinNode) judgeStrategy(filters []exprInfo) {
 	for _, filter := range filters {
 		if j.Strategy == NestLoop {
@@ -496,7 +502,7 @@ func (j *JoinNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.
 	return nil
 }
 
-// handleOthers used to handle otherJoinOn|rightNull|otherFilter.
+// handleOthers used to handle otherLeftJoin|rightNull|otherFilter.
 func (j *JoinNode) handleOthers() error {
 	var err error
 	if err = j.pushNullExprs(); err != nil {
@@ -836,7 +842,7 @@ func (j *JoinNode) Order() int {
 }
 
 // buildQuery used to build the QueryTuple.
-func (j *JoinNode) buildQuery(tbInfos map[string]*tableInfo) {
+func (j *JoinNode) buildQuery(root PlanNode) {
 	if j.Strategy == SortMerge {
 		if len(j.LeftKeys) == 0 && len(j.CmpFilter) == 0 && !j.IsLeftJoin {
 			j.Strategy = Cartesian
@@ -844,10 +850,10 @@ func (j *JoinNode) buildQuery(tbInfos map[string]*tableInfo) {
 	}
 
 	j.Right.setNoTableFilter(j.noTableFilter)
-	j.Right.buildQuery(tbInfos)
+	j.Right.buildQuery(root)
 
 	j.Left.setNoTableFilter(j.noTableFilter)
-	j.Left.buildQuery(tbInfos)
+	j.Left.buildQuery(root)
 }
 
 // GetQuery used to get the Querys.
@@ -855,4 +861,42 @@ func (j *JoinNode) GetQuery() []xcontext.QueryTuple {
 	querys := j.Left.GetQuery()
 	querys = append(querys, j.Right.GetQuery()...)
 	return querys
+}
+
+// procure requests for the specified column from the plan
+// and returns the join var name for it.
+func (j *JoinNode) procure(col *sqlparser.ColName) string {
+	var joinVar string
+	field := col.Name.String()
+	table := col.Qualifier.Name.String()
+	joinVar = col.Qualifier.Name.CompliantName() + "_" + col.Name.CompliantName()
+	if _, ok := j.Vars[joinVar]; ok {
+		return joinVar
+	}
+
+	// `col` must be in `j.Left`.
+	tuples := j.Left.getFields()
+	index := -1
+	for i, tuple := range tuples {
+		if tuple.isCol {
+			if field == tuple.field && table == tuple.info.referTables[0] {
+				index = i
+				break
+			}
+		}
+	}
+
+	// key not in the select fields.
+	if index == -1 {
+		tuple := selectTuple{
+			expr:  &sqlparser.AliasedExpr{Expr: col},
+			info:  exprInfo{col, []string{table}, []*sqlparser.ColName{col}, nil},
+			field: field,
+			isCol: true,
+		}
+		index, _ = j.Left.pushSelectExpr(tuple)
+	}
+
+	j.Vars[joinVar] = index
+	return joinVar
 }

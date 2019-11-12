@@ -120,7 +120,6 @@ func TestProcessSelect(t *testing.T) {
 					Range:   "[512-4096)",
 				}},
 		},
-
 		{
 			query:   "select A.id from A join B where A.id=1",
 			project: "id",
@@ -141,7 +140,6 @@ func TestProcessSelect(t *testing.T) {
 					Range:   "[512-4096)",
 				}},
 		},
-
 		{
 			query:   "select A.id from A left join B on A.id=B.id and A.a=1 and B.b=2 and 1=1 where B.id=1",
 			project: "id",
@@ -157,7 +155,6 @@ func TestProcessSelect(t *testing.T) {
 					Range:   "[512-4096)",
 				}},
 		},
-
 		{
 			query:   "select A.id from A join B on A.id = B.id and concat(A.str,B.str) = 'golang' where A.id = 1",
 			project: "id",
@@ -173,7 +170,6 @@ func TestProcessSelect(t *testing.T) {
 					Range:   "[512-4096)",
 				}},
 		},
-
 		{
 			query:   "select A.id from A left join B on A.a+1=B.a where A.id=1",
 			project: "id",
@@ -194,7 +190,6 @@ func TestProcessSelect(t *testing.T) {
 					Range:   "[512-4096)",
 				}},
 		},
-
 		{
 			query:   "select B.id as a from B group by a",
 			project: "a",
@@ -210,7 +205,6 @@ func TestProcessSelect(t *testing.T) {
 					Range:   "[512-4096)",
 				}},
 		},
-
 		{
 			query:   "select avg(distinct id) as tmp,b,sum(id),count(id) from B group by b",
 			project: "tmp, b, sum(id), count(id)",
@@ -336,6 +330,26 @@ func TestProcessSelect(t *testing.T) {
 					Query:   "select B.id from sbtest.B1 as B where B.id in (0, 1, 2) order by B.id asc",
 					Backend: "backend2",
 					Range:   "[512-4096)",
+				}},
+		},
+		{
+			query:   "select S.a from A join B on A.id=B.id join S on A.a+B.a>S.a where A.id=1",
+			project: "a",
+			out: []xcontext.QueryTuple{
+				{
+					Query:   "select A.a, A.id from sbtest.A6 as A where A.id = 1",
+					Backend: "backend6",
+					Range:   "[512-4096)",
+				},
+				{
+					Query:   "select B.a from sbtest.B1 as B where B.id = 1 and :A_id = B.id",
+					Backend: "backend2",
+					Range:   "[512-4096)",
+				},
+				{
+					Query:   "select S.a from sbtest.S where :A_a + :B_a > S.a",
+					Backend: "backend1",
+					Range:   "",
 				}},
 		},
 	}

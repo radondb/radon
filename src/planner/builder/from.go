@@ -161,8 +161,7 @@ func scanJoinTableExpr(log *xlog.Log, router *router.Router, database string, jo
 // If can be merged, left and right merge into one MergeNode.
 // else build a JoinNode, the two nodes become new joinnode's Left and Right.
 func join(log *xlog.Log, lpn, rpn SelectNode, joinExpr *sqlparser.JoinTableExpr, router *router.Router) (SelectNode, error) {
-	var joinOn []exprInfo
-	var otherJoinOn []exprInfo
+	var joinOn, otherJoinOn []exprInfo
 	var err error
 
 	referTables := make(map[string]*tableInfo)

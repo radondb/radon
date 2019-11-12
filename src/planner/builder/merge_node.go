@@ -302,8 +302,9 @@ func (m *MergeNode) Order() int {
 }
 
 // buildQuery used to build the QueryTuple.
-func (m *MergeNode) buildQuery(tbInfos map[string]*tableInfo) {
+func (m *MergeNode) buildQuery(root PlanNode) {
 	var Range string
+	tbInfos := root.getReferTables()
 	if sel, ok := m.Sel.(*sqlparser.Select); ok {
 		if len(sel.SelectExprs) == 0 {
 			sel.SelectExprs = append(sel.SelectExprs, &sqlparser.AliasedExpr{
@@ -317,7 +318,10 @@ func (m *MergeNode) buildQuery(tbInfos map[string]*tableInfo) {
 			tableName := node.Qualifier.Name.String()
 			if tableName != "" {
 				if _, ok := m.referTables[tableName]; !ok {
-					joinVar := procure(tbInfos, node)
+					// The lowest common ancestors node must be JoinNode.
+					// `m` in parent.Right, `tbInfos[tableName].parent` in left.
+					parent := findLCA(root.(SelectNode), tbInfos[tableName].parent, m)
+					joinVar := parent.(*JoinNode).procure(node)
 					buf.Myprintf("%a", ":"+joinVar)
 					return
 				}

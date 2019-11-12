@@ -35,7 +35,7 @@ func BuildNode(log *xlog.Log, router *router.Router, database string, node sqlpa
 		return nil, err
 	}
 
-	root.buildQuery(root.getReferTables())
+	root.buildQuery(root)
 	return root, nil
 }
 

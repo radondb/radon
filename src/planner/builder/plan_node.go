@@ -16,7 +16,7 @@ import (
 
 // PlanNode interface.
 type PlanNode interface {
-	buildQuery(tbInfos map[string]*tableInfo)
+	buildQuery(root PlanNode)
 	Children() []ChildPlan
 	getFields() []selectTuple
 	getReferTables() map[string]*tableInfo
