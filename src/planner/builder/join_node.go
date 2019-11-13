@@ -347,12 +347,12 @@ func (j *JoinNode) judgeStrategy(filters []exprInfo) {
 		}
 
 		if exp, ok := filter.expr.(*sqlparser.ComparisonExpr); ok {
-			left := findParent(getTbInExpr(exp.Left), j)
+			left := findParent(getTbsInExpr(exp.Left), j)
 			if _, ok := left.(*JoinNode); ok {
 				j.setNestLoop()
 				return
 			}
-			right := findParent(getTbInExpr(exp.Right), j)
+			right := findParent(getTbsInExpr(exp.Right), j)
 			if _, ok := right.(*JoinNode); ok {
 				j.setNestLoop()
 			}

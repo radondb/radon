@@ -347,8 +347,8 @@ func parseHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo, fields []s
 	return tuples, nil
 }
 
-// getTbInExpr used to get the referred tables from the expr.
-func getTbInExpr(expr sqlparser.Expr) []string {
+// getTbsInExpr used to get the referred tables from the expr.
+func getTbsInExpr(expr sqlparser.Expr) []string {
 	var referTables []string
 	sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
 		switch node := node.(type) {
