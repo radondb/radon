@@ -72,7 +72,7 @@ func parseSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*tableInfo)
 				}
 			} else {
 				if _, ok := tbInfos[tableName]; !ok {
-					return false, errors.Errorf("unsupported: unknown.column.'%s'.in.field.list", field)
+					return false, errors.Errorf("unsupported: unknown.column.'%s.%s'.in.field.list", tableName, field)
 				}
 			}
 

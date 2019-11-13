@@ -522,6 +522,8 @@ func TestSelectUnsupported(t *testing.T) {
 		"select a+1 from A group by a+1",
 		"select count(distinct *) from A",
 		"select t1.a from G",
+		"select S.id from A join B on B.id=A.id",
+		"select eeeee from A join B on B.id=A.id",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
@@ -561,6 +563,8 @@ func TestSelectUnsupported(t *testing.T) {
 		"unsupported: group.by.[a + 1].type.should.be.colname",
 		"unsupported: syntax.error.at.'count(distinct *)'",
 		"unsupported: unknown.column.'t1.a'.in.exprs",
+		"unsupported: unknown.column.'S.id'.in.field.list",
+		"unsupported: unknown.column.'eeeee'.in.select.exprs",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
