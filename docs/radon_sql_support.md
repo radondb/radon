@@ -114,17 +114,32 @@ Query OK, 0 rows affected (0.01 sec)
     | [DEFAULT] {CHARSET | CHARACTER SET} [=] charset_name
     | COMMENT [=] 'string'
     | {PARTITION BY HASH(shard-key)|SINGLE|GLOBAL}
+    | PARTITION BY LIST(shard-key)(PARTITION backend VALUES IN (value_list),...)
 ```
 
 `Instructions`
 * Create partition information and generate partition tables on each partition
-* With `GLOBAL` will create a global table. The global table has full data at every backend.
-* The global tables are generally used for tables with fewer changes and smaller capacity, requiring frequent
-  association with other tables.
+* With `GLOBAL` will create a global table. The global table has full data at every backend. The global tables are generally used for tables with fewer changes and smaller capacity, requiring frequent association with other tables.
 * With `SINGLE` will create a single table. The single table only on the first backend.
-* With `PARTITION BY HASH(partition key)` will create a hash partition table.
-* Without `PARTITION BY HASH(shard-key)|SINGLE|GLOBAL` will create a partition table. The table's 
-  `PRIMARY|UNIQUE KEY` is the partition key, only support one primary|unique key.
+* With `PARTITION BY HASH(shard-key)` will create a hash partition table.
+* Without `PARTITION BY HASH(shard-key)|LIST(shard-key)|SINGLE|GLOBAL` will create a hash partition table. The table's `PRIMARY|UNIQUE KEY` is the partition key, only support one primary|unique key.
+* With `PARTITION BY LIST(shard-key)` will create a list partition table. `PARTITION backend VALUES IN (value_list)` is one partition, The variable backend is one backend name, The variable value_list is values with `,`.
+	* all expected values for the partitioning expression should be covered in `PARTITION ... VALUES IN (...)` clauses. An INSERT statement containing an unmatched partitioning column value fails with an error, as shown in this example:
+	```
+	mysql> CREATE TABLE h2 (
+	    ->   c1 INT,
+	    ->   c2 INT
+	    -> )
+	    -> PARTITION BY LIST(c1) (
+	    ->   PARTITION p0 VALUES IN (1, 4, 7),
+	    ->   PARTITION p1 VALUES IN (2, 5, 8)
+	    -> );
+	Query OK, 0 rows affected (0.11 sec)
+		
+	mysql> INSERT INTO h2 VALUES (3, 5);
+	ERROR 1525 (HY000): Table has no partition for value 3
+	```
+
 * The partitioning key only supports specifying one column, the data type of this column is not limited(
   except for TYPE `BINARY/NULL`)
 * The partition mode is HASH, which is evenly distributed across the partitions according to the partition key
