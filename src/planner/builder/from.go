@@ -48,13 +48,14 @@ type tableInfo struct {
  *          /  \
  *         /    \
  *  MergeNode  MergeNode
+ *  The leaf node is MergeNode, branch node is JoinNode.
  */
-func scanTableExprs(log *xlog.Log, router *router.Router, database string, tableExprs sqlparser.TableExprs) (SelectNode, error) {
+func scanTableExprs(log *xlog.Log, router *router.Router, database string, tableExprs sqlparser.TableExprs) (PlanNode, error) {
 	if len(tableExprs) == 1 {
 		return scanTableExpr(log, router, database, tableExprs[0])
 	}
 
-	var lpn, rpn SelectNode
+	var lpn, rpn PlanNode
 	var err error
 	if lpn, err = scanTableExpr(log, router, database, tableExprs[0]); err != nil {
 		return nil, err
@@ -66,9 +67,9 @@ func scanTableExprs(log *xlog.Log, router *router.Router, database string, table
 }
 
 // scanTableExpr produces a plannode subtree by the TableExpr.
-func scanTableExpr(log *xlog.Log, router *router.Router, database string, tableExpr sqlparser.TableExpr) (SelectNode, error) {
+func scanTableExpr(log *xlog.Log, router *router.Router, database string, tableExpr sqlparser.TableExpr) (PlanNode, error) {
 	var err error
-	var p SelectNode
+	var p PlanNode
 	switch tableExpr := tableExpr.(type) {
 	case *sqlparser.AliasedTableExpr:
 		p, err = scanAliasedTableExpr(log, router, database, tableExpr)
@@ -77,13 +78,13 @@ func scanTableExpr(log *xlog.Log, router *router.Router, database string, tableE
 	case *sqlparser.ParenTableExpr:
 		p, err = scanTableExprs(log, router, database, tableExpr.Exprs)
 		// If finally p is a MergeNode, the pushed query need keep the parenthese.
-		p.setParenthese(true)
+		setParenthese(p, true)
 	}
 	return p, err
 }
 
 // scanAliasedTableExpr produces the table's tableInfo by the AliasedTableExpr, and build a MergeNode subtree.
-func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tableExpr *sqlparser.AliasedTableExpr) (SelectNode, error) {
+func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tableExpr *sqlparser.AliasedTableExpr) (PlanNode, error) {
 	var err error
 	mn := newMergeNode(log, r)
 	switch expr := tableExpr.Expr.(type) {
@@ -136,8 +137,8 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 	return mn, err
 }
 
-// scanJoinTableExpr produces a SelectNode subtree by the JoinTableExpr.
-func scanJoinTableExpr(log *xlog.Log, router *router.Router, database string, joinExpr *sqlparser.JoinTableExpr) (SelectNode, error) {
+// scanJoinTableExpr produces a PlanNode subtree by the JoinTableExpr.
+func scanJoinTableExpr(log *xlog.Log, router *router.Router, database string, joinExpr *sqlparser.JoinTableExpr) (PlanNode, error) {
 	switch joinExpr.Join {
 	case sqlparser.JoinStr, sqlparser.StraightJoinStr, sqlparser.LeftJoinStr:
 	case sqlparser.RightJoinStr:
@@ -157,10 +158,10 @@ func scanJoinTableExpr(log *xlog.Log, router *router.Router, database string, jo
 	return join(log, lpn, rpn, joinExpr, router)
 }
 
-// join build a SelectNode subtree by judging whether left and right can be merged.
+// join build a PlanNode subtree by judging whether left and right can be merged.
 // If can be merged, left and right merge into one MergeNode.
 // else build a JoinNode, the two nodes become new joinnode's Left and Right.
-func join(log *xlog.Log, lpn, rpn SelectNode, joinExpr *sqlparser.JoinTableExpr, router *router.Router) (SelectNode, error) {
+func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, router *router.Router) (PlanNode, error) {
 	var joinOn, otherJoinOn []exprInfo
 	var err error
 
@@ -228,7 +229,11 @@ func join(log *xlog.Log, lpn, rpn SelectNode, joinExpr *sqlparser.JoinTableExpr,
 	if jn.IsLeftJoin {
 		jn.setOtherJoin(otherJoinOn)
 	} else {
-		err = jn.pushFilter(otherJoinOn)
+		for _, filter := range otherJoinOn {
+			if err := jn.pushFilter(filter); err != nil {
+				return jn, err
+			}
+		}
 	}
 	return jn, err
 }
@@ -260,7 +265,11 @@ func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJo
 
 	lmn.nonGlobalCnt += rmn.nonGlobalCnt
 	if joinExpr == nil || joinExpr.Join != sqlparser.LeftJoinStr {
-		err = lmn.pushFilter(otherJoinOn)
+		for _, filter := range otherJoinOn {
+			if err := lmn.pushFilter(filter); err != nil {
+				return lmn, err
+			}
+		}
 	}
 	return lmn, err
 }
