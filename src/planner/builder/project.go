@@ -112,7 +112,7 @@ func parseSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*tableInfo)
 	return &selectTuple{expr, exprInfo{expr.Expr, referTables, cols, nil}, field, alias, funcName, aggrField, distinct, isCol}, hasAggregates, nil
 }
 
-func parseSelectExprs(exprs sqlparser.SelectExprs, root SelectNode) ([]selectTuple, aggrType, error) {
+func parseSelectExprs(exprs sqlparser.SelectExprs, root PlanNode) ([]selectTuple, aggrType, error) {
 	var tuples []selectTuple
 	hasAggs := false
 	hasDist := false

@@ -16,35 +16,28 @@ import (
 
 // PlanNode interface.
 type PlanNode interface {
+	addNoTableFilter(exprs []sqlparser.Expr)
 	buildQuery(root PlanNode)
+	calcRoute() (PlanNode, error)
 	Children() []ChildPlan
 	getFields() []selectTuple
 	getReferTables() map[string]*tableInfo
 	GetQuery() []xcontext.QueryTuple
-	pushOrderBy(sel sqlparser.SelectStatement) error
-	pushLimit(sel sqlparser.SelectStatement) error
-}
-
-// SelectNode interface.
-type SelectNode interface {
-	PlanNode
-	pushFilter(filters []exprInfo) error
-	pushKeyFilter(filter exprInfo, table, field string) error
-	setParent(p SelectNode)
-	setNoTableFilter(exprs []sqlparser.Expr)
-	setParenthese(hasParen bool)
-	pushEqualCmpr(joins []exprInfo) SelectNode
-	calcRoute() (SelectNode, error)
 	pushSelectExprs(fields, groups []selectTuple, sel *sqlparser.Select, aggTyp aggrType) error
 	pushSelectExpr(field selectTuple) (int, error)
-	pushHaving(havings []exprInfo) error
+	pushFilter(filter exprInfo) error
+	pushKeyFilter(filter exprInfo, table, field string) error
+	pushHaving(having exprInfo) error
+	pushOrderBy(orderBy sqlparser.OrderBy) error
+	pushLimit(limit *sqlparser.Limit) error
 	pushMisc(sel *sqlparser.Select)
 	reOrder(int)
+	setParent(p *JoinNode)
 	Order() int
 }
 
 // findLCA get the two plannode's lowest common ancestors node.
-func findLCA(h, p1, p2 SelectNode) SelectNode {
+func findLCA(h, p1, p2 PlanNode) PlanNode {
 	if p1 == h || p2 == h {
 		return h
 	}
@@ -64,8 +57,18 @@ func findLCA(h, p1, p2 SelectNode) SelectNode {
 	return pl
 }
 
-func findParent(tables []string, node SelectNode) SelectNode {
-	var parent SelectNode
+// setParenthese is only used in JoinNode and MergeNode.
+func setParenthese(node PlanNode, hasParen bool) {
+	switch node := node.(type) {
+	case *JoinNode:
+		node.hasParen = hasParen
+	case *MergeNode:
+		node.hasParen = hasParen
+	}
+}
+
+func findParent(tables []string, node PlanNode) PlanNode {
+	var parent PlanNode
 	for _, tb := range tables {
 		tbInfo := node.getReferTables()[tb]
 		if parent == nil {
@@ -79,11 +82,49 @@ func findParent(tables []string, node SelectNode) SelectNode {
 	return parent
 }
 
-func addFilter(s SelectNode, filter exprInfo) {
+func addFilter(s PlanNode, filter exprInfo) {
 	switch node := s.(type) {
 	case *JoinNode:
 		node.otherFilter = append(node.otherFilter, filter)
 	case *MergeNode:
 		node.addWhere(filter.expr)
 	}
+}
+
+// pushFilters push a WHERE clause down, and update the PlanNode info.
+func pushFilters(s PlanNode, expr sqlparser.Expr) (PlanNode, error) {
+	joins, filters, err := parseWhereOrJoinExprs(expr, s.getReferTables())
+	if err != nil {
+		return s, err
+	}
+
+	for _, filter := range filters {
+		if err := s.pushFilter(filter); err != nil {
+			return s, err
+		}
+	}
+
+	switch node := s.(type) {
+	case *MergeNode:
+		for _, joinCond := range joins {
+			node.addWhere(joinCond.expr)
+		}
+	case *JoinNode:
+		return node.pushEqualCmpr(joins), nil
+	}
+	return s, nil
+}
+
+// pushHavings push a HAVING clause down.
+func pushHavings(s PlanNode, expr sqlparser.Expr, tbInfos map[string]*tableInfo) error {
+	havings, err := parseHaving(expr, tbInfos, s.getFields())
+	if err != nil {
+		return err
+	}
+	for _, having := range havings {
+		if err = s.pushHaving(having); err != nil {
+			return err
+		}
+	}
+	return nil
 }

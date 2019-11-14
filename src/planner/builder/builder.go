@@ -47,14 +47,9 @@ func processSelect(log *xlog.Log, router *router.Router, database string, node *
 
 	tbInfos := root.getReferTables()
 	if node.Where != nil {
-		joins, filters, err := parseWhereOrJoinExprs(node.Where.Expr, tbInfos)
-		if err != nil {
+		if root, err = pushFilters(root, node.Where.Expr); err != nil {
 			return nil, err
 		}
-		if err = root.pushFilter(filters); err != nil {
-			return nil, err
-		}
-		root = root.pushEqualCmpr(joins)
 	}
 	if root, err = root.calcRoute(); err != nil {
 		return nil, err
@@ -91,22 +86,20 @@ func processSelect(log *xlog.Log, router *router.Router, database string, node *
 	}
 
 	if node.Having != nil {
-		havings, err := parseHaving(node.Having.Expr, tbInfos, root.getFields())
-		if err != nil {
-			return nil, err
-		}
-		if err = root.pushHaving(havings); err != nil {
+		if err = pushHavings(root, node.Having.Expr, tbInfos); err != nil {
 			return nil, err
 		}
 	}
 
-	if err = root.pushOrderBy(node); err != nil {
-		return nil, err
+	if len(node.OrderBy) > 0 {
+		if err = root.pushOrderBy(node.OrderBy); err != nil {
+			return nil, err
+		}
 	}
 
 	// Limit SubPlan.
 	if node.Limit != nil {
-		if err = root.pushLimit(node); err != nil {
+		if err = root.pushLimit(node.Limit); err != nil {
 			return nil, err
 		}
 	}
@@ -134,9 +127,6 @@ func processPart(log *xlog.Log, router *router.Router, database string, part sql
 	case *sqlparser.Union:
 		return processUnion(log, router, database, part)
 	case *sqlparser.Select:
-		if len(part.OrderBy) > 0 && part.Limit == nil {
-			part.OrderBy = []*sqlparser.Order{}
-		}
 		if len(part.From) == 1 {
 			if aliasExpr, ok := part.From[0].(*sqlparser.AliasedTableExpr); ok {
 				if tb, ok := aliasExpr.Expr.(sqlparser.TableName); ok && tb.Name.String() == "dual" {
@@ -187,11 +177,15 @@ func union(log *xlog.Log, router *router.Router, database string, left, right Pl
 	}
 end:
 	p := newUnionNode(log, left, right, node.Type)
-	if err := p.pushOrderBy(node); err != nil {
-		return nil, err
+	if len(node.OrderBy) > 0 {
+		if err := p.pushOrderBy(node.OrderBy); err != nil {
+			return nil, err
+		}
 	}
-	if err := p.pushLimit(node); err != nil {
-		return nil, err
+	if node.Limit != nil {
+		if err := p.pushLimit(node.Limit); err != nil {
+			return nil, err
+		}
 	}
 	return p, nil
 }
