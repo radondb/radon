@@ -500,6 +500,7 @@ func TestSelectUnsupported(t *testing.T) {
 		"select avg(id)*1000 from A",
 		"select avg(*) from A",
 		"select B.* from A",
+		"select * from D,A",
 		"select * from A where a>1 having count(a) >3",
 		"select a,b from A group by B.a",
 		"select *,avg(a) from A",
@@ -541,6 +542,7 @@ func TestSelectUnsupported(t *testing.T) {
 		"unsupported: 'avg(id) * 1000'.contain.aggregate.in.select.exprs",
 		"unsupported: syntax.error.at.'avg(*)'",
 		"unsupported:  unknown.table.'B'.in.field.list",
+		"Table 'D' doesn't exist (errno 1146) (sqlstate 42S02)",
 		"unsupported: expr[count(a)].in.having.clause",
 		"unsupported: unknow.table.in.group.by.field[B.a]",
 		"unsupported: exists.aggregate.and.'*'.select.exprs",
@@ -864,15 +866,15 @@ func TestSelectPlanJoin(t *testing.T) {
 				}},
 		},
 		{
-			query: "select * from B join B as A where A.a=B.a and A.id=B.id",
+			query: "select * from B join B as A where A.id=B.id and A.a=B.a",
 			out: []xcontext.QueryTuple{
 				{
-					Query:   "select * from sbtest.B0 as B, sbtest.B0 as A where A.a = B.a and A.id = B.id",
+					Query:   "select * from sbtest.B0 as B, sbtest.B0 as A where A.id = B.id and A.a = B.a",
 					Backend: "backend1",
 					Range:   "[0-512)",
 				},
 				{
-					Query:   "select * from sbtest.B1 as B, sbtest.B1 as A where A.a = B.a and A.id = B.id",
+					Query:   "select * from sbtest.B1 as B, sbtest.B1 as A where A.id = B.id and A.a = B.a",
 					Backend: "backend2",
 					Range:   "[512-4096)",
 				}},
@@ -972,7 +974,7 @@ func TestProcessUnion(t *testing.T) {
 		{
 			query: "select a,b from S union (select a,b from G order by a) limit 10",
 			out: []xcontext.QueryTuple{{
-				Query:   "select a, b from sbtest.S union (select a, b from sbtest.G) limit 10",
+				Query:   "select a, b from sbtest.S union (select a, b from sbtest.G order by a asc) limit 10",
 				Backend: "backend1",
 				Range:   "",
 			}},
@@ -1041,6 +1043,7 @@ func TestProcessUnion(t *testing.T) {
 				q := plan.GetQuery()
 				assert.Equal(t, tcase.out, q)
 				plan.Children()
+				plan.getReferTables()
 			}
 		}
 	}
