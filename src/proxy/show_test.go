@@ -474,6 +474,26 @@ func TestProxyShowCreateTable(t *testing.T) {
 		},
 	}
 
+	lr := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "table",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "create table",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("l_0000")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("create table l_0000")),
+			},
+		},
+	}
+
+
 	r2 := &sqltypes.Result{
 		Fields: []*querypb.Field{
 			{
@@ -516,12 +536,14 @@ func TestProxyShowCreateTable(t *testing.T) {
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
 	address := proxy.Address()
+	backends := fakedbs.BackendConfs()
 
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQuerys("show create table test.t1_0000", r1)
+		fakedbs.AddQuerys("show create table test.l_0000", lr)
 		fakedbs.AddQuerys("show create table test.t1", r1)
 		fakedbs.AddQuerys("show create table t1", r1)
 		fakedbs.AddQuerys("show create table MYSQL.t1", r1)
@@ -557,7 +579,31 @@ func TestProxyShowCreateTable(t *testing.T) {
 		query := "show create table test.t1"
 		qr, err := client.FetchAll(query, -1)
 		assert.Nil(t, err)
-		want := "[t1 create table t1\n/*!50100 PARTITION BY HASH (id) */]"
+		want := "[t1 create table t1\n/*!50100 PARTITION BY HASH(id) */]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// create test table with list.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		b1 := backends[0].Name
+		query := fmt.Sprintf("create table l(id int, b int) partition by list(id)(partition %s values in (1,2));", b1)
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		client.Quit()
+	}
+
+	// show create table which shardType is list.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show create table test.l"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[l create table l\n/*!50100 PARTITION BY LIST(id) */]"
 		got := fmt.Sprintf("%+v", qr.Rows[0])
 		assert.Equal(t, want, got)
 	}
@@ -738,7 +784,7 @@ func TestProxyShowColumns(t *testing.T) {
 		query := "show create table test.t1"
 		qr, err := client.FetchAll(query, -1)
 		assert.Nil(t, err)
-		want := "[t1 create table t1\n/*!50100 PARTITION BY HASH (id) */]"
+		want := "[t1 create table t1\n/*!50100 PARTITION BY HASH(id) */]"
 		got := fmt.Sprintf("%+v", qr.Rows[0])
 		assert.Equal(t, want, got)
 	}
