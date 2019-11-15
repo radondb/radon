@@ -74,6 +74,7 @@ This step also includes steps analyzing the client's SQL statements against the 
 You can see the a query plan  generates using `EXPLAIN`(At this stage we only use `EXPLAIN` to  analysis  Table distribution).
 
 ``` Excuting ```
+
 Executing an Executor in a storage layer in Parallel with a Distributed Execution Plan.
 
 ### SQL with Transaction
