@@ -257,6 +257,12 @@ func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query str
 	var qr *sqltypes.Result
 	var err error
 
+	tableConfig, err := router.TableConfig(database, table)
+	if err != nil {
+		return nil, err
+	}
+	tableType := tableConfig.ShardType
+
 	shardKey, err := router.ShardKey(database, table)
 	if err != nil {
 		return nil, err
@@ -279,11 +285,6 @@ func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query str
 			return nil, err
 		}
 
-		tableConfig, err := router.TableConfig(database, table)
-		if err != nil {
-			return nil, err
-		}
-		tableType := tableConfig.ShardType
 		// 'show create table' has two columns.
 		c2 := qr.Rows[0][1]
 		// Add tableType to the end of c2Val
@@ -317,7 +318,7 @@ func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query str
 		// Add partition info to the end of c2Val
 		c2Buf := common.NewBuffer(0)
 		c2Buf.WriteString(c2Val)
-		partInfo := fmt.Sprintf("\n/*!50100 PARTITION BY HASH (%s) */", shardKey)
+		partInfo := fmt.Sprintf("\n/*!50100 PARTITION BY %s(%s) */", tableType, shardKey)
 		c2Buf.WriteString(partInfo)
 
 		qr.Rows[0][0] = sqltypes.MakeTrusted(c1.Type(), []byte(c1Val))
