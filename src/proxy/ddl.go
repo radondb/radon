@@ -192,6 +192,8 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		if err := route.CreateDatabase(database); err != nil {
 			return nil, err
 		}
+		// If some error happens in mysql internal error, we should check and remove the
+		// router table mannully for data security.
 		return spanner.ExecuteScatter(query)
 	case sqlparser.DropDBStr:
 		if node.IfExists && !checkDatabaseExists(database, route) {
@@ -279,14 +281,9 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 				return nil, err
 			}
 		}
-
-		r, err := spanner.ExecuteDDL(session, database, sqlparser.String(ddl), node)
-		if err != nil {
-			// Try to drop table.
-			route.DropTable(database, table)
-			return nil, err
-		}
-		return r, nil
+		// If some error happens in mysql internal error, we should check and remove the
+		// router table mannully for data security.
+		return spanner.ExecuteDDL(session, database, sqlparser.String(ddl), node)
 	case sqlparser.DropTableStr:
 		r := &sqltypes.Result{}
 		tables := ddl.Tables

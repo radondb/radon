@@ -34,7 +34,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -45,7 +45,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -56,7 +56,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") partition by hash(id) partitions 6",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -67,7 +67,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -78,7 +78,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") default charset=utf8",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") default charset=utf8",
@@ -89,7 +89,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") engine=tokudb",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") engine=tokudb",
@@ -100,7 +100,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") engine=tokudb default charset=utf8",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") engine=tokudb default charset=utf8",
@@ -111,7 +111,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 PARTITION BY HASH(id)",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") engine=InnoDB default charset=utf8mb4",
@@ -122,7 +122,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") engine=tokudb default charset=utf8 partition by hash(id)",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") engine=tokudb default charset=utf8",
@@ -132,7 +132,7 @@ func TestDDL1(t *testing.T) {
 				"	`status` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") partition by hash(`status`)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`status` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -142,7 +142,7 @@ func TestDDL1(t *testing.T) {
 				"	status int primary key comment '/*non_reserved_keyword*/',\n" +
 				"	`name` varchar(10)\n" +
 				") partition by hash(status)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`status` int comment '/*non_reserved_keyword*/' primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -152,7 +152,7 @@ func TestDDL1(t *testing.T) {
 				"	bool int primary key comment '/*non_reserved_keyword*/',\n" +
 				"	`name` varchar(10)\n" +
 				") partition by hash(bool)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`bool` int comment '/*non_reserved_keyword*/' primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -162,7 +162,7 @@ func TestDDL1(t *testing.T) {
 				"	enum int primary key comment '/*non_reserved_keyword*/',\n" +
 				"	`name` varchar(10)\n" +
 				") partition by hash(enum)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`enum` int comment '/*non_reserved_keyword*/' primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -172,7 +172,7 @@ func TestDDL1(t *testing.T) {
 				"	datetime int primary key comment '/*non_reserved_keyword*/',\n" +
 				"	`name` varchar(10)\n" +
 				") partition by hash(datetime)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`datetime` int comment '/*non_reserved_keyword*/' primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -184,7 +184,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") engine=tokudb comment='comment option' default charset=utf8 partition by hash(id)",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") comment='comment option' engine=tokudb default charset=utf8",
@@ -195,7 +195,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") engine='tokudb' comment='comment option' default charset='utf8' global",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") comment='comment option' engine='tokudb' default charset='utf8'",
@@ -206,7 +206,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") single engine=tokudb comment='comment option' default charset utf8",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") comment='comment option' engine=tokudb default charset=utf8",
@@ -217,7 +217,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") engine=tokudb comment 'comment option' charset \"utf8\" partition by hash(id)",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") comment='comment option' engine=tokudb default charset='utf8'",
@@ -228,7 +228,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") engine=tokudb comment='comment option' character set 'utf8' partition by hash(id)",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") comment='comment option' engine=tokudb default charset='utf8'",
@@ -239,7 +239,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") GLOBAL",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -251,7 +251,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") SINGLE",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -265,7 +265,7 @@ func TestDDL1(t *testing.T) {
 				") PARTITION BY LIST(c1) (" +
 				"PARTITION p0 VALUES IN (1,4,7)," +
 				"PARTITION p1 VALUES IN (2,5,8) )",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -277,7 +277,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") distributed by(node3)",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -289,7 +289,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") ",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -305,7 +305,7 @@ func TestDDL1(t *testing.T) {
 				"	`col6` int not null unique key key comment 'RadonDB' auto_increment,\n" +
 				"	`col7` int not null unique key key comment 'RadonDB' auto_increment primary key\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int not null,\n" +
 				"	`col2` int not null unique key,\n" +
 				"	`col3` int not null unique key,\n" +
@@ -326,7 +326,7 @@ func TestDDL1(t *testing.T) {
 				"	`col6` int auto_increment not null unique key key comment 'RadonDB',\n" +
 				"	`col7` int auto_increment not null unique key key comment 'RadonDB' primary key\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int auto_increment,\n" +
 				"	`col2` int not null auto_increment,\n" +
 				"	`col3` int not null auto_increment unique key,\n" +
@@ -348,7 +348,7 @@ func TestDDL1(t *testing.T) {
 				"	`col7` int comment 'RadonDB' not null unique key key comment 'RadonDB' auto_increment,\n" +
 				"	`col8` int comment 'RadonDB' not null unique key key comment 'RadonDB' auto_increment primary key\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int comment 'RadonDB',\n" +
 				"	`col2` int not null comment 'RadonDB',\n" +
 				"	`col3` int not null comment 'RadonDB' unique key,\n" +
@@ -370,7 +370,7 @@ func TestDDL1(t *testing.T) {
 				"	`col6` int key not null unique key comment 'RadonDB' auto_increment,\n" +
 				"	`col7` int key not null unique key comment 'RadonDB' auto_increment primary key\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int primary key,\n" +
 				"	`col2` int not null primary key,\n" +
 				"	`col3` int not null primary key unique key,\n" +
@@ -391,7 +391,7 @@ func TestDDL1(t *testing.T) {
 				"	`col6` int primary key not null unique key comment 'RadonDB' auto_increment,\n" +
 				"	`col7` int primary key not null unique key comment 'RadonDB' auto_increment key\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int primary key,\n" +
 				"	`col2` int not null primary key,\n" +
 				"	`col3` int not null primary key unique key,\n" +
@@ -412,7 +412,7 @@ func TestDDL1(t *testing.T) {
 				"	`col6` int unique not null unique key comment 'RadonDB' auto_increment,\n" +
 				"	`col7` int unique not null unique key comment 'RadonDB' auto_increment primary key\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int unique key,\n" +
 				"	`col2` int not null unique key,\n" +
 				"	`col3` int not null unique key,\n" +
@@ -433,7 +433,7 @@ func TestDDL1(t *testing.T) {
 				"	`col6` int unique key not null key unique comment 'RadonDB' auto_increment,\n" +
 				"	`col7` int unique key not null key unique comment 'RadonDB' auto_increment primary key\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int unique key,\n" +
 				"	`col2` int not null unique key,\n" +
 				"	`col3` int not null unique key,\n" +
@@ -449,7 +449,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int not null auto_increment primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int not null auto_increment primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -462,7 +462,7 @@ func TestDDL1(t *testing.T) {
 				"	`t1` timestamp default current_timestamp,\n" +
 				"	`t2`  timestamp ON UPDATE CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' ON UPDATE CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int primary key,\n" +
 				"	`t1` timestamp default current_timestamp,\n" +
 				"	`t2` timestamp not null default current_timestamp on update current_timestamp comment 'currenttimestamp'\n" +
@@ -476,7 +476,7 @@ func TestDDL1(t *testing.T) {
 				"	title VARCHAR(200),\n" +
 				"   FULLTEXT INDEX ngram_idx(title,body) WITH PARSER ngram\n" +
 				")",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int primary key,\n" +
 				"	`title` varchar(200),\n" +
 				"	fulltext index `ngram_idx` (`title`, `body`) WITH PARSER ngram\n" +
@@ -490,7 +490,7 @@ func TestDDL1(t *testing.T) {
 				"	title VARCHAR(200),\n" +
 				"   FULLTEXT KEY ngram_idx(title,body) /*!50100 WITH PARSER `ngram` */ \n" +
 				")",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int primary key,\n" +
 				"	`title` varchar(200),\n" +
 				"	fulltext key `ngram_idx` (`title`, `body`) WITH PARSER ngram\n" +
@@ -501,7 +501,7 @@ func TestDDL1(t *testing.T) {
 			input: "create table t (\n" +
 				"	`id` int unique key unique primary key comment 'RadonDB' auto_increment not null\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int not null auto_increment comment 'RadonDB' primary key unique key\n" +
 				")",
 		},
@@ -511,7 +511,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int key not null auto_increment primary key primary key key key not null auto_increment,\n" +
 				"	`name` varchar(10)\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int not null auto_increment primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -522,7 +522,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int key not null auto_increment primary key primary key key unique unique key unique not null auto_increment,\n" +
 				"	`name` varchar(10) comment 'RadonDB'\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int not null auto_increment primary key unique key,\n" +
 				"	`name` varchar(10) comment 'RadonDB'\n" +
 				")",
@@ -533,7 +533,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int comment 'RadonDB' auto_increment not null primary key,\n" +
 				"	`name` varchar(10)\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int not null auto_increment comment 'RadonDB' primary key,\n" +
 				"	`name` varchar(10)\n" +
 				")",
@@ -545,7 +545,7 @@ func TestDDL1(t *testing.T) {
 				"	`id` int comment 'RadonDB' auto_increment not null primary key,\n" +
 				"	`name` varchar(10) key\n" +
 				") partition by hash(id)",
-			output: "create table t (\n" +
+			output: "create table if not exists t (\n" +
 				"	`id` int not null auto_increment comment 'RadonDB' primary key,\n" +
 				"	`name` varchar(10) primary key\n" +
 				")",
@@ -557,7 +557,7 @@ func TestDDL1(t *testing.T) {
 				"	`name` varchar(10),\n" +
 				"	KEY `IDX_USER` (`user_id`)\n" +
 				") engine=tokudb default charset=utf8 partition by hash(id)",
-			output: "create table test.t (\n" +
+			output: "create table if not exists test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10),\n" +
 				"	key `IDX_USER` (`user_id`)\n" +
@@ -597,7 +597,7 @@ func TestDDL1(t *testing.T) {
 
 		{
 			input:  "create database test",
-			output: "create database test",
+			output: "create database if not exists test",
 		},
 
 		{
@@ -612,39 +612,39 @@ func TestDDL1(t *testing.T) {
 		// Create database with option issue #478
 		{
 			input:  "create database test charset utf8mxx",
-			output: "create database test charset utf8mxx",
+			output: "create database if not exists test charset utf8mxx",
 		},
 		{
 			input:  "create database test character set latin1xxx",
-			output: "create database test character set latin1xxx",
+			output: "create database if not exists test character set latin1xxx",
 		},
 		{
 			input:  "create database test charset default",
-			output: "create database test charset default",
+			output: "create database if not exists test charset default",
 		},
 		{
 			input:  "create database test character set default",
-			output: "create database test character set default",
+			output: "create database if not exists test character set default",
 		},
 		{
 			input:  "create database test charset utf8mb4",
-			output: "create database test charset utf8mb4",
+			output: "create database if not exists test charset utf8mb4",
 		},
 		{
 			input:  "create database test character set latin1",
-			output: "create database test character set latin1",
+			output: "create database if not exists test character set latin1",
 		},
 		{
 			input:  "create database test collate latin1_swedish_ci",
-			output: "create database test collate latin1_swedish_ci",
+			output: "create database if not exists test collate latin1_swedish_ci",
 		},
 		{
 			input:  "create database test collate default charset default",
-			output: "create database test collate default charset default",
+			output: "create database if not exists test collate default charset default",
 		},
 		{
 			input:  "create database test  charset default collate default",
-			output: "create database test charset default collate default",
+			output: "create database if not exists test charset default collate default",
 		},
 		{
 			input:  "create database if not exists test  charset default collate default",

@@ -383,6 +383,15 @@ func TestProxyDDLTable(t *testing.T) {
 		assert.Equal(t, want, got)
 	}
 
+	// drop sberror2 table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "sbtest", "utf8")
+		assert.Nil(t, err)
+		query := "drop table sberror2"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
 	// check sbtest.tables.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "sbtest", "utf8")

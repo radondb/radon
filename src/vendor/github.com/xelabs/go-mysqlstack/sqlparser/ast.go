@@ -610,10 +610,9 @@ const (
 func (node *DDL) Format(buf *TrackedBuffer) {
 	switch node.Action {
 	case CreateDBStr:
-		ifnotexists := ""
-		if node.IfNotExists {
-			ifnotexists = " if not exists"
-		}
+		// No matter node.IfNotExists is true or not, we always add str 'if not exists'
+		// to resolve the potential problem https://github.com/radondb/radon/issues/484
+		ifnotexists := " if not exists"
 		buf.Myprintf("%s%s %s", node.Action, ifnotexists, node.Database.String())
 		node.DatabaseOptions.Format(buf)
 	case DropDBStr:
@@ -623,10 +622,9 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 		}
 		buf.Myprintf("%s%s %s", node.Action, exists, node.Database.String())
 	case CreateTableStr:
-		ifnotexists := ""
-		if node.IfNotExists {
-			ifnotexists = " if not exists"
-		}
+		// No matter node.IfNotExists is true or not, we always add str 'if not exists'
+		// to resolve the potential problem https://github.com/radondb/radon/issues/484
+		ifnotexists := " if not exists"
 		if node.TableSpec == nil {
 			buf.Myprintf("%s%s %v", node.Action, ifnotexists, node.NewName)
 		} else {

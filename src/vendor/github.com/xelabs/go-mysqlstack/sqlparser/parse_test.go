@@ -648,9 +648,11 @@ func TestValid(t *testing.T) {
 		input:  "alter table e comment = 'hello'",
 		output: "alter table e",
 	}, {
-		input: "create table a (\n\t`a` int\n)",
+		input:  "create table a (\n\t`a` int\n)",
+		output: "create table if not exists a (\n\t`a` int\n)",
 	}, {
-		input: "create table `by` (\n\t`by` char\n)",
+		input:  "create table `by` (\n\t`by` char\n)",
+		output: "create table if not exists `by` (\n\t`by` char\n)",
 	}, {
 		input:  "create table if not exists a (\n\t`a` int\n)",
 		output: "create table if not exists a (\n\t`a` int\n)",
@@ -795,7 +797,8 @@ func TestCaseSensitivity(t *testing.T) {
 		input  string
 		output string
 	}{{
-		input: "create table A (\n\t`B` int\n)",
+		input:  "create table A (\n\t`B` int\n)",
+		output: "create table if not exists A (\n\t`B` int\n)",
 	}, {
 		input:  "create index b on A",
 		output: "create index b on A",
@@ -846,7 +849,7 @@ func TestCaseSensitivity(t *testing.T) {
 		input: "insert into A(A, B) values (1, 2)",
 	}, {
 		input:  "CREATE TABLE A (\n\t`A` int\n)",
-		output: "create table A (\n\t`A` int\n)",
+		output: "create table if not exists A (\n\t`A` int\n)",
 	}, {
 		input:  "select /* lock in SHARE MODE */ 1 from t lock in SHARE MODE",
 		output: "select /* lock in SHARE MODE */ 1 from t lock in share mode",
@@ -1057,13 +1060,13 @@ func TestConvert(t *testing.T) {
 
 func TestCreateTable(t *testing.T) {
 	validSQL := []string{
-		"create table t (\n" +
+		"create table if not exists t (\n" +
 			"	`id` int primary key,\n" +
 			"	`name` varchar(10)\n" +
 			")",
 
 		// test all the data types and options
-		"create table t (\n" +
+		"create table if not exists t (\n" +
 			"	`col_bit` bit,\n" +
 			"	`col_tinyint` tinyint auto_increment,\n" +
 			"	`col_tinyint3` tinyint(3) unsigned,\n" +
@@ -1117,7 +1120,7 @@ func TestCreateTable(t *testing.T) {
 			")",
 
 		// test defaults
-		"create table t (\n" +
+		"create table if not exists t (\n" +
 			"	`i1` int default 1,\n" +
 			"	`i2` int default null,\n" +
 			"	`f1` float default 1.23,\n" +
@@ -1127,7 +1130,7 @@ func TestCreateTable(t *testing.T) {
 			")",
 
 		// test defining indexes separately
-		"create table t (\n" +
+		"create table if not exists t (\n" +
 			"	`id` int auto_increment,\n" +
 			"	`username` varchar,\n" +
 			"	`email` varchar,\n" +
@@ -1142,7 +1145,7 @@ func TestCreateTable(t *testing.T) {
 			")",
 
 		// multi-column indexes
-		"create table t (\n" +
+		"create table if not exists t (\n" +
 			"	`id` int auto_increment,\n" +
 			"	`username` varchar,\n" +
 			"	`email` varchar,\n" +
@@ -1156,7 +1159,7 @@ func TestCreateTable(t *testing.T) {
 			")",
 
 		// table options
-		"create table t (\n" +
+		"create table if not exists t (\n" +
 			"	`id` int auto_increment\n" +
 			") default charset=utf8mb4\n",
 	}
