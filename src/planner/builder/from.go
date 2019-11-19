@@ -113,7 +113,7 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 		case "GLOBAL":
 			mn.nonGlobalCnt = 0
 		case "SINGLE":
-			mn.index = append(mn.index, 0)
+			mn.indexes = append(mn.indexes, 0)
 			mn.nonGlobalCnt = 1
 		case "HASH", "LIST":
 			// if a shard table hasn't alias, create one in order to push.
@@ -238,7 +238,7 @@ func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, r
 	return jn, err
 }
 
-// mergeRoutes merges two MergeNode.
+// mergeRoutes merges two MergeNode to the lmn.
 func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJoinOn []exprInfo) (*MergeNode, error) {
 	var err error
 	lSel := lmn.Sel.(*sqlparser.Select)

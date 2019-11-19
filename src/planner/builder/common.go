@@ -53,14 +53,14 @@ func isContainKey(a []string, b string) bool {
 	return false
 }
 
-// getIndex used to get index from router.
-func getIndex(router *router.Router, tbInfo *tableInfo, val *sqlparser.SQLVal) error {
+// fetchIndex used to fetch index from router.
+func fetchIndex(tbInfo *tableInfo, val *sqlparser.SQLVal, router *router.Router) error {
 	idx, err := router.GetIndex(tbInfo.database, tbInfo.tableName, val)
 	if err != nil {
 		return err
 	}
 
-	tbInfo.parent.index = append(tbInfo.parent.index, idx)
+	tbInfo.parent.indexes = append(tbInfo.parent.indexes, idx)
 	return nil
 }
 
