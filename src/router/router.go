@@ -357,19 +357,19 @@ func (r *Router) GetIndex(database, tableName string, sqlval *sqlparser.SQLVal) 
 	return index, nil
 }
 
-// GetSegments returns Segments based on index.
-func (r *Router) GetSegments(database, tableName string, index []int) ([]Segment, error) {
+// GetSegments returns Segments based on indexes.
+func (r *Router) GetSegments(database, tableName string, indexes []int) ([]Segment, error) {
 	table, err := r.getTable(database, tableName)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(index) == 0 {
+	if len(indexes) == 0 {
 		return table.Partition.GetSegments(), nil
 	}
 
 	var segs []Segment
-	for _, idx := range index {
+	for _, idx := range indexes {
 		segment, err := table.Partition.GetSegment(idx)
 		if err != nil {
 			return nil, err

@@ -158,12 +158,21 @@ func (j *JoinNode) pushFilter(filter exprInfo) error {
 	}
 
 	rightTbs := j.Right.getReferTables()
-	// If left join's right node has "is null" condition, the condition
-	// will record in rightNull instead of push down.
 	if j.IsLeftJoin {
+		// If left join's right node has "is null" condition, the condition
+		// will record in rightNull instead of push down.
 		if ok, nullFunc := checkIsWithNull(filter, rightTbs); ok {
 			j.rightNull = append(j.rightNull, nullFunc)
 			return nil
+		}
+
+		if !j.HasRightFilter {
+			for _, tb := range filter.referTables {
+				if _, ok := rightTbs[tb]; ok {
+					j.HasRightFilter = true
+					break
+				}
+			}
 		}
 	}
 
@@ -180,15 +189,6 @@ func (j *JoinNode) pushFilter(filter exprInfo) error {
 	} else {
 		parent := findParent(filter.referTables, j)
 		addFilter(parent, filter)
-	}
-
-	if j.IsLeftJoin && !j.HasRightFilter {
-		for _, tb := range filter.referTables {
-			if _, ok := rightTbs[tb]; ok {
-				j.HasRightFilter = true
-				break
-			}
-		}
 	}
 	return nil
 }
@@ -369,7 +369,7 @@ func (j *JoinNode) setNestLoop() {
 // pushEqualCmpr used to push the equal Comparison type filters.
 // eg: 'select * from t1, t2 where t1.a=t2.a and t1.b=2'.
 // 't1.a=t2.a' is the 'join' type filters.
-func (j *JoinNode) pushEqualCmpr(joins []exprInfo) PlanNode {
+func (j *JoinNode) pushEqualCmprs(joins []exprInfo) PlanNode {
 	for i, joinCond := range joins {
 		var parent PlanNode
 		ltb := j.referTables[joinCond.referTables[0]]
@@ -450,7 +450,7 @@ func (j *JoinNode) calcRoute() (PlanNode, error) {
 				if lmn.nonGlobalCnt == 0 {
 					lmn.backend = rmn.backend
 					lmn.routeLen = rmn.routeLen
-					lmn.index = rmn.index
+					lmn.indexes = rmn.indexes
 				}
 				mn, _ := mergeRoutes(lmn, rmn, j.joinExpr, nil)
 				mn.setParent(j.parent)

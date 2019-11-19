@@ -110,7 +110,7 @@ func pushFilters(s PlanNode, expr sqlparser.Expr) (PlanNode, error) {
 			node.addWhere(joinCond.expr)
 		}
 	case *JoinNode:
-		return node.pushEqualCmpr(joins), nil
+		return node.pushEqualCmprs(joins), nil
 	}
 	return s, nil
 }

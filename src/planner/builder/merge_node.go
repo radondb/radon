@@ -32,7 +32,7 @@ type MergeNode struct {
 	// if the query can be pushed down a backend, record.
 	backend string
 	// the shard index slice.
-	index []int
+	indexes []int
 	// length of the route.
 	routeLen int
 	// referred tables' tableInfo map.
@@ -94,7 +94,7 @@ func (m *MergeNode) pushFilter(filter exprInfo) error {
 		if tbInfo.shardKey != "" && len(filter.vals) > 0 {
 			if nameMatch(filter.cols[0], filter.referTables[0], tbInfo.shardKey) {
 				for _, val := range filter.vals {
-					if err := getIndex(m.router, tbInfo, val); err != nil {
+					if err := fetchIndex(tbInfo, val, m.router); err != nil {
 						return err
 					}
 				}
@@ -111,7 +111,7 @@ func (m *MergeNode) pushKeyFilter(filter exprInfo, table, field string) error {
 	tbInfo := m.referTables[table]
 	if field == tbInfo.shardKey && len(filter.vals) > 0 {
 		for _, val := range filter.vals {
-			if err := getIndex(m.router, tbInfo, val); err != nil {
+			if err := fetchIndex(tbInfo, val, m.router); err != nil {
 				return err
 			}
 		}
@@ -151,14 +151,14 @@ func (m *MergeNode) calcRoute() (PlanNode, error) {
 			rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 			idx := rand.Intn(len(segments))
 			m.backend = segments[idx].Backend
-			m.index = append(m.index, idx)
+			m.indexes = append(m.indexes, idx)
 			m.routeLen = 1
 			break
 		}
 		if tbInfo.shardType == "GLOBAL" {
 			continue
 		}
-		tbInfo.Segments, err = m.router.GetSegments(tbInfo.database, tbInfo.tableName, m.index)
+		tbInfo.Segments, err = m.router.GetSegments(tbInfo.database, tbInfo.tableName, m.indexes)
 		if err != nil {
 			return m, err
 		}
