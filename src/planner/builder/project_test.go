@@ -301,3 +301,54 @@ func TestSelectExprsError(t *testing.T) {
 		assert.Equal(t, wants[i], got)
 	}
 }
+
+func TestReplaceSelect(t *testing.T) {
+	query := "select tmp+a,cnt,b from (select a+1 as tmp,sum(b) as cnt,a from A) t"
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig())
+	assert.Nil(t, err)
+
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+	sel := node.(*sqlparser.Select)
+
+	p, err := BuildNode(log, route, database, sel.From[0].(*sqlparser.AliasedTableExpr).Expr.(*sqlparser.Subquery).Select)
+	assert.Nil(t, err)
+
+	colMap := make(map[string]selectTuple)
+	for _, field := range p.getFields() {
+		name := field.alias
+		if name == "" {
+			name = field.field
+		}
+		colMap[name] = field
+	}
+
+	{
+		tuple := parseExpr(sel.SelectExprs[0].(*sqlparser.AliasedExpr).Expr)
+		field, err := replaceSelect(tuple, colMap)
+		assert.Equal(t, "tmp + a", field.alias)
+
+		buf := sqlparser.NewTrackedBuffer(nil)
+		field.expr.Format(buf)
+		assert.Nil(t, err)
+		assert.Equal(t, "a + 1 + a as `tmp + a`", buf.String())
+	}
+	{
+		tuple := parseExpr(sel.SelectExprs[1].(*sqlparser.AliasedExpr).Expr)
+		_, err = replaceSelect(tuple, colMap)
+		assert.NotNil(t, err)
+		assert.Equal(t, "unsupported: aggregation.field.in.subquery.is.used.in.clause", err.Error())
+	}
+	{
+		tuple := parseExpr(sel.SelectExprs[2].(*sqlparser.AliasedExpr).Expr)
+		_, err = replaceSelect(tuple, colMap)
+		assert.NotNil(t, err)
+		assert.Equal(t, "unsupported: unknown.column.name.'b'", err.Error())
+	}
+}

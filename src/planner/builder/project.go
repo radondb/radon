@@ -306,6 +306,16 @@ func checkInTuple(field, table string, tuples []selectTuple) (bool, *selectTuple
 	return false, nil
 }
 
+//getMatchedField used to find the matched field from colMap.
+func getMatchedField(fieldName string, colMap map[string]selectTuple) (selectTuple, error) {
+	for field, tuple := range colMap {
+		if fieldName == field {
+			return tuple, nil
+		}
+	}
+	return selectTuple{}, errors.Errorf("unsupported: unknown.column.name.'%s'", fieldName)
+}
+
 // checkGroupBy used to check groupby.
 func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.Router, tbInfos map[string]*tableInfo, canOpt bool) ([]selectTuple, error) {
 	var groupTuples []selectTuple
@@ -431,4 +441,25 @@ func GetProject(root PlanNode) string {
 		prefix = ", "
 	}
 	return project
+}
+
+// replaceSelect replace the field based on colMap.
+// such as: select tmp+1 from (select a+1 as tmp,b from t1)t;
+// `tmp+1` will be overwritten as 'a+1+1 as `tmp+1`'.
+func replaceSelect(field selectTuple, colMap map[string]selectTuple) (selectTuple, error) {
+	var err error
+	if len(field.info.referTables) > 0 {
+		field.info, err = replaceCol(field.info, colMap)
+		if err != nil {
+			return field, err
+		}
+
+		if expr, ok := field.expr.(*sqlparser.AliasedExpr); ok {
+			if field.alias == "" {
+				field.alias = field.field
+				expr.As = sqlparser.NewColIdent(field.field)
+			}
+		}
+	}
+	return field, nil
 }
