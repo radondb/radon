@@ -363,3 +363,36 @@ func getTbsInExpr(expr sqlparser.Expr) []string {
 	}, expr)
 	return referTables
 }
+
+// replaceCol replace the info.cols based on the colMap.
+// eg:
+//  select b from (select a+1 as tmp,b from t1)t where tmp > 1;
+// If want to replace `tmp>1` with the fields in subquery.
+// The `colMap` is built from `a+1 as tmp` and `b`.
+// The `info` is built from `tmp>1`.
+// We need find and replace the cols from colMap.
+// Finally, `tmp > 1` will be overwritten as `a+1 > 1`.
+func replaceCol(info exprInfo, colMap map[string]selectTuple) (exprInfo, error) {
+	var tables []string
+	var columns []*sqlparser.ColName
+	for _, col := range info.cols {
+		field, err := getMatchedField(col.Name.String(), colMap)
+		if err != nil {
+			return info, err
+		}
+		if field.aggrFuc != "" {
+			return info, errors.New("unsupported: aggregation.field.in.subquery.is.used.in.clause")
+		}
+
+		info.expr = sqlparser.ReplaceExpr(info.expr, col, field.info.expr)
+		columns = append(columns, field.info.cols...)
+		for _, referTable := range field.info.referTables {
+			if !isContainKey(tables, referTable) {
+				tables = append(tables, referTable)
+			}
+		}
+	}
+	info.cols = columns
+	info.referTables = tables
+	return info, nil
+}
