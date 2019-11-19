@@ -182,7 +182,7 @@ func skipParenthesis(node sqlparser.Expr) sqlparser.Expr {
 }
 
 // splitOrExpression breaks up the OrExpr into OR-separated conditions.
-// Split the Equal conditions into inMap, return the orter conditions.
+// Split the Equal conditions into inMap, return the other conditions.
 func splitOrExpression(node sqlparser.Expr, inMap map[*sqlparser.ColName][]sqlparser.Expr) []sqlparser.Expr {
 	var subExprs []sqlparser.Expr
 	switch expr := node.(type) {

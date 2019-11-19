@@ -165,7 +165,7 @@ func union(log *xlog.Log, router *router.Router, database string, left, right Pl
 	if lm.routeLen == 1 && rm.routeLen == 1 && (lm.backend == rm.backend || lm.nonGlobalCnt == 0 || rm.nonGlobalCnt == 0) {
 		if lm.nonGlobalCnt == 0 && rm.ReqMode != xcontext.ReqSingle {
 			lm.backend = rm.backend
-			lm.index = rm.index
+			lm.indexes = rm.indexes
 			lm.ReqMode = rm.ReqMode
 		}
 		lm.Sel = node

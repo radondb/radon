@@ -89,7 +89,7 @@ func TestScanTableExprs(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, []int{2323}, m.index)
+		assert.Equal(t, []int{2323}, m.indexes)
 	}
 	// left join.
 	{
@@ -115,7 +115,7 @@ func TestScanTableExprs(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, 0, len(m.index))
+		assert.Equal(t, 0, len(m.indexes))
 		assert.NotNil(t, j.otherLeftJoin)
 
 		err = j.pushOthers()
@@ -166,7 +166,7 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		assert.Equal(t, m, tbInfo.parent)
 		assert.Equal(t, 2, len(m.getReferTables()))
-		assert.Equal(t, 0, len(m.index))
+		assert.Equal(t, 0, len(m.indexes))
 		assert.True(t, m.hasParen)
 		assert.NotNil(t, j.otherLeftJoin)
 
@@ -190,7 +190,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, 2, len(tbMaps))
 		tbInfo := tbMaps["A"]
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, []int{2323}, m.index)
+		assert.Equal(t, []int{2323}, m.indexes)
 		assert.NotNil(t, m.Sel.(*sqlparser.Select).Where)
 	}
 	// with parenthese query.
@@ -233,7 +233,7 @@ func TestScanTableExprs(t *testing.T) {
 		assert.Equal(t, 3, len(tbMaps))
 		tbInfo := tbMaps["B"]
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, []int{2323}, m.index)
+		assert.Equal(t, []int{2323}, m.indexes)
 		assert.NotNil(t, m.Sel.(*sqlparser.Select).Where)
 	}
 	// two join on conditions.
@@ -260,7 +260,7 @@ func TestScanTableExprs(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, []int{2323}, m.index)
+		assert.Equal(t, []int{2323}, m.indexes)
 	}
 	// without on conditions.
 	{
@@ -277,7 +277,7 @@ func TestScanTableExprs(t *testing.T) {
 		}
 		tbMaps := m.getReferTables()
 		assert.Equal(t, 2, len(tbMaps))
-		assert.Equal(t, []int{2323}, m.index)
+		assert.Equal(t, []int{2323}, m.indexes)
 		assert.Equal(t, 2, len(m.Sel.(*sqlparser.Select).From))
 		assert.NotNil(t, m.Sel.(*sqlparser.Select).Where)
 	}
@@ -399,7 +399,7 @@ func TestScanTableExprsList(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, []int{2323}, m.index)
+		assert.Equal(t, []int{2323}, m.indexes)
 	}
 	// left join.
 	{
@@ -425,7 +425,7 @@ func TestScanTableExprsList(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, 0, len(m.index))
+		assert.Equal(t, 0, len(m.indexes))
 		assert.NotNil(t, j.otherLeftJoin)
 
 		err = j.pushOthers()
@@ -475,7 +475,7 @@ func TestScanTableExprsList(t *testing.T) {
 		}
 		assert.Equal(t, m, tbInfo.parent)
 		assert.Equal(t, 2, len(m.getReferTables()))
-		assert.Equal(t, 0, len(m.index))
+		assert.Equal(t, 0, len(m.indexes))
 		assert.True(t, m.hasParen)
 		assert.NotNil(t, j.otherLeftJoin)
 
@@ -499,7 +499,7 @@ func TestScanTableExprsList(t *testing.T) {
 		assert.Equal(t, 2, len(tbMaps))
 		tbInfo := tbMaps["A"]
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, []int{2323}, m.index)
+		assert.Equal(t, []int{2323}, m.indexes)
 		assert.NotNil(t, m.Sel.(*sqlparser.Select).Where)
 	}
 	// with parenthese query.
@@ -550,7 +550,7 @@ func TestScanTableExprsList(t *testing.T) {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
 		assert.Equal(t, m, tbInfo.parent)
-		assert.Equal(t, []int{2323}, m.index)
+		assert.Equal(t, []int{2323}, m.indexes)
 	}
 	// without on conditions.
 	{
@@ -578,7 +578,7 @@ func TestScanTableExprsList(t *testing.T) {
 		}
 		assert.Equal(t, m, tbInfo.parent)
 		// TODO(andyli): Optimize List: Now, index nil, push down to all backends.
-		assert.Equal(t, 0, len(m.index))
+		assert.Equal(t, 0, len(m.indexes))
 	}
 	// haspare.
 	{
@@ -680,7 +680,7 @@ func TestScanTableExprsListErrorDebug(t *testing.T) {
 	}
 	assert.Equal(t, m, tbInfo.parent)
 	// TODO(andyli): Optimize List: Now, index nil, push down to all backends.
-	assert.Equal(t, 0, len(m.index))
+	assert.Equal(t, 0, len(m.indexes))
 }
 
 func TestScanTableExprsError(t *testing.T) {
