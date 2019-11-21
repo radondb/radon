@@ -23,9 +23,15 @@ func TestGetDMLRouting(t *testing.T) {
 		"select * from B where B.b between 10 and 20 and B.id = 10",
 		"select * from B where id = 10",
 		"select * from A join B on A.id = B.id where A.id = 10",
+		"select * from B where B.id in (1,2,3)",
+		"select * from B where id = 1 or id =2 or id =3",
+		"select * from B where B.id in (1,2,c)",
 	}
 
 	want := []int{
+		1,
+		1,
+		2,
 		1,
 		1,
 		2,
@@ -46,6 +52,35 @@ func TestGetDMLRouting(t *testing.T) {
 		got, err := GetDMLRouting(database, "B", "id", n.Where, route)
 		assert.Nil(t, err)
 		assert.Equal(t, want[i], len(got))
+	}
+}
+
+func TestGetDMLRoutingErr(t *testing.T) {
+	testcases := []struct {
+		query string
+		out   string
+	}{
+		{
+			query: "select * from B where B.id in (1,2,0x12)",
+			out:   "hash.unsupported.key.type:[3]",
+		},
+	}
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableBConfig())
+	assert.Nil(t, err)
+
+	for _, testcase := range testcases {
+		node, err := sqlparser.Parse(testcase.query)
+		n := node.(*sqlparser.Select)
+		assert.Nil(t, err)
+		_, err = GetDMLRouting(database, "B", "id", n.Where, route)
+		assert.NotNil(t, err)
+		assert.Equal(t, testcase.out, err.Error())
 	}
 }
 

@@ -79,31 +79,6 @@ func TestDeletePlan(t *testing.T) {
 	"RawQuery": "delete from sbtest.A where id in (1, 2,3)",
 	"Partitions": [
 		{
-			"Query": "delete from sbtest.A1 where id in (1, 2, 3)",
-			"Backend": "backend1",
-			"Range": "[0-32)"
-		},
-		{
-			"Query": "delete from sbtest.A2 where id in (1, 2, 3)",
-			"Backend": "backend2",
-			"Range": "[32-64)"
-		},
-		{
-			"Query": "delete from sbtest.A3 where id in (1, 2, 3)",
-			"Backend": "backend3",
-			"Range": "[64-96)"
-		},
-		{
-			"Query": "delete from sbtest.A4 where id in (1, 2, 3)",
-			"Backend": "backend4",
-			"Range": "[96-256)"
-		},
-		{
-			"Query": "delete from sbtest.A5 where id in (1, 2, 3)",
-			"Backend": "backend5",
-			"Range": "[256-512)"
-		},
-		{
 			"Query": "delete from sbtest.A6 where id in (1, 2, 3)",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
