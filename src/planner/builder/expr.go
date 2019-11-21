@@ -128,6 +128,7 @@ func GetDMLRouting(database, table, shardkey string, where *sqlparser.Where, rou
 		filters := splitAndExpression(nil, where.Expr)
 		for _, filter := range filters {
 			filter = skipParenthesis(filter)
+			filter = convertOrToIn(filter)
 			comparison, ok := filter.(*sqlparser.ComparisonExpr)
 			if !ok {
 				continue
@@ -140,6 +141,24 @@ func GetDMLRouting(database, table, shardkey string, where *sqlparser.Where, rou
 					sqlval, ok := comparison.Right.(*sqlparser.SQLVal)
 					if ok {
 						return router.Lookup(database, table, sqlval, sqlval)
+					}
+				}
+			case sqlparser.InStr:
+				if nameMatch(comparison.Left, table, shardkey) {
+					if valTuple, ok := comparison.Right.(sqlparser.ValTuple); ok {
+						var idxs []int
+						for _, val := range valTuple {
+							if sqlVal, ok := val.(*sqlparser.SQLVal); ok {
+								idx, err := router.GetIndex(database, table, sqlVal)
+								if err != nil {
+									return nil, err
+								}
+								idxs = append(idxs, idx)
+							} else {
+								return router.Lookup(database, table, nil, nil)
+							}
+						}
+						return router.GetSegments(database, table, idxs)
 					}
 				}
 			}

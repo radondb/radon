@@ -43,31 +43,6 @@ func TestUpdatePlan(t *testing.T) {
 	"RawQuery": "update sbtest.A set val = 1 where id in (1, 2)",
 	"Partitions": [
 		{
-			"Query": "update sbtest.A1 set val = 1 where id in (1, 2)",
-			"Backend": "backend1",
-			"Range": "[0-32)"
-		},
-		{
-			"Query": "update sbtest.A2 set val = 1 where id in (1, 2)",
-			"Backend": "backend2",
-			"Range": "[32-64)"
-		},
-		{
-			"Query": "update sbtest.A3 set val = 1 where id in (1, 2)",
-			"Backend": "backend3",
-			"Range": "[64-96)"
-		},
-		{
-			"Query": "update sbtest.A4 set val = 1 where id in (1, 2)",
-			"Backend": "backend4",
-			"Range": "[96-256)"
-		},
-		{
-			"Query": "update sbtest.A5 set val = 1 where id in (1, 2)",
-			"Backend": "backend5",
-			"Range": "[256-512)"
-		},
-		{
 			"Query": "update sbtest.A6 set val = 1 where id in (1, 2)",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
