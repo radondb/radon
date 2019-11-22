@@ -173,6 +173,7 @@ func union(log *xlog.Log, router *router.Router, database string, left, right Pl
 			v.parent = lm
 			lm.referTables[k] = v
 		}
+		lm.realTables = append(lm.realTables, rm.realTables...)
 		return lm, nil
 	}
 end:

@@ -118,7 +118,6 @@ func parseSelectExprs(exprs sqlparser.SelectExprs, root PlanNode) ([]selectTuple
 	hasDist := false
 	aggType := nullAgg
 	tbInfos := root.getReferTables()
-	_, isMergeNode := root.(*MergeNode)
 	for _, expr := range exprs {
 		switch exp := expr.(type) {
 		case *sqlparser.AliasedExpr:
@@ -132,24 +131,42 @@ func parseSelectExprs(exprs sqlparser.SelectExprs, root PlanNode) ([]selectTuple
 			}
 			tuples = append(tuples, *tuple)
 		case *sqlparser.StarExpr:
-			if !isMergeNode {
+			switch root := root.(type) {
+			case *MergeNode:
+				tuple := selectTuple{expr: exp, field: "*"}
+				if !exp.TableName.IsEmpty() {
+					tbName := exp.TableName.Name.String()
+					if _, ok := tbInfos[tbName]; !ok {
+						return nil, aggType, errors.Errorf("unsupported:  unknown.table.'%s'.in.field.list", tbName)
+					}
+					tuple.info.referTables = append(tuple.info.referTables, tbName)
+				}
+
+				tuples = append(tuples, tuple)
+			case *SubNode:
+				for _, subField := range root.Sub.getFields() {
+					field := subField.alias
+					if field == "" {
+						field = subField.field
+					}
+					col := &sqlparser.ColName{Name: sqlparser.NewColIdent(field)}
+					tuple := selectTuple{
+						expr:  &sqlparser.AliasedExpr{Expr: col},
+						info:  exprInfo{col, []string{root.subInfo.alias.alias}, []*sqlparser.ColName{col}, nil},
+						field: field,
+						isCol: true,
+					}
+					tuples = append(tuples, tuple)
+				}
+			default:
 				return nil, aggType, errors.New("unsupported: '*'.expression.in.cross-shard.query")
 			}
-			tuple := selectTuple{expr: exp, field: "*"}
-			if !exp.TableName.IsEmpty() {
-				tbName := exp.TableName.Name.String()
-				if _, ok := tbInfos[tbName]; !ok {
-					return nil, aggType, errors.Errorf("unsupported:  unknown.table.'%s'.in.field.list", tbName)
-				}
-				tuple.info.referTables = append(tuple.info.referTables, tbName)
-			}
-
-			tuples = append(tuples, tuple)
 		case sqlparser.Nextval:
 			return nil, aggType, errors.Errorf("unsupported: nextval.in.select.exprs")
 		}
 	}
 
+	_, isMergeNode := root.(*MergeNode)
 	return tuples, setAggregatorType(hasAggs, hasDist, isMergeNode), nil
 }
 

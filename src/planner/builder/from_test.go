@@ -686,7 +686,6 @@ func TestScanTableExprsListErrorDebug(t *testing.T) {
 func TestScanTableExprsError(t *testing.T) {
 	querys := []string{
 		"select * from  C where C.id=1",
-		"select * from (select * from A) as D",
 		"select * from A natural join B",
 		"select * from A join B on A.id=B.id and id=1",
 		"select * from A join B on A.id=B.id and C.id=1",
@@ -702,7 +701,6 @@ func TestScanTableExprsError(t *testing.T) {
 	}
 	wants := []string{
 		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
-		"unsupported: subquery.in.select",
 		"unsupported: join.type:natural join",
 		"unsupported: unknown.column.'id'.in.clause",
 		"unsupported: unknown.column.'C.id'.in.clause",
@@ -735,7 +733,6 @@ func TestScanTableExprsError(t *testing.T) {
 
 func TestScanTableExprsListError(t *testing.T) {
 	querys := []string{
-		"select * from (select * from L) as L",
 		"select * from L natural join B",
 		"select * from A join L on A.id=L.id and id=1",
 		"select * from A join L on A.id=L.id and C.id=1",
@@ -749,7 +746,6 @@ func TestScanTableExprsListError(t *testing.T) {
 		"select * from L join A as L where L.id=1",
 	}
 	wants := []string{
-		"unsupported: subquery.in.select",
 		"unsupported: join.type:natural join",
 		"unsupported: unknown.column.'id'.in.clause",
 		"unsupported: unknown.column.'C.id'.in.clause",

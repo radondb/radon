@@ -11,6 +11,7 @@ package builder
 import (
 	"xcontext"
 
+	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 )
 
@@ -82,13 +83,16 @@ func findParent(tables []string, node PlanNode) PlanNode {
 	return parent
 }
 
-func addFilter(s PlanNode, filter exprInfo) {
+func addFilter(s PlanNode, filter exprInfo) error {
 	switch node := s.(type) {
 	case *JoinNode:
 		node.otherFilter = append(node.otherFilter, filter)
 	case *MergeNode:
 		node.addWhere(filter.expr)
+	case *SubNode:
+		return node.pushFilter(filter)
 	}
+	return nil
 }
 
 // pushFilters push a WHERE clause down, and update the PlanNode info.
@@ -127,4 +131,40 @@ func pushHavings(s PlanNode, expr sqlparser.Expr, tbInfos map[string]*tableInfo)
 		}
 	}
 	return nil
+}
+
+func handleSelectExpr(field selectTuple, node PlanNode) (int, error) {
+	parent := findParent(field.info.referTables, node)
+	if j, ok := parent.(*JoinNode); ok {
+		if j.Strategy != NestLoop {
+			return -1, errors.Errorf("unsupported: '%s'.expression.in.cross-shard.query", field.alias)
+		}
+	}
+	return parent.pushSelectExpr(field)
+}
+
+func handleFilter(filter exprInfo, node PlanNode) error {
+	parent := findParent(filter.referTables, node)
+	if j, ok := parent.(*JoinNode); ok {
+		if j.Strategy == NestLoop {
+			return j.pushOtherFilters([]exprInfo{filter}, false)
+		}
+
+		buf := sqlparser.NewTrackedBuffer(nil)
+		filter.expr.Format(buf)
+		return errors.Errorf("unsupported: where.clause.'%s'.in.cross-shard.join", buf.String())
+	}
+	return parent.pushFilter(filter)
+}
+
+func handleHaving(having exprInfo, node PlanNode) error {
+	parent := findParent(having.referTables, node)
+	if j, ok := parent.(*JoinNode); ok {
+		if j.Strategy != NestLoop {
+			buf := sqlparser.NewTrackedBuffer(nil)
+			having.expr.Format(buf)
+			return errors.Errorf("unsupported: having.clause.'%s'.in.cross-shard.join", buf.String())
+		}
+	}
+	return parent.pushHaving(having)
 }

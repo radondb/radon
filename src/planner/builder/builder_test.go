@@ -525,6 +525,7 @@ func TestSelectUnsupported(t *testing.T) {
 		"select t1.a from G",
 		"select S.id from A join B on B.id=A.id",
 		"select eeeee from A join B on B.id=A.id",
+		"select t.a from A join (select a,b,sum(c) as cnt from B) t on A.a=t.a where t.cnt + t.a>1",
 	}
 	results := []string{
 		"unsupported: subqueries.in.select",
@@ -567,6 +568,7 @@ func TestSelectUnsupported(t *testing.T) {
 		"unsupported: unknown.column.'t1.a'.in.exprs",
 		"unsupported: unknown.column.'S.id'.in.field.list",
 		"unsupported: unknown.column.'eeeee'.in.select.exprs",
+		"unsupported: aggregation.field.in.subquery.is.used.in.clause",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -793,6 +795,7 @@ func TestSelectPlanGlobal(t *testing.T) {
 		"select 1, sum(a),avg(a),a,b from sbtest.G where id>1 group by a,b order by a desc limit 10 offset 100",
 		"select G.a, G.b from G join G1 on G.a = G1.a where G1.id=1",
 		"select G.a, G.b from G, G1 where G.a = G1.a and G1.id=1",
+		"select a from (select a, id from G) as t where t.a > 1",
 	}
 
 	{

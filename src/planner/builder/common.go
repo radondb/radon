@@ -17,12 +17,15 @@ import (
 
 func checkTbName(tbInfos map[string]*tableInfo, node sqlparser.SQLNode) error {
 	return sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
-		if col, ok := node.(*sqlparser.ColName); ok {
-			tableName := col.Qualifier.Name.String()
+		switch node := node.(type) {
+		case *sqlparser.Subquery:
+			return false, nil
+		case *sqlparser.ColName:
+			tableName := node.Qualifier.Name.String()
 			if tableName != "" {
 				if _, ok := tbInfos[tableName]; !ok {
 					buf := sqlparser.NewTrackedBuffer(nil)
-					col.Format(buf)
+					node.Format(buf)
 					return false, errors.Errorf("unsupported: unknown.column.'%s'.in.exprs", buf.String())
 				}
 			}
@@ -60,7 +63,9 @@ func fetchIndex(tbInfo *tableInfo, val *sqlparser.SQLVal, router *router.Router)
 		return err
 	}
 
-	tbInfo.parent.indexes = append(tbInfo.parent.indexes, idx)
+	if m, ok := tbInfo.parent.(*MergeNode); ok {
+		m.indexes = append(m.indexes, idx)
+	}
 	return nil
 }
 

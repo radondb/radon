@@ -35,8 +35,8 @@ type tableInfo struct {
 	tableExpr *sqlparser.AliasedTableExpr
 	// table's route.
 	Segments []router.Segment `json:",omitempty"`
-	// table's parent node, the type always a MergeNode.
-	parent *MergeNode
+	// table's parent node, the type may be MergeNode|SubNode.
+	parent PlanNode
 }
 
 /* scanTableExprs analyzes the 'FROM' clause, build a plannode tree.
@@ -48,7 +48,7 @@ type tableInfo struct {
  *          /  \
  *         /    \
  *  MergeNode  MergeNode
- *  The leaf node is MergeNode, branch node is JoinNode.
+ *  The leaf node maybe MergeNode|SubNode, branch node is JoinNode.
  */
 func scanTableExprs(log *xlog.Log, router *router.Router, database string, tableExprs sqlparser.TableExprs) (PlanNode, error) {
 	if len(tableExprs) == 1 {
@@ -86,9 +86,10 @@ func scanTableExpr(log *xlog.Log, router *router.Router, database string, tableE
 // scanAliasedTableExpr produces the table's tableInfo by the AliasedTableExpr, and build a MergeNode subtree.
 func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tableExpr *sqlparser.AliasedTableExpr) (PlanNode, error) {
 	var err error
-	mn := newMergeNode(log, r)
 	switch expr := tableExpr.Expr.(type) {
 	case sqlparser.TableName:
+		mn := newMergeNode(log, r)
+		mn.Sel = &sqlparser.Select{From: sqlparser.TableExprs([]sqlparser.TableExpr{tableExpr})}
 		if expr.Qualifier.IsEmpty() {
 			expr.Qualifier = sqlparser.NewTableIdent(database)
 		}
@@ -130,11 +131,67 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 		} else {
 			mn.referTables[tn.tableName] = tn
 		}
+		mn.realTables = append(mn.realTables, tn)
+		return mn, err
 	case *sqlparser.Subquery:
-		err = errors.New("unsupported: subquery.in.select")
+		var p PlanNode
+		switch node := expr.Select.(type) {
+		case *sqlparser.Select:
+			if p, err = processSelect(log, r, database, node); err != nil {
+				return nil, err
+			}
+		default:
+			return nil, errors.New("unsupported: unknown.select.statement")
+		}
+
+		tn := &tableInfo{
+			database:  database,
+			alias:     tableExpr.As.String(),
+			tableExpr: tableExpr,
+		}
+		referTables := map[string]*tableInfo{
+			tn.alias: tn,
+		}
+		// Check if a field of the same name already exists, store fields.
+		// Dups are not allowed in subqueries in this situation.
+		colMap := make(map[string]selectTuple)
+		for _, field := range p.getFields() {
+			name := field.alias
+			if name == "" {
+				name = field.field
+			}
+
+			if _, ok := colMap[name]; ok {
+				return nil, errors.Errorf("unsupported: duplicate.column.name.'%s'", name)
+			}
+			colMap[name] = field
+		}
+		subInfo := &derived{tn, colMap, p.getReferTables()}
+
+		if m, ok := p.(*MergeNode); ok {
+			if m.routeLen == 1 {
+				m.fields = nil
+				tn.parent = m
+				m.subInfos = append(m.subInfos, subInfo)
+				m.hasParen = false
+				m.referTables = referTables
+				if m.nonGlobalCnt == 0 {
+					m.indexes = nil
+					m.backend = ""
+					m.routeLen = 0
+				}
+				m.Sel = &sqlparser.Select{
+					From: sqlparser.TableExprs([]sqlparser.TableExpr{tableExpr}),
+				}
+				return m, nil
+			}
+		}
+
+		subNode := newSubNode(log, r, p, subInfo, referTables)
+		tn.parent = subNode
+		return subNode, nil
 	}
-	mn.Sel = &sqlparser.Select{From: sqlparser.TableExprs([]sqlparser.TableExpr{tableExpr})}
-	return mn, err
+	panic("unreachable")
 }
 
 // scanJoinTableExpr produces a PlanNode subtree by the JoinTableExpr.
@@ -271,6 +328,12 @@ func mergeRoutes(lmn, rmn *MergeNode, joinExpr *sqlparser.JoinTableExpr, otherJo
 			}
 		}
 	}
+
+	if rmn.indexes != nil {
+		lmn.indexes = rmn.indexes
+	}
+	lmn.subInfos = append(lmn.subInfos, rmn.subInfos...)
+	lmn.realTables = append(lmn.realTables, rmn.realTables...)
 	return lmn, err
 }
 
