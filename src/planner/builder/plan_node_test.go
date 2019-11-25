@@ -58,13 +58,11 @@ func TestPushOrderBy(t *testing.T) {
 
 func TestPushOrderByError(t *testing.T) {
 	querys := []string{
-		"select a from A order by b",
-		"select A.a from A join B on A.id=B.id order by B.b",
+		"select A.a from A join B on A.id=B.id order by b",
 		"select A.a from A join B on A.id=B.id order by C.a",
 	}
 	wants := []string{
-		"unsupported: orderby[b].should.in.select.list",
-		"unsupported: orderby[B.b].should.in.select.list",
+		"unsupported: column.'b'.in.order.clause.is.ambiguous",
 		"unsupported: unknow.table.in.order.by.field[C.a]",
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
