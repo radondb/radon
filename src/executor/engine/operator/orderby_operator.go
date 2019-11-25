@@ -77,6 +77,6 @@ func (operator *OrderByOperator) Execute(ctx *xcontext.ResultContext) error {
 		}
 		return true
 	})
-
+	rs.RemoveColumns(plan.RemovedIdxs...)
 	return err
 }

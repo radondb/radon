@@ -80,9 +80,11 @@ func TestOrderByOperator(t *testing.T) {
 
 	querys := []string{
 		"select id, name from A where id>8 order by id desc, name asc",
+		"select id from A where id>8 order by id desc, name asc",
 	}
 	results := []string{
 		"[[51 lang] [5 g] [5 g] [3 go] [3 z] [1 x]]",
+		"[[51] [5] [5] [3] [3] [1]]",
 	}
 
 	for i, query := range querys {

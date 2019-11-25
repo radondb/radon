@@ -793,7 +793,7 @@ func (j *JoinNode) pushHaving(having exprInfo) error {
 
 // pushOrderBy used to push the order by exprs.
 func (j *JoinNode) pushOrderBy(orderBy sqlparser.OrderBy) error {
-	orderPlan := NewOrderByPlan(j.log, orderBy, j.fields, j.referTables)
+	orderPlan := NewOrderByPlan(j.log, orderBy, j)
 	j.children = append(j.children, orderPlan)
 	return orderPlan.Build()
 }
