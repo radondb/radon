@@ -77,7 +77,7 @@ func (u *UnionNode) getFields() []selectTuple {
 
 // pushOrderBy used to push the order by exprs.
 func (u *UnionNode) pushOrderBy(orderBy sqlparser.OrderBy) error {
-	orderPlan := NewOrderByPlan(u.log, orderBy, u.getFields(), u.referTables)
+	orderPlan := NewOrderByPlan(u.log, orderBy, u)
 	u.children = append(u.children, orderPlan)
 	return orderPlan.Build()
 }

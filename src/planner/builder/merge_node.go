@@ -192,7 +192,7 @@ func (m *MergeNode) pushSelectExprs(fields, groups []selectTuple, sel *sqlparser
 		}
 		if len(groups) == 0 {
 			if len(node.OrderBy) > 0 {
-				orderPlan := NewOrderByPlan(m.log, node.OrderBy, m.fields, m.referTables)
+				orderPlan := NewOrderByPlan(m.log, node.OrderBy, m)
 				if err := orderPlan.Build(); err != nil {
 					return err
 				}
@@ -236,7 +236,7 @@ func (m *MergeNode) pushHaving(having exprInfo) error {
 // pushOrderBy used to push the order by exprs.
 func (m *MergeNode) pushOrderBy(orderBy sqlparser.OrderBy) error {
 	m.Sel.(*sqlparser.Select).OrderBy = orderBy
-	orderPlan := NewOrderByPlan(m.log, orderBy, m.fields, m.referTables)
+	orderPlan := NewOrderByPlan(m.log, orderBy, m)
 	m.children = append(m.children, orderPlan)
 	return orderPlan.Build()
 }

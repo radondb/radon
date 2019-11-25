@@ -10,7 +10,6 @@ package builder
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -41,32 +40,28 @@ type OrderBy struct {
 
 // OrderByPlan represents order-by plan.
 type OrderByPlan struct {
-	log      *xlog.Log
-	node     sqlparser.OrderBy
-	tuples   []selectTuple
-	tbInfos  map[string]*tableInfo
-	OrderBys []OrderBy `json:"OrderBy(s)"`
-	typ      ChildType
+	log  *xlog.Log
+	node sqlparser.OrderBy
+	root PlanNode
+	// The indexes mark the fields to be removed.
+	RemovedIdxs []int
+	OrderBys    []OrderBy `json:"OrderBy(s)"`
+	typ         ChildType
 }
 
 // NewOrderByPlan used to create OrderByPlan.
-func NewOrderByPlan(log *xlog.Log, node sqlparser.OrderBy, tuples []selectTuple, tbInfos map[string]*tableInfo) *OrderByPlan {
+func NewOrderByPlan(log *xlog.Log, node sqlparser.OrderBy, root PlanNode) *OrderByPlan {
 	return &OrderByPlan{
-		log:     log,
-		node:    node,
-		tuples:  tuples,
-		tbInfos: tbInfos,
-		typ:     ChildTypeOrderby,
+		log:  log,
+		node: node,
+		root: root,
+		typ:  ChildTypeOrderby,
 	}
 }
 
 // analyze used to check the 'order by' is at the support level.
-// Supports:
-// 1. sqlparser.ColName: 'select a from t order by a'
-//
-// Unsupported(orderby field must be in select list):
-// 1. 'select a from t order by b'
 func (p *OrderByPlan) analyze() error {
+	tbInfos := p.root.getReferTables()
 	for _, o := range p.node {
 		switch e := o.Expr.(type) {
 		case *sqlparser.ColName:
@@ -80,18 +75,38 @@ func (p *OrderByPlan) analyze() error {
 			orderBy.Field = e.Name.String()
 			orderBy.Table = e.Qualifier.Name.String()
 			if orderBy.Table != "" {
-				if _, ok := p.tbInfos[orderBy.Table]; !ok {
+				if _, ok := p.root.(*UnionNode); ok {
+					return errors.Errorf("unsupported: table.'%s'.from.one.of.the.SELECTs.cannot.be.used.in.field.list", orderBy.Table)
+				}
+				if _, ok := tbInfos[orderBy.Table]; !ok {
 					return errors.Errorf("unsupported: unknow.table.in.order.by.field[%s.%s]", orderBy.Table, orderBy.Field)
 				}
 			}
 
-			ok, tuple := checkInTuple(orderBy.Field, orderBy.Table, p.tuples)
+			ok, tuple := checkInTuple(orderBy.Field, orderBy.Table, p.root.getFields())
 			if !ok {
-				field := orderBy.Field
-				if orderBy.Table != "" {
-					field = fmt.Sprintf("%s.%s", orderBy.Table, orderBy.Field)
+				if _, ok := p.root.(*UnionNode); ok {
+					return errors.Errorf("unsupported: unknown.column.'%s'.in.'order.clause'", orderBy.Field)
 				}
-				return errors.Errorf("unsupported: orderby[%s].should.in.select.list", field)
+
+				tablename := orderBy.Table
+				if tablename == "" {
+					if len(tbInfos) == 1 {
+						tablename, _ = getOneTableInfo(tbInfos)
+					} else {
+						return errors.Errorf("unsupported: column.'%s'.in.order.clause.is.ambiguous", orderBy.Field)
+					}
+				}
+				// If `orderby.field` not exists in the field list,
+				// we need push it into field list and record in RemovedIdxs.
+				tuple = &selectTuple{
+					expr:  &sqlparser.AliasedExpr{Expr: e},
+					info:  exprInfo{e, []string{tablename}, []*sqlparser.ColName{e}, nil},
+					field: orderBy.Field,
+					isCol: true,
+				}
+				index, _ := p.root.pushSelectExpr(*tuple)
+				p.RemovedIdxs = append(p.RemovedIdxs, index)
 			}
 
 			if tuple.field != "*" {

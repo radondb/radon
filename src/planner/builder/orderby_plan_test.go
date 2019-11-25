@@ -31,6 +31,7 @@ func TestOrderByPlan(t *testing.T) {
 		"select A.a from A order by a",
 		"select a as b from A order by a",
 		"select a as b from A order by A.a",
+		"select a,b from A order by c",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -44,9 +45,9 @@ func TestOrderByPlan(t *testing.T) {
 		node := tree.(*sqlparser.Select)
 		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		tuples, _, err := parseSelectExprs(node.SelectExprs, p)
+		_, _, err = parseSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
-		plan := NewOrderByPlan(log, node.OrderBy, tuples, p.getReferTables())
+		plan := NewOrderByPlan(log, node.OrderBy, p)
 		// plan build
 		{
 			err := plan.Build()
@@ -59,20 +60,20 @@ func TestOrderByPlan(t *testing.T) {
 
 func TestOrderByPlanError(t *testing.T) {
 	querys := []string{
-		"select a,b from A order by c",
 		"select a,b from A order by rand()",
 		"select A.* from A order by X.a",
+		"select A.a from A join B on A.id=B.id order by b",
 	}
 	results := []string{
-		"unsupported: orderby[c].should.in.select.list",
 		"unsupported: orderby:[rand()].type.should.be.colname",
 		"unsupported: unknow.table.in.order.by.field[X.a]",
+		"unsupported: column.'b'.in.order.clause.is.ambiguous",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
-	err := route.AddForTest("sbtest", router.MockTableMConfig())
+	err := route.AddForTest("sbtest", router.MockTableMConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		tree, err := sqlparser.Parse(query)
@@ -80,9 +81,9 @@ func TestOrderByPlanError(t *testing.T) {
 		node := tree.(*sqlparser.Select)
 		p, err := scanTableExprs(log, route, "sbtest", node.From)
 		assert.Nil(t, err)
-		tuples, _, err := parseSelectExprs(node.SelectExprs, p)
+		_, _, err = parseSelectExprs(node.SelectExprs, p)
 		assert.Nil(t, err)
-		plan := NewOrderByPlan(log, node.OrderBy, tuples, p.getReferTables())
+		plan := NewOrderByPlan(log, node.OrderBy, p)
 		// plan build
 		{
 			err := plan.Build()
