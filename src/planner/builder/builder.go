@@ -86,7 +86,7 @@ func processSelect(log *xlog.Log, router *router.Router, database string, node *
 	}
 
 	if node.Having != nil {
-		if err = pushHavings(root, node.Having.Expr, tbInfos); err != nil {
+		if err = pushHavings(root, node.Having.Expr); err != nil {
 			return nil, err
 		}
 	}

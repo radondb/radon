@@ -222,7 +222,7 @@ func TestParserHaving(t *testing.T) {
 		err = p.pushSelectExprs(fields, nil, sel, aggTyp)
 		assert.Nil(t, err)
 
-		err = pushHavings(p, sel.Having.Expr, p.getReferTables())
+		err = pushHavings(p, sel.Having.Expr)
 		assert.Nil(t, err)
 	}
 }
@@ -261,7 +261,7 @@ func TestParserHavingError(t *testing.T) {
 		err = p.pushSelectExprs(fields, nil, sel, aggTyp)
 		assert.Nil(t, err)
 
-		err = pushHavings(p, sel.Having.Expr, p.getReferTables())
+		err = pushHavings(p, sel.Having.Expr)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}
