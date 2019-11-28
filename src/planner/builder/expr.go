@@ -317,7 +317,7 @@ func checkJoinOn(lpn, rpn PlanNode, join exprInfo) (exprInfo, error) {
 
 // parseHaving used to check the having exprs and parse into tuples.
 // unsupport: `select sum(t2.id) as tmp, t1.id from t2,t1 having tmp=1`.
-func parseHaving(exprs sqlparser.Expr, tbInfos map[string]*tableInfo, fields []selectTuple) ([]exprInfo, error) {
+func parseHaving(exprs sqlparser.Expr, fields []selectTuple) ([]exprInfo, error) {
 	var tuples []exprInfo
 	filters := splitAndExpression(nil, exprs)
 	for _, filter := range filters {
@@ -394,18 +394,18 @@ func getTbsInExpr(expr sqlparser.Expr) []string {
 func replaceCol(info exprInfo, colMap map[string]selectTuple) (exprInfo, error) {
 	var tables []string
 	var columns []*sqlparser.ColName
-	for _, col := range info.cols {
-		field, err := getMatchedField(col.Name.String(), colMap)
+	for _, old := range info.cols {
+		new, err := getMatchedField(old.Name.String(), colMap)
 		if err != nil {
 			return info, err
 		}
-		if field.aggrFuc != "" {
+		if new.aggrFuc != "" {
 			return info, errors.New("unsupported: aggregation.field.in.subquery.is.used.in.clause")
 		}
 
-		info.expr = sqlparser.ReplaceExpr(info.expr, col, field.info.expr)
-		columns = append(columns, field.info.cols...)
-		for _, referTable := range field.info.referTables {
+		info.expr = sqlparser.ReplaceExpr(info.expr, old, new.info.expr)
+		columns = append(columns, new.info.cols...)
+		for _, referTable := range new.info.referTables {
 			if !isContainKey(tables, referTable) {
 				tables = append(tables, referTable)
 			}
