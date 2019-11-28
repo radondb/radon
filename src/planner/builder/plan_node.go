@@ -116,8 +116,8 @@ func pushFilters(s PlanNode, expr sqlparser.Expr) (PlanNode, error) {
 }
 
 // pushHavings push a HAVING clause down.
-func pushHavings(s PlanNode, expr sqlparser.Expr, tbInfos map[string]*tableInfo) error {
-	havings, err := parseHaving(expr, tbInfos, s.getFields())
+func pushHavings(s PlanNode, expr sqlparser.Expr) error {
+	havings, err := parseHaving(expr, s.getFields())
 	if err != nil {
 		return err
 	}
