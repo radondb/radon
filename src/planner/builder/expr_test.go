@@ -26,6 +26,8 @@ func TestGetDMLRouting(t *testing.T) {
 		"select * from B where B.id in (1,2,3)",
 		"select * from B where id = 1 or id =2 or id =3",
 		"select * from B where B.id in (1,2,c)",
+		"select * from A where id = 1 or id in (2,3)",
+		"select * from A where (id = 1 and id = 1) or id in (2,3)",
 	}
 
 	want := []int{
@@ -35,6 +37,8 @@ func TestGetDMLRouting(t *testing.T) {
 		1,
 		1,
 		2,
+		1,
+		1,
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
@@ -113,6 +117,44 @@ func TestParserWhereOrJoinExprs(t *testing.T) {
 	}
 }
 
+func TestTransformORs(t *testing.T) {
+	querys := []string{
+		"select * from A where (id=1 and b = 1) or (id=1 and a = 1)",
+		"select * from A where ((id=1 and id=1) or (id=1 and a=2)) and c=2",
+		"select * from A where 1=id or id=2 or id in (3,4)",
+	}
+
+	wants := []string{
+		"select * from A where id = 1 and (b in (1) or a in (1))",
+		"select * from A where id = 1 and c = 2",
+		"select * from A where id in (1, 2, 3, 4)",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableMConfig())
+	assert.Nil(t, err)
+
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		sel := node.(*sqlparser.Select)
+		filters := splitAndExpression(nil, sel.Where.Expr)
+		filters = transformORs(filters)
+
+		sel.Where = nil
+		for _, filter := range filters {
+			sel.AddWhere(filter)
+		}
+		buf := sqlparser.NewTrackedBuffer(nil)
+		sel.Format(buf)
+		assert.Equal(t, wants[i], buf.String())
+	}
+}
 func TestWhereFilters(t *testing.T) {
 	querys := []string{
 		"select * from G, A where G.id=A.id and A.id=1",
@@ -188,6 +230,10 @@ func TestWhereFiltersError(t *testing.T) {
 	// splitAndExpression.
 	{
 		splitAndExpression(nil, nil)
+	}
+	// splitOrExpression.
+	{
+		splitOrExpression(nil, nil)
 	}
 }
 

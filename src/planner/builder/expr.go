@@ -34,13 +34,11 @@ type exprInfo struct {
 // t1.b=2 paser in wheres, t1.b col, 2 val.
 func parseWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) ([]exprInfo, []exprInfo, error) {
 	filters := splitAndExpression(nil, exprs)
+	filters = transformORs(filters)
 	var joins, wheres []exprInfo
-
 	for _, filter := range filters {
 		var cols []*sqlparser.ColName
 		var vals []*sqlparser.SQLVal
-		filter = skipParenthesis(filter)
-		filter = convertOrToIn(filter)
 		referTables := make([]string, 0, 4)
 		err := sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
 			switch node := node.(type) {
@@ -118,7 +116,6 @@ func parseWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) 
 		tuple := exprInfo{filter, referTables, cols, vals}
 		wheres = append(wheres, tuple)
 	}
-
 	return joins, wheres, nil
 }
 
@@ -126,9 +123,8 @@ func parseWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) 
 func GetDMLRouting(database, table, shardkey string, where *sqlparser.Where, router *router.Router) ([]router.Segment, error) {
 	if shardkey != "" && where != nil {
 		filters := splitAndExpression(nil, where.Expr)
+		filters = transformORs(filters)
 		for _, filter := range filters {
-			filter = skipParenthesis(filter)
-			filter = convertOrToIn(filter)
 			comparison, ok := filter.(*sqlparser.ComparisonExpr)
 			if !ok {
 				continue
@@ -184,63 +180,155 @@ func splitAndExpression(filters []sqlparser.Expr, node sqlparser.Expr) []sqlpars
 		filters = splitAndExpression(filters, node.Left)
 		return splitAndExpression(filters, node.Right)
 	case *sqlparser.ParenExpr:
-		if node, ok := node.Expr.(*sqlparser.AndExpr); ok {
-			return splitAndExpression(filters, node)
-		}
+		return splitAndExpression(filters, node.Expr)
 	}
 	return append(filters, node)
 }
 
-// skipParenthesis skips the parenthesis (if any) of an expression and
-// returns the innermost unparenthesized expression.
-func skipParenthesis(node sqlparser.Expr) sqlparser.Expr {
-	if node, ok := node.(*sqlparser.ParenExpr); ok {
-		return skipParenthesis(node.Expr)
+// splitOrExpression breaks up the Expr into OR-separated conditions
+// and appends them to filters.
+func splitOrExpression(filters []sqlparser.Expr, node sqlparser.Expr) []sqlparser.Expr {
+	if node == nil {
+		return filters
 	}
-	return node
+	switch node := node.(type) {
+	case *sqlparser.OrExpr:
+		filters = splitOrExpression(filters, node.Left)
+		return splitOrExpression(filters, node.Right)
+	case *sqlparser.ParenExpr:
+		return splitOrExpression(filters, node.Expr)
+	}
+	return append(filters, node)
 }
 
-// splitOrExpression breaks up the OrExpr into OR-separated conditions.
-// Split the Equal conditions into inMap, return the other conditions.
-func splitOrExpression(node sqlparser.Expr, inMap map[*sqlparser.ColName][]sqlparser.Expr) []sqlparser.Expr {
+// transformORs transforms the OR expressions. If the cond is OR, try to extract
+// the same condition from it, then convert the OR expression to IN expression.
+func transformORs(exprs []sqlparser.Expr) []sqlparser.Expr {
+	var newExprs []sqlparser.Expr
+	for _, expr := range exprs {
+		or, ok := expr.(*sqlparser.OrExpr)
+		if !ok {
+			newExprs = append(newExprs, expr)
+			continue
+		}
+		exprMaps, splited, onlyNeedSplited := extractExprsFromOr(or)
+		newExprs = append(newExprs, splited...)
+		if !onlyNeedSplited {
+			newExprs = append(newExprs, convertOrToIn(exprMaps))
+		}
+	}
+	return newExprs
+}
+
+// extractExprsFromOr extracts the same condition that occurs in every OR args and remove them from OR.
+func extractExprsFromOr(expr *sqlparser.OrExpr) ([]map[string]sqlparser.Expr, []sqlparser.Expr, bool) {
 	var subExprs []sqlparser.Expr
-	switch expr := node.(type) {
-	case *sqlparser.OrExpr:
-		subExprs = append(subExprs, splitOrExpression(expr.Left, inMap)...)
-		subExprs = append(subExprs, splitOrExpression(expr.Right, inMap)...)
-	case *sqlparser.ComparisonExpr:
-		canSplit := false
-		if expr.Operator == sqlparser.EqualStr {
-			if lc, ok := expr.Left.(*sqlparser.ColName); ok {
-				if val, ok := expr.Right.(*sqlparser.SQLVal); ok {
-					col := checkColInMap(inMap, lc)
-					inMap[col] = append(inMap[col], val)
-					canSplit = true
-				}
-			} else {
-				if rc, ok := expr.Right.(*sqlparser.ColName); ok {
-					if val, ok := expr.Left.(*sqlparser.SQLVal); ok {
-						col := checkColInMap(inMap, rc)
-						inMap[col] = append(inMap[col], val)
-						canSplit = true
-					}
-				}
+	subExprs = splitOrExpression(subExprs, expr)
+	exprMaps := make([]map[string]sqlparser.Expr, len(subExprs))
+	strCntMap := make(map[string]int)
+	strExprMap := make(map[string]sqlparser.Expr)
+	for i, expr := range subExprs {
+		innerMap := make(map[string]struct{})
+		args := splitAndExpression(nil, expr)
+		exprMap := make(map[string]sqlparser.Expr, len(args))
+		for _, arg := range args {
+			buf := sqlparser.NewTrackedBuffer(nil)
+			arg.Format(buf)
+			str := buf.String()
+			if _, ok := innerMap[str]; ok {
+				// Remove the duplicate conditions.
+				// eg: `(t1.a=1 and t1.a=1) or ...` is equivalent to the statement `t1.a=1 or ...`.
+				continue
+			}
+			exprMap[str] = arg
+			innerMap[str] = struct{}{}
+			if i == 0 {
+				strCntMap[str] = 1
+				strExprMap[str] = arg
+			} else if _, ok := strCntMap[str]; ok {
+				strCntMap[str]++
 			}
 		}
-
-		if !canSplit {
-			subExprs = append(subExprs, expr)
-		}
-	case *sqlparser.ParenExpr:
-		subExprs = append(subExprs, splitOrExpression(skipParenthesis(expr), inMap)...)
-	default:
-		subExprs = append(subExprs, expr)
+		exprMaps[i] = exprMap
 	}
-	return subExprs
+
+	// The expr need exists in every subExprs.
+	for str, cnt := range strCntMap {
+		if cnt < len(subExprs) {
+			delete(strExprMap, str)
+		}
+	}
+	if len(strExprMap) == 0 {
+		return exprMaps, nil, false
+	}
+
+	onlyNeedSplited := false
+	for _, exprMap := range exprMaps {
+		for str := range strExprMap {
+			delete(exprMap, str)
+		}
+		// eg: `(t1.a=1) or (t1.a=1 and t2.a>1)` is equivalent to the statement `t1.a=1`.
+		if len(exprMap) == 0 {
+			onlyNeedSplited = true
+			break
+		}
+	}
+	var splited []sqlparser.Expr
+	for _, expr := range strExprMap {
+		splited = append(splited, expr)
+	}
+	return exprMaps, splited, onlyNeedSplited
+}
+
+// convertOrToIn converts the Expr type from `or` to `in`.
+func convertOrToIn(exprMaps []map[string]sqlparser.Expr) sqlparser.Expr {
+	var i int
+	inMap := make(map[*sqlparser.ColName]sqlparser.ValTuple, len(exprMaps))
+	for i < len(exprMaps) {
+		match := true
+		var col *sqlparser.ColName
+		var vals sqlparser.ValTuple
+		for _, expr := range exprMaps[i] {
+			newCol, newVals := fetchColVals(expr)
+			if col == nil {
+				col = newCol
+			}
+			if newCol == nil || !col.Equal(newCol) {
+				match = false
+				break
+			}
+			vals = append(vals, newVals...)
+		}
+		if match {
+			col = checkColInMap(inMap, col)
+			inMap[col] = append(inMap[col], vals...)
+			exprMaps = append(exprMaps[:i], exprMaps[i+1:]...)
+			continue
+		}
+		i++
+	}
+
+	var newExpr sqlparser.Expr
+	for _, exprs := range exprMaps {
+		var sub sqlparser.Expr
+		for _, expr := range exprs {
+			sub = rebuildAnd(sub, expr)
+		}
+		newExpr = rebuildOr(newExpr, sub)
+	}
+	for k, v := range inMap {
+		sub := &sqlparser.ComparisonExpr{
+			Operator: sqlparser.InStr,
+			Left:     k,
+			Right:    v,
+		}
+		newExpr = rebuildOr(newExpr, sub)
+	}
+	return newExpr
 }
 
 // checkColInMap used to check if the colname is in the map.
-func checkColInMap(inMap map[*sqlparser.ColName][]sqlparser.Expr, col *sqlparser.ColName) *sqlparser.ColName {
+func checkColInMap(inMap map[*sqlparser.ColName]sqlparser.ValTuple, col *sqlparser.ColName) *sqlparser.ColName {
 	for k := range inMap {
 		if col.Equal(k) {
 			return k
@@ -260,28 +348,43 @@ func rebuildOr(node, expr sqlparser.Expr) sqlparser.Expr {
 	}
 }
 
-// convertOrToIn used to change the EqualStr to InStr.
-func convertOrToIn(node sqlparser.Expr) sqlparser.Expr {
-	expr, ok := node.(*sqlparser.OrExpr)
-	if !ok {
-		return node
+// rebuildAnd used to rebuild the AndExpr.
+func rebuildAnd(node, expr sqlparser.Expr) sqlparser.Expr {
+	if node == nil {
+		return expr
 	}
+	return &sqlparser.AndExpr{
+		Left:  node,
+		Right: expr,
+	}
+}
 
-	inMap := make(map[*sqlparser.ColName][]sqlparser.Expr)
-	var result sqlparser.Expr
-	subExprs := splitOrExpression(expr, inMap)
-	for _, subExpr := range subExprs {
-		result = rebuildOr(result, subExpr)
-	}
-	for k, v := range inMap {
-		subExpr := &sqlparser.ComparisonExpr{
-			Operator: sqlparser.InStr,
-			Left:     k,
-			Right:    sqlparser.ValTuple(v),
+// fetchColVals fetch ColName and ValTuple from Expr which type is `in` or `=`.
+func fetchColVals(node sqlparser.Expr) (*sqlparser.ColName, sqlparser.ValTuple) {
+	var col *sqlparser.ColName
+	var vals sqlparser.ValTuple
+	if expr, ok := node.(*sqlparser.ComparisonExpr); ok {
+		switch expr.Operator {
+		case sqlparser.EqualStr:
+			if _, ok := expr.Left.(*sqlparser.SQLVal); ok {
+				expr.Left, expr.Right = expr.Right, expr.Left
+			}
+			if lc, ok := expr.Left.(*sqlparser.ColName); ok {
+				if val, ok := expr.Right.(*sqlparser.SQLVal); ok {
+					col = lc
+					vals = append(vals, val)
+				}
+			}
+		case sqlparser.InStr:
+			if lc, ok := expr.Left.(*sqlparser.ColName); ok {
+				if valTuple, ok := expr.Right.(sqlparser.ValTuple); ok {
+					col = lc
+					vals = valTuple
+				}
+			}
 		}
-		result = rebuildOr(result, subExpr)
 	}
-	return result
+	return col, vals
 }
 
 // convertToLeftJoin converts a right join into a left join.
@@ -321,7 +424,6 @@ func parseHaving(exprs sqlparser.Expr, fields []selectTuple) ([]exprInfo, error)
 	var tuples []exprInfo
 	filters := splitAndExpression(nil, exprs)
 	for _, filter := range filters {
-		filter = skipParenthesis(filter)
 		tuple := exprInfo{filter, nil, nil, nil}
 		err := sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
 			switch node := node.(type) {
