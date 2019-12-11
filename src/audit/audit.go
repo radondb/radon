@@ -51,6 +51,7 @@ type event struct {
 	ThreadID    uint32        `json:"thread_id"`    // Thread id.
 	CommandType string        `json:"command_type"` // Type of command.
 	Argument    string        `json:"argument"`     // Full query.
+	Status      uint32        `json:"status"`       // Status of results, if 0 success, else failed.
 	QueryRows   uint64        `json:"query_rows"`   // Query rows.
 }
 
@@ -102,7 +103,7 @@ func (a *Audit) Init() error {
 }
 
 // LogReadEvent used to handle the read-only event.
-func (a *Audit) LogReadEvent(t string, user string, host string, threadID uint32, query string, affected uint64, startTime time.Time) {
+func (a *Audit) LogReadEvent(t string, user string, host string, threadID uint32, query string, status uint32, affected uint64, startTime time.Time) {
 	if a.conf.Mode == ALL || a.conf.Mode == READ {
 		e := &event{
 			Start:       startTime,
@@ -113,6 +114,7 @@ func (a *Audit) LogReadEvent(t string, user string, host string, threadID uint32
 			ThreadID:    threadID,
 			CommandType: t,
 			Argument:    query,
+			Status:      status,
 			QueryRows:   affected,
 		}
 		a.queue <- e
@@ -120,7 +122,7 @@ func (a *Audit) LogReadEvent(t string, user string, host string, threadID uint32
 }
 
 // LogWriteEvent used to handle the write event.
-func (a *Audit) LogWriteEvent(t string, user string, host string, threadID uint32, query string, affected uint64, startTime time.Time) {
+func (a *Audit) LogWriteEvent(t string, user string, host string, threadID uint32, query string, status uint32, affected uint64, startTime time.Time) {
 	if a.conf.Mode == ALL || a.conf.Mode == WRITE {
 		e := &event{
 			Start:       startTime,
@@ -131,6 +133,7 @@ func (a *Audit) LogWriteEvent(t string, user string, host string, threadID uint3
 			ThreadID:    threadID,
 			CommandType: t,
 			Argument:    query,
+			Status:      status,
 			QueryRows:   affected,
 		}
 		a.queue <- e

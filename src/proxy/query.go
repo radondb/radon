@@ -110,13 +110,13 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 		if qr, err = spanner.handleUseDB(session, query, node); err != nil {
 			log.Error("proxy.usedb[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
-		spanner.auditLog(session, R, xbase.USEDB, query, qr)
+		spanner.auditLog(session, R, xbase.USEDB, query, qr, err != nil)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.DDL:
 		if qr, err = spanner.handleDDL(session, query, node); err != nil {
 			log.Error("proxy.DDL[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
-		spanner.auditLog(session, W, xbase.DDL, query, qr)
+		spanner.auditLog(session, W, xbase.DDL, query, qr, err != nil)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Show:
 		show := node
@@ -182,7 +182,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 			log.Error("proxy.show.unsupported[%s].from.session[%v]", query, session.ID())
 			err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query:%v", query)
 		}
-		spanner.auditLog(session, R, xbase.SHOW, query, qr)
+		spanner.auditLog(session, R, xbase.SHOW, query, qr, err != nil)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Insert:
 		if qr, err = spanner.handleInsert(session, query, node); err != nil {
@@ -190,22 +190,22 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 		}
 		switch node.Action {
 		case sqlparser.InsertStr:
-			spanner.auditLog(session, W, xbase.INSERT, query, qr)
+			spanner.auditLog(session, W, xbase.INSERT, query, qr, err != nil)
 		case sqlparser.ReplaceStr:
-			spanner.auditLog(session, W, xbase.REPLACE, query, qr)
+			spanner.auditLog(session, W, xbase.REPLACE, query, qr, err != nil)
 		}
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Delete:
 		if qr, err = spanner.handleDelete(session, query, node); err != nil {
 			log.Error("proxy.delete[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
-		spanner.auditLog(session, W, xbase.DELETE, query, qr)
+		spanner.auditLog(session, W, xbase.DELETE, query, qr, err != nil)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Update:
 		if qr, err = spanner.handleUpdate(session, query, node); err != nil {
 			log.Error("proxy.update[%s].from.session[%v].error:%+v", xbase.TruncateQuery(query, 256), session.ID(), err)
 		}
-		spanner.auditLog(session, W, xbase.UPDATE, query, qr)
+		spanner.auditLog(session, W, xbase.UPDATE, query, qr, err != nil)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Select:
 		txSession := spanner.sessions.getTxnSession(session)
@@ -243,13 +243,13 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 						}
 					}
 				}
-				spanner.auditLog(session, R, xbase.SELECT, query, qr)
+				spanner.auditLog(session, R, xbase.SELECT, query, qr, err != nil)
 				return returnQuery(qr, callback, err)
 			default: // ParenTableExpr, JoinTableExpr
 				if qr, err = spanner.handleSelect(session, query, node); err != nil {
 					log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
 				}
-				spanner.auditLog(session, R, xbase.SELECT, query, qr)
+				spanner.auditLog(session, R, xbase.SELECT, query, qr, err != nil)
 				return returnQuery(qr, callback, err)
 			}
 		}
@@ -257,19 +257,19 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 		if qr, err = spanner.handleSelect(session, query, node); err != nil {
 			log.Error("proxy.union[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
-		spanner.auditLog(session, W, xbase.UPDATE, query, qr)
+		spanner.auditLog(session, W, xbase.UPDATE, query, qr, err != nil)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Kill:
 		if qr, err = spanner.handleKill(session, query, node); err != nil {
 			log.Error("proxy.kill[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
-		spanner.auditLog(session, R, xbase.KILL, query, qr)
+		spanner.auditLog(session, R, xbase.KILL, query, qr, err != nil)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Explain:
 		if qr, err = spanner.handleExplain(session, query, node); err != nil {
 			log.Error("proxy.explain[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
-		spanner.auditLog(session, R, xbase.EXPLAIN, query, qr)
+		spanner.auditLog(session, R, xbase.EXPLAIN, query, qr, err != nil)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Transaction:
 		// Support for myloader.
@@ -277,31 +277,31 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 		if qr, err = spanner.handleMultiStmtTxn(session, query, node); err != nil {
 			log.Error("proxy.transaction[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
-		spanner.auditLog(session, R, xbase.TRANSACTION, query, qr)
+		spanner.auditLog(session, R, xbase.TRANSACTION, query, qr, err != nil)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Radon:
 		if qr, err = spanner.handleRadon(session, query, node); err != nil {
 			log.Error("proxy.admin[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
-		spanner.auditLog(session, R, xbase.RADON, query, qr)
+		spanner.auditLog(session, R, xbase.RADON, query, qr, err != nil)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Set:
 		log.Warning("proxy.query.set.query:%s", query)
 		if qr, err = spanner.handleSet(session, query, node); err != nil {
 			log.Error("proxy.set[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
-		spanner.auditLog(session, R, xbase.SET, query, qr)
+		spanner.auditLog(session, R, xbase.SET, query, qr, err != nil)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Checksum:
 		log.Warning("proxy.query.checksum.query:%s", query)
 		if qr, err = spanner.handleChecksumTable(session, query, node); err != nil {
 			log.Error("proxy.checksum[%s].from.session[%v].error:%+v", query, session.ID(), err)
 		}
-		spanner.auditLog(session, R, xbase.CHECKSUM, query, qr)
+		spanner.auditLog(session, R, xbase.CHECKSUM, query, qr, err != nil)
 		return returnQuery(qr, callback, err)
 	default:
 		log.Error("proxy.unsupported[%s].from.session[%v]", query, session.ID())
-		spanner.auditLog(session, R, xbase.UNSUPPORT, query, qr)
+		spanner.auditLog(session, R, xbase.UNSUPPORT, query, qr, err != nil)
 		err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query:%v", query)
 		return err
 	}
