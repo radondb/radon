@@ -41,6 +41,13 @@ func TestScatterAddRemove(t *testing.T) {
 		assert.NotNil(t, err)
 	}
 
+	// duplicate address
+	{
+		config2 := MockBackendConfigDefault("node2", addrs[0])
+		err := scatter.Add(config2)
+		assert.NotNil(t, err)
+	}
+
 	// remove
 	{
 		err := scatter.Remove(config1)
