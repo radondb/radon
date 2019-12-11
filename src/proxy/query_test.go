@@ -663,3 +663,36 @@ func TestProxyQueryFixJdbcPanic495(t *testing.T) {
 		}
 	}
 }
+
+func TestProxyQuerySubQuery(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+	testcases := []struct {
+		query string
+		out   string
+	}{
+		{
+			query: "select * from (select a from t) as tt",
+			out:   "unsupported: subqueries.in.select (errno 1105) (sqlstate HY000)",
+		},
+		{
+			query: "select * from t1 join t2 on t1.a=t2.a where exists(select a from t)",
+			out:   "unsupported: subqueries.in.select (errno 1105) (sqlstate HY000)",
+		},
+	}
+
+	fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+	fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+	{
+		client, err := driver.NewConn("mock", "mock", address, " ", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+
+		for _, testcase := range testcases {
+			_, err = client.FetchAll(testcase.query, -1)
+			assert.Equal(t, testcase.out, err.Error())
+		}
+	}
+}
