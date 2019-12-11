@@ -58,6 +58,13 @@ func (scatter *Scatter) add(config *config.BackendConfig) error {
 	if _, ok := scatter.backends[config.Name]; ok {
 		return errors.Errorf("scatter.backend[%v].duplicate", config.Name)
 	}
+	// check the address in backendsConfig, fix issue#546.
+	for _, pool := range scatter.backends {
+		if pool.conf.Address == config.Address {
+			return errors.Errorf("scatter.address[%v].already.exists.in.backends", config.Address)
+		}
+	}
+
 	pool := NewPool(scatter.log, config)
 	scatter.backends[config.Name] = pool
 	monitor.BackendInc("backend")

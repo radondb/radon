@@ -218,6 +218,25 @@ func TestAttachErrorDuplicateBackend(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestAttachErrorDuplicateAddress(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedb, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	scatter := proxy.Scatter()
+	router := proxy.Router()
+	spanner := proxy.Spanner()
+	addrs := fakedb.Addrs()
+
+	handler := NewAttach(log, scatter, router, spanner)
+
+	query := fmt.Sprintf("radon attach('%s', 'mock', 'pwd')", addrs[0])
+	node, err := sqlparser.Parse(query)
+	assert.Nil(t, err)
+	attach := node.(*sqlparser.Radon)
+	_, err = handler.Attach(attach)
+	assert.NotNil(t, err)
+}
+
 func TestAttachErrorShow(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedb, proxy, cleanup := MockProxy(log)

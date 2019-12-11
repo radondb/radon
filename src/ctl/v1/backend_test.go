@@ -47,6 +47,19 @@ func TestCtlV1BackendAdd(t *testing.T) {
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/radon/backend", p))
 		recorded.CodeIs(200)
 	}
+
+	// duplicate address.
+	{
+		p := &backendParams{
+			Name:           "backend7",
+			Address:        "192.168.0.1:3306",
+			User:           "mock",
+			Password:       "pwd",
+			MaxConnections: 1024,
+		}
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/radon/backend", p))
+		recorded.CodeIs(500)
+	}
 }
 
 func TestCtlV1BackendAddError(t *testing.T) {
