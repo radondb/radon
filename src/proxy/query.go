@@ -105,18 +105,22 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 	defer func() {
 		queryStat(node, timeStart, slowQueryTime, err)
 	}()
+	// The status of the execution result, zero for success and non-zero for failure.
+	status := uint16(0)
 	switch node := node.(type) {
 	case *sqlparser.Use:
 		if qr, err = spanner.handleUseDB(session, query, node); err != nil {
 			log.Error("proxy.usedb[%s].from.session[%v].error:%+v", query, session.ID(), err)
+			status = 1
 		}
-		spanner.auditLog(session, R, xbase.USEDB, query, qr)
+		spanner.auditLog(session, R, xbase.USEDB, query, qr, status)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.DDL:
 		if qr, err = spanner.handleDDL(session, query, node); err != nil {
 			log.Error("proxy.DDL[%s].from.session[%v].error:%+v", query, session.ID(), err)
+			status = 1
 		}
-		spanner.auditLog(session, W, xbase.DDL, query, qr)
+		spanner.auditLog(session, W, xbase.DDL, query, qr, status)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Show:
 		show := node
@@ -124,88 +128,105 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 		case sqlparser.ShowDatabasesStr:
 			if qr, err = spanner.handleShowDatabases(session, query, node); err != nil {
 				log.Error("proxy.show.databases[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		case sqlparser.ShowStatusStr:
 			if qr, err = spanner.handleShowStatus(session, query, node); err != nil {
 				log.Error("proxy.show.status[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		case sqlparser.ShowVersionsStr:
 			if qr, err = spanner.handleShowVersions(session, query, node); err != nil {
 				log.Error("proxy.show.verions[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		case sqlparser.ShowEnginesStr:
 			if qr, err = spanner.handleShowEngines(session, query, node); err != nil {
 				log.Error("proxy.show.engines[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		case sqlparser.ShowTablesStr, sqlparser.ShowFullTablesStr:
 			// Support for SHOW FULL TBALES which can be parsed used by Navicat
 			// TODO: need to support: SHOW [FULL] TABLES [FROM db_name] [like_or_where]
 			if qr, err = spanner.handleShowTables(session, query, node); err != nil {
 				log.Error("proxy.show.tables[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		case sqlparser.ShowCreateTableStr:
 			if qr, err = spanner.handleShowCreateTable(session, query, node); err != nil {
 				log.Error("proxy.show.create.table[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		case sqlparser.ShowColumnsStr:
 			if qr, err = spanner.handleShowColumns(session, query, node); err != nil {
 				log.Error("proxy.show.colomns[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		case sqlparser.ShowProcesslistStr:
 			if qr, err = spanner.handleShowProcesslist(session, query, node); err != nil {
 				log.Error("proxy.show.processlist[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		case sqlparser.ShowQueryzStr:
 			if qr, err = spanner.handleShowQueryz(session, query, node); err != nil {
 				log.Error("proxy.show.queryz[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		case sqlparser.ShowTxnzStr:
 			if qr, err = spanner.handleShowTxnz(session, query, node); err != nil {
 				log.Error("proxy.show.txnz[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		case sqlparser.ShowCreateDatabaseStr:
 			// Support for myloader.
 			if qr, err = spanner.handleShowCreateDatabase(session, query, node); err != nil {
 				log.Error("proxy.show.create.database[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		case sqlparser.ShowTableStatusStr:
 			// Support for Navicat.
 			if qr, err = spanner.handleShowTableStatus(session, query, node); err != nil {
 				log.Error("proxy.show.table.status[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		case sqlparser.ShowWarningsStr, sqlparser.ShowVariablesStr:
 			// Support for JDBC.
 			if qr, err = spanner.handleJDBCShows(session, query, node); err != nil {
 				log.Error("proxy.JDBC.shows[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
 			}
 		default:
 			log.Error("proxy.show.unsupported[%s].from.session[%v]", query, session.ID())
-			err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query:%v", query)
+			status = sqldb.ER_UNKNOWN_ERROR
+			err = sqldb.NewSQLErrorf(status, "unsupported.query:%v", query)
 		}
-		spanner.auditLog(session, R, xbase.SHOW, query, qr)
+		spanner.auditLog(session, R, xbase.SHOW, query, qr, status)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Insert:
 		if qr, err = spanner.handleInsert(session, query, node); err != nil {
 			log.Error("proxy.insert[%s].from.session[%v].error:%+v", xbase.TruncateQuery(query, 256), session.ID(), err)
+			status = 1
 		}
 		switch node.Action {
 		case sqlparser.InsertStr:
-			spanner.auditLog(session, W, xbase.INSERT, query, qr)
+			spanner.auditLog(session, W, xbase.INSERT, query, qr, status)
 		case sqlparser.ReplaceStr:
-			spanner.auditLog(session, W, xbase.REPLACE, query, qr)
+			spanner.auditLog(session, W, xbase.REPLACE, query, qr, status)
 		}
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Delete:
 		if qr, err = spanner.handleDelete(session, query, node); err != nil {
 			log.Error("proxy.delete[%s].from.session[%v].error:%+v", query, session.ID(), err)
+			status = 1
 		}
-		spanner.auditLog(session, W, xbase.DELETE, query, qr)
+		spanner.auditLog(session, W, xbase.DELETE, query, qr, status)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Update:
 		if qr, err = spanner.handleUpdate(session, query, node); err != nil {
 			log.Error("proxy.update[%s].from.session[%v].error:%+v", xbase.TruncateQuery(query, 256), session.ID(), err)
+			status = 1
 		}
-		spanner.auditLog(session, W, xbase.UPDATE, query, qr)
+		spanner.auditLog(session, W, xbase.UPDATE, query, qr, status)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Select:
 		txSession := spanner.sessions.getTxnSession(session)
@@ -215,94 +236,107 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 				return err
 			}
 			return nil
-		} else {
-			switch node.From[0].(type) {
-			case *sqlparser.AliasedTableExpr:
-				aliasTableExpr := node.From[0].(*sqlparser.AliasedTableExpr)
-				tb, ok := aliasTableExpr.Expr.(sqlparser.TableName)
-				if !ok {
-					// Subquery.
-					if qr, err = spanner.handleSelect(session, query, node); err != nil {
-						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
-					}
-				} else {
-					if tb.Name.String() == "dual" {
-						// Select 1.
-						if qr, err = spanner.ExecuteSingle(query); err != nil {
-							log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
-						}
-					} else if spanner.router.IsSystemDB(tb.Qualifier.String()) {
-						// System database select.
-						if qr, err = spanner.handleSelectSystem(session, query, node); err != nil {
-							log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
-						}
-					} else {
-						// Normal select.
-						if qr, err = spanner.handleSelect(session, query, node); err != nil {
-							log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
-						}
-					}
-				}
-				spanner.auditLog(session, R, xbase.SELECT, query, qr)
-				return returnQuery(qr, callback, err)
-			default: // ParenTableExpr, JoinTableExpr
+		}
+
+		switch node.From[0].(type) {
+		case *sqlparser.AliasedTableExpr:
+			aliasTableExpr := node.From[0].(*sqlparser.AliasedTableExpr)
+			tb, ok := aliasTableExpr.Expr.(sqlparser.TableName)
+			if !ok {
+				// Subquery.
 				if qr, err = spanner.handleSelect(session, query, node); err != nil {
 					log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
+					status = 1
 				}
-				spanner.auditLog(session, R, xbase.SELECT, query, qr)
-				return returnQuery(qr, callback, err)
+			} else {
+				if tb.Name.String() == "dual" {
+					// Select 1.
+					if qr, err = spanner.ExecuteSingle(query); err != nil {
+						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
+						status = 1
+					}
+				} else if spanner.router.IsSystemDB(tb.Qualifier.String()) {
+					// System database select.
+					if qr, err = spanner.handleSelectSystem(session, query, node); err != nil {
+						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
+						status = 1
+					}
+				} else {
+					// Normal select.
+					if qr, err = spanner.handleSelect(session, query, node); err != nil {
+						log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
+						status = 1
+					}
+				}
 			}
+			spanner.auditLog(session, R, xbase.SELECT, query, qr, status)
+			return returnQuery(qr, callback, err)
+		default: // ParenTableExpr, JoinTableExpr
+			if qr, err = spanner.handleSelect(session, query, node); err != nil {
+				log.Error("proxy.select[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
+			}
+			spanner.auditLog(session, R, xbase.SELECT, query, qr, status)
+			return returnQuery(qr, callback, err)
 		}
 	case *sqlparser.Union:
 		if qr, err = spanner.handleSelect(session, query, node); err != nil {
 			log.Error("proxy.union[%s].from.session[%v].error:%+v", query, session.ID(), err)
+			status = 1
 		}
-		spanner.auditLog(session, W, xbase.UPDATE, query, qr)
+		spanner.auditLog(session, W, xbase.UPDATE, query, qr, status)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Kill:
 		if qr, err = spanner.handleKill(session, query, node); err != nil {
 			log.Error("proxy.kill[%s].from.session[%v].error:%+v", query, session.ID(), err)
+			status = 1
 		}
-		spanner.auditLog(session, R, xbase.KILL, query, qr)
+		spanner.auditLog(session, R, xbase.KILL, query, qr, status)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Explain:
 		if qr, err = spanner.handleExplain(session, query, node); err != nil {
 			log.Error("proxy.explain[%s].from.session[%v].error:%+v", query, session.ID(), err)
+			status = 1
 		}
-		spanner.auditLog(session, R, xbase.EXPLAIN, query, qr)
+		spanner.auditLog(session, R, xbase.EXPLAIN, query, qr, status)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Transaction:
 		// Support for myloader.
 		// Support Multiple-statement Transaction
 		if qr, err = spanner.handleMultiStmtTxn(session, query, node); err != nil {
 			log.Error("proxy.transaction[%s].from.session[%v].error:%+v", query, session.ID(), err)
+			status = 1
 		}
-		spanner.auditLog(session, R, xbase.TRANSACTION, query, qr)
+		spanner.auditLog(session, R, xbase.TRANSACTION, query, qr, status)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Radon:
 		if qr, err = spanner.handleRadon(session, query, node); err != nil {
 			log.Error("proxy.admin[%s].from.session[%v].error:%+v", query, session.ID(), err)
+			status = 1
 		}
-		spanner.auditLog(session, R, xbase.RADON, query, qr)
+		spanner.auditLog(session, R, xbase.RADON, query, qr, status)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Set:
 		log.Warning("proxy.query.set.query:%s", query)
 		if qr, err = spanner.handleSet(session, query, node); err != nil {
 			log.Error("proxy.set[%s].from.session[%v].error:%+v", query, session.ID(), err)
+			status = 1
 		}
-		spanner.auditLog(session, R, xbase.SET, query, qr)
+		spanner.auditLog(session, R, xbase.SET, query, qr, status)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Checksum:
 		log.Warning("proxy.query.checksum.query:%s", query)
 		if qr, err = spanner.handleChecksumTable(session, query, node); err != nil {
 			log.Error("proxy.checksum[%s].from.session[%v].error:%+v", query, session.ID(), err)
+			status = 1
 		}
-		spanner.auditLog(session, R, xbase.CHECKSUM, query, qr)
+		spanner.auditLog(session, R, xbase.CHECKSUM, query, qr, status)
 		return returnQuery(qr, callback, err)
 	default:
 		log.Error("proxy.unsupported[%s].from.session[%v]", query, session.ID())
-		spanner.auditLog(session, R, xbase.UNSUPPORT, query, qr)
-		err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query:%v", query)
+		status = sqldb.ER_UNKNOWN_ERROR
+		err = sqldb.NewSQLErrorf(status, "unsupported.query:%v", query)
+		spanner.auditLog(session, R, xbase.UNSUPPORT, query, qr, status)
 		return err
 	}
 }

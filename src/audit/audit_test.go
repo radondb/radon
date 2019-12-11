@@ -49,9 +49,9 @@ func TestAudit(t *testing.T) {
 		threadID := uint32(i)
 		query := "select a,b,cd from table1 where a=b and c=d and e=d group by id order\n by desc"
 		if i%2 == 0 {
-			audit.LogWriteEvent(typ, user, host, threadID, query, 0, time.Now())
+			audit.LogWriteEvent(typ, user, host, threadID, query, 0, 0, time.Now())
 		} else {
-			audit.LogReadEvent(typ, user, host, threadID, query, 0, time.Now())
+			audit.LogReadEvent(typ, user, host, threadID, query, 0, 0, time.Now())
 		}
 	}
 }
@@ -85,9 +85,9 @@ func TestAuditMultiThread(t *testing.T) {
 				threadID := uint32(i)
 				query := "select a,b,cd from table1 where a=b and c=d and e=d group by id order\n by desc"
 				if i%2 == 0 {
-					a.LogWriteEvent(typ, user, host, threadID, query, 0, time.Now())
+					a.LogWriteEvent(typ, user, host, threadID, query, 0, 0, time.Now())
 				} else {
-					a.LogReadEvent(typ, user, host, threadID, query, 0, time.Now())
+					a.LogReadEvent(typ, user, host, threadID, query, 0, 0, time.Now())
 				}
 			}
 			wait.Done()
@@ -122,9 +122,9 @@ func TestPurge(t *testing.T) {
 		threadID := uint32(i)
 		query := "select a,b,cd from table1 where a=b and c=d and e=d group by id order\n by desc"
 		if i%2 == 0 {
-			audit.LogWriteEvent(typ, user, host, threadID, query, 0, time.Now())
+			audit.LogWriteEvent(typ, user, host, threadID, query, 0, 0, time.Now())
 		} else {
-			audit.LogReadEvent(typ, user, host, threadID, query, 0, time.Now())
+			audit.LogReadEvent(typ, user, host, threadID, query, 0, 0, time.Now())
 		}
 	}
 	// first the close the audit to stop the event writing.
@@ -170,7 +170,7 @@ func TestAuditBench(t *testing.T) {
 			host := "127.0.0.1:8899"
 			threadID := uint32(i)
 			query := "select a,b,cd from table1 where a=b and c=d and e=d group by id order\n by desc"
-			audit.LogWriteEvent(typ, user, host, threadID, query, 0, time.Now())
+			audit.LogWriteEvent(typ, user, host, threadID, query, 0, 0, time.Now())
 		}
 		took := time.Since(now)
 		fmt.Printf(" LOOP\t%v COST %v, avg:%v/s\n", N, took, (int64(N)/(took.Nanoseconds()/1e6))*1000)

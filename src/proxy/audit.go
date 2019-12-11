@@ -24,21 +24,21 @@ const (
 	W
 )
 
-func (spanner *Spanner) auditLog(session *driver.Session, m mode, typ string, query string, qr *sqltypes.Result) error {
+func (spanner *Spanner) auditLog(session *driver.Session, m mode, typ string, query string, qr *sqltypes.Result, status uint16) error {
 	adit := spanner.audit
 	user := session.User()
 	host := session.Addr()
 	connID := session.ID()
 	affected := uint64(0)
 	if qr != nil {
-		affected = uint64(len(qr.Rows))
+		affected = qr.RowsAffected
 	}
 	now := time.Now().UTC()
 	switch m {
 	case R:
-		adit.LogReadEvent(typ, user, host, connID, query, affected, now)
+		adit.LogReadEvent(typ, user, host, connID, query, status, affected, now)
 	case W:
-		adit.LogWriteEvent(typ, user, host, connID, query, affected, now)
+		adit.LogWriteEvent(typ, user, host, connID, query, status, affected, now)
 	}
 	return nil
 }

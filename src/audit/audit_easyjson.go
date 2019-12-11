@@ -17,7 +17,7 @@ var (
 	_ easyjson.Marshaler
 )
 
-func easyjsonF2c44427EncodeAudit1(out *jwriter.Writer, in event) {
+func easyjsonF2c44427EncodeAudit(out *jwriter.Writer, in event) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -73,6 +73,12 @@ func easyjsonF2c44427EncodeAudit1(out *jwriter.Writer, in event) {
 		out.RawByte(',')
 	}
 	first = false
+	out.RawString("\"status\":")
+	out.Uint32(uint32(in.Status))
+	if !first {
+		out.RawByte(',')
+	}
+	first = false
 	out.RawString("\"query_rows\":")
 	out.Uint64(uint64(in.QueryRows))
 	out.RawByte('}')
@@ -81,6 +87,6 @@ func easyjsonF2c44427EncodeAudit1(out *jwriter.Writer, in event) {
 // MarshalJSON supports json.Marshaler interface
 func (v event) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjsonF2c44427EncodeAudit1(&w, v)
+	easyjsonF2c44427EncodeAudit(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
