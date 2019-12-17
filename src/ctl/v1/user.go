@@ -139,7 +139,7 @@ func userzHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r *r
 	backend := backends[rand.Intn(len(backends))]
 	log.Warning("api.v1.userz[from:%v]", r.RemoteAddr)
 
-	query := "SELECT user,host FROM mysql.user"
+	query := "SELECT User,Host,Super_priv FROM mysql.user"
 	qr, err := spanner.ExecuteOnThisBackend(backend, query)
 	if err != nil {
 		log.Error("api.v1.userz.get.mysql.user[from.backend:%v].error:%+v", backend, err)
@@ -148,13 +148,15 @@ func userzHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r *r
 	}
 
 	type UserInfo struct {
-		User string
-		Host string
+		User      string
+		Host      string
+		SuperPriv string
 	}
 	var Users = make([]UserInfo, len(qr.Rows))
 	for i, row := range qr.Rows {
 		Users[i].User = string(row[0].Raw())
 		Users[i].Host = string(row[1].Raw())
+		Users[i].SuperPriv = string(row[2].Raw())
 	}
 
 	w.WriteJson(Users)
