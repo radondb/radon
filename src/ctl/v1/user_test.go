@@ -419,15 +419,21 @@ func TestCtlV1Userz(t *testing.T) {
 				Name: "Host",
 				Type: querypb.Type_VARCHAR,
 			},
+			{
+				Name: "Super_priv",
+				Type: querypb.Type_VARCHAR,
+			},
 		},
 		Rows: [][]sqltypes.Value{
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test1")),
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("%")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("Y")),
 			},
 			{
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("test2")),
 				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("%")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("N")),
 			},
 		},
 	}
@@ -449,7 +455,7 @@ func TestCtlV1Userz(t *testing.T) {
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("GET", "http://localhost/v1/user/userz", nil))
 		recorded.CodeIs(200)
 
-		want := "[{\"User\":\"test1\",\"Host\":\"%\"},{\"User\":\"test2\",\"Host\":\"%\"}]"
+		want := "[{\"User\":\"test1\",\"Host\":\"%\",\"SuperPriv\":\"Y\"},{\"User\":\"test2\",\"Host\":\"%\",\"SuperPriv\":\"N\"}]"
 		got := recorded.Recorder.Body.String()
 		log.Debug(got)
 		assert.Equal(t, want, got)
