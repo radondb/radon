@@ -1403,9 +1403,13 @@ show_statement:
   {
     $$ = &Show{Type: ShowFullTablesStr, Database: $4, Where: NewWhere(WhereStr, $5)}
   }
-| SHOW COLUMNS FROM table_name force_eof
+| SHOW COLUMNS FROM table_name where_expression_opt force_eof
   {
-    $$ = &Show{Type: ShowColumnsStr, Table: $4}
+    $$ = &Show{Type: ShowColumnsStr, Table: $4, Where: NewWhere(WhereStr, $5)}
+  }
+| SHOW FULL COLUMNS FROM table_name where_expression_opt force_eof
+  {
+    $$ = &Show{Type: ShowFullColumnsStr, Table: $5, Where: NewWhere(WhereStr, $6)}
   }
 | SHOW CREATE TABLE table_name force_eof
   {

@@ -1140,8 +1140,9 @@ const (
 	ShowCreateDatabaseStr = "create database"
 	ShowTableStatusStr    = "table status"
 	ShowTablesStr         = "tables"
-	ShowColumnsStr        = "columns"
 	ShowFullTablesStr     = "full tables"
+	ShowColumnsStr        = "columns"
+	ShowFullColumnsStr    = "full columns"
 	ShowCreateTableStr    = "create table"
 	ShowEnginesStr        = "engines"
 	ShowStatusStr         = "status"
@@ -1186,10 +1187,13 @@ func (node *Show) Format(buf *TrackedBuffer) {
 			buf.Myprintf(" from gtid '%s'", node.From)
 		}
 		buf.Myprintf("%v", node.Limit)
-	case ShowColumnsStr:
+	case ShowColumnsStr, ShowFullColumnsStr:
 		buf.Myprintf("show %s", node.Type)
 		if node.Table.Name.String() != "" {
-			buf.Myprintf(" from %s", node.Table.Name.String())
+			buf.Myprintf(" from %v", node.Table)
+		}
+		if node.Where != nil {
+			buf.Myprintf("%v", node.Where)
 		}
 	default:
 		buf.Myprintf("show %s", node.Type)

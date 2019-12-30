@@ -157,7 +157,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 				log.Error("proxy.show.create.table[%s].from.session[%v].error:%+v", query, session.ID(), err)
 				status = 1
 			}
-		case sqlparser.ShowColumnsStr:
+		case sqlparser.ShowColumnsStr, sqlparser.ShowFullColumnsStr:
 			if qr, err = spanner.handleShowColumns(session, query, node); err != nil {
 				log.Error("proxy.show.colomns[%s].from.session[%v].error:%+v", query, session.ID(), err)
 				status = 1
