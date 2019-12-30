@@ -1127,11 +1127,12 @@ const (
 // Show represents a show statement.
 type Show struct {
 	Type     string
+	Full     string
 	Table    TableName
 	Database TableName
 	From     string
 	Limit    *Limit
-	Where    *Where
+	Filter   *ShowFilter
 }
 
 // The following constants represent SHOW statements.
@@ -1141,7 +1142,6 @@ const (
 	ShowTableStatusStr    = "table status"
 	ShowTablesStr         = "tables"
 	ShowColumnsStr        = "columns"
-	ShowFullTablesStr     = "full tables"
 	ShowCreateTableStr    = "create table"
 	ShowEnginesStr        = "engines"
 	ShowStatusStr         = "status"
@@ -1168,17 +1168,12 @@ func (node *Show) Format(buf *TrackedBuffer) {
 	case ShowCreateTableStr:
 		buf.Myprintf("show %s %v", node.Type, node.Table)
 	case ShowTablesStr:
-		buf.Myprintf("show %s", node.Type)
+		buf.Myprintf("show %s%s", node.Full, node.Type)
 		if node.Database.Name.String() != "" {
 			buf.Myprintf(" from %s", node.Database.Name.String())
 		}
-	case ShowFullTablesStr:
-		buf.Myprintf("show %s", node.Type)
-		if node.Database.Name.String() != "" {
-			buf.Myprintf(" from %s", node.Database.Name.String())
-		}
-		if node.Where != nil {
-			buf.Myprintf("%v", node.Where)
+		if node.Filter != nil {
+			buf.Myprintf("%v", node.Filter)
 		}
 	case ShowBinlogEventsStr:
 		buf.Myprintf("show %s", node.Type)
@@ -1187,9 +1182,12 @@ func (node *Show) Format(buf *TrackedBuffer) {
 		}
 		buf.Myprintf("%v", node.Limit)
 	case ShowColumnsStr:
-		buf.Myprintf("show %s", node.Type)
+		buf.Myprintf("show %s%s", node.Full, node.Type)
 		if node.Table.Name.String() != "" {
-			buf.Myprintf(" from %s", node.Table.Name.String())
+			buf.Myprintf(" from %v", node.Table)
+		}
+		if node.Filter != nil {
+			buf.Myprintf("%v", node.Filter)
 		}
 	default:
 		buf.Myprintf("show %s", node.Type)
@@ -1198,6 +1196,29 @@ func (node *Show) Format(buf *TrackedBuffer) {
 
 // WalkSubtree walks the nodes of the subtree.
 func (node *Show) WalkSubtree(visit Visit) error {
+	return nil
+}
+
+// ShowFilter is show tables filter
+type ShowFilter struct {
+	Like   string
+	Filter Expr
+}
+
+// Format formats the node.
+func (node *ShowFilter) Format(buf *TrackedBuffer) {
+	if node == nil {
+		return
+	}
+	if node.Like != "" {
+		buf.Myprintf(" like '%s'", node.Like)
+	} else {
+		buf.Myprintf(" where %v", node.Filter)
+	}
+}
+
+// WalkSubtree walks the nodes of the subtree.
+func (node *ShowFilter) WalkSubtree(visit Visit) error {
 	return nil
 }
 

@@ -32,82 +32,74 @@ func TestShow1(t *testing.T) {
 			input:  "show table status from sbtest",
 			output: "show table status from sbtest",
 		},
-
 		{
 			input:  "show create table t1",
 			output: "show create table t1",
 		},
-
 		{
 			input:  "show tables",
 			output: "show tables",
 		},
-
 		{
 			input:  "show full tables",
 			output: "show full tables",
 		},
-
 		{
 			input:  "show full tables from t1",
 			output: "show full tables from t1",
 		},
-
+		{
+			input:  "show full tables from t1 like '%mysql%'",
+			output: "show full tables from t1 like '%mysql%'",
+		},
 		{
 			input:  "show full tables where Table_type != 'VIEW'",
 			output: "show full tables where Table_type != 'VIEW'",
 		},
-
 		{
 			input:  "show tables from t1",
 			output: "show tables from t1",
 		},
-
+		{
+			input:  "show tables from t1 like '%mysql%'",
+			output: "show tables from t1 like '%mysql%'",
+		},
 		{
 			input:  "show databases",
 			output: "show databases",
 		},
-
 		{
 			input:  "show create database sbtest",
 			output: "show create database sbtest",
 		},
-
 		{
 			input:  "show engines",
 			output: "show engines",
 		},
-
 		{
 			input:  "show status",
 			output: "show status",
 		},
-
 		{
 			input:  "show versions",
 			output: "show versions",
 		},
-
 		{
 			input:  "show processlist",
 			output: "show processlist",
 		},
-
 		{
 			input:  "show queryz",
 			output: "show queryz",
 		},
-
 		{
 			input:  "show txnz",
 			output: "show txnz",
 		},
-
 		{
 			input:  "show warnings",
 			output: "show warnings",
 		},
-
 		{
 			input:  "show variables",
 			output: "show variables",
@@ -131,6 +123,50 @@ func TestShow1(t *testing.T) {
 		{
 			input:  "show columns from t1",
 			output: "show columns from t1",
+		},
+		{
+			input:  "show columns from t1 like '%'",
+			output: "show columns from t1 like '%'",
+		},
+		{
+			input:  "show columns from t1 where `Key` = 'PRI'",
+			output: "show columns from t1 where `Key` = 'PRI'",
+		},
+		{
+			input:  "show full columns from t1",
+			output: "show full columns from t1",
+		},
+		{
+			input:  "show full columns from t1 like '%'",
+			output: "show full columns from t1 like '%'",
+		},
+		{
+			input:  "show full columns from t1 where `Key` = 'PRI'",
+			output: "show full columns from t1 where `Key` = 'PRI'",
+		},
+		{
+			input:  "show fields from t1",
+			output: "show columns from t1",
+		},
+		{
+			input:  "show fields from t1 like '%'",
+			output: "show columns from t1 like '%'",
+		},
+		{
+			input:  "show fields from t1 where `Key` = 'PRI'",
+			output: "show columns from t1 where `Key` = 'PRI'",
+		},
+		{
+			input:  "show full fields from t1",
+			output: "show full columns from t1",
+		},
+		{
+			input:  "show full fields from t1 like '%'",
+			output: "show full columns from t1 like '%'",
+		},
+		{
+			input:  "show full fields from t1 where `Key` = 'PRI'",
+			output: "show full columns from t1 where `Key` = 'PRI'",
 		},
 	}
 
