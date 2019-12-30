@@ -110,6 +110,7 @@ func forceEOF(yylex interface{}) {
   databaseOption      *DatabaseOption
   partitionDefinition *PartitionDefinition
   partitionDefinitions []*PartitionDefinition
+  showFilter    *ShowFilter
 }
 
 %token LEX_ERROR
@@ -178,7 +179,7 @@ func forceEOF(yylex interface{}) {
 %token <bytes> NULLX AUTO_INCREMENT APPROXNUM SIGNED UNSIGNED ZEROFILL
 
 // Supported SHOW tokens
-%token <bytes> DATABASES TABLES VITESS_KEYSPACES VITESS_SHARDS VSCHEMA_TABLES WARNINGS VARIABLES EVENTS BINLOG GTID STATUS COLUMNS
+%token <bytes> DATABASES TABLES WARNINGS VARIABLES EVENTS BINLOG GTID STATUS COLUMNS FIELDS
 
 // Functions
 %token <bytes> CURRENT_TIMESTAMP DATABASE CURRENT_DATE
@@ -222,6 +223,8 @@ func forceEOF(yylex interface{}) {
 %type <tableExpr> table_reference table_factor join_table
 %type <str> inner_join outer_join natural_join
 %type <tableName> table_name into_table_name database_from_opt
+%type <str> full_opt columns_or_fields
+%type <showFilter> like_or_where_opt
 %type <tableNames> table_name_list
 %type <aliasedTableName> aliased_table_name
 %type <indexHints> index_hint_list
@@ -271,7 +274,6 @@ func forceEOF(yylex interface{}) {
 %type <str> charset
 %type <str> set_session_or_global
 %type <convertType> convert_type
-%type <str> show_statement_type
 %type <columnType> column_type
 %type <columnType> int_type decimal_type numeric_type time_type char_type
 %type <optVal> length_opt column_default_opt on_update_opt column_comment_opt table_comment_opt engine_option charset_option tabletype_option
@@ -1365,47 +1367,10 @@ radon_statement:
     $$ = &Radon{ Action: ReshardStr, Table: $3, NewName: $5}
   }
 
-show_statement_type:
-  ID
-  {
-    $$ = ShowUnsupportedStr
-  }
-| reserved_keyword
-  {
-    switch v := string($1); v {
-    case ShowDatabasesStr, ShowTablesStr, ShowEnginesStr, ShowVersionsStr, ShowProcesslistStr, ShowQueryzStr, ShowTxnzStr, ShowColumnsStr:
-      $$ = v
-    default:
-      $$ = ShowUnsupportedStr
-    }
-  }
-| non_reserved_keyword
-  {
-    $$ = ShowUnsupportedStr
-    switch v := string($1); v {
-    case ShowStatusStr:
-      $$ = v
-    default:
-      $$ = ShowUnsupportedStr
-    }
-  }
-
 show_statement:
-  SHOW show_statement_type force_eof
+  SHOW BINLOG EVENTS binlog_from_opt limit_opt force_eof
   {
-    $$ = &Show{Type: $2}
-  }
-| SHOW TABLES FROM table_name force_eof
-  {
-    $$ = &Show{Type: ShowTablesStr, Database: $4}
-  }
-| SHOW FULL TABLES database_from_opt where_expression_opt force_eof
-  {
-    $$ = &Show{Type: ShowFullTablesStr, Database: $4, Where: NewWhere(WhereStr, $5)}
-  }
-| SHOW COLUMNS FROM table_name force_eof
-  {
-    $$ = &Show{Type: ShowColumnsStr, Table: $4}
+    $$ = &Show{Type: ShowBinlogEventsStr, From: $4, Limit: $5 }
   }
 | SHOW CREATE TABLE table_name force_eof
   {
@@ -1415,22 +1380,58 @@ show_statement:
   {
     $$ = &Show{Type: ShowCreateDatabaseStr, Database: $4}
   }
-| SHOW WARNINGS force_eof
+| SHOW DATABASES force_eof
   {
-    $$ = &Show{Type: ShowWarningsStr}
+    $$ = &Show{Type: ShowDatabasesStr}
   }
-| SHOW VARIABLES force_eof
+| SHOW ENGINES force_eof
   {
-    $$ = &Show{Type: ShowVariablesStr}
+    $$ = &Show{Type: ShowEnginesStr}
   }
-| SHOW BINLOG EVENTS binlog_from_opt limit_opt force_eof
+| SHOW full_opt TABLES database_from_opt like_or_where_opt
   {
-    $$ = &Show{Type: ShowBinlogEventsStr, From: $4, Limit: $5 }
+    $$ = &Show{Full: $2, Type: ShowTablesStr, Database: $4, Filter:$5}
+  }
+| SHOW full_opt columns_or_fields FROM table_name like_or_where_opt
+  {
+    $$ = &Show{Full: $2, Type: ShowColumnsStr, Table: $5, Filter:$6}
+  }
+| SHOW PROCESSLIST force_eof
+  {
+    $$ = &Show{Type: ShowProcesslistStr}
+  }
+| SHOW QUERYZ force_eof
+  {
+    $$ = &Show{Type: ShowQueryzStr}
+  }
+| SHOW STATUS force_eof
+  {
+    $$ = &Show{Type: ShowStatusStr}
   }
 | SHOW TABLE STATUS database_from_opt force_eof
   {
     $$ = &Show{Type: ShowTableStatusStr, Database: $4}
   }
+| SHOW TXNZ force_eof
+  {
+    $$ = &Show{Type: ShowTxnzStr}
+  }
+| SHOW VARIABLES force_eof
+  {
+    $$ = &Show{Type: ShowVariablesStr}
+  }
+| SHOW VERSIONS force_eof
+  {
+    $$ = &Show{Type: ShowVersionsStr}
+  }
+| SHOW WARNINGS force_eof
+  {
+    $$ = &Show{Type: ShowWarningsStr}
+  }
+| SHOW ID force_eof
+   {
+     $$ = &Show{Type: ShowUnsupportedStr}
+   }
 
 binlog_from_opt:
   {
@@ -1448,6 +1449,40 @@ database_from_opt:
 | FROM table_name
   {
     $$ = $2
+  }
+
+full_opt:
+  /* empty */
+  {
+    $$ = ""
+  }
+| FULL
+  {
+    $$ = "full "
+  }
+
+columns_or_fields:
+  COLUMNS
+  {
+      $$ = string($1)
+  }
+| FIELDS
+  {
+      $$ = string($1)
+  }
+
+like_or_where_opt:
+  /* empty */
+  {
+    $$ = nil
+  }
+| LIKE STRING
+  {
+    $$ = &ShowFilter{Like:string($2)}
+  }
+| WHERE expression
+  {
+    $$ = &ShowFilter{Filter:$2}
   }
 
 checksum_statement:
@@ -2926,6 +2961,7 @@ non_reserved_keyword:
 | ENUM
 | ENGINE
 | EXPANSION
+| FIELDS
 | FLOAT_TYPE
 | FULLTEXT
 | GLOBAL
@@ -2947,9 +2983,6 @@ non_reserved_keyword:
 | TRUNCATE
 | UNUSED
 | VIEW
-| VITESS_KEYSPACES
-| VITESS_SHARDS
-| VSCHEMA_TABLES
 | YEAR
 | RADON
 | ATTACH

@@ -333,10 +333,10 @@ func (spanner *Spanner) handleShowColumns(session *driver.Session, query string,
 	ast := node
 
 	table := ast.Table.Name.String()
-	database := session.Schema()
-	if !ast.Table.Qualifier.IsEmpty() {
-		database = ast.Table.Qualifier.String()
+	if ast.Table.Qualifier.IsEmpty() {
+		ast.Table.Qualifier = sqlparser.NewTableIdent(session.Schema())
 	}
+	database := ast.Table.Qualifier.String()
 	if database == "" {
 		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)
 	}
@@ -352,8 +352,10 @@ func (spanner *Spanner) handleShowColumns(session *driver.Session, query string,
 	}
 	partTable := parts[0].Table
 	backend := parts[0].Backend
-	rewritten := fmt.Sprintf("SHOW COLUMNS FROM %s.%s", database, partTable)
-	qr, err := spanner.ExecuteOnThisBackend(backend, rewritten)
+	ast.Table.Name = sqlparser.NewTableIdent(partTable)
+	buf := sqlparser.NewTrackedBuffer(nil)
+	ast.Format(buf)
+	qr, err := spanner.ExecuteOnThisBackend(backend, buf.String())
 	if err != nil {
 		return nil, err
 	}

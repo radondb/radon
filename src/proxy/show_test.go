@@ -378,6 +378,16 @@ func TestProxyShowTables(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
+	// show tables like.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show tables from test like '%user%'"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
 	// show tables error with null database.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
@@ -492,7 +502,6 @@ func TestProxyShowCreateTable(t *testing.T) {
 			},
 		},
 	}
-
 
 	r2 := &sqltypes.Result{
 		Fields: []*querypb.Field{
@@ -744,6 +753,55 @@ func TestProxyShowColumns(t *testing.T) {
 		},
 	}
 
+	r3 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "Field",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Type",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Null",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Key",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Default",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Extra",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Privileges",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Comment",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("col_a")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("int(11)")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("YES")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("PRI")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("select,insert,update,references")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("NULL")),
+			},
+		},
+	}
+
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
@@ -755,6 +813,7 @@ func TestProxyShowColumns(t *testing.T) {
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("show create .*", r1)
 		fakedbs.AddQueryPattern("show columns .*", r2)
+		fakedbs.AddQueryPattern("show full columns .*", r3)
 	}
 
 	// create database.
@@ -789,7 +848,7 @@ func TestProxyShowColumns(t *testing.T) {
 		assert.Equal(t, want, got)
 	}
 
-	// show columns from table
+	// show columns from table.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
@@ -802,7 +861,59 @@ func TestProxyShowColumns(t *testing.T) {
 		assert.Equal(t, want, got)
 	}
 
-	// show columns from table err(database is empty)
+	// show columns from table where.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show columns from test.t1 where `Null` = 'YES'"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[col_a int(11) YES NULL NULL NULL]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// show full columns from table(use database).
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show full columns from t1"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[col_a int(11) YES PRI NULL NULL select,insert,update,references NULL]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// show full columns from table where.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show full columns from test.t1 where `Key` = 'PRI'"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[col_a int(11) YES PRI NULL NULL select,insert,update,references NULL]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// show full fields from table like.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show full fields from test.t1 like '%a'"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[col_a int(11) YES PRI NULL NULL select,insert,update,references NULL]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// show columns from table err(database is empty).
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
@@ -812,7 +923,7 @@ func TestProxyShowColumns(t *testing.T) {
 		assert.NotNil(t, err)
 	}
 
-	// show columns from table err(sys database:MYSQL)
+	// show columns from table err(sys database:MYSQL).
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
@@ -822,7 +933,7 @@ func TestProxyShowColumns(t *testing.T) {
 		assert.NotNil(t, err)
 	}
 
-	// show columns from table err(database not exist)
+	// show columns from table err(database not exist).
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
