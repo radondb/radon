@@ -19,6 +19,7 @@ type EventHandler interface {
 	OnPosSynced(pos mysql.Position, force bool) error
 	OnXA(e *XAEvent) error
 	String() string
+	WaitWorkerDone()
 }
 
 type DummyEventHandler struct {
@@ -35,6 +36,7 @@ func (h *DummyEventHandler) OnGTID(mysql.GTIDSet) error             { return nil
 func (h *DummyEventHandler) OnPosSynced(mysql.Position, bool) error { return nil }
 func (h *DummyEventHandler) OnXA(*XAEvent) error                    { return nil }
 func (h *DummyEventHandler) String() string                         { return "DummyEventHandler" }
+func (h *DummyEventHandler) WaitWorkerDone()                        {}
 
 // `SetEventHandler` registers the sync handler, you must register your
 // own handler before starting Canal.

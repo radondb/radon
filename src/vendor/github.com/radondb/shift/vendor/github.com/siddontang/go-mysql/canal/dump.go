@@ -155,6 +155,7 @@ func (c *Canal) dump() error {
 	if err := c.dumper.DumpAndParse(h); err != nil {
 		return errors.Trace(err)
 	}
+	c.eventHandler.WaitWorkerDone()
 
 	pos := mysql.Position{Name: h.name, Pos: uint32(h.pos)}
 	c.master.Update(pos)

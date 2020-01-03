@@ -1,14 +1,35 @@
 language: go
 sudo: required
+dist: xenial
 go:
   - 1.11.x
+
+before_script: 
+  - mysqld --defaults-file=.travis/my3306.cnf --initialize-insecure 
+  - mysqld --defaults-file=.travis/my3306.cnf &
+  - mysqld --defaults-file=.travis/my3307.cnf --initialize-insecure 
+  - mysqld --defaults-file=.travis/my3307.cnf &
+  - mysqld --defaults-file=.travis/my3309.cnf --initialize-insecure
+  - mysqld --defaults-file=.travis/my3309.cnf &
+  - git clone https://github.com/radondb/radon.git
+  - cd radon
+  - make
+  - mkdir -p bin/bin/radon-meta
+  - cp ../.travis/backend.json bin/bin/radon-meta/
+  - cd ./bin
+  - ./radon -c ../conf/radon.default.json &
+  - cd ../..
 
 before_install:
 
 script:
+  - mysql -uroot -P3306 -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS test;'
   - make build
   - make test
   - make coverage
+  # testshift is used for make test on shift. We take it out alone because it needs to build at 
+  # least three mysql instances, so we just test it on ci. Of course you can build a test env on your machine.
+  - make testshift
 
 after_success:
   # send coverage reports to Codecov

@@ -1,0 +1,14 @@
+{
+	"backends": [
+		{
+			"name": "backend1",
+			"address": "127.0.0.1:3309",
+			"user": "root",
+			"password": "",
+			"database": "",
+			"charset": "utf8",
+			"max-connections": 1024,
+			"role": 0
+		}
+	]
+}

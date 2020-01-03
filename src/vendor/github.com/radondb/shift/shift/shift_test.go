@@ -1391,6 +1391,7 @@ func TestShiftParseBOM(t *testing.T) {
 	}
 }
 
+// This test is also suit for issue https://github.com/radondb/radon/issues/556
 func TestDataRaceOnCanalStatus(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
 	shift := NewShift(log, mockCfg)
