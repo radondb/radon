@@ -111,6 +111,7 @@ Query OK, 0 rows affected (0.01 sec)
  CREATE TABLE [IF NOT EXISTS] table_name
     (create_definition,...)
       ENGINE [=] {InnoDB|TokuDB}
+    | AUTO_INCREMENT [=] value
     | [DEFAULT] {CHARSET | CHARACTER SET} [=] charset_name
     | COMMENT [=] 'string'
     | {PARTITION BY HASH(shard-key)|SINGLE|GLOBAL}
@@ -119,6 +120,7 @@ Query OK, 0 rows affected (0.01 sec)
 
 `Instructions`
 * Create partition information and generate partition tables on each partition
+* AUTO_INCREMENT table_option currently only supported at the grammatical level, the value will not take effect.
 * With `GLOBAL` will create a global table. The global table has full data at every backend. The global tables are generally used for tables with fewer changes and smaller capacity, requiring frequent association with other tables.
 * With `SINGLE` will create a single table. The single table only on the first backend.
 * With `PARTITION BY HASH(shard-key)` will create a hash partition table. The partition mode is HASH, which is evenly distributed across the partitions according to the partition key `HASH value`

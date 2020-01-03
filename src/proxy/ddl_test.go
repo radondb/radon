@@ -775,7 +775,7 @@ func TestProxyDDLCreateTable(t *testing.T) {
 		"create table t3(a int, b int)   PARTITION  BY hash(a)  ",
 		"create table t4(a int, b int)engine=tokudb PARTITION  BY hash(a)  ",
 		"create table t5(a int, b int) default charset=utf8  PARTITION  BY hash(a)  ",
-		"create table t6(a int, b int)engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t6(a int, b int)engine=tokudb auto_increment=10 default charset=utf8  PARTITION  BY hash(a)  ",
 	}
 
 	for _, query := range querys {
