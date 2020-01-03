@@ -1,0 +1,10 @@
+[mysqld]
+port = 3306
+socket = /tmp/mysql.sock.3306
+datadir = ./data3306
+log_bin=mysql-bin
+log_bin_index=mysql-bin.index
+binlog_format=ROW
+server-id        = 12345
+
+[mysqld_safe]

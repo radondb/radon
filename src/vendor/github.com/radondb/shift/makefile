@@ -29,11 +29,12 @@ testmysql:
 	go test -v ./vendor/github.com/siddontang/go-mysql/...
 
 # code coverage
-COVPKGS =	./shift\
-			./vendor/github.com/siddontang/go-mysql/canal/...
+COVPKGS =	./shift/...\
+   			./xbase/...\
+			./vendor/github.com/siddontang/go-mysql/...
 coverage:
 	go build -v -o bin/gotestcover \
-	./vendor/github.com/pierrre/gotestcover/*.go;
-	gotestcover -coverprofile=coverage.out -v $(COVPKGS)
+	../../pierrre/gotestcover/*.go;
+	bin/gotestcover -coverprofile=coverage.out -v $(COVPKGS)
 	go tool cover -html=coverage.out
 .PHONY: build clean install fmt test coverage .go-version

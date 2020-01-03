@@ -379,10 +379,6 @@ func (shift *Shift) behindsCheckStart() error {
 		log.Info("shift.dumping...")
 		// If some error happened during dumping, wait dump will be still set dump done.
 		<-s.canal.WaitDumpDone()
-		// Wait dump worker done.
-		log.Info("shift.wait.dumper.background.worker...")
-		shift.handler.WaitWorkerDone()
-		log.Info("shift.wait.dumper.background.worker.done...")
 		prePos := s.canal.SyncedPosition()
 
 		for range s.behindsTicker.C {
