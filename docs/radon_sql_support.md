@@ -121,7 +121,7 @@ Query OK, 0 rows affected (0.01 sec)
 * Create partition information and generate partition tables on each partition
 * With `GLOBAL` will create a global table. The global table has full data at every backend. The global tables are generally used for tables with fewer changes and smaller capacity, requiring frequent association with other tables.
 * With `SINGLE` will create a single table. The single table only on the first backend.
-* With `PARTITION BY HASH(shard-key)` will create a hash partition table.
+* With `PARTITION BY HASH(shard-key)` will create a hash partition table. The partition mode is HASH, which is evenly distributed across the partitions according to the partition key `HASH value`
 * Without `PARTITION BY HASH(shard-key)|LIST(shard-key)|SINGLE|GLOBAL` will create a hash partition table. The table's `PRIMARY|UNIQUE KEY` is the partition key, only support one primary|unique key.
 * With `PARTITION BY LIST(shard-key)` will create a list partition table. `PARTITION backend VALUES IN (value_list)` is one partition, The variable backend is one backend name, The variable value_list is values with `,`.
 	* all expected values for the partitioning expression should be covered in `PARTITION ... VALUES IN (...)` clauses. An INSERT statement containing an unmatched partitioning column value fails with an error, as shown in this example:
@@ -142,8 +142,6 @@ Query OK, 0 rows affected (0.01 sec)
 
 * The partitioning key only supports specifying one column, the data type of this column is not limited(
   except for TYPE `BINARY/NULL`)
-* The partition mode is HASH, which is evenly distributed across the partitions according to the partition key
- `HASH value`
 * table_options only support `ENGINE` `CHARSET` and `COMMENT`，Others are automatically ignored
 * The default engine for partition table is `InnoDB`
 * The default character set for partition table `UTF-8`
@@ -532,7 +530,7 @@ SELECT ...]
 `Instructions`
 
  * Support cross-partition count, sum, avg, max, min and other aggregate functions, Aggregate functions only support for numeric values
- * Support cross-partition order by, group by, limit and other operations, *field must be in select_expr*
+ * Support cross-partition order by, group by, limit and other operations, *group by field must be in select_expr*
  * Group by suggest to be used with aggregation function, avoid using group by alone when returning non-`group by` fields.
  * Support complex queries such as joins.
  * Support where and having clause, having doesn't support aggregate function temporarily.
@@ -540,6 +538,7 @@ SELECT ...]
  * Support alias_name for column like `SELECT columna [[AS] alias] FROM mytable;`.
  * Support alias_name for table like `SELECT columna FROM tbl_name [[AS] alias];`.
  * Support LEFT|RIGHT OUTER and INNER|CROSS join.
+ * `select *` is not recommended, especially in join statements.
  * Support UNION [ALL | DISTINCT].
  
 
@@ -1128,6 +1127,116 @@ SELECT title from articles  WHERE MATCH (title, body) AGAINST ('数据库' IN BO
 | 数据库管理            |
 +-----------------------+
 2 rows in set (0.04 sec)
+```
+
+## Radon
+### RADON ATTACH
+
+`Syntax`
+```
+RADON ATTACH($address,$user,$password)
+```
+
+`Instructions`
+* Attch one mysql as Radon's backend. 
+* The type is 'attach' in `backend.json`.
+
+`Example: `
+
+```
+mysql> radon attach('127.0.0.1:3306','root','123456');
+Query OK, 0 rows affected (0.94 sec)
+```
+
+### RADON ATTACHLIST
+
+`Instructions`
+* List the backend of type `attach`. 
+
+`Example: `
+```
+mysql> radon attachlist;
++----------------+----------------+------+
+| Name           | Address        | User |
++----------------+----------------+------+
+| 127.0.0.1:3306 | 127.0.0.1:3306 | root |
++----------------+----------------+------+
+1 row in set (0.00 sec)
+```
+
+### RADON DETACH
+
+`Syntax`
+```
+RADON DETACH($address)
+```
+
+`Instructions`
+* Detach the backend of type `attach`. 
+
+```
+mysql> radon detach('127.0.0.1:3306');
+Query OK, 0 rows affected (0.22 sec)
+
+mysql> radon attachlist;
+Empty set (0.00 sec)
+```
+
+### RADON RESHARD
+
+`Syntax`
+```
+RADON RESHARD tbl_name TO new_tbl_name
+```
+
+`Instructions`
+* RADON RESHARD can shift data from one SINGLE table to another PARTITION table. 
+* The cmd execute the shift cmd and will return immediately, the shift will run in background on other goroutine.
+* The SINGLE table with the primary key can be partitioned.
+
+```
+mysql> show tables;
+Empty set (0.10 sec)
+
+mysql> create table t1(a int primary key, b varchar(255)) single;
+Query OK, 0 rows affected (0.13 sec)
+
+mysql> insert into t1(a,b) values(1,'a'),(2,'b');
+Query OK, 2 rows affected (0.10 sec)
+
+mysql> radon reshard t1 to new_tb;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> show tables;
++---------------+
+| Tables_in_zzq |
++---------------+
+| t1            |
+| new_tb        |
++---------------+
+2 rows in set (0.10 sec)
+
+mysql> show create table new_tb;
++--------+----------------------------------------------------------------+
+| Table  | Create Table                                                   |
++--------+----------------------------------------------------------------+
+| new_tb | CREATE TABLE `new_tb` (
+  `a` int(11) NOT NULL,
+  `b` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`a`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+/*!50100 PARTITION BY HASH(a) */ |
++--------+----------------------------------------------------------------+
+1 row in set (0.05 sec)
+
+mysql> select * from new_tb;
++---+------+
+| a | b    |
++---+------+
+| 1 | a    |
+| 2 | b    |
++---+------+
+2 rows in set (1.09 sec)
 ```
 
 ## Others
