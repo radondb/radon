@@ -703,6 +703,7 @@ const (
 	TableOptionEngine
 	TableOptionCharset
 	TableOptionTableType
+	TableOptionAutoInc
 )
 
 // TableOption represents the table options.
@@ -726,6 +727,7 @@ func (tblOptList *TableOptionListOpt) CheckIfTableOptDuplicate() string {
 		TableOptionEngine:    false,
 		TableOptionCharset:   false,
 		TableOptionTableType: false,
+		TableOptionAutoInc:   false,
 	}
 	for _, opt := range tblOptList.TblOptList {
 		switch opt.Type {
@@ -749,6 +751,12 @@ func (tblOptList *TableOptionListOpt) CheckIfTableOptDuplicate() string {
 				return "Duplicate table option for keyword 'single or global', the option should only be appeared just one time in RadonDB."
 			}
 			optOnce[TableOptionTableType] = true
+		case TableOptionAutoInc:
+			if optOnce[TableOptionAutoInc] {
+				return "Duplicate table option for keyword 'auto_increment', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionAutoInc] = true
+
 		}
 	}
 	return ""

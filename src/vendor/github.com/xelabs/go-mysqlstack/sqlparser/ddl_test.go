@@ -927,8 +927,8 @@ func TestDDL1ParseError(t *testing.T) {
 			input: "create table test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
-				") engine=tokudb engine=tokudb comment 'comment option' charset \"utf8\" partition by hash(id)",
-			output: "Duplicate table option for keyword 'engine', the option should only be appeared just one time in RadonDB. at position 145 near 'partition'",
+				") engine=tokudb auto_increment=100 engine=tokudb comment 'comment option' charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'engine', the option should only be appeared just one time in RadonDB. at position 164 near 'partition'",
 		},
 		{ // Duplicate keyword
 			input: "create table test.t (\n" +
