@@ -17,6 +17,8 @@ import (
 	"proxy"
 
 	"github.com/ant0ine/go-json-rest/rest"
+	"github.com/radondb/shift/shift"
+	shiftlog "github.com/radondb/shift/xlog"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -355,4 +357,108 @@ func globalsHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r 
 		return
 	}
 	w.WriteJson(globals)
+}
+
+type migrateParams struct {
+	ToFlavor string `json:"to-flavor"`
+
+	From         string `json:"from"`
+	FromUser     string `json:"from-user"`
+	FromPassword string `json:"from-password"`
+	FromDatabase string `json:"from-database"`
+	FromTable    string `json:"from-table"`
+
+	To         string `json:"to"`
+	ToUser     string `json:"to-user"`
+	ToPassword string `json:"to-password"`
+	ToDatabase string `json:"to-database"`
+	ToTable    string `json:"to-table"`
+
+	RadonURL               string `json:"radonurl"`
+	Cleanup                bool   `json:"cleanup"`
+	MySQLDump              string `json:"mysqldump"`
+	Threads                int    `json:"threads"`
+	Behinds                int    `json:"behinds"`
+	Checksum               bool   `json:"checksum"`
+	WaitTimeBeforeChecksum int    `json:"wait-time-before-checksum"`
+}
+
+// ShardMigrateHandler used to migrate data from one backend to another.
+// Returns:
+// 1. Status:200
+// 2. Status:204
+// 3. Status:500
+func ShardMigrateHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFunc {
+	f := func(w rest.ResponseWriter, r *rest.Request) {
+		shardMigrateHandler(proxy, w, r)
+	}
+	return f
+}
+
+func shardMigrateHandler(proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Request) {
+	log := shiftlog.NewStdLog(shiftlog.Level(shiftlog.INFO))
+	p := &migrateParams{
+		ToFlavor:               shift.ToMySQLFlavor,
+		RadonURL:               "http://" + proxy.Config().Proxy.PeerAddress,
+		Cleanup:                false,
+		MySQLDump:              "mysqldump",
+		Threads:                16,
+		Behinds:                2048,
+		Checksum:               true,
+		WaitTimeBeforeChecksum: 10,
+	}
+	err := r.DecodeJsonPayload(&p)
+	if err != nil {
+		log.Error("api.v1.shard.migrate.error:%+v", err)
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// check args.
+	if len(p.From) == 0 || len(p.FromUser) == 0 || len(p.FromDatabase) == 0 || len(p.FromTable) == 0 ||
+		len(p.To) == 0 || len(p.ToUser) == 0 || len(p.ToDatabase) == 0 || len(p.ToTable) == 0 {
+		log.Error("api.v1.shard.migrate[%+v].error:some param is empty", p)
+		rest.Error(w, "some args are empty", http.StatusNoContent)
+		return
+	}
+	log.Warning(`
+           IMPORTANT: Please check that the shift run completes successfully.
+           At the end of a successful shift run prints "shift.completed.OK!".`)
+
+	cfg := &shift.Config{
+		ToFlavor:               p.ToFlavor,
+		From:                   p.From,
+		FromUser:               p.FromUser,
+		FromPassword:           p.FromPassword,
+		FromDatabase:           p.FromDatabase,
+		FromTable:              p.FromTable,
+		To:                     p.To,
+		ToUser:                 p.ToUser,
+		ToPassword:             p.ToPassword,
+		ToDatabase:             p.ToDatabase,
+		ToTable:                p.ToTable,
+		Cleanup:                p.Cleanup,
+		MySQLDump:              p.MySQLDump,
+		Threads:                p.Threads,
+		Behinds:                p.Behinds,
+		RadonURL:               p.RadonURL,
+		Checksum:               p.Checksum,
+		WaitTimeBeforeChecksum: p.WaitTimeBeforeChecksum,
+	}
+	log.Info("shift.cfg:%+v", cfg)
+
+	shift := shift.NewShift(log, cfg)
+	if err := shift.Start(); err != nil {
+		log.Error("shift.start.error:%+v", err)
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = shift.WaitFinish()
+	if err != nil {
+		log.Error("shift.wait.finish.error:%+v", err)
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Warning("api.v1.shard.migrate.done...")
 }

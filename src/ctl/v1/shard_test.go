@@ -1313,3 +1313,164 @@ func TestSubTableToTable(t *testing.T) {
 		}
 	}
 }
+
+var (
+	showBinlogFormat = &sqltypes.Result{
+		RowsAffected: 1,
+		Fields: []*querypb.Field{
+			{
+				Name: "Variable_name",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Value",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("binlog_format")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("ROW")),
+			},
+		},
+	}
+	selectResult = &sqltypes.Result{
+		RowsAffected: 2,
+		Fields: []*querypb.Field{
+			{
+				Name: "Tables_in_test",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("b")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("A")),
+			},
+		},
+	}
+	showCreateTableResult = &sqltypes.Result{
+		RowsAffected: 2,
+		Fields: []*querypb.Field{
+			{
+				Name: "Table",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Create Table",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("a")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR,
+					[]byte("CREATE TABLE `a` (`i` int(11) NOT NULL, PRIMARY KEY (`i`)) ENGINE=InnoDB DEFAULT CHARSET=utf8")),
+			},
+		},
+	}
+	emptyResult = &sqltypes.Result{}
+)
+
+func TestCtlV1ShardMigrateErr(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := proxy.MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+	scatter := proxy.Scatter()
+
+	api := rest.NewApi()
+	router, _ := rest.MakeRouter(
+		rest.Post("/v1/shard/migrate", ShardMigrateHandler(log, proxy)),
+	)
+	api.SetApp(router)
+	handler := api.MakeHandler()
+
+	var from, fromUsr, fromPasswd, to, toUsr, toPasswd string
+	backends := scatter.BackendConfigsClone()
+	for _, backend := range backends {
+		if backend.Name == "backend0" {
+			from = backend.Address
+			fromUsr = backend.User
+			fromPasswd = backend.Password
+		} else if backend.Name == "backend1" {
+			to = backend.Address
+			toUsr = backend.User
+			toPasswd = backend.Password
+		}
+	}
+	p := &migrateParams{
+		ToFlavor:               "mysql",
+		From:                   "127.0.0.1" + from,
+		FromUser:               fromUsr,
+		FromPassword:           fromPasswd,
+		FromDatabase:           "test",
+		FromTable:              "a",
+		To:                     "127.0.0.1" + to,
+		ToUser:                 toUsr,
+		ToPassword:             toPasswd,
+		ToDatabase:             "test",
+		ToTable:                "a",
+		RadonURL:               "http://" + proxy.Config().Proxy.PeerAddress,
+		Cleanup:                false,
+		MySQLDump:              "mysqldump",
+		Threads:                16,
+		Behinds:                2048,
+		Checksum:               true,
+		WaitTimeBeforeChecksum: 10,
+	}
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create .*", emptyResult)
+		fakedbs.AddQueryPattern("show .*", showCreateTableResult)
+		fakedbs.AddQuery("SHOW GLOBAL VARIABLES LIKE \"binlog_format\"", showBinlogFormat)
+		fakedbs.AddQueryPattern("FLUSH .*", emptyResult)
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.a(i int primary key) single"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// DecodeJsonPayload err.
+	{
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/shard/migrate", nil))
+		recorded.CodeIs(500)
+	}
+
+	// shift.Start() err.
+	{
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/shard/migrate", p))
+		recorded.CodeIs(500)
+	}
+
+	// shift.WaitFinish() err.
+	{
+		fakedbs.AddQueryPattern("select .*", selectResult)
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/shard/migrate", p))
+		recorded.CodeIs(500)
+	}
+
+	// check args empty.
+	{
+		p.ToTable = ""
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/shard/migrate", p))
+		recorded.CodeIs(204)
+	}
+}
