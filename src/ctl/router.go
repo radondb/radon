@@ -9,7 +9,7 @@
 package ctl
 
 import (
-	"ctl/v1"
+	v1 "ctl/v1"
 
 	"github.com/ant0ine/go-json-rest/rest"
 )
@@ -44,6 +44,7 @@ func (admin *Admin) NewRouter() (rest.App, error) {
 		rest.Get("/v1/shard/balanceadvice", v1.ShardBalanceAdviceHandler(log, proxy)),
 		rest.Post("/v1/shard/shift", v1.ShardRuleShiftHandler(log, proxy)),
 		rest.Post("/v1/shard/reload", v1.ShardReLoadHandler(log, proxy)),
+		rest.Post("/v1/shard/migrate", v1.ShardMigrateHandler(log, proxy)),
 
 		// meta
 		rest.Get("/v1/meta/versions", v1.VersionzHandler(log, proxy)),
