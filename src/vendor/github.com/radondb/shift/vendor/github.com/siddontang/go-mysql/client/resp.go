@@ -51,18 +51,18 @@ func (c *Conn) handleOKPacket(data []byte) (*Result, error) {
 		c.status = r.Status
 		pos += 2
 
-		//todo:strict_mode, check warnings as error
-		//Warnings := binary.LittleEndian.Uint16(data[pos:])
-		//pos += 2
+		// todo:strict_mode, check warnings as error
+		// Warnings := binary.LittleEndian.Uint16(data[pos:])
+		// pos += 2
 	} else if c.capability&CLIENT_TRANSACTIONS > 0 {
 		r.Status = binary.LittleEndian.Uint16(data[pos:])
 		c.status = r.Status
 		pos += 2
 	}
 
-	//new ok package will check CLIENT_SESSION_TRACK too, but I don't support it now.
+	// new ok package will check CLIENT_SESSION_TRACK too, but I don't support it now.
 
-	//skip info
+	// skip info
 	return r, nil
 }
 
@@ -315,6 +315,10 @@ func (c *Conn) readResultRows(result *Result, isBinary bool) (err error) {
 			}
 
 			break
+		}
+
+		if data[0] == ERR_HEADER {
+			return c.handleErrorPacket(data)
 		}
 
 		result.RowDatas = append(result.RowDatas, data)
