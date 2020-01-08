@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/juju/errors"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"github.com/siddontang/go-log/log"
 	"github.com/siddontang/go-mysql/mysql"
 	"github.com/siddontang/go-mysql/replication"
@@ -24,7 +25,7 @@ var (
 
 func (c *Canal) startSyncer() (*replication.BinlogStreamer, error) {
 	gset := c.master.GTIDSet()
-	if gset == nil {
+	if gset == nil || gset.String() == "" {
 		pos := c.master.Position()
 		s, err := c.syncer.StartSync(pos)
 		if err != nil {
@@ -33,11 +34,12 @@ func (c *Canal) startSyncer() (*replication.BinlogStreamer, error) {
 		log.Infof("start sync binlog at binlog file %v", pos)
 		return s, nil
 	} else {
+		gsetClone := gset.Clone()
 		s, err := c.syncer.StartSyncGTID(gset)
 		if err != nil {
 			return nil, errors.Errorf("start sync replication at GTID set %v error %v", gset, err)
 		}
-		log.Infof("start sync binlog at GTID set %v", gset)
+		log.Infof("start sync binlog at GTID set %v", gsetClone)
 		return s, nil
 	}
 }
@@ -50,12 +52,35 @@ func (c *Canal) runSyncBinlog() error {
 
 	savePos := false
 	force := false
+
+	// The name of the binlog file received in the fake rotate event.
+	// It must be preserved until the new position is saved.
+	fakeRotateLogName := ""
+
 	for {
 		ev, err := s.GetEvent(c.ctx)
 
 		if err != nil {
 			return errors.Trace(err)
 		}
+
+		// Update the delay between the Canal and the Master before the handler hooks are called
+		c.updateReplicationDelay(ev)
+
+		// If log pos equals zero then the received event is a fake rotate event and
+		// contains only a name of the next binlog file
+		// See https://github.com/mysql/mysql-server/blob/8e797a5d6eb3a87f16498edcb7261a75897babae/sql/rpl_binlog_sender.h#L235
+		// and https://github.com/mysql/mysql-server/blob/8cc757da3d87bf4a1f07dcfb2d3c96fed3806870/sql/rpl_binlog_sender.cc#L899
+		if ev.Header.LogPos == 0 {
+			switch e := ev.Event.(type) {
+			case *replication.RotateEvent:
+				fakeRotateLogName = string(e.NextLogName)
+				log.Infof("received fake rotate event, next log name is %s", e.NextLogName)
+			}
+
+			continue
+		}
+
 		savePos = false
 		force = false
 		pos := c.master.Position()
@@ -63,6 +88,11 @@ func (c *Canal) runSyncBinlog() error {
 		curPos := pos.Pos
 		//next binlog pos
 		pos.Pos = ev.Header.LogPos
+
+		// new file name received in the fake rotate event
+		if fakeRotateLogName != "" {
+			pos.Name = fakeRotateLogName
+		}
 
 		// We only save position with RotateEvent and XIDEvent.
 		// For RowsEvent, we can't save the position until meeting XIDEvent
@@ -93,13 +123,13 @@ func (c *Canal) runSyncBinlog() error {
 			}
 			continue
 		case *replication.XIDEvent:
-			if e.GSet != nil {
-				c.master.UpdateGTIDSet(e.GSet)
-			}
 			savePos = true
 			// try to save the position later
 			if err := c.eventHandler.OnXID(pos); err != nil {
 				return errors.Trace(err)
+			}
+			if e.GSet != nil {
+				c.master.UpdateGTIDSet(e.GSet)
 			}
 		case *replication.MariadbGTIDEvent:
 			// try to save the GTID later
@@ -120,10 +150,6 @@ func (c *Canal) runSyncBinlog() error {
 				return errors.Trace(err)
 			}
 		case *replication.QueryEvent:
-			if e.GSet != nil {
-				c.master.UpdateGTIDSet(e.GSet)
-			}
-
 			// Handle XA.
 			if strings.HasPrefix(string(e.Query), "XA") {
 				savePos = true
@@ -170,6 +196,9 @@ func (c *Canal) runSyncBinlog() error {
 					return errors.Trace(err)
 				}
 			}
+			if e.GSet != nil {
+				c.master.UpdateGTIDSet(e.GSet)
+			}
 		default:
 			if pos.Pos > 0 {
 				savePos = true
@@ -179,13 +208,24 @@ func (c *Canal) runSyncBinlog() error {
 		if savePos {
 			c.master.Update(pos)
 			c.master.UpdateTimestamp(ev.Header.Timestamp)
-			if err := c.eventHandler.OnPosSynced(pos, force); err != nil {
+			fakeRotateLogName = ""
+
+			if err := c.eventHandler.OnPosSynced(pos, c.master.GTIDSet(), force); err != nil {
 				return errors.Trace(err)
 			}
 		}
 	}
 
 	return nil
+}
+
+func (c *Canal) updateReplicationDelay(ev *replication.BinlogEvent) {
+	var newDelay uint32
+	now := uint32(time.Now().Unix())
+	if now >= ev.Header.Timestamp {
+		newDelay = now - ev.Header.Timestamp
+	}
+	atomic.StoreUint32(c.delay, newDelay)
 }
 
 func (c *Canal) handleRowsEvent(e *replication.BinlogEvent) error {

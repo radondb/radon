@@ -440,20 +440,43 @@ func (e *MariadbBinlogCheckPointEvent) Dump(w io.Writer) {
 }
 
 type MariadbGTIDEvent struct {
-	GTID MariadbGTID
+	GTID     MariadbGTID
+	Flags    byte
+	CommitID uint64
+}
+
+func (e *MariadbGTIDEvent) IsDDL() bool {
+	return (e.Flags & BINLOG_MARIADB_FL_DDL) != 0
+}
+
+func (e *MariadbGTIDEvent) IsStandalone() bool {
+	return (e.Flags & BINLOG_MARIADB_FL_STANDALONE) != 0
+}
+
+func (e *MariadbGTIDEvent) IsGroupCommit() bool {
+	return (e.Flags & BINLOG_MARIADB_FL_GROUP_COMMIT_ID) != 0
 }
 
 func (e *MariadbGTIDEvent) Decode(data []byte) error {
+	pos := 0
 	e.GTID.SequenceNumber = binary.LittleEndian.Uint64(data)
-	e.GTID.DomainID = binary.LittleEndian.Uint32(data[8:])
+	pos += 8
+	e.GTID.DomainID = binary.LittleEndian.Uint32(data[pos:])
+	pos += 4
+	e.Flags = uint8(data[pos])
+	pos += 1
 
-	// we don't care commit id now, maybe later
+	if (e.Flags & BINLOG_MARIADB_FL_GROUP_COMMIT_ID) > 0 {
+		e.CommitID = binary.LittleEndian.Uint64(data[pos:])
+	}
 
 	return nil
 }
 
 func (e *MariadbGTIDEvent) Dump(w io.Writer) {
 	fmt.Fprintf(w, "GTID: %v\n", e.GTID)
+	fmt.Fprintf(w, "Flags: %v\n", e.Flags)
+	fmt.Fprintf(w, "CommitID: %v\n", e.CommitID)
 	fmt.Fprintln(w)
 }
 

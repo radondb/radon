@@ -23,6 +23,7 @@ before_script:
 before_install:
 
 script:
+  #test is used for make testcanal in shift
   - mysql -uroot -P3306 -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS test;'
   - make build
   - make test

@@ -6,5 +6,7 @@ log_bin=mysql-bin
 log_bin_index=mysql-bin.index
 binlog_format=ROW
 server-id        = 12346
+gtid-mode = ON
+enforce_gtid_consistency = ON
 
 [mysqld_safe]
