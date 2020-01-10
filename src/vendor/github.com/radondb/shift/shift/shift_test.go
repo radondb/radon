@@ -1538,3 +1538,61 @@ func TestSupportShiftToRadonDB(t *testing.T) {
 		log.Info("shift to radondb done.")
 	}
 }
+
+// Fix bug for issue #560
+func TestShiftColOrTblNameWithoutQuote(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+
+	fromPool, errfrom := NewPool(log, 4, mockCfg.From, mockCfg.FromUser, mockCfg.FromPassword)
+	assert.Nil(t, errfrom)
+	fromConn := fromPool.Get()
+	// Clean before exit
+	defer func() {
+		sql := "DROP DATABASE IF EXISTS `a-b_db`"
+		if _, err := fromConn.Execute(sql); err != nil {
+			log.Panicf("test.drop.databse.error:%+v", err)
+		}
+		fromPool.Put(fromConn)
+		fromPool.Close()
+	}()
+
+	// Drop test DB
+	sql := "DROP DATABASE IF EXISTS `a-b_db`"
+	if _, err := fromConn.Execute(sql); err != nil {
+		log.Panicf("test.drop.from.databse.error:%+v", err)
+	}
+
+	// Create DB error
+	_, err := fromConn.Execute("CREATE DATABASE a-b_db")
+	assert.NotNil(t, err)
+
+	// Create DB success
+	_, err = fromConn.Execute("CREATE DATABASE `a-b_db`")
+	assert.Nil(t, err)
+
+	// Create table error
+	_, err = fromConn.Execute("CREATE TABLE `a-b_db`.a-b_tbl(`char` int, `key` bigint) ENGINE=InnoDB DEFAULT CHARSET=utf8")
+	assert.NotNil(t, err)
+
+	// Create table success
+	_, err = fromConn.Execute("CREATE TABLE `a-b_db`.`a-b_tbl`(`char` int, `key` bigint) ENGINE=InnoDB DEFAULT CHARSET=utf8")
+	assert.Nil(t, err)
+
+	_, err = fromConn.Execute("INSERT INTO `a-b_db`.`a-b_tbl` VALUES (3, -3.14)")
+	assert.Nil(t, err)
+
+	// Update col fail
+	_, err = fromConn.Execute("UPDATE `a-b_db`.`a-b_tbl` set char=1 where char=3")
+	assert.NotNil(t, err)
+	// Update col success
+	_, err = fromConn.Execute("UPDATE `a-b_db`.`a-b_tbl` set `char`=1 where `char`=3")
+	assert.Nil(t, err)
+
+	// DELETE fail
+	_, err = fromConn.Execute("DELETE FROM `a-b_db`.`a-b_tbl` where char=3")
+	assert.NotNil(t, err)
+
+	// DELETE success
+	_, err = fromConn.Execute("DELETE FROM `a-b_db`.`a-b_tbl` where `char`=3")
+	assert.Nil(t, err)
+}

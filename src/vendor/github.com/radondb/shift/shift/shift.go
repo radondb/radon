@@ -257,7 +257,7 @@ func (shift *Shift) ChecksumTable() error {
 	}
 
 	checksumFunc := func(t string, Conn *client.Conn, Database string, Table string, c chan interface{}) {
-		sql := fmt.Sprintf("checksum table %s.%s", Database, Table)
+		sql := fmt.Sprintf("checksum table `%s`.`%s`", Database, Table)
 		r, err := Conn.Execute(sql)
 		if err != nil {
 			log.Error("shift.checksum.%s.table[%s.%s].error", t, Database, Table)
