@@ -47,6 +47,11 @@ Contents
       * [SET](#set)
     * [Full Text Search](#full-text-search)
       * [ngram Full Text Parser](#ngram-full-text-parser)
+    * [Radon](#radon)
+      * [RADON ATTACH](#radon-attach)
+      * [RADON ATTACHLIST](#radon-attachlist)
+      * [RADON DETACH](#radon-detach)
+      * [RADON RESHARD](#radon-reshard) 
     * [Others](#others)
       * [Using AUTO_INCREMENT](#using-auto-increment)
 
@@ -880,8 +885,9 @@ mysql> SHOW DATABASES;
 
 `Syntax`
 ```
-SHOW TABLES
+SHOW [FULL] TABLES
 [FROM db_name]
+[LIKE 'pattern' | WHERE expr]
 ```
 
 `Instructions`
@@ -927,7 +933,9 @@ mysql> show table status;
 `Syntax`
 
 ```
-SHOW COLUMNS FROM [db_name.]table_name
+SHOW [FULL] {COLUMNS | FIELDS} 
+FROM [db_name.]table_name
+[LIKE 'pattern' | WHERE expr]
 ```
 
 `Instructions`
@@ -936,18 +944,25 @@ SHOW COLUMNS FROM [db_name.]table_name
 `Example: `
 
 ```
-mysql> CREATE TABLE T1(A INT, B VARCHAR(10)) PARTITION BY HASH(A);
+mysql> CREATE TABLE t1(A INT PRIMARY KEY, B VARCHAR(10)) PARTITION BY HASH(A);
 Query OK, 0 rows affected (0.52 sec)
 
-mysql> SHOW COLUMNS FROM T1;
+mysql> SHOW COLUMNS FROM t1;
 +-------+-------------+------+-----+---------+-------+
 | Field | Type        | Null | Key | Default | Extra |
 +-------+-------------+------+-----+---------+-------+
-| A     | int(11)     | YES  |     | NULL    |       |
+| A     | int(11)     | NO   | PRI | NULL    |       |
 | B     | varchar(10) | YES  |     | NULL    |       |
 +-------+-------------+------+-----+---------+-------+
-2 rows in set (0.01 sec)
+2 rows in set (0.03 sec)
 
+mysql> SHOW FULL COLUMNS FROM t1 where `Key` = 'PRI';
++-------+---------+-----------+------+-----+---------+-------+---------------------------------+---------+
+| Field | Type    | Collation | Null | Key | Default | Extra | Privileges                      | Comment |
++-------+---------+-----------+------+-----+---------+-------+---------------------------------+---------+
+| A     | int(11) | NULL      | NO   | PRI | NULL    |       | select,insert,update,references |         |
++-------+---------+-----------+------+-----+---------+-------+---------------------------------+---------+
+1 row in set (0.04 sec)
 ```
 
 #### SHOW CREATE TABLE
