@@ -14,6 +14,7 @@ Contents
       * [balanceadvice](#balanceadvice)
       * [shift](#shift)
       * [reload](#reload)
+      * [migrate](#migrate)
    * [backend](#backend)
       * [health](#health)
    * [backends](#backends)
@@ -333,6 +334,56 @@ HTTP/1.1 200 OK
 Date: Tue, 10 Apr 2018 02:07:15 GMT
 Content-Length: 0
 Content-Type: text/plain; charset=utf-8
+```
+
+
+### migrate
+
+This api is used to migrate the data from one backend to another.
+
+```
+Path:    /v1/shard/migrate
+Method:  POST
+Request: {
+			"to-flavor":                 "Destination db flavor, like mysql/mariadb/radondb, default mysql"
+			"from":                      "Source MySQL backend(host:port)",                                   [required]
+			"from-user":                 "MySQL user, must have replication privilege",                       [required]
+			"from-password":             "MySQL user password",                                               [required]
+			"from-database":             "Source database",                                                   [required]
+			"from-table":                "Source table",                                                      [required]
+			"to":                        "Destination MySQL backend(host:port)",                              [required]
+			"to-user":                   "MySQL user, must have replication privilege",                       [required]
+			"to-password":               "MySQL user password",                                               [required]
+			"to-database":               "Destination database",                                              [required]
+			"to-table":                  "Destination table",                                                 [required]
+			"radonurl":                  "Radon RESTful api(default: http://peer-address)",
+			"cleanup":                   "Cleanup the from table after shifted(defaults false)",
+			"mysqldump":                 "mysqldump path",
+			"threads":                   "shift threads num(defaults 16)",
+			"behinds":                   "position behinds num(default 2048)",
+			"checksum":                  "Checksum the from table and to table after shifted(defaults true)",
+			"wait-time-before-checksum": "seconds sleep before checksum"
+         }
+```
+
+`Status:`
+
+```
+	200: StatusOK
+	204: StatusNoContent
+	500: StatusInternalServerError
+```
+
+`Example: `
+
+```
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"from": "127.0.0.1:3000","from-user":"usr","from-password":"123456","from-table":"t1","from-database":"test",  \
+"to":"127.0.0.1:4000","to-user":"usr","to-password":"123456","to-database":"test","to-table":"t1","cleanup":true}' http://127.0.0.1:8080/v1/shard/migrate
+
+---Response---
+HTTP/1.1 200 OK
+Date: Fri, 10 Jan 2020 10:56:31 GMT
+Content-Length: 0
 ```
 
 ## backend
