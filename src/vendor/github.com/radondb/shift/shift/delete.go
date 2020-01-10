@@ -39,14 +39,14 @@ func (h *EventHandler) DeleteRow(e *canal.RowsEvent) {
 			if len(pks) > 0 {
 				for _, pk := range pks {
 					v := row[pk]
-					values = append(values, fmt.Sprintf("%s=%s", e.Table.Columns[pk].Name, h.ParseValue(e, pk, v)))
+					values = append(values, fmt.Sprintf("`%s`=%s", e.Table.Columns[pk].Name, h.ParseValue(e, pk, v)))
 				}
 			} else {
 				for j, v := range row {
 					if v == nil {
 						continue
 					}
-					values = append(values, fmt.Sprintf("%s=%s", e.Table.Columns[j].Name, h.ParseValue(e, j, v)))
+					values = append(values, fmt.Sprintf("`%s`=%s", e.Table.Columns[j].Name, h.ParseValue(e, j, v)))
 				}
 			}
 

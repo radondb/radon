@@ -46,20 +46,20 @@ func (h *EventHandler) UpdateRow(e *canal.RowsEvent) {
 			if len(pks) > 0 {
 				for _, pk := range pks {
 					v := v1Row[pk]
-					wheres = append(wheres, fmt.Sprintf("%s=%s", e.Table.Columns[pk].Name, h.ParseValue(e, pk, v)))
+					wheres = append(wheres, fmt.Sprintf("`%s`=%s", e.Table.Columns[pk].Name, h.ParseValue(e, pk, v)))
 				}
 			}
 
 			for i := range v2Row {
 				v2 := v2Row[i]
 				if v2 != nil {
-					values = append(values, fmt.Sprintf("%s=%s", e.Table.Columns[i].Name, h.ParseValue(e, i, v2)))
+					values = append(values, fmt.Sprintf("`%s`=%s", e.Table.Columns[i].Name, h.ParseValue(e, i, v2)))
 				}
 
 				if len(pks) == 0 {
 					v1 := v1Row[i]
 					if v1 != nil {
-						wheres = append(wheres, fmt.Sprintf("%s=%s", e.Table.Columns[i].Name, h.ParseValue(e, i, v1)))
+						wheres = append(wheres, fmt.Sprintf("`%s`=%s", e.Table.Columns[i].Name, h.ParseValue(e, i, v1)))
 					}
 				}
 			}
