@@ -119,7 +119,7 @@ Query OK, 0 rows affected (0.01 sec)
     | AUTO_INCREMENT [=] value
     | [DEFAULT] {CHARSET | CHARACTER SET} [=] charset_name
     | COMMENT [=] 'string'
-    | {PARTITION BY HASH(shard-key)|SINGLE|GLOBAL}
+    | {PARTITION BY HASH(shard-key)|SINGLE|GLOBAL|DISTRIBUTED BY (backend-name)}
     | PARTITION BY LIST(shard-key)(PARTITION backend VALUES IN (value_list),...)
 ```
 
@@ -128,6 +128,7 @@ Query OK, 0 rows affected (0.01 sec)
 * AUTO_INCREMENT table_option currently only supported at the grammatical level, the value will not take effect.
 * With `GLOBAL` will create a global table. The global table has full data at every backend. The global tables are generally used for tables with fewer changes and smaller capacity, requiring frequent association with other tables.
 * With `SINGLE` will create a single table. The single table only on the first backend.
+* With `DISTRIBUTED BY (backend-name)` will create a single table. The single table is distributed on the specified backend `backend-name`.
 * With `PARTITION BY HASH(shard-key)` will create a hash partition table. The partition mode is HASH, which is evenly distributed across the partitions according to the partition key `HASH value`
 * Without `PARTITION BY HASH(shard-key)|LIST(shard-key)|SINGLE|GLOBAL` will create a hash partition table. The table's `PRIMARY|UNIQUE KEY` is the partition key, only support one primary|unique key.
 * With `PARTITION BY LIST(shard-key)` will create a list partition table. `PARTITION backend VALUES IN (value_list)` is one partition, The variable backend is one backend name, The variable value_list is values with `,`.
@@ -145,6 +146,9 @@ Query OK, 0 rows affected (0.01 sec)
 		
 	mysql> INSERT INTO h2 VALUES (3, 5);
 	ERROR 1525 (HY000): Table has no partition for value 3
+
+  mysql> CREATE TABLE t5(id int, age int) DISTRIBUTED BY (backend1);
+  Query OK, 0 rows affected (0.11 sec)
 	```
 
 * The partitioning key only supports specifying one column, the data type of this column is not limited(
