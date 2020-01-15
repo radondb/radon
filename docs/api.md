@@ -74,8 +74,7 @@ Request: {
 ```
 `Example: `
 ```
-$ curl -i -H 'Content-Type: application/json' -X PUT -d '{"max-connections":1024, "max-result-size":1073741824, "max-join-rows":32768, "ddl-timeout":3600, "query-timeout":600, "twopc-enable":true, "allowip": ["127.0.0.1", "127.0.0.2"]}' \
-		 http://127.0.0.1:8080/v1/radon/config
+$ curl -i -H 'Content-Type: application/json' -X PUT -d '{"max-connections":1024, "max-result-size":1073741824, "max-join-rows":32768, "ddl-timeout":3600, "query-timeout":600, "twopc-enable":true, "allowip": ["127.0.0.1", "127.0.0.2"]}' http://127.0.0.1:8080/v1/radon/config
 
 ---Response---
 HTTP/1.1 200 OK
@@ -90,7 +89,7 @@ Content-Type: text/plain; charset=utf-8
 Path:    /v1/radon/readonly
 Method:  PUT
 Request: {
-			"readonly": The value of the read-only(true) or not(false),														[required]
+			"readonly": The value of the read-only(true) or not(false),	                                [required]
          }
 ```
 
@@ -105,8 +104,7 @@ Request: {
 `Example: `
 
 ```
-$ curl -i -H 'Content-Type: application/json' -X PUT -d '{"readonly":true}' \
-		 http://127.0.0.1:8080/v1/radon/readonly
+$ curl -i -H 'Content-Type: application/json' -X PUT -d '{"readonly":true}' http://127.0.0.1:8080/v1/radon/readonly
 		
 ---Response---
 HTTP/1.1 200 OK
@@ -136,8 +134,7 @@ Request: {
 `Example:`
 
 ```
-$ curl -i -H 'Content-Type: application/json' -X PUT -d '{"limits":4800}' \
-		 http://127.0.0.1:8080/v1/radon/throttle
+$ curl -i -H 'Content-Type: application/json' -X PUT -d '{"limits":4800}' http://127.0.0.1:8080/v1/radon/throttle
 
 ---Response---
 HTTP/1.1 200 OK
@@ -301,8 +298,7 @@ Request: {
 `Example: `
 
 ```
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"database": "db_test1", "table": "t1", "from-address": "127.0.0.1:3306", "to-address": "127.0.0.1:3306"} \
-		 http://127.0.0.1:8080/v1/shard/shift
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"database": "db_test1", "table": "t1", "from-address": "127.0.0.1:3306", "to-address": "127.0.0.1:3306"} http://127.0.0.1:8080/v1/shard/shift
 ```
 
 
@@ -377,8 +373,7 @@ Request: {
 `Example: `
 
 ```
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"from": "127.0.0.1:3000","from-user":"usr","from-password":"123456","from-table":"t1","from-database":"test",  \
-"to":"127.0.0.1:4000","to-user":"usr","to-password":"123456","to-database":"test","to-table":"t1","cleanup":true}' http://127.0.0.1:8080/v1/shard/migrate
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"from": "127.0.0.1:3000","from-user":"usr","from-password":"123456","from-table":"t1","from-database":"test", "to":"127.0.0.1:4000","to-user":"usr","to-password":"123456","to-database":"test","to-table":"t1","cleanup":true}' http://127.0.0.1:8080/v1/shard/migrate
 
 ---Response---
 HTTP/1.1 200 OK
@@ -440,8 +435,7 @@ Request: {
 `Example: `
 
 ```
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend1", "address": "127.0.0.1:3306", "user": "root", "password": "318831", "max-connections":1024}' \
-		 http://127.0.0.1:8080/v1/radon/backend
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend1", "address": "127.0.0.1:3306", "user": "root", "password": "318831", "max-connections":1024}' http://127.0.0.1:8080/v1/radon/backend
 
 ---Response---
 HTTP/1.1 200 OK
@@ -755,8 +749,7 @@ Request: {
 `Example: `
 
 ```
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"address": "127.0.0.1:8080"}' \
-		 http://127.0.0.1:8080/v1/peer/add
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"address": "127.0.0.1:8080"}' http://127.0.0.1:8080/v1/peer/add
 
 ---Response---
 HTTP/1.1 200 OK
@@ -812,8 +805,7 @@ Request: {
 `Example: `
 
 ```
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"address": "127.0.0.1:8080"}' \
-		 http://127.0.0.1:8080/v1/peer/remove
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"address": "127.0.0.1:8080"}' http://127.0.0.1:8080/v1/peer/remove
 
 ---Response---
 HTTP/1.1 200 OK
@@ -858,15 +850,13 @@ Request: {
 
 ```
 ---backend should not be null---
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend1", "address": "127.0.0.1:3306", "user": "root", "password": "318831", "max-connections":1024}' \
- http://127.0.0.1:8080/v1/radon/backend
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend1", "address": "127.0.0.1:3306", "user": "root", "password": "318831", "max-connections":1024}' http://127.0.0.1:8080/v1/radon/backend
 HTTP/1.1 200 OK
 Date: Tue, 10 Apr 2018 03:35:22 GMT
 Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"databases":"db1,db2", "user": "test", "password": "test", "privilege": "select, update"}' \
-		 http://127.0.0.1:8080/v1/user/add
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"databases":"db1,db2", "user": "test", "password": "test", "privilege": "select, update"}' http://127.0.0.1:8080/v1/user/add
 HTTP/1.1 200 OK
 Date: Tue, 10 Apr 2018 03:35:27 GMT
 Content-Length: 0
@@ -907,8 +897,7 @@ Request: {
 `Example:`
 
 ```
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"user": "test", "password": "test"}' \
-		 http://127.0.0.1:8080/v1/user/update
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"user": "test", "password": "test"}' http://127.0.0.1:8080/v1/user/update
 
 ---Response---
 HTTP/1.1 200 OK
@@ -938,8 +927,7 @@ Request: {
 `Example:`
 
 ```
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"user": "test"}' \
-		 http://127.0.0.1:8080/v1/user/remove
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"user": "test"}' http://127.0.0.1:8080/v1/user/remove
 ---Response---
 HTTP/1.1 200 OK
 Date: Tue, 10 Apr 2018 03:41:14 GMT
