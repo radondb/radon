@@ -11,6 +11,7 @@ package shift
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/radondb/shift/xbase/sync2"
@@ -36,14 +37,25 @@ type Shift struct {
 	behindsTicker *time.Ticker
 	handler       *EventHandler
 
+	// Receive any error happened during shift in different goroutines
 	err        chan error
 	done       chan bool
 	allDone    sync2.AtomicBool
 	atomicBool sync2.AtomicBool // true: canal run normal; false: canal get some exception
+
+	// shift progress
+	mu       sync.Mutex
+	progress *ShiftProgress
 }
 
 func NewShift(log *xlog.Log, cfg *Config) *Shift {
 	log.Info("shift.cfg:%#v", cfg)
+	progress := &ShiftProgress{
+		DumpProgressRate: "not start yet!",
+		DumpRemainTime:   "0",
+		PositionBehinds:  "not start yet!",
+		MigrateStatus:    "",
+	}
 	return &Shift{
 		log:           log,
 		cfg:           cfg,
@@ -51,6 +63,7 @@ func NewShift(log *xlog.Log, cfg *Config) *Shift {
 		err:           make(chan error),
 		behindsTicker: time.NewTicker(time.Duration(behindsDuration) * time.Millisecond),
 		atomicBool:    sync2.NewAtomicBool(true),
+		progress:      progress,
 	}
 }
 
@@ -68,6 +81,9 @@ func (shift *Shift) Start() error {
 	if err := shift.prepareCanal(); err != nil {
 		log.Error("shift.prepare.canal.error")
 		return errors.Trace(err)
+	}
+	if err := shift.dumpProgress(); err != nil {
+		return err
 	}
 	if err := shift.behindsCheckStart(); err != nil {
 		log.Error("shift.start.check.behinds.error")
@@ -381,6 +397,9 @@ func (shift *Shift) behindsCheckStart() error {
 		<-s.canal.WaitDumpDone()
 		prePos := s.canal.SyncedPosition()
 
+		// update progress info
+		shift.UpdateProgress("100%", "0", "", "", "", "")
+
 		for range s.behindsTicker.C {
 			// if allDone, the loop should be over and break, otherwise,
 			// it will caused fatal exit during waitUtilPositon
@@ -389,6 +408,17 @@ func (shift *Shift) behindsCheckStart() error {
 			}
 			// If canal get something wrong during dumping or syncing data, we should log error
 			if s.GetCanalStatus() {
+				// Get master and sync gtid
+				if s.canal.SyncedGTIDSet() != nil {
+					syncGtid := s.canal.SyncedGTIDSet().(*mysql.MysqlGTIDSet)
+					shift.UpdateProgress("", "", "", syncGtid.String(), "", "")
+				}
+				if masterGtid, err := s.canal.GetMasterGTIDSet(); err != nil {
+					shift.err <- errors.Trace(err)
+				} else {
+					shift.UpdateProgress("", "", "", "", masterGtid.String(), "")
+				}
+
 				masterPos, err := s.masterPosition()
 				if err != nil {
 					shift.err <- errors.Trace(err)
@@ -399,10 +429,26 @@ func (shift *Shift) behindsCheckStart() error {
 				diff := (syncPos.Pos - prePos.Pos)
 				speed := diff / (behindsDuration / 1000)
 				log.Info("--shift.check.behinds[%d]--master[%+v]--synced[%+v]--speed:%v events/second, diff:%v", behinds, masterPos, syncPos, speed, diff)
+				shift.UpdateProgress("", "", fmt.Sprintf("%v", behinds), "", "", "")
+				shift.WriteShiftProgress()
 				if (masterPos.Name == syncPos.Name) && (behinds <= shift.cfg.Behinds) {
 					if err := shift.setRadon(); err != nil {
 						shift.err <- errors.Trace(err)
 						break
+					} else {
+						shift.UpdateProgress("", "", "0", "", "", "")
+						// Get master and sync gtid again
+						if s.canal.SyncedGTIDSet() != nil {
+							syncGtid := s.canal.SyncedGTIDSet().(*mysql.MysqlGTIDSet)
+							shift.UpdateProgress("", "", "", syncGtid.String(), "", "")
+						}
+						if masterGtid, err := s.canal.GetMasterGTIDSet(); err != nil {
+							shift.err <- errors.Trace(err)
+						} else {
+							shift.UpdateProgress("", "", "", "", masterGtid.String(), "")
+						}
+						shift.WriteShiftProgress()
+						return
 					}
 				} else {
 					factor := float32(shift.cfg.Behinds+1) / float32(behinds+1)
@@ -432,6 +478,13 @@ func (shift *Shift) close() error {
 	shift.toPool.Close()
 	if err := shift.Cleanup(); err != nil {
 		return errors.Trace(err)
+	}
+	if shift.allDone.Get() {
+		shift.UpdateProgress("", "", "", "", "", "success")
+		shift.WriteShiftProgress()
+	} else {
+		shift.UpdateProgress("", "", "", "", "", "fail")
+		shift.WriteShiftProgress()
 	}
 	log.Info("shift.do.close.done...")
 	return nil

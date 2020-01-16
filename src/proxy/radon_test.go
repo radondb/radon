@@ -48,4 +48,13 @@ func TestErrorParams(t *testing.T) {
 		_, err = client.FetchAll(query, -1)
 		assert.NotNil(t, err)
 	}
+
+	// progress.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "radon progress db.tb"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
 }

@@ -204,7 +204,7 @@ func forceEOF(yylex interface{}) {
 // SET tokens
 %token <bytes> GLOBAL SESSION NAMES
 // Radon Tokens
-%token <bytes> RADON ATTACH ATTACHLIST DETACH RESHARD
+%token <bytes> RADON ATTACH ATTACHLIST DETACH RESHARD PROGRESS
 
 %type <statement> command
 %type <selStmt> select_statement base_select union_lhs union_rhs
@@ -1378,6 +1378,11 @@ radon_statement:
   {
     $$ = &Radon{ Action: ReshardStr, Table: $3, NewName: $5}
   }
+| RADON PROGRESS table_name force_eof
+  {
+    $$ = &Radon{ Action: ProgressStr, Table: $3}
+  }
+
 
 show_statement:
   SHOW BINLOG EVENTS binlog_from_opt limit_opt force_eof
@@ -3001,6 +3006,7 @@ non_reserved_keyword:
 | DETACH
 | ATTACHLIST
 | RESHARD
+| PROGRESS
 
 openb:
   '('

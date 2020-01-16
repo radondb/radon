@@ -62,6 +62,15 @@ func (spanner *Spanner) handleRadon(session *driver.Session, query string, node 
 		reshard := NewReshard(log, spanner.scatter, spanner.router, spanner, session.User())
 		reshard.SetHandle(reshard)
 		qr, err = reshard.ReShardTable(database, table, newDatabase, newTable)
+	case sqlparser.ProgressStr:
+		table := snode.Table.Name.String()
+		database := session.Schema()
+		if !snode.Table.Qualifier.IsEmpty() {
+			database = snode.Table.Qualifier.String()
+		}
+
+		progress := NewProgress(log, spanner.router, database, table)
+		qr, err = progress.GetShiftProgressInfo()
 
 	default:
 		log.Error("proxy.radon.unsupported[%s]", query)

@@ -35,6 +35,10 @@ func TestRadonAttach(t *testing.T) {
 			input:  "radon reshard db.t as b.tt",
 			output: "radon reshard db.t to b.tt",
 		},
+		{
+			input:  "radon progress db.t",
+			output: "radon progress db.t",
+		},
 	}
 
 	for _, exp := range validSQL {

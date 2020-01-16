@@ -3491,6 +3491,7 @@ const (
 	DetachStr     = "detach"
 	AttachListStr = "attachlist"
 	ReshardStr    = "reshard"
+	ProgressStr   = "progress"
 )
 
 func (*Radon) iStatement() {}
@@ -3504,6 +3505,8 @@ func (node *Radon) Format(buf *TrackedBuffer) {
 		buf.Myprintf("radon %s %v", node.Action, node.Row)
 	case ReshardStr:
 		buf.Myprintf("radon %s %v to %v", node.Action, node.Table, node.NewName)
+	case ProgressStr:
+		buf.Myprintf("radon %s %v", node.Action, node.Table)
 	}
 }
 

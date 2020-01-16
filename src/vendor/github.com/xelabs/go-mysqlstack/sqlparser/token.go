@@ -364,6 +364,7 @@ var keywords = map[string]int{
 	"detach":              DETACH,
 	"attachlist":          ATTACHLIST,
 	"reshard":             RESHARD,
+	"progress":            PROGRESS,
 }
 
 // keywordStrings contains the reverse mapping of token to keyword strings

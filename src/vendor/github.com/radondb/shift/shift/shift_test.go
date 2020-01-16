@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/radondb/shift/xlog"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -1082,6 +1081,7 @@ func TestShiftStart(t *testing.T) {
 	defer shift.close()
 
 	err := shift.Start()
+	time.Sleep(time.Millisecond * 10)
 	assert.Nil(t, err)
 }
 
@@ -1197,6 +1197,13 @@ func TestShiftCanalClose(t *testing.T) {
 	errstart = shift.Start()
 	assert.Nil(t, errstart)
 
+	// for issue #542, before close, migrating
+	time.Sleep(time.Millisecond * 1)
+	p, err := shift.ReadShiftProgress()
+	assert.Nil(t, err)
+	assert.False(t, assert.ObjectsAreEqualValues("100%", p.DumpProgressRate))
+	assert.True(t, assert.ObjectsAreEqualValues("migrating", p.MigrateStatus))
+
 	// Sleep 2s to make sure we have enough time that shift.Start() having executed
 	// canal.Run(), then we can use shift.close() to simulate signal like kill
 	time.Sleep(time.Second * 2)
@@ -1207,6 +1214,11 @@ func TestShiftCanalClose(t *testing.T) {
 	wg.Wait()
 	assert.False(t, shift.allDone.Get())
 
+	// for issue #542, shift close, migrate fail
+	p, err = shift.ReadShiftProgress()
+	assert.Nil(t, err)
+	assert.True(t, assert.ObjectsAreEqualValues("fail", p.MigrateStatus))
+
 	// No matter what exeption happens, the target table should be cleaned up
 	// so the table we selected is not exist
 	toConn := toPool.Get()
@@ -1215,7 +1227,7 @@ func TestShiftCanalClose(t *testing.T) {
 	}
 	defer toPool.Put(toConn)
 	sql := fmt.Sprintf("select count(*) from `%s`.`%s`", mockCfg.ToDatabase, mockCfg.ToTable)
-	_, err := toConn.Execute(sql)
+	_, err = toConn.Execute(sql)
 	errStr := fmt.Sprintf("%s", err)
 	errWant := fmt.Sprintf("ERROR 1146 (42S02): Table '%s.%s' doesn't exist", mockCfg.ToDatabase, mockCfg.ToTable)
 	b := strings.EqualFold(errStr, errWant)
@@ -1534,6 +1546,11 @@ func TestSupportShiftToRadonDB(t *testing.T) {
 		<-shift.getDoneCh()
 		assert.True(t, shift.allDone.Get())
 		shift.close()
+		// for issue #542
+		p, err := shift.ReadShiftProgress()
+		assert.Nil(t, err)
+		assert.True(t, assert.ObjectsAreEqualValues("100%", p.DumpProgressRate))
+		assert.True(t, assert.ObjectsAreEqualValues("success", p.MigrateStatus))
 
 		log.Info("shift to radondb done.")
 	}
