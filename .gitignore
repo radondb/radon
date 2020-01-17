@@ -20,3 +20,4 @@ src/honnef.co
 
 # visual studio code files
 .vscode
+src/radon/bin

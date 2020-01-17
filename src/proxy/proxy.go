@@ -293,3 +293,11 @@ func (p *Proxy) SetStreamBufferSize(streamBufferSize int) {
 	p.log.Info("proxy.SetStreamBufferSize:[%d->%d]", p.conf.Proxy.StreamBufferSize, streamBufferSize)
 	p.conf.Proxy.StreamBufferSize = streamBufferSize
 }
+
+// SetBlocks used to set router blocks.
+func (p *Proxy) SetBlocks(blocks int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.log.Info("proxy.SetBlocks:[%d->%d]", p.conf.Router.Blocks, blocks)
+	p.conf.Router.Blocks = blocks
+}

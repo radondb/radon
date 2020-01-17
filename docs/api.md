@@ -55,14 +55,15 @@ This document describes the RadonDB REST API, which allows users to achieve most
 Path:    /v1/radon/config
 Method:  PUT
 Request: {
-			"max-connections": The maximum permitted number of simultaneous client connections,                                    [required]
-			"max-result-size": The maximum result size(in bytes) of a query,                                                       [required]
-			"max-join-rows":   The maximum number of rows that will be held in memory for join's intermediate results.             [required]
-			"ddl-timeout":     The execution timeout(in millisecond) for DDL statements,                                           [required]
-			"query-timeout":   The execution timeout(in millisecond) for DML statements,                                           [required]
-			"twopc-enable":    Enables(true or false) radon two phase commit, for distrubuted transaction,                         [required]
-			"allowip":         ["allow-ip-1", "allow-ip-2"],                                                                       [required]
-			"audit-mode":      The audit log mode, "N": disabled, "R": read enabled, "W": write enabled, "A": read/write enabled,  [required]
+			"max-connections": The maximum permitted number of simultaneous client connections,
+			"max-result-size": The maximum result size(in bytes) of a query,
+			"max-join-rows":   The maximum number of rows that will be held in memory for join's intermediate results,
+			"ddl-timeout":     The execution timeout(in millisecond) for DDL statements,
+			"query-timeout":   The execution timeout(in millisecond) for DML statements,
+			"twopc-enable":    Enables(true or false) radon two phase commit, for distrubuted transaction,
+			"allowip":         ["allow-ip-1", "allow-ip-2"],
+			"audit-mode":      The audit log mode, "N": disabled, "R": read enabled, "W": write enabled, "A": read/write enabled,
+			"blocks-readonly": The size of a block when create hash tables,
          }
          
 ```
