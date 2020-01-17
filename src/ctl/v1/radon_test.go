@@ -37,12 +37,15 @@ func TestCtlV1RadonConfig(t *testing.T) {
 
 		type radonParams1 struct {
 			MaxConnections   int      `json:"max-connections"`
+			MaxResultSize    int      `json:"max-result-size"`
+			MaxJoinRows      int      `json:"max-join-rows"`
 			DDLTimeout       int      `json:"ddl-timeout"`
 			QueryTimeout     int      `json:"query-timeout"`
 			TwoPCEnable      bool     `json:"twopc-enable"`
 			AllowIP          []string `json:"allowip,omitempty"`
 			AuditMode        string   `json:"audit-mode"`
 			StreamBufferSize int      `json:"stream-buffer-size"`
+			Blocks           int      `json:"blocks-readonly"`
 		}
 
 		// 200.
@@ -50,25 +53,29 @@ func TestCtlV1RadonConfig(t *testing.T) {
 			// client
 			p := &radonParams1{
 				MaxConnections:   1023,
+				MaxResultSize:    1073741823,
+				MaxJoinRows:      32767,
 				QueryTimeout:     33,
 				TwoPCEnable:      true,
 				AllowIP:          []string{"127.0.0.1", "127.0.0.2"},
 				AuditMode:        "A",
 				StreamBufferSize: 16777216,
+				Blocks:           128,
 			}
 			recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("PUT", "http://localhost/v1/radon/config", p))
 			recorded.CodeIs(200)
 
 			radonConf := proxy.Config()
 			assert.Equal(t, 1023, radonConf.Proxy.MaxConnections)
-			assert.Equal(t, 1073741824, radonConf.Proxy.MaxResultSize)
-			assert.Equal(t, 32768, radonConf.Proxy.MaxJoinRows)
+			assert.Equal(t, 1073741823, radonConf.Proxy.MaxResultSize)
+			assert.Equal(t, 32767, radonConf.Proxy.MaxJoinRows)
 			assert.Equal(t, 0, radonConf.Proxy.DDLTimeout)
 			assert.Equal(t, 33, radonConf.Proxy.QueryTimeout)
 			assert.Equal(t, true, radonConf.Proxy.TwopcEnable)
 			assert.Equal(t, []string{"127.0.0.1", "127.0.0.2"}, radonConf.Proxy.IPS)
 			assert.Equal(t, "A", radonConf.Audit.Mode)
 			assert.Equal(t, 16777216, radonConf.Proxy.StreamBufferSize)
+			assert.Equal(t, 128, radonConf.Router.Blocks)
 		}
 
 		// Unset AllowIP.
@@ -76,6 +83,8 @@ func TestCtlV1RadonConfig(t *testing.T) {
 			// client
 			p := &radonParams1{
 				MaxConnections:   1023,
+				MaxResultSize:    1073741824,
+				MaxJoinRows:      32768,
 				QueryTimeout:     33,
 				TwoPCEnable:      true,
 				AuditMode:        "A",

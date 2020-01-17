@@ -27,6 +27,7 @@ type radonParams struct {
 	AllowIP          []string `json:"allowip,omitempty"`
 	AuditMode        *string  `json:"audit-mode"`
 	StreamBufferSize *int     `json:"stream-buffer-size"`
+	Blocks           *int     `json:"blocks-readonly"`
 }
 
 // RadonConfigHandler impl.
@@ -71,6 +72,9 @@ func radonConfigHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter
 	}
 	if p.StreamBufferSize != nil {
 		proxy.SetStreamBufferSize(*p.StreamBufferSize)
+	}
+	if p.Blocks != nil {
+		proxy.SetBlocks(*p.Blocks)
 	}
 
 	// reset the allow ip table list.

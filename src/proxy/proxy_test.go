@@ -76,6 +76,12 @@ func TestProxy1(t *testing.T) {
 		assert.Equal(t, "A", proxy.conf.Audit.Mode)
 	}
 
+	// SetBlocks.
+	{
+		proxy.SetBlocks(256)
+		assert.Equal(t, 256, proxy.conf.Router.Blocks)
+	}
+
 	// SetThrottle
 	{
 		proxy.SetThrottle(100)
