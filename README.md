@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/radondb/radon.png)](https://travis-ci.org/radondb/radon)
+[![Build Status](https://api.travis-ci.org/radondb/radon.svg?branch=master)](https://travis-ci.org/radondb/radon)
 [![Go Report Card](https://goreportcard.com/badge/github.com/radondb/radon)](https://goreportcard.com/report/github.com/radondb/radon)
 [![codecov.io](https://codecov.io/gh/radondb/radon/graphs/badge.svg)](https://codecov.io/gh/radondb/radon/branch/master)
 
