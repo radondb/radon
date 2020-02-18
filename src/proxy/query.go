@@ -100,6 +100,10 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 		if spanner.IsDDL(node) {
 			return sqldb.NewSQLError(sqldb.ER_OPTION_PREVENTS_STATEMENT, "--read-only")
 		}
+		// Admin command denied.
+		if spanner.IsAdminCmd(node) {
+			return sqldb.NewSQLError(sqldb.ER_OPTION_PREVENTS_STATEMENT, "--read-only")
+		}
 	}
 
 	defer func() {
@@ -364,6 +368,18 @@ func (spanner *Spanner) IsDDL(node sqlparser.Statement) bool {
 	switch node.(type) {
 	case *sqlparser.DDL:
 		return true
+	}
+	return false
+}
+
+// IsAdminCmd returns the Admin query or not.
+// Some of admin commands are prohibited when radon is read-only.
+func (spanner *Spanner) IsAdminCmd(node sqlparser.Statement) bool {
+	if node, ok := node.(*sqlparser.Radon); ok {
+		switch node.Action {
+		case sqlparser.AttachStr, sqlparser.DetachStr, sqlparser.ReshardStr:
+			return true
+		}
 	}
 	return false
 }
