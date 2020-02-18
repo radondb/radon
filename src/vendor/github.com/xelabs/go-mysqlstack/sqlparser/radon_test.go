@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestRadonAttach(t *testing.T) {
+func TestRadon(t *testing.T) {
 	validSQL := []struct {
 		input  string
 		output string
@@ -34,6 +34,14 @@ func TestRadonAttach(t *testing.T) {
 		{
 			input:  "radon reshard db.t as b.tt",
 			output: "radon reshard db.t to b.tt",
+		},
+		{
+			input:  "radon cleanup",
+			output: "radon cleanup",
+		},
+		{
+			input:  "radon cleanup db.t",
+			output: "radon cleanup db.t",
 		},
 	}
 

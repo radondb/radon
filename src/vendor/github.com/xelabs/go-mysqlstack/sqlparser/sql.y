@@ -500,6 +500,10 @@ func forceEOF(yylex interface{}) {
 	ATTACHLIST
 	DETACH
 	RESHARD
+	CLEANUP
+
+%type	<tableName>
+	cleanup_op
 
 %type	<statement>
 	command
@@ -1937,6 +1941,19 @@ radon_statement:
 |	RADON RESHARD table_name to_opt table_name force_eof
 	{
 		$$ = &Radon{Action: ReshardStr, Table: $3, NewName: $5}
+	}
+|   RADON CLEANUP cleanup_op force_eof
+    {
+		$$ = &Radon{Action: CleanupStr, Table: $3}
+	}
+
+cleanup_op:
+	{
+		$$ = TableName{}
+	}
+| table_name
+	{
+		$$ = $1
 	}
 
 show_statement:
@@ -3613,6 +3630,7 @@ non_reserved_keyword:
 |	DETACH
 |	ATTACHLIST
 |	RESHARD
+|   CLEANUP
 
 openb:
 	'('
