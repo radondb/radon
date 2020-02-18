@@ -414,6 +414,12 @@ func shardMigrateHandler(proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Requ
 		return
 	}
 
+	if proxy.Spanner().ReadOnly() {
+		log.Error("api.v1.shard.migrate.error:The MySQL server is running with the --read-only option")
+		rest.Error(w, "The MySQL server is running with the --read-only option", http.StatusForbidden)
+		return
+	}
+
 	// check args.
 	if len(p.From) == 0 || len(p.FromUser) == 0 || len(p.FromDatabase) == 0 || len(p.FromTable) == 0 ||
 		len(p.To) == 0 || len(p.ToUser) == 0 || len(p.ToDatabase) == 0 || len(p.ToTable) == 0 {

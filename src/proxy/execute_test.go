@@ -316,6 +316,17 @@ func TestProxyExecuteReadonly(t *testing.T) {
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}
+
+	// Radon Admin.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "radon attach('attach1', '127.0.0.1:6000', 'root', '123456', 'xxxx')"
+		_, err = client.FetchAll(query, -1)
+		want := "The MySQL server is running with the --read-only option so it cannot execute this statement (errno 1290) (sqlstate 42000)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
 }
 
 func TestProxyExecuteStreamFetch(t *testing.T) {

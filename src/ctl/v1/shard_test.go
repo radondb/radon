@@ -1473,4 +1473,15 @@ func TestCtlV1ShardMigrateErr(t *testing.T) {
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/shard/migrate", p))
 		recorded.CodeIs(204)
 	}
+
+	// Set readonly.
+	{
+		proxy.SetReadOnly(true)
+	}
+
+	// readonly forbid.
+	{
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/shard/migrate", p))
+		recorded.CodeIs(403)
+	}
 }
