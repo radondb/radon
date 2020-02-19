@@ -27,6 +27,18 @@ const (
 	behindsDuration = 5000
 )
 
+// Status is used to identify the migration status.
+type Status int32
+
+const (
+	// MIGRATING ...
+	MIGRATING Status = iota
+	// SUCCESS ...
+	SUCCESS
+	// FAILURE ...
+	FAILURE
+)
+
 type Shift struct {
 	log           *xlog.Log
 	cfg           *Config

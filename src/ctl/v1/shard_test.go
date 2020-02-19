@@ -17,6 +17,7 @@ import (
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/ant0ine/go-json-rest/rest/test"
+	"github.com/radondb/shift/shift"
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/driver"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
@@ -1162,7 +1163,7 @@ func TestCtlV1ShardRuleShiftError(t *testing.T) {
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/shard/shift", p))
 		recorded.CodeIs(500)
 
-		want := "{\"Error\":\"router.rule.change.cant.found.backend[backend0]+table:[t1_000x]\"}"
+		want := "{\"Error\":\"router.find.table.config.cant.found.backend[backend0]+table:[t1_000x]\"}"
 		got := recorded.Recorder.Body.String()
 		assert.Equal(t, want, got)
 	}
@@ -1472,5 +1473,262 @@ func TestCtlV1ShardMigrateErr(t *testing.T) {
 		p.ToTable = ""
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/shard/migrate", p))
 		recorded.CodeIs(204)
+	}
+}
+
+func TestCtlV1ShardStatus(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := proxy.MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+	scatter := proxy.Scatter()
+	routei := proxy.Router()
+
+	var from, to string
+	backends := scatter.BackendConfigsClone()
+	for _, backend := range backends {
+		if backend.Name == "backend0" {
+			from = backend.Address
+		} else if backend.Name == "backend1" {
+			to = backend.Address
+		}
+	}
+
+	testcases := []statusParams{
+		// migrating, cleanup is true.
+		{
+			Database:    "test",
+			Table:       "t1_0000",
+			FromAddress: from,
+			ToAddress:   to,
+			Status:      shift.MIGRATING,
+			Cleanup:     true,
+		},
+		// migrate success, cleanup is true.
+		{
+			Database:    "test",
+			Table:       "t1_0000",
+			FromAddress: to,
+			ToAddress:   from,
+			Status:      shift.SUCCESS,
+			Cleanup:     true,
+		},
+		// migrating, cleanup is false.
+		{
+			Database:    "test",
+			Table:       "t1_0000",
+			FromAddress: from,
+			ToAddress:   to,
+			Status:      shift.MIGRATING,
+			Cleanup:     false,
+		},
+		// migrate failure, cleanup is false.
+		{
+			Database:    "test",
+			Table:       "t1_0000",
+			FromAddress: from,
+			ToAddress:   to,
+			Status:      shift.FAILURE,
+			Cleanup:     false,
+		},
+	}
+
+	wants := []struct {
+		status  string
+		cleanup string
+	}{
+		{
+			status:  "migrating",
+			cleanup: "backend1",
+		},
+		{
+			status:  "",
+			cleanup: "",
+		},
+		{
+			status:  "migrating",
+			cleanup: "backend1",
+		},
+		{
+			status:  "",
+			cleanup: "backend1",
+		},
+	}
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	{
+		api := rest.NewApi()
+		router, _ := rest.MakeRouter(
+			rest.Put("/v1/shard/status", ShardStatusHandler(log, proxy)),
+		)
+		api.SetApp(router)
+		handler := api.MakeHandler()
+
+		for i, p := range testcases {
+			recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("PUT", "http://localhost/v1/shard/status", &p))
+			recorded.CodeIs(200)
+			tbInf, err := routei.TableConfig("test", "t1")
+			assert.Nil(t, err)
+			assert.Equal(t, wants[i].status, tbInf.Partitions[0].Status)
+			assert.Equal(t, wants[i].cleanup, tbInf.Partitions[0].Cleanup)
+		}
+	}
+}
+
+func TestCtlV1ShardStatusErr(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := proxy.MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+	scatter := proxy.Scatter()
+
+	var from, to string
+	backends := scatter.BackendConfigsClone()
+	for _, backend := range backends {
+		if backend.Name == "backend0" {
+			from = backend.Address
+		} else if backend.Name == "backend1" {
+			to = backend.Address
+		}
+	}
+
+	testcases := []statusParams{
+		// database is NULL.
+		{
+			Database:    "",
+			Table:       "t1_0000",
+			FromAddress: from,
+			ToAddress:   to,
+			Status:      shift.MIGRATING,
+			Cleanup:     true,
+		},
+		// database is system.
+		{
+			Database:    "mysql",
+			Table:       "user",
+			FromAddress: from,
+			ToAddress:   to,
+			Status:      shift.MIGRATING,
+			Cleanup:     true,
+		},
+		// from is NULL.
+		{
+			Database:    "test",
+			Table:       "t1_0000",
+			FromAddress: "",
+			ToAddress:   to,
+			Status:      shift.MIGRATING,
+			Cleanup:     true,
+		},
+		// from equals to.
+		{
+			Database:    "test",
+			Table:       "t1_0000",
+			FromAddress: to,
+			ToAddress:   to,
+			Status:      shift.MIGRATING,
+			Cleanup:     true,
+		},
+		// Table cant find.
+		{
+			Database:    "test",
+			Table:       "t2",
+			FromAddress: from,
+			ToAddress:   to,
+			Status:      shift.MIGRATING,
+			Cleanup:     true,
+		},
+	}
+
+	wants := []struct {
+		code int
+		err  string
+	}{
+		{
+			code: 500,
+			err:  "{\"Error\":\"database or table is null\"}",
+		},
+		{
+			code: 500,
+			err:  "{\"Error\":\"database can't be system database\"}",
+		},
+		{
+			code: 500,
+			err:  "{\"Error\":\"from-address or to-address is invalid\"}",
+		},
+		{
+			code: 500,
+			err:  "{\"Error\":\"from-address or to-address is invalid\"}",
+		},
+		{
+			code: 500,
+			err:  "{\"Error\":\"router.find.table.config.cant.found.backend[backend0]+table:[t2]\"}",
+		},
+	}
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	{
+		api := rest.NewApi()
+		router, _ := rest.MakeRouter(
+			rest.Put("/v1/shard/status", ShardStatusHandler(log, proxy)),
+		)
+		api.SetApp(router)
+		handler := api.MakeHandler()
+
+		// DecodeJsonPayload err.
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("PUT", "http://localhost/v1/shard/status", nil))
+		recorded.CodeIs(500)
+		got := recorded.Recorder.Body.String()
+		assert.Equal(t, "{\"Error\":\"JSON payload is empty\"}", got)
+
+		for i, p := range testcases {
+			recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("PUT", "http://localhost/v1/shard/status", &p))
+			recorded.CodeIs(wants[i].code)
+
+			got := recorded.Recorder.Body.String()
+			assert.Equal(t, wants[i].err, got)
+		}
 	}
 }

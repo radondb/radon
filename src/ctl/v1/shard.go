@@ -422,8 +422,8 @@ func shardMigrateHandler(proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Requ
 		return
 	}
 	log.Warning(`
-           IMPORTANT: Please check that the shift run completes successfully.
-           At the end of a successful shift run prints "shift.completed.OK!".`)
+			IMPORTANT: Please check that the shift run completes successfully.
+			At the end of a successful shift run prints "shift.completed.OK!".`)
 
 	cfg := &shift.Config{
 		ToFlavor:               p.ToFlavor,
@@ -461,4 +461,78 @@ func shardMigrateHandler(proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Requ
 		return
 	}
 	log.Warning("api.v1.shard.migrate.done...")
+}
+
+type statusParams struct {
+	Database string `json:"database"`
+	Table    string `json:"table"`
+	// 0. migrating.
+	// 1. migrate success.
+	// 2. migrate failure.
+	Status      shift.Status `json:"status"`
+	FromAddress string       `json:"from-address"`
+	ToAddress   string       `json:"to-address"`
+	Cleanup     bool         `json:"cleanup"`
+}
+
+// ShardStatusHandler used to modify partition status and cleanup.
+// Returns:
+// 1. Status:200
+// 2. Status:500
+func ShardStatusHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFunc {
+	f := func(w rest.ResponseWriter, r *rest.Request) {
+		shardStatusHandler(log, proxy, w, r)
+	}
+	return f
+}
+
+func shardStatusHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Request) {
+	router := proxy.Router()
+	scatter := proxy.Scatter()
+	p := statusParams{}
+	err := r.DecodeJsonPayload(&p)
+	if err != nil {
+		log.Error("api.v1.radon.shard.status.parse.json.error:%+v", err)
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Warning("api.v1.radon.shard.status[from:%v].request:%+v", r.RemoteAddr, p)
+
+	if p.Database == "" || p.Table == "" {
+		log.Error("api.v1.shard.status.request.database[%s].or.table[%s].is.null", p.Database, p.Table)
+		rest.Error(w, "database or table is null", http.StatusInternalServerError)
+		return
+	}
+
+	for _, sysDB := range sysDBs {
+		if sysDB == strings.ToLower(p.Database) {
+			log.Error("api.v1.shard.status.database[%s].is.system", p.Database)
+			rest.Error(w, "database can't be system database", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	var fromBackend, toBackend string
+	backends := scatter.BackendConfigsClone()
+	for _, backend := range backends {
+		if backend.Address == p.FromAddress {
+			fromBackend = backend.Name
+		} else if backend.Address == p.ToAddress {
+			toBackend = backend.Name
+		}
+	}
+
+	if fromBackend == "" || toBackend == "" {
+		log.Error("api.v1.shard.status.fromBackend[%s].or.toBackend[%s].is.NULL", fromBackend, toBackend)
+		rest.Error(w, "from-address or to-address is invalid", http.StatusInternalServerError)
+		return
+	}
+
+	err = router.PatitionStatusModify(p.Status, p.Cleanup, fromBackend, toBackend, p.Database, p.Table)
+	if err != nil {
+		log.Error("api.v1.shard.status.modify.error:%+v", err)
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Warning("api.v1.shard.status.done...")
 }

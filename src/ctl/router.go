@@ -45,6 +45,7 @@ func (admin *Admin) NewRouter() (rest.App, error) {
 		rest.Post("/v1/shard/shift", v1.ShardRuleShiftHandler(log, proxy)),
 		rest.Post("/v1/shard/reload", v1.ShardReLoadHandler(log, proxy)),
 		rest.Post("/v1/shard/migrate", v1.ShardMigrateHandler(log, proxy)),
+		rest.Put("/v1/shard/status", v1.ShardStatusHandler(log, proxy)),
 
 		// meta
 		rest.Get("/v1/meta/versions", v1.VersionzHandler(log, proxy)),

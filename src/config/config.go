@@ -164,12 +164,19 @@ type BackendsConfig struct {
 	Backends []*BackendConfig `json:"backends"`
 }
 
+const (
+	// MIGRATING is intermediate state of migration.
+	MIGRATING = "migrating"
+)
+
 // PartitionConfig tuple.
 type PartitionConfig struct {
 	Table     string `json:"table"`
-	Segment   string `json:"segment"`
+	Segment   string `json:"segment,omitempty"`
 	Backend   string `json:"backend"`
-	ListValue string `json:"listvalue"`
+	ListValue string `json:"listvalue,omitempty"`
+	Status    string `json:"status,omitempty"`
+	Cleanup   string `json:"cleanup,omitempty"`
 }
 
 // AutoIncrement tuple.
@@ -180,10 +187,10 @@ type AutoIncrement struct {
 // TableConfig tuple.
 type TableConfig struct {
 	Name          string             `json:"name"`
-	Slots         int                `json:"slots-readonly"`
-	Blocks        int                `json:"blocks-readonly"`
+	Slots         int                `json:"slots-readonly,omitempty"`
+	Blocks        int                `json:"blocks-readonly,omitempty"`
 	ShardType     string             `json:"shardtype"`
-	ShardKey      string             `json:"shardkey"`
+	ShardKey      string             `json:"shardkey,omitempty"`
 	Partitions    []*PartitionConfig `json:"partitions"`
 	AutoIncrement *AutoIncrement     `json:"auto-increment,omitempty"`
 }

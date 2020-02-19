@@ -11,6 +11,7 @@ package router
 import (
 	"testing"
 
+	"github.com/radondb/shift/shift"
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
@@ -268,7 +269,7 @@ func TestApiPartitionRuleShiftErrors(t *testing.T) {
 		database := "sbtestx"
 		table := "A8"
 		err := router.PartitionRuleShift(from, to, database, table)
-		want := "router.rule.change.cant.found.database:sbtestx"
+		want := "router.find.partition.config.cant.found.database:sbtestx"
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}
@@ -280,7 +281,7 @@ func TestApiPartitionRuleShiftErrors(t *testing.T) {
 		database := "sbtest"
 		table := "A88"
 		err := router.PartitionRuleShift(from, to, database, table)
-		want := "router.rule.change.cant.found.backend[backend8]+table:[A88]"
+		want := "router.find.table.config.cant.found.backend[backend8]+table:[A88]"
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}
@@ -352,4 +353,165 @@ func TestApiReLoad(t *testing.T) {
 	want := "sbtest"
 	got := rules.Schemas[0].DB
 	assert.Equal(t, want, got)
+}
+
+func TestApiPartitionStatusModify(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+
+	router.CreateDatabase("sbtest")
+
+	// add router sbtest.A.
+	{
+		err := router.addTable("sbtest", MockTableAConfig())
+		assert.Nil(t, err)
+	}
+
+	// Partition table, migrating.
+	{
+		migrateStatus := shift.MIGRATING
+		isCleanup := false
+		from := "backend8"
+		to := "backend88"
+		database := "sbtest"
+		table := "A8"
+		err := router.PatitionStatusModify(migrateStatus, isCleanup, from, to, database, table)
+		assert.Nil(t, err)
+
+		tConf, err := router.TableConfig("sbtest", "A")
+		assert.Nil(t, err)
+		assert.Equal(t, "migrating", tConf.Partitions[3].Status)
+		assert.Equal(t, "backend88", tConf.Partitions[3].Cleanup)
+	}
+
+	// Partition table, migrate failure.
+	{
+		migrateStatus := shift.FAILURE
+		isCleanup := false
+		from := "backend8"
+		to := "backend88"
+		database := "sbtest"
+		table := "A8"
+		err := router.PatitionStatusModify(migrateStatus, isCleanup, from, to, database, table)
+		assert.Nil(t, err)
+
+		tConf, err := router.TableConfig("sbtest", "A")
+		assert.Nil(t, err)
+		assert.Equal(t, "", tConf.Partitions[3].Status)
+		assert.Equal(t, "backend88", tConf.Partitions[3].Cleanup)
+	}
+
+	// add router sbtest.G.
+	{
+		err := router.addTable("sbtest", MockTableGConfig())
+		assert.Nil(t, err)
+	}
+
+	// Global table, migrating.
+	{
+		migrateStatus := shift.MIGRATING
+		isCleanup := false
+		from := "backend1"
+		to := "backend3"
+		database := "sbtest"
+		table := "G"
+		err := router.PatitionStatusModify(migrateStatus, isCleanup, from, to, database, table)
+		assert.Nil(t, err)
+
+		tConf, err := router.TableConfig("sbtest", "G")
+		assert.Nil(t, err)
+		assert.Equal(t, "migrating", tConf.Partitions[0].Status)
+		assert.Equal(t, "backend3", tConf.Partitions[0].Cleanup)
+	}
+
+	// Global table rule shift.
+	{
+		from := "backend1"
+		to := "backend3"
+		database := "sbtest"
+		table := "G"
+		err := router.PartitionRuleShift(from, to, database, table)
+		assert.Nil(t, err)
+	}
+
+	// Global table, migrate success.
+	{
+		migrateStatus := shift.SUCCESS
+		isCleanup := false
+		from := "backend1"
+		to := "backend3"
+		database := "sbtest"
+		table := "G"
+		err := router.PatitionStatusModify(migrateStatus, isCleanup, from, to, database, table)
+		assert.Nil(t, err)
+
+		tConf, err := router.TableConfig("sbtest", "G")
+		assert.Nil(t, err)
+		assert.Equal(t, "", tConf.Partitions[0].Status)
+		assert.Equal(t, "", tConf.Partitions[0].Cleanup)
+	}
+
+	// Drop.
+	{
+		err := router.DropDatabase("sbtest")
+		assert.Nil(t, err)
+	}
+}
+
+func TestApiPartitionStatusModifyErrors(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	router, cleanup := MockNewRouter(log)
+	defer cleanup()
+
+	// add router of sbtest.A
+	{
+		err := router.addTable("sbtest", MockTableAConfig())
+		assert.Nil(t, err)
+
+		tConf, err := router.TableConfig("sbtest", "A")
+		assert.Nil(t, err)
+		assert.NotNil(t, tConf)
+	}
+
+	// database can't found.
+	{
+		migrateStatus := shift.MIGRATING
+		isCleanup := true
+		from := "backend8"
+		to := "backend88"
+		database := "sbtestx"
+		table := "A8"
+		err := router.PatitionStatusModify(migrateStatus, isCleanup, from, to, database, table)
+		want := "router.find.partition.config.cant.found.database:sbtestx"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+
+	// table can't found.
+	{
+		migrateStatus := shift.MIGRATING
+		isCleanup := true
+		from := "backend8"
+		to := "backend88"
+		database := "sbtest"
+		table := "A88"
+		err := router.PatitionStatusModify(migrateStatus, isCleanup, from, to, database, table)
+		want := "router.find.table.config.cant.found.backend[backend8]+table:[A88]"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+
+	// writeFrmData err.
+	{
+		migrateStatus := shift.MIGRATING
+		isCleanup := true
+		router.metadir = "/u100000/xx"
+		from := "backend8"
+		to := "backend4"
+		database := "sbtest"
+		table := "A8"
+		err := router.PatitionStatusModify(migrateStatus, isCleanup, from, to, database, table)
+		assert.NotNil(t, err)
+	}
 }
