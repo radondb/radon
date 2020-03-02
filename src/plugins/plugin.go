@@ -15,6 +15,7 @@ import (
 
 	"plugins/autoincrement"
 	"plugins/privilege"
+	"plugins/shiftmanager"
 
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
@@ -27,6 +28,7 @@ type Plugin struct {
 	scatter       *backend.Scatter
 	autoincrement autoincrement.AutoIncrementHandler
 	privilege     privilege.PrivilegeHandler
+	shiftMgr      shiftmanager.ShiftMgrHandler
 }
 
 // NewPlugin -- creates new Plugin.
@@ -60,6 +62,13 @@ func (plugin *Plugin) Init() error {
 	}
 	plugin.privilege = privilegePlug
 
+	// Register shiftmanager plug
+	shiftMgr := shiftmanager.NewShiftManager(log)
+	if err := shiftMgr.Init(); err != nil {
+		return err
+	}
+	plugin.shiftMgr = shiftMgr
+
 	return nil
 }
 
@@ -67,6 +76,7 @@ func (plugin *Plugin) Init() error {
 func (plugin *Plugin) Close() {
 	plugin.autoincrement.Close()
 	plugin.privilege.Close()
+	plugin.shiftMgr.Close()
 }
 
 // PlugAutoIncrement -- return AutoIncrement plug.
@@ -77,4 +87,9 @@ func (plugin *Plugin) PlugAutoIncrement() autoincrement.AutoIncrementHandler {
 // PlugPrivilege -- return Privilege plug.
 func (plugin *Plugin) PlugPrivilege() privilege.PrivilegeHandler {
 	return plugin.privilege
+}
+
+// PlugShiftMgr -- return ShiftMgr plug.
+func (plugin *Plugin) PlugShiftMgr() shiftmanager.ShiftMgrHandler {
+	return plugin.shiftMgr
 }

@@ -37,4 +37,7 @@ func TestPlugins(t *testing.T) {
 
 	privilegePlug := plugin.PlugPrivilege()
 	assert.NotNil(t, privilegePlug)
+
+	shiftMgrPlug := plugin.PlugShiftMgr()
+	assert.NotNil(t, shiftMgrPlug)
 }
