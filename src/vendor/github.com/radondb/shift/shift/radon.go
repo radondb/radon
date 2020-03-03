@@ -165,7 +165,17 @@ func (shift *Shift) setRadon() error {
 		log.Info("shift.checksum.table.done...")
 	}
 
-	// 5. Set radon rule.
+	// 5. Rename ToTable.
+	{
+		log.Info("shift.rename.totable...")
+		if err := shift.renameToTable(); err != nil {
+			log.Error("shift.rename.totable.error")
+			return errors.Trace(err)
+		}
+		log.Info("shift.rename.totable.done...")
+	}
+
+	// 6. Set radon rule.
 	{
 		if shift.cfg.ToFlavor == ToMySQLFlavor || shift.cfg.ToFlavor == ToMariaDBFlavor {
 			log.Info("shift.set.radon.rule...")
@@ -177,7 +187,7 @@ func (shift *Shift) setRadon() error {
 		}
 	}
 
-	// 6. Set radon to read/write.
+	// 7. Set radon to read/write.
 	{
 		log.Info("shift.set.radon.to.write...")
 		if err := shift.setRadonReadOnly(false); err != nil {
@@ -187,7 +197,7 @@ func (shift *Shift) setRadon() error {
 		log.Info("shift.set.radon.to.write.done...")
 	}
 
-	// 7. Set radon throttle to unlimits.
+	// 8. Set radon throttle to unlimits.
 	{
 		log.Info("shift.set.radon.throttle.to.unlimits...")
 		if err := shift.setRadonThrottle(0); err != nil {
@@ -197,7 +207,7 @@ func (shift *Shift) setRadon() error {
 		log.Info("shift.set.radon.throttle.to.unlimits.done...")
 	}
 
-	// 8. Good, we have all done.
+	// 9. Good, we have all done.
 	{
 		shift.done <- true
 		shift.allDone.Set(true)

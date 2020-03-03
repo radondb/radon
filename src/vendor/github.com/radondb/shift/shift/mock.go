@@ -36,6 +36,7 @@ var (
 		ToDatabase: "shift_test_to",
 		ToTable:    "t1",
 
+		Rebalance: false,
 		Cleanup:   true,
 		Threads:   16,
 		Behinds:   256,
@@ -57,6 +58,7 @@ var (
 		ToDatabase: "mysql",
 		ToTable:    "userx",
 
+		Rebalance: false,
 		Cleanup:   true,
 		Threads:   16,
 		Behinds:   256,
@@ -78,6 +80,7 @@ var (
 		ToDatabase: "shift_test_to",
 		ToTable:    "t1",
 
+		Rebalance: false,
 		Cleanup:   true,
 		Threads:   16,
 		Behinds:   256,
@@ -99,6 +102,7 @@ var (
 		ToDatabase: "shift_test_to",
 		ToTable:    "t1",
 
+		Rebalance: false,
 		Cleanup:   true,
 		Threads:   16,
 		Behinds:   256,
@@ -120,11 +124,34 @@ var (
 		ToDatabase: "shift_test_to",
 		ToTable:    "t1",
 
+		Rebalance: false,
 		Cleanup:   true,
 		Threads:   16,
 		Behinds:   256,
 		MySQLDump: "mysqldump",
 		RadonURL:  fmt.Sprintf("http://127.0.0.1:%d", 8080),
+		Checksum:  true,
+	}
+
+	// Config for rebalance shift.
+	mockCfgRebalance = &Config{
+		ToFlavor:     "mysql",
+		From:         "127.0.0.1:3306",
+		FromUser:     "root",
+		FromDatabase: "shift_test_from",
+		FromTable:    "t1",
+
+		To:         "127.0.0.1:3307",
+		ToUser:     "root",
+		ToDatabase: "shift_test_to",
+		ToTable:    "t1",
+
+		Rebalance: true,
+		Cleanup:   false,
+		Threads:   16,
+		Behinds:   256,
+		MySQLDump: "mysqldump",
+		RadonURL:  fmt.Sprintf("http://127.0.0.1:%d", restfulPort),
 		Checksum:  true,
 	}
 )
@@ -162,9 +189,9 @@ func mockShift(log *xlog.Log, cfg *Config, hasPK bool, initData bool, readonlyHa
 		}
 
 		if _, isSystem := sysDatabases[strings.ToLower(cfg.FromDatabase)]; !isSystem {
-			// Cleanup From table first.
+			// Cleanup From database first.
 			{
-				sql := fmt.Sprintf("drop table if exists `%s`.`%s`", cfg.FromDatabase, cfg.FromTable)
+				sql := fmt.Sprintf("drop database if exists `%s`", cfg.FromDatabase)
 				if _, err := fromConn.Execute(sql); err != nil {
 					log.Panicf("mock.shift.drop.from.table.error:%+v", err)
 				}
@@ -255,6 +282,11 @@ func MockShift(log *xlog.Log, hasPK bool) (*Shift, func()) {
 func MockShiftWithCleanup(log *xlog.Log, hasPK bool) (*Shift, func()) {
 	mockCfg.Cleanup = true
 	cfg := mockCfg
+	return mockShift(log, cfg, hasPK, false, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
+}
+
+func MockShiftWithRebalance(log *xlog.Log, hasPK bool) (*Shift, func()) {
+	cfg := mockCfgRebalance
 	return mockShift(log, cfg, hasPK, false, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
 }
 

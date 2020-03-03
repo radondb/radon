@@ -1414,6 +1414,7 @@ func TestCtlV1ShardMigrateErr(t *testing.T) {
 		ToDatabase:             "test",
 		ToTable:                "a",
 		RadonURL:               "http://" + proxy.Config().Proxy.PeerAddress,
+		Rebalance:              true,
 		Cleanup:                false,
 		MySQLDump:              "mysqldump",
 		Threads:                16,

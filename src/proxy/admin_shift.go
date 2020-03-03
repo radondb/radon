@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	rebalance = false
 	cleanup   = false
 	checksum  = true
 	mysqlDump = "mysqldump"
@@ -105,6 +106,7 @@ func shiftTableLow(db, srcTable, dstDB, dstTable, user string, spanner *Spanner)
 		ToDatabase:             shiftInfo.ToDatabase,
 		ToTable:                shiftInfo.ToTable,
 		ToFlavor:               toFlavor,
+		Rebalance:              rebalance,
 		Cleanup:                cleanup,
 		MySQLDump:              mysqlDump,
 		Threads:                threads,
