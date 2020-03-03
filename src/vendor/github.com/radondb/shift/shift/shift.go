@@ -190,6 +190,11 @@ func (shift *Shift) prepareTable() error {
 			log.Error("shift.show.[%s].create.table.get.error", cfg.From)
 			return errors.Trace(err)
 		}
+
+		// ToTable add suffix `_migrate`.
+		if cfg.ToFlavor == ToMySQLFlavor || cfg.ToFlavor == ToMariaDBFlavor {
+			cfg.ToTable = cfg.ToTable + "_migrate"
+		}
 		sql = strings.Replace(sql, fmt.Sprintf("CREATE TABLE `%s`", cfg.FromTable), fmt.Sprintf("CREATE TABLE `%s`.`%s`", cfg.ToDatabase, cfg.ToTable), 1)
 		if _, err := toConn.Execute(sql); err != nil {
 			log.Error("shift.create.[%s].table.sql[%s].error", cfg.To, sql)
@@ -197,6 +202,64 @@ func (shift *Shift) prepareTable() error {
 		}
 		log.Info("shift.prepare.table.done...")
 	}
+	return nil
+}
+
+// rename table `toTable_migrate` to `toTable`.
+func (shift *Shift) renameToTable() error {
+	log := shift.log
+	cfg := shift.cfg
+	if cfg.ToFlavor == ToRadonDBFlavor {
+		return nil
+	}
+
+	// To connection.
+	toConn := shift.toPool.Get()
+	if toConn == nil {
+		return errors.Trace(errors.Errorf("shift.to.conn.get.nil"))
+	}
+	defer shift.toPool.Put(toConn)
+
+	// Check the database is not system database and rename it.
+	if _, isSystem := sysDatabases[strings.ToLower(cfg.ToDatabase)]; !isSystem {
+		tb := strings.TrimSuffix(cfg.ToTable, "_migrate")
+		sql := fmt.Sprintf("rename table %s.%s to %s.%s", cfg.ToDatabase, cfg.ToTable, cfg.ToDatabase, tb)
+		if _, err := toConn.Execute(sql); err != nil {
+			log.Error("shift.rename.totable.[%s].sql[%s].error", cfg.To, sql)
+			return errors.Trace(err)
+		}
+		cfg.ToTable = tb
+		log.Info("shift.rename.totable.done...")
+	}
+	return nil
+}
+
+// rename table `fromTable` to `fromTable_cleanup`.
+func (shift *Shift) renameFromTable() error {
+	log := shift.log
+	cfg := shift.cfg
+	if cfg.ToFlavor == ToRadonDBFlavor {
+		return nil
+	}
+
+	// Check the database is not system database and rename it.
+	if _, isSystem := sysDatabases[strings.ToLower(cfg.FromDatabase)]; !isSystem {
+		fromConn, err := client.Connect(cfg.From, cfg.FromUser, cfg.FromPassword, "")
+		if err != nil {
+			log.Error("shift.rename.from.new.connection.error")
+			return errors.Trace(err)
+		}
+
+		sql := fmt.Sprintf("rename table %s.%s to %s.%s_cleanup", cfg.FromDatabase, cfg.FromTable, cfg.FromDatabase, cfg.FromTable)
+		if _, err := fromConn.Execute(sql); err != nil {
+			log.Error("shift.rename.fromtable.[%s].sql[%s].error", cfg.From, sql)
+			return errors.Trace(err)
+		}
+		log.Info("shift.rename.fromtable.done.and.do.close.to.connect...")
+		return fromConn.Close()
+	}
+
+	log.Info("shift.table.is.system.rename.skip...")
 	return nil
 }
 

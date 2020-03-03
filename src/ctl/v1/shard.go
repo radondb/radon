@@ -375,6 +375,7 @@ type migrateParams struct {
 	ToTable    string `json:"to-table"`
 
 	RadonURL               string `json:"radonurl"`
+	Rebalance              bool   `json:"rebalance"`
 	Cleanup                bool   `json:"cleanup"`
 	MySQLDump              string `json:"mysqldump"`
 	Threads                int    `json:"threads"`
@@ -400,6 +401,7 @@ func shardMigrateHandler(proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Requ
 	p := &migrateParams{
 		ToFlavor:               shift.ToMySQLFlavor,
 		RadonURL:               "http://" + proxy.Config().Proxy.PeerAddress,
+		Rebalance:              false,
 		Cleanup:                false,
 		MySQLDump:              "mysqldump",
 		Threads:                16,
@@ -443,6 +445,7 @@ func shardMigrateHandler(proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Requ
 		ToPassword:             p.ToPassword,
 		ToDatabase:             p.ToDatabase,
 		ToTable:                p.ToTable,
+		Rebalance:              p.Rebalance,
 		Cleanup:                p.Cleanup,
 		MySQLDump:              p.MySQLDump,
 		Threads:                p.Threads,

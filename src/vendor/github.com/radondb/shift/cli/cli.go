@@ -34,6 +34,7 @@ var (
 	toTable    = flag.String("to-table", "", "Destination table")
 
 	cleanup                = flag.Bool("cleanup", false, "Cleanup the from table after shifted(defaults false)")
+	rebalance              = flag.Bool("rebalance", false, "Rebalance means a rebalance operation, which from table need cleanup after shifted(default false)")
 	checksum               = flag.Bool("checksum", true, "Checksum the from table and to table after shifted(defaults true)")
 	mysqlDump              = flag.String("mysqldump", "mysqldump", "mysqldump path")
 	threads                = flag.Int("threads", 16, "shift threads num(defaults 16)")
@@ -82,6 +83,7 @@ func main() {
 		ToPassword:             *toPassword,
 		ToDatabase:             *toDatabase,
 		ToTable:                *toTable,
+		Rebalance:              *rebalance,
 		Cleanup:                *cleanup,
 		MySQLDump:              *mysqlDump,
 		Threads:                *threads,

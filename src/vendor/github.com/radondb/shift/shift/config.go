@@ -30,6 +30,7 @@ type Config struct {
 	ToDatabase string
 	ToTable    string
 
+	Rebalance              bool
 	Cleanup                bool
 	MySQLDump              string
 	Threads                int

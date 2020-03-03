@@ -38,9 +38,13 @@ func (shift *Shift) Cleanup() error {
 	if shift.cfg.Cleanup {
 		if shift.allDone.Get() {
 			return shift.cleanupFrom()
-		} else {
-			return shift.cleanupTo()
 		}
+		return shift.cleanupTo()
+	}
+
+	// Rename fromTable.
+	if shift.cfg.Rebalance && shift.allDone.Get() {
+		return shift.renameFromTable()
 	}
 	return nil
 }
