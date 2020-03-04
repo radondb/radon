@@ -1402,13 +1402,12 @@ func TestCtlV1ShardMigrateErr(t *testing.T) {
 		}
 	}
 	p := &migrateParams{
-		ToFlavor:               "mysql",
-		From:                   "127.0.0.1" + from,
+		From:                   from,
 		FromUser:               fromUsr,
 		FromPassword:           fromPasswd,
 		FromDatabase:           "test",
 		FromTable:              "a",
-		To:                     "127.0.0.1" + to,
+		To:                     to,
 		ToUser:                 toUsr,
 		ToPassword:             toPasswd,
 		ToDatabase:             "test",
@@ -1473,6 +1472,14 @@ func TestCtlV1ShardMigrateErr(t *testing.T) {
 		p.ToTable = ""
 		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/shard/migrate", p))
 		recorded.CodeIs(204)
+	}
+
+	// check backend null.
+	{
+		p.ToTable = "a"
+		p.To = "192.168.0.1:3306"
+		recorded := test.RunRequest(t, handler, test.MakeSimpleRequest("POST", "http://localhost/v1/shard/migrate", p))
+		recorded.CodeIs(500)
 	}
 
 	// Set readonly.

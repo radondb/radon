@@ -342,7 +342,6 @@ This api is used to migrate the data from one backend to another.
 Path:    /v1/shard/migrate
 Method:  POST
 Request: {
-			"to-flavor":                 "Destination db flavor, like mysql/mariadb/radondb, default mysql"
 			"from":                      "Source MySQL backend(host:port)",                                   [required]
 			"from-user":                 "MySQL user, must have replication privilege",                       [required]
 			"from-password":             "MySQL user password",                                               [required]

@@ -88,6 +88,7 @@ func (shiftMgr *ShiftManager) NewShiftInstance(shiftInfo *ShiftInfo, typ ShiftTy
 		ToPassword:             shiftInfo.ToPassword,
 		ToDatabase:             shiftInfo.ToDatabase,
 		ToTable:                shiftInfo.ToTable,
+		Rebalance:              shiftInfo.Rebalance,
 		Cleanup:                shiftInfo.Cleanup,
 		MySQLDump:              shiftInfo.MysqlDump,
 		Threads:                shiftInfo.Threads,

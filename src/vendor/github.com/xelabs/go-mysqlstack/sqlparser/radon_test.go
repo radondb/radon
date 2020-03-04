@@ -39,10 +39,6 @@ func TestRadon(t *testing.T) {
 			input:  "radon cleanup",
 			output: "radon cleanup",
 		},
-		{
-			input:  "radon cleanup db.t",
-			output: "radon cleanup db.t",
-		},
 	}
 
 	for _, exp := range validSQL {

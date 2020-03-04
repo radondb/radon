@@ -62,7 +62,9 @@ func (spanner *Spanner) handleRadon(session *driver.Session, query string, node 
 		reshard := NewReshard(log, spanner.scatter, spanner.router, spanner, session.User())
 		reshard.SetHandle(reshard)
 		qr, err = reshard.ReShardTable(database, table, newDatabase, newTable)
-
+	case sqlparser.CleanupStr:
+		cleanup := NewCleanup(log, spanner.scatter, spanner.router, spanner)
+		qr, err = cleanup.Cleanup()
 	default:
 		log.Error("proxy.radon.unsupported[%s]", query)
 		err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query: %v", query)

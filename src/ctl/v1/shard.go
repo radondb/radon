@@ -9,15 +9,16 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"plugins/shiftmanager"
 	"proxy"
 
 	"github.com/ant0ine/go-json-rest/rest"
-	"github.com/radondb/shift/shift"
 	shiftlog "github.com/radondb/shift/xlog"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
@@ -360,8 +361,6 @@ func globalsHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r 
 }
 
 type migrateParams struct {
-	ToFlavor string `json:"to-flavor"`
-
 	From         string `json:"from"`
 	FromUser     string `json:"from-user"`
 	FromPassword string `json:"from-password"`
@@ -388,7 +387,8 @@ type migrateParams struct {
 // Returns:
 // 1. Status:200
 // 2. Status:204
-// 3. Status:500
+// 3. Status:403
+// 4. Status:500
 func ShardMigrateHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFunc {
 	f := func(w rest.ResponseWriter, r *rest.Request) {
 		shardMigrateHandler(proxy, w, r)
@@ -397,9 +397,9 @@ func ShardMigrateHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFunc {
 }
 
 func shardMigrateHandler(proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Request) {
+	scatter := proxy.Scatter()
 	log := shiftlog.NewStdLog(shiftlog.Level(shiftlog.INFO))
 	p := &migrateParams{
-		ToFlavor:               shift.ToMySQLFlavor,
 		RadonURL:               "http://" + proxy.Config().Proxy.PeerAddress,
 		Rebalance:              false,
 		Cleanup:                false,
@@ -423,18 +423,30 @@ func shardMigrateHandler(proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Requ
 	}
 
 	// check args.
-	if len(p.From) == 0 || len(p.FromUser) == 0 || len(p.FromDatabase) == 0 || len(p.FromTable) == 0 ||
-		len(p.To) == 0 || len(p.ToUser) == 0 || len(p.ToDatabase) == 0 || len(p.ToTable) == 0 {
+	if len(p.FromUser) == 0 || len(p.FromDatabase) == 0 || len(p.FromTable) == 0 ||
+		len(p.ToUser) == 0 || len(p.ToDatabase) == 0 || len(p.ToTable) == 0 {
 		log.Error("api.v1.shard.migrate[%+v].error:some param is empty", p)
 		rest.Error(w, "some args are empty", http.StatusNoContent)
 		return
 	}
-	log.Warning(`
-           IMPORTANT: Please check that the shift run completes successfully.
-           At the end of a successful shift run prints "shift.completed.OK!".`)
 
-	cfg := &shift.Config{
-		ToFlavor:               p.ToFlavor,
+	// Check the backend name.
+	var fromBackend, toBackend string
+	backends := scatter.BackendConfigsClone()
+	for _, backend := range backends {
+		if backend.Address == p.From {
+			fromBackend = backend.Name
+		} else if backend.Address == p.To {
+			toBackend = backend.Name
+		}
+	}
+	if fromBackend == "" || toBackend == "" {
+		log.Error("api.v1.shard.migrate.fromBackend[%s].or.toBackend[%s].is.NULL", fromBackend, toBackend)
+		rest.Error(w, "api.v1.shard.migrate.backend.NULL", http.StatusInternalServerError)
+		return
+	}
+
+	cfg := &shiftmanager.ShiftInfo{
 		From:                   p.From,
 		FromUser:               p.FromUser,
 		FromPassword:           p.FromPassword,
@@ -447,23 +459,26 @@ func shardMigrateHandler(proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Requ
 		ToTable:                p.ToTable,
 		Rebalance:              p.Rebalance,
 		Cleanup:                p.Cleanup,
-		MySQLDump:              p.MySQLDump,
+		MysqlDump:              p.MySQLDump,
 		Threads:                p.Threads,
-		Behinds:                p.Behinds,
+		PosBehinds:             p.Behinds,
 		RadonURL:               p.RadonURL,
 		Checksum:               p.Checksum,
 		WaitTimeBeforeChecksum: p.WaitTimeBeforeChecksum,
 	}
-	log.Info("shift.cfg:%+v", cfg)
 
-	shift := shift.NewShift(log, cfg)
-	if err := shift.Start(); err != nil {
+	shiftMgr := proxy.Plugins().PlugShiftMgr()
+	shift, _ := shiftMgr.NewShiftInstance(cfg, shiftmanager.ShiftTypeRebalance)
+
+	key := fmt.Sprintf("`%s`.`%s`_%s", p.ToDatabase, p.ToTable, toBackend)
+	err = shiftMgr.StartShiftInstance(key, shift, shiftmanager.ShiftTypeRebalance)
+	if err != nil {
 		log.Error("shift.start.error:%+v", err)
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = shift.WaitFinish()
+	err = shiftMgr.WaitInstanceFinish(key)
 	if err != nil {
 		log.Error("shift.wait.finish.error:%+v", err)
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
