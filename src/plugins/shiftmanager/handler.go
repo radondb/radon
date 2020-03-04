@@ -60,6 +60,7 @@ type ShiftInfo struct {
 	ToDatabase string
 	ToTable    string
 
+	Rebalance              bool
 	Cleanup                bool
 	Checksum               bool
 	MysqlDump              string

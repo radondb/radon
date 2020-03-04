@@ -163,6 +163,11 @@ func (p *Proxy) Syncer() *syncer.Syncer {
 	return p.syncer
 }
 
+// Plugins return the plugins.
+func (p *Proxy) Plugins() *plugins.Plugin {
+	return p.plugins
+}
+
 // Sessions returns the sessions.
 func (p *Proxy) Sessions() *Sessions {
 	return p.sessions

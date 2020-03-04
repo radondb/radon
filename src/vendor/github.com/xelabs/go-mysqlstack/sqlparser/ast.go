@@ -3507,9 +3507,6 @@ func (node *Radon) Format(buf *TrackedBuffer) {
 		buf.Myprintf("radon %s %v to %v", node.Action, node.Table, node.NewName)
 	case CleanupStr:
 		buf.Myprintf("radon %s", node.Action)
-		if node.Table.Name.String() != "" {
-			buf.Myprintf(" %v", node.Table)
-		}
 	}
 }
 

@@ -502,9 +502,6 @@ func forceEOF(yylex interface{}) {
 	RESHARD
 	CLEANUP
 
-%type	<tableName>
-	cleanup_op
-
 %type	<statement>
 	command
 
@@ -1942,18 +1939,9 @@ radon_statement:
 	{
 		$$ = &Radon{Action: ReshardStr, Table: $3, NewName: $5}
 	}
-|   RADON CLEANUP cleanup_op force_eof
+|   RADON CLEANUP force_eof
     {
-		$$ = &Radon{Action: CleanupStr, Table: $3}
-	}
-
-cleanup_op:
-	{
-		$$ = TableName{}
-	}
-| table_name
-	{
-		$$ = $1
+		$$ = &Radon{Action: CleanupStr}
 	}
 
 show_statement:

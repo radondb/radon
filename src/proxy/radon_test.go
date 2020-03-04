@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/driver"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -47,5 +48,26 @@ func TestErrorParams(t *testing.T) {
 		query := "radon reshard db.tb to db2.t2"
 		_, err = client.FetchAll(query, -1)
 		assert.NotNil(t, err)
+	}
+}
+
+func TestRadonCleanup(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedb, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedb.AddQueryPattern("show databases", &sqltypes.Result{})
+	}
+
+	// cleanup.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "radon cleanup"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
 	}
 }

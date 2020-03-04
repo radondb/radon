@@ -115,6 +115,12 @@ func TestProxy1(t *testing.T) {
 		assert.NotNil(t, syncer)
 	}
 
+	// Plugins.
+	{
+		plugins := proxy.Plugins()
+		assert.NotNil(t, plugins)
+	}
+
 	// PeerAddress
 	{
 		addr := proxy.PeerAddress()
