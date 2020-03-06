@@ -776,6 +776,7 @@ func forceEOF(yylex interface{}) {
 	charset_option
 	tabletype_option
 	auto_opt
+	parts_num_opt
 
 %type	<str>
 	charset_opt
@@ -1034,6 +1035,20 @@ partition_definition:
 		$$ = &PartitionDefinition{Backend: string($2), Row: $5}
 	}
 
+parts_num_opt:
+	/* empty */
+	{
+		$$ = nil
+	}
+|	PARTITIONS INTEGRAL
+	{
+		if string($2) == "0" {
+			yylex.Error("Number of partitions must be a positive integer")
+			return 1
+		}
+		$$ = NewIntVal($2)
+	}
+
 create_statement:
 	create_table_prefix table_spec
 	{
@@ -1041,11 +1056,12 @@ create_statement:
 		$1.TableSpec = $2
 		$$ = $1
 	}
-|	create_table_prefix table_spec PARTITION BY HASH openb col_id closeb ddl_force_eof
+|	create_table_prefix table_spec PARTITION BY HASH openb col_id closeb parts_num_opt ddl_force_eof
 	{
 		$1.Action = CreateTableStr
 		$1.TableSpec = $2
 		$1.PartitionName = $7.String()
+		$1.PartitionNum = $9
 		if $2.Options.Type == GlobalTableType || $2.Options.Type == SingleTableType {
 			yylex.Error("SINGLE or GLOBAL should not be used simultaneously with PARTITION")
 			return 1

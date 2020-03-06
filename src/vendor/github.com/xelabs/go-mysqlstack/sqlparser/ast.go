@@ -580,6 +580,7 @@ type DDL struct {
 
 	// Partition options.
 	PartitionOptions PartitionOptions
+	PartitionNum     *SQLVal
 }
 
 // DDL strings.
