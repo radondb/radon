@@ -923,6 +923,13 @@ func TestDDL1ParseError(t *testing.T) {
 				") partition by hash(id)",
 			output: "syntax error at position 26 near 'integer'",
 		},
+		{
+			input: "create table t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") partition by hash(id) partitions 0",
+			output: "Number of partitions must be a positive integer at position 97 near '0'",
+		},
 		{ // Duplicate keyword
 			input: "create table test.t (\n" +
 				"	`id` int primary key,\n" +

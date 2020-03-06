@@ -1166,7 +1166,10 @@ func TestProxyDDLGlobalSingleNormalList(t *testing.T) {
 	querys := []string{
 		"CREATE TABLE t1(a int primary key,b int )",
 		"CREATE TABLE t2(a int primary key,b int ) GLOBAL",
+		"CREATE TABLE t2(a int primary key,b int ) GLOBAL",
 		"CREATE TABLE t4(a int primary key,b int ) partition by hash(a)",
+		"CREATE TABLE t4(a int primary key,b int ) partition by hash(a)",
+		"CREATE TABLE t3(a int primary key,b int ) SINGLE",
 		"CREATE TABLE t3(a int primary key,b int ) SINGLE",
 		"CREATE TABLE t1(a int ,b int )",
 		"CREATE TABLE t5(a int ,b int, primary key(a))",
@@ -1188,8 +1191,11 @@ func TestProxyDDLGlobalSingleNormalList(t *testing.T) {
 	results := []string{
 		"",
 		"",
+		"router.add.db[test].table[t2].exists (errno 1105) (sqlstate HY000)",
 		"",
+		"router.add.db[test].table[t4].exists (errno 1105) (sqlstate HY000)",
 		"",
+		"router.add.db[test].table[t3].exists (errno 1105) (sqlstate HY000)",
 		"The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication (errno 1105) (sqlstate HY000)",
 		"",
 		"The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication (errno 1105) (sqlstate HY000)",

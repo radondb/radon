@@ -226,23 +226,6 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		// Check engine.
 		checkEngine(ddl)
 
-		switch ddl.TableSpec.Options.Type {
-		case sqlparser.PartitionTableHash, sqlparser.NormalTableType:
-			if shardKey, err = tryGetShardKey(ddl); err != nil {
-				return nil, err
-			}
-			tableType = router.TableTypePartitionHash
-		case sqlparser.PartitionTableList:
-			if shardKey, err = tryGetShardKey(ddl); err != nil {
-				return nil, err
-			}
-			tableType = router.TableTypePartitionList
-		case sqlparser.GlobalTableType:
-			tableType = router.TableTypeGlobal
-		case sqlparser.SingleTableType:
-			tableType = router.TableTypeSingle
-		}
-
 		autoinc, err := autoincrement.GetAutoIncrement(node)
 		if err != nil {
 			return nil, err
@@ -251,8 +234,32 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 			AutoIncrement: autoinc,
 		}
 
-		switch tableType {
-		case router.TableTypeSingle:
+		switch ddl.TableSpec.Options.Type {
+		case sqlparser.PartitionTableHash, sqlparser.NormalTableType:
+			if shardKey, err = tryGetShardKey(ddl); err != nil {
+				return nil, err
+			}
+
+			tableType = router.TableTypePartitionHash
+			if err := route.CreateHashTable(database, table, shardKey, tableType, backends, ddl.PartitionNum, extra); err != nil {
+				return nil, err
+			}
+		case sqlparser.PartitionTableList:
+			if shardKey, err = tryGetShardKey(ddl); err != nil {
+				return nil, err
+			}
+
+			tableType = router.TableTypePartitionList
+			if err := route.CreateListTable(database, table, shardKey, tableType, ddl.PartitionOptions, extra); err != nil {
+				return nil, err
+			}
+		case sqlparser.GlobalTableType:
+			tableType = router.TableTypeGlobal
+			if err := route.CreateNonPartTable(database, table, tableType, backends, extra); err != nil {
+				return nil, err
+			}
+		case sqlparser.SingleTableType:
+			tableType = router.TableTypeSingle
 			if ddl.BackendName != "" {
 				// TODO(andy): distributed by a list of backends
 				if isExist := scatter.CheckBackend(ddl.BackendName); !isExist {
@@ -261,22 +268,13 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 				}
 
 				assignedBackends := []string{ddl.BackendName}
-				if err := route.CreateTable(database, table, shardKey, tableType, assignedBackends, extra); err != nil {
+				if err := route.CreateNonPartTable(database, table, tableType, assignedBackends, extra); err != nil {
 					return nil, err
 				}
 			} else {
-				if err := route.CreateTable(database, table, shardKey, tableType, backends, extra); err != nil {
+				if err := route.CreateNonPartTable(database, table, tableType, backends, extra); err != nil {
 					return nil, err
 				}
-			}
-		case router.TableTypePartitionList:
-			if err := route.CreateListTable(database, table, shardKey, tableType, ddl.PartitionOptions, extra); err != nil {
-				return nil, err
-			}
-
-		default:
-			if err := route.CreateTable(database, table, shardKey, tableType, backends, extra); err != nil {
-				return nil, err
 			}
 		}
 

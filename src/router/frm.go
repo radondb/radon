@@ -202,15 +202,14 @@ func (r *Router) CheckTable(database string, tableName string) (isExist bool, er
 	return true, nil
 }
 
-// CreateTable used to add a table to router and flush the schema to disk.
+// CreateNonPartTable used to add a non-partitioned table to router and flush the schema to disk.
 // Lock.
-func (r *Router) CreateTable(db, table, shardKey string, tableType string, backends []string, extra *Extra) error {
+func (r *Router) CreateNonPartTable(db, table, tableType string, backends []string, extra *Extra) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	var err error
 	var tableConf *config.TableConfig
-	log := r.log
 
 	switch tableType {
 	case TableTypeGlobal:
@@ -221,35 +220,41 @@ func (r *Router) CreateTable(db, table, shardKey string, tableType string, backe
 		if tableConf, err = r.SingleUniform(table, backends); err != nil {
 			return err
 		}
-	case TableTypePartitionHash:
-		if tableConf, err = r.HashUniform(table, shardKey, backends); err != nil {
-			return err
-		}
 	default:
-		if tableConf, err = r.HashUniform(table, shardKey, backends); err != nil {
-			return err
-		}
+		err := errors.Errorf("tableType is unsupported: %s", tableType)
+		return err
 	}
 
 	if extra != nil {
 		tableConf.AutoIncrement = extra.AutoIncrement
 	}
 
-	// add config to router.
-	if err = r.addTable(db, tableConf); err != nil {
-		log.Error("frm.create.add.route.error:%v", err)
-		return err
-	}
-	if err = r.writeTableFrmData(db, table, tableConf); err != nil {
-		log.Error("frm.create.table[db:%v, table:%v].file.error:%+v", db, tableConf.Name, err)
+	return r.createTable(db, table, tableConf)
+}
+
+// CreateHashTable used to add a hash table to router and flush the schema to disk.
+func (r *Router) CreateHashTable(db, table, shardKey string, tableType string, backends []string, partitionNum *sqlparser.SQLVal, extra *Extra) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var err error
+	var tableConf *config.TableConfig
+
+	switch tableType {
+	case TableTypePartitionHash:
+		if tableConf, err = r.HashUniform(table, shardKey, backends, partitionNum); err != nil {
+			return err
+		}
+	default:
+		err := errors.Errorf("tableType is unsupported: %s", tableType)
 		return err
 	}
 
-	if err = config.UpdateVersion(r.metadir); err != nil {
-		log.Panicf("frm.create.table.update.version.error:%v", err)
-		return err
+	if extra != nil {
+		tableConf.AutoIncrement = extra.AutoIncrement
 	}
-	return nil
+
+	return r.createTable(db, table, tableConf)
 }
 
 // CreateListTable used to add a list table to router and flush the schema to disk.
@@ -260,7 +265,6 @@ func (r *Router) CreateListTable(db, table, shardKey string, tableType string,
 
 	var err error
 	var tableConf *config.TableConfig
-	log := r.log
 
 	switch tableType {
 	case TableTypePartitionList:
@@ -277,25 +281,12 @@ func (r *Router) CreateListTable(db, table, shardKey string, tableType string,
 		tableConf.AutoIncrement = extra.AutoIncrement
 	}
 
-	// add config to router.
-	if err = r.addTable(db, tableConf); err != nil {
-		log.Error("frm.create.add.route.error:%v", err)
-		return err
-	}
-	if err = r.writeTableFrmData(db, table, tableConf); err != nil {
-		log.Error("frm.create.table[db:%v, table:%v].file.error:%+v", db, tableConf.Name, err)
-		return err
-	}
-
-	if err = config.UpdateVersion(r.metadir); err != nil {
-		log.Panicf("frm.create.table.update.version.error:%v", err)
-		return err
-	}
-	return nil
+	return r.createTable(db, table, tableConf)
 }
 
 func (r *Router) createTable(db, table string, tableConf *config.TableConfig) error {
 	var err error
+	log := r.log
 
 	// add config to router.
 	if err = r.addTable(db, tableConf); err != nil {

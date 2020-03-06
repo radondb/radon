@@ -234,7 +234,7 @@ func (attach *Attach) addAttachHandler(log *xlog.Log, scatter *backend.Scatter, 
 				return err
 			}
 
-			err = route.CreateTable(db, table, "", router.TableTypeSingle, attachBackend, nil)
+			err = route.CreateNonPartTable(db, table, router.TableTypeSingle, attachBackend, nil)
 			if err != nil {
 				return err
 			}

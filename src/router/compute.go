@@ -11,6 +11,7 @@ package router
 import (
 	"fmt"
 	"sort"
+	"strconv"
 
 	"config"
 
@@ -19,8 +20,12 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
+var (
+	partitionNums = []int{8, 16, 32, 64}
+)
+
 // HashUniform used to uniform the hash slots to backends.
-func (r *Router) HashUniform(table, shardkey string, backends []string) (*config.TableConfig, error) {
+func (r *Router) HashUniform(table, shardkey string, backends []string, partitionNum *sqlparser.SQLVal) (*config.TableConfig, error) {
 	if table == "" {
 		return nil, errors.New("table.cant.be.null")
 	}
@@ -30,6 +35,25 @@ func (r *Router) HashUniform(table, shardkey string, backends []string) (*config
 
 	slots := r.conf.Slots
 	blocks := r.conf.Blocks
+	if partitionNum != nil {
+		num, err := strconv.Atoi(common.BytesToString(partitionNum.Val))
+		if err != nil {
+			return nil, err
+		}
+
+		exists := false
+		for _, partNum := range partitionNums {
+			if num == partNum {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			return nil, errors.New("number.of.partitions.must.be.one.of.the.list.[8, 16, 32, 64]")
+		}
+		blocks = slots / num
+	}
+
 	nums := len(backends)
 	if nums == 0 {
 		return nil, errors.New("router.compute.backends.is.null")
@@ -42,8 +66,8 @@ func (r *Router) HashUniform(table, shardkey string, backends []string) (*config
 	sort.Strings(backends)
 	tableConf := &config.TableConfig{
 		Name:       table,
-		Slots:      r.conf.Slots,
-		Blocks:     r.conf.Blocks,
+		Slots:      slots,
+		Blocks:     blocks,
 		ShardKey:   shardkey,
 		ShardType:  methodTypeHash,
 		Partitions: make([]*config.PartitionConfig, 0, 16),

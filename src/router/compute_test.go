@@ -192,7 +192,7 @@ func TestRouterCompute(t *testing.T) {
 		"192.168.0.4",
 		"192.168.0.5",
 	}
-	got, err := router.HashUniform("t1", "id", backends)
+	got, err := router.HashUniform("t1", "id", backends, sqlparser.NewIntVal([]byte("32")))
 	assert.Nil(t, err)
 	//config.WriteConfig("/tmp/c.json", got)
 	want, err := config.ReadTableConfig(datas)
@@ -208,7 +208,7 @@ func TestRouterComputeHashError(t *testing.T) {
 	{
 		assert.NotNil(t, router)
 		backends := []string{}
-		_, err := router.HashUniform("t1", "id", backends)
+		_, err := router.HashUniform("t1", "id", backends, nil)
 		assert.NotNil(t, err)
 	}
 	// backends is too manys.
@@ -218,7 +218,7 @@ func TestRouterComputeHashError(t *testing.T) {
 		for i := 0; i < router.conf.Slots; i++ {
 			backends = append(backends, fmt.Sprintf("%d", i))
 		}
-		_, err := router.HashUniform("t1", "id", backends)
+		_, err := router.HashUniform("t1", "id", backends, nil)
 		assert.NotNil(t, err)
 	}
 }
@@ -232,7 +232,7 @@ func TestRouterComputeHashError1(t *testing.T) {
 	{
 		assert.NotNil(t, router)
 		backends := []string{"backend1"}
-		_, err := router.HashUniform("", "id", backends)
+		_, err := router.HashUniform("", "id", backends, nil)
 		assert.NotNil(t, err)
 	}
 
@@ -240,7 +240,23 @@ func TestRouterComputeHashError1(t *testing.T) {
 	{
 		assert.NotNil(t, router)
 		backends := []string{"backend1"}
-		_, err := router.HashUniform("t1", "", backends)
+		_, err := router.HashUniform("t1", "", backends, nil)
+		assert.NotNil(t, err)
+	}
+
+	// PartitionNum invaild.
+	{
+		assert.NotNil(t, router)
+		backends := []string{"backend1"}
+		_, err := router.HashUniform("t1", "id", backends, sqlparser.NewIntVal([]byte("4")))
+		assert.NotNil(t, err)
+	}
+
+	// PartitionNum type invaild.
+	{
+		assert.NotNil(t, router)
+		backends := []string{"backend1"}
+		_, err := router.HashUniform("t1", "id", backends, sqlparser.NewIntVal([]byte("1.2")))
 		assert.NotNil(t, err)
 	}
 }

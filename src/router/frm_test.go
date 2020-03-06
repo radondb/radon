@@ -50,7 +50,7 @@ func TestFrmTable(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t1", "id", TableTypePartitionHash, backends, nil, &Extra{&config.AutoIncrement{"id"}})
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
@@ -59,7 +59,7 @@ func TestFrmTable(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t2", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t2", "id", TableTypePartitionHash, backends, sqlparser.NewIntVal([]byte("16")), nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
@@ -67,21 +67,21 @@ func TestFrmTable(t *testing.T) {
 	// Add 2.
 	{
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t2", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t2", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.NotNil(t, err)
 	}
 
 	// Add global table.
 	{
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t3", "", TableTypeGlobal, backends, nil)
+		err := router.CreateNonPartTable("test", "t3", TableTypeGlobal, backends, &Extra{&config.AutoIncrement{"id"}})
 		assert.Nil(t, err)
 	}
 
 	// Add single table.
 	{
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t3_single", "", TableTypeSingle, backends, nil)
+		err := router.CreateNonPartTable("test", "t3_single", TableTypeSingle, backends, nil)
 		assert.Nil(t, err)
 	}
 
@@ -105,7 +105,7 @@ func TestFrmTable(t *testing.T) {
 	// Add partition table.
 	{
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t3_partition", "shardkey1", TableTypePartitionHash, backends, nil)
+		err := router.CreateHashTable("test", "t3_partition", "shardkey1", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 	}
 
@@ -146,21 +146,42 @@ func TestFrmTableError(t *testing.T) {
 	// Add 1.
 	{
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("", "t1", "id", "", backends, nil)
+		err := router.CreateHashTable("", "t1", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.NotNil(t, err)
 	}
 
 	// Add 2.
 	{
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "", "id", TableTypePartitionHash, backends, nil, nil)
+		assert.NotNil(t, err)
+	}
+
+	// unsupported table type.
+	{
+		backends := []string{"backend1", "backend2"}
+		err := router.CreateHashTable("test", "t1", "id", TableTypeSingle, backends, nil, nil)
+		assert.NotNil(t, err)
+	}
+
+	// unsupported table type.
+	{
+		backends := []string{"backend1", "backend2"}
+		err := router.CreateNonPartTable("test", "t1", TableTypePartitionHash, backends, nil)
 		assert.NotNil(t, err)
 	}
 
 	// Add single table.
 	{
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "", "", TableTypeSingle, backends, nil)
+		err := router.CreateNonPartTable("test", "", TableTypeSingle, backends, nil)
+		assert.NotNil(t, err)
+	}
+
+	// Add global table.
+	{
+		backends := []string{"backend1", "backend2"}
+		err := router.CreateNonPartTable("test", "", TableTypeGlobal, backends, nil)
 		assert.NotNil(t, err)
 	}
 
@@ -174,7 +195,7 @@ func TestFrmTableError(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t1", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
@@ -198,7 +219,7 @@ func TestFrmDropDatabase(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t1", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
@@ -207,7 +228,7 @@ func TestFrmDropDatabase(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t2", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t2", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
@@ -232,7 +253,7 @@ func TestFrmLoad(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t1", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
@@ -241,7 +262,7 @@ func TestFrmLoad(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t2", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t2", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
@@ -295,7 +316,7 @@ func TestFrmReadFileBroken(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t1", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 		// Make file broken.
@@ -335,7 +356,7 @@ func TestFrmDatabaseNoTables(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test1", "t1", "id", "", backends, nil)
+		err := router.CreateHashTable("test1", "t1", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test1", "t1"))
 	}
@@ -370,7 +391,7 @@ func TestFrmTableRename(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t1", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
@@ -379,7 +400,7 @@ func TestFrmTableRename(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t2", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t2", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
@@ -405,7 +426,7 @@ func TestFrmTableRenameError(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t1", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
@@ -414,7 +435,7 @@ func TestFrmTableRenameError(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2"}
-		err := router.CreateTable("test", "t2", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t2", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t2"))
 	}
@@ -461,7 +482,7 @@ func TestFrmCheckDatabase(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t1", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
@@ -481,7 +502,7 @@ func TestFrmCheckTable(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t1", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
@@ -505,7 +526,7 @@ func TestFrmTableCreateListTable(t *testing.T) {
 	{
 		tmpRouter := router
 		backends := []string{"backend1", "backend2", "backend3"}
-		err := router.CreateTable("test", "t1", "id", "", backends, nil)
+		err := router.CreateHashTable("test", "t1", "id", TableTypePartitionHash, backends, nil, nil)
 		assert.Nil(t, err)
 		assert.True(t, checkFileExistsForTest(tmpRouter, "test", "t1"))
 	}
