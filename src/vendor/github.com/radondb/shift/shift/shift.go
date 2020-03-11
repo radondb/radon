@@ -11,6 +11,7 @@ package shift
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/radondb/shift/xbase/sync2"
@@ -40,9 +41,10 @@ type Shift struct {
 	done       chan bool
 	allDone    sync2.AtomicBool
 	atomicBool sync2.AtomicBool // true: canal run normal; false: canal get some exception
+	stopSignal chan struct{}
 }
 
-func NewShift(log *xlog.Log, cfg *Config) *Shift {
+func NewShift(log *xlog.Log, cfg *Config) ShiftHandler {
 	log.Info("shift.cfg:%#v", cfg)
 	return &Shift{
 		log:           log,
@@ -51,6 +53,7 @@ func NewShift(log *xlog.Log, cfg *Config) *Shift {
 		err:           make(chan error),
 		behindsTicker: time.NewTicker(time.Duration(behindsDuration) * time.Millisecond),
 		atomicBool:    sync2.NewAtomicBool(true),
+		stopSignal:    make(chan struct{}),
 	}
 }
 
@@ -82,7 +85,7 @@ func (shift *Shift) WaitFinish() error {
 	// No matter shift table success or not, we do close func
 	closeWithDone := func() error {
 		if err := shift.close(); err != nil {
-			log.Error("shift.do.close.failed:%+v", err)
+			log.Error("shift.do.close.failed.when.shift.completed.:%+v", err)
 			return err
 		} else {
 			log.Info("shift.completed.OK!")
@@ -91,10 +94,17 @@ func (shift *Shift) WaitFinish() error {
 	}
 	closeWithError := func() error {
 		if err := shift.close(); err != nil {
-			log.Error("shift.do.close.failed:%+v", err)
+			log.Error("shift.do.close.failed.when.some.errors.happened.during.shift:%+v", err)
 			return err
 		}
 		return nil
+	}
+	closeWithStop := func() error {
+		if err := shift.close(); err != nil {
+			log.Error("shift.do.close.failed.during.stop.shift:%+v", err)
+			return err
+		}
+		return fmt.Errorf("shift.get.stopped.signal.and.has.been.stopped.now")
 	}
 
 	select {
@@ -102,18 +112,38 @@ func (shift *Shift) WaitFinish() error {
 		log.Info("shift.table.done.and.do.close.work.before.return.")
 		return closeWithDone()
 	case err := <-shift.getErrorCh():
-		log.Error("shift.table.got.error.and.do.close.work.before.return:%+v", err)
+		log.Error("shift.table.get.error.and.do.close.work.before.return:%+v", err)
 		_ = closeWithError()
 		return err
+	case <-shift.getStopSignal():
+		log.Info("shift.table.get.stop.signal.and.do.close.work.before.return.")
+		// If we get stop signal, we should start a thead to receive error signal,
+		// when we do closeWithStop, canal will get error and shift will then get anoter
+		// signal err, we should receive it otherwise program will be blocked.
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = <-shift.getErrorCh()
+		}()
+		return closeWithStop()
 	}
 }
 
-func (shift *Shift) GetCanalStatus() bool {
+// getCanalStatus used to get status when canal is running
+func (shift *Shift) getCanalStatus() bool {
 	return shift.atomicBool.Get()
 }
 
-func (shift *Shift) SetCanalStatus(b bool) {
+// setCanalStatus used to set status when canal is running
+func (shift *Shift) setCanalStatus(b bool) {
 	shift.atomicBool.Set(b)
+}
+
+// SetStopSignal used to set a stop signal to shift
+func (shift *Shift) SetStopSignal() {
+	close(shift.stopSignal)
 }
 
 func (shift *Shift) prepareConnection() error {
@@ -226,7 +256,7 @@ func (shift *Shift) prepareCanal() error {
 	go func() {
 		if err := canal.Run(); err != nil {
 			if !shift.allDone.Get() {
-				shift.SetCanalStatus(false)
+				shift.setCanalStatus(false)
 				log.Error("shift.canal.running.with.error")
 				shift.err <- errors.Trace(err)
 			} else {
@@ -388,7 +418,7 @@ func (shift *Shift) behindsCheckStart() error {
 				break
 			}
 			// If canal get something wrong during dumping or syncing data, we should log error
-			if s.GetCanalStatus() {
+			if s.getCanalStatus() {
 				masterPos, err := s.masterPosition()
 				if err != nil {
 					shift.err <- errors.Trace(err)
@@ -443,4 +473,8 @@ func (shift *Shift) getDoneCh() chan bool {
 
 func (shift *Shift) getErrorCh() chan error {
 	return shift.err
+}
+
+func (shift *Shift) getStopSignal() <-chan struct{} {
+	return shift.stopSignal
 }

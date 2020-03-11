@@ -131,7 +131,7 @@ var (
 
 func mockShift(log *xlog.Log, cfg *Config, hasPK bool, initData bool, readonlyHanler mockHandler, shardshiftHandler mockHandler, throttleHandler mockHandler) (*Shift, func()) {
 	h := mockHttp(log, restfulPort, readonlyHanler, shardshiftHandler, throttleHandler)
-	shift := NewShift(log, cfg)
+	shift, _ := NewShift(log, cfg).(*Shift)
 
 	// Prepare connections.
 	{

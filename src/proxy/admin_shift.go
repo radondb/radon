@@ -116,7 +116,7 @@ func shiftTableLow(db, srcTable, dstDB, dstTable, user string, spanner *Spanner)
 
 	log.Info("shift.cfg:%+v", cfg)
 
-	shift := shift.NewShift(log, cfg)
+	shift := shift.NewShift(log, cfg).(*shift.Shift)
 	if err := shift.Start(); err != nil {
 		log.Error("shift.start.error:%+v", err)
 		return err
