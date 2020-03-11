@@ -70,6 +70,7 @@ testplugins:
 	go test -v plugins
 	go test -v plugins/autoincrement
 	go test -v plugins/privilege
+	go test -v plugins/shiftmanager
 testmysqlstack:
 	cd src/vendor/github.com/xelabs/go-mysqlstack&&make test
 
@@ -92,7 +93,7 @@ allpkgs =	xbase\
 			audit\
 			syncer\
 			monitor\
-			plugins
+			plugins/...
 coverage:
 	go build -v -o bin/gotestcover \
 	src/vendor/github.com/pierrre/gotestcover/*.go;

@@ -51,7 +51,7 @@ func assertChecksumNotEqual(t *testing.T, shift *Shift) {
 }
 
 func TestShiftInsert(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShift(log, true)
 	defer cleanup()
 
@@ -92,7 +92,7 @@ func TestShiftInsert(t *testing.T) {
 
 /*
 func TestShiftInsertJson(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShift(log, true)
 	defer cleanup()
 
@@ -120,7 +120,7 @@ func TestShiftInsertJson(t *testing.T) {
 */
 
 func TestShiftDelete(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShift(log, true)
 	defer cleanup()
 
@@ -214,7 +214,7 @@ func TestShiftDelete(t *testing.T) {
 }
 
 func TestShiftDeleteWithoutPK(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShift(log, false)
 	defer cleanup()
 
@@ -308,7 +308,7 @@ func TestShiftDeleteWithoutPK(t *testing.T) {
 }
 
 func TestShiftUpdate(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShift(log, true)
 	defer cleanup()
 
@@ -401,7 +401,7 @@ func TestShiftUpdate(t *testing.T) {
 }
 
 func TestShiftUpdateWithoutPK(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShift(log, false)
 	defer cleanup()
 
@@ -494,7 +494,7 @@ func TestShiftUpdateWithoutPK(t *testing.T) {
 }
 
 func TestShiftReplace(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShift(log, true)
 	defer cleanup()
 
@@ -531,7 +531,7 @@ func TestShiftReplace(t *testing.T) {
 }
 
 func TestShiftIntegerUnsigned(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShift(log, false)
 	defer cleanup()
 
@@ -571,7 +571,7 @@ func TestShiftIntegerUnsigned(t *testing.T) {
 }
 
 func TestShiftXACommit(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShiftXa(log, true)
 	defer cleanup()
 
@@ -680,7 +680,7 @@ func TestShiftXACommit(t *testing.T) {
 /*
 // This test will be fail when shift tables
 func TestShiftXARollback(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShiftXa(log, true)
 	defer cleanup()
 
@@ -801,7 +801,7 @@ func TestShiftXARollback(t *testing.T) {
 */
 
 func TestShiftInsertWithDump(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShiftWithData(log, true)
 	defer cleanup()
 
@@ -841,7 +841,7 @@ func TestShiftInsertWithDump(t *testing.T) {
 }
 
 func TestShiftChecksumTable(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShift(log, false)
 	defer cleanup()
 
@@ -880,7 +880,7 @@ func TestShiftChecksumTable(t *testing.T) {
 }
 
 func TestShiftMySQLTable(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShiftMysqlTable(log, false)
 	defer cleanup()
 
@@ -901,7 +901,7 @@ func TestShiftMySQLTable(t *testing.T) {
 }
 
 func TestShiftMySQLTableWithDatas(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShiftMysqlTableWithData(log, false)
 	defer cleanup()
 
@@ -912,7 +912,7 @@ func TestShiftMySQLTableWithDatas(t *testing.T) {
 }
 
 func TestShiftWithCleanup(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShiftWithCleanup(log, true)
 	defer cleanup()
 
@@ -994,7 +994,7 @@ func TestShiftWithRebalance(t *testing.T) {
 // Now we doesn`t support ddl
 /*
 func TestShiftDDLEvent(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShiftDDL(log, true)
 	defer cleanup()
 	fromConn := shift.fromPool.Get()
@@ -1073,7 +1073,7 @@ func TestShiftDDLEvent(t *testing.T) {
 */
 
 func TestShiftWithRadonReadonlyError(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShiftWithRadonReadonlyError(log, true)
 	defer cleanup()
 
@@ -1093,7 +1093,7 @@ func TestShiftWithRadonReadonlyError(t *testing.T) {
 }
 
 func TestShiftWithRadonShardShiftError(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShiftWithRadonShardRuleError(log, true)
 	defer cleanup()
 
@@ -1117,8 +1117,8 @@ func TestShiftWithRadonShardShiftError(t *testing.T) {
 }
 
 func TestShiftStart(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
-	shift := NewShift(log, mockCfg)
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	shift, _ := NewShift(log, mockCfg).(*Shift)
 	defer shift.close()
 
 	err := shift.Start()
@@ -1126,7 +1126,7 @@ func TestShiftStart(t *testing.T) {
 }
 
 func TestShiftRadonThrottle(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	shift, cleanup := MockShift(log, true)
 	defer cleanup()
 	shift.cfg.Behinds = 0
@@ -1155,8 +1155,8 @@ func TestShiftRadonThrottle(t *testing.T) {
 
 // Fix bug for issue #4
 func TestShiftCanalClose(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
-	shift := NewShift(log, mockCfg)
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	shift, _ := NewShift(log, mockCfg).(*Shift)
 	// Replace time ticker every 5s to 1s, 5s is to long for us to test
 	shift.behindsTicker = time.NewTicker(time.Duration(1000) * time.Millisecond)
 	h := mockHttp(log, restfulPort, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
@@ -1264,7 +1264,7 @@ func TestShiftCanalClose(t *testing.T) {
 
 // Fix bug for issue #14
 func TestShiftParseBOM(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 
 	fromPool, errfrom := NewPool(log, 4, mockCfg.From, mockCfg.FromUser, mockCfg.FromPassword)
 	assert.Nil(t, errfrom)
@@ -1369,7 +1369,7 @@ func TestShiftParseBOM(t *testing.T) {
 
 	// shift table normal
 	{
-		shift := NewShift(log, mockCfg)
+		shift, _ := NewShift(log, mockCfg).(*Shift)
 		h := mockHttp(log, restfulPort, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
 
 		shift.cfg.FromDatabase = "DTtest"
@@ -1390,7 +1390,7 @@ func TestShiftParseBOM(t *testing.T) {
 
 	// shift table test_geo
 	{
-		shift := NewShift(log, mockCfg)
+		shift, _ := NewShift(log, mockCfg).(*Shift)
 		h := mockHttp(log, restfulPort, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
 
 		shift.cfg.FromDatabase = "DTtest"
@@ -1411,7 +1411,7 @@ func TestShiftParseBOM(t *testing.T) {
 
 	// shift table test_parse_time
 	{
-		shift := NewShift(log, mockCfg)
+		shift, _ := NewShift(log, mockCfg).(*Shift)
 		h := mockHttp(log, restfulPort, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
 
 		shift.cfg.FromDatabase = "DTtest"
@@ -1433,8 +1433,8 @@ func TestShiftParseBOM(t *testing.T) {
 
 // This test is also suit for issue https://github.com/radondb/radon/issues/556
 func TestDataRaceOnCanalStatus(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
-	shift := NewShift(log, mockCfg)
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	shift, _ := NewShift(log, mockCfg).(*Shift)
 
 	// The detection is opportunistically, but we want exit normally
 	// on run out of a million times.
@@ -1443,7 +1443,7 @@ func TestDataRaceOnCanalStatus(t *testing.T) {
 	go func() {
 		defer wg1.Done()
 		for i := 0; i < 1e6; i++ {
-			_ = shift.GetCanalStatus()
+			_ = shift.getCanalStatus()
 		}
 	}()
 	var wg2 sync.WaitGroup
@@ -1451,7 +1451,7 @@ func TestDataRaceOnCanalStatus(t *testing.T) {
 	go func() {
 		defer wg2.Done()
 		for i := 0; i < 1e6; i++ {
-			shift.SetCanalStatus(true)
+			shift.setCanalStatus(true)
 		}
 	}()
 	wg1.Wait()
@@ -1462,23 +1462,23 @@ func TestDataRaceOnCanalStatus(t *testing.T) {
 
 // for issue #40
 func TestFatalExit(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
-	shift := NewShift(log, mockCfg)
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	shift, _ := NewShift(log, mockCfg).(*Shift)
 
 	// The detection is opportunistically, but we want exit normally
 	// on run out of a million times.
 	var wg1 sync.WaitGroup
 	wg1.Add(1)
-	shift.SetCanalStatus(true)
+	shift.setCanalStatus(true)
 	shift.allDone.Set(false)
 	go func() {
 		defer wg1.Done()
 		for {
 			if shift.allDone.Get() {
-				shift.SetCanalStatus(false)
+				shift.setCanalStatus(false)
 				break
 			} else {
-				shift.SetCanalStatus(true)
+				shift.setCanalStatus(true)
 			}
 		}
 	}()
@@ -1490,7 +1490,7 @@ func TestFatalExit(t *testing.T) {
 			if shift.allDone.Get() {
 				break
 			}
-			if shift.GetCanalStatus() {
+			if shift.getCanalStatus() {
 				if i == 1e6 {
 					shift.allDone.Set(true)
 				}
@@ -1508,7 +1508,7 @@ func TestFatalExit(t *testing.T) {
 
 // For issue #38
 func TestSupportShiftToRadonDB(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 
 	fromPool, errfrom := NewPool(log, 4, mockRadonDBCfg.From, mockRadonDBCfg.FromUser, mockRadonDBCfg.FromPassword)
 	assert.Nil(t, errfrom)
@@ -1563,7 +1563,7 @@ func TestSupportShiftToRadonDB(t *testing.T) {
 
 	// shift table normal
 	{
-		shift := NewShift(log, mockRadonDBCfg)
+		shift, _ := NewShift(log, mockRadonDBCfg).(*Shift)
 		shift.cfg.FromDatabase = "DTtest"
 		shift.cfg.ToDatabase = "DTtest"
 		shift.cfg.FromTable = "normal"
@@ -1581,7 +1581,7 @@ func TestSupportShiftToRadonDB(t *testing.T) {
 
 // Fix bug for issue #560
 func TestShiftColOrTblNameWithoutQuote(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 
 	fromPool, errfrom := NewPool(log, 4, mockCfg.From, mockCfg.FromUser, mockCfg.FromPassword)
 	assert.Nil(t, errfrom)
@@ -1635,4 +1635,105 @@ func TestShiftColOrTblNameWithoutQuote(t *testing.T) {
 	// DELETE success
 	_, err = fromConn.Execute("DELETE FROM `a-b_db`.`a-b_tbl` where `char`=3")
 	assert.Nil(t, err)
+}
+
+func TestShiftSetStop(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	shift, _ := NewShift(log, mockCfg).(*Shift)
+	// Replace time ticker every 5s to 1s, 5s is to long for us to test
+	shift.behindsTicker = time.NewTicker(time.Duration(1000) * time.Millisecond)
+	h := mockHttp(log, restfulPort, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
+	defer func() {
+		ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+		h.Shutdown(ctx)
+	}()
+
+	fromPool, errfrom := NewPool(log, 4, mockCfg.From, mockCfg.FromUser, mockCfg.FromPassword)
+	assert.Nil(t, errfrom)
+	toPool, errto := NewPool(log, 4, mockCfg.To, mockCfg.ToUser, mockCfg.ToPassword)
+	assert.Nil(t, errto)
+
+	var c = make(chan bool, 1)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	// Keep continuing insert so that canal will be always running and we
+	// have enough time to use shift.close() to simulate signal like kill
+	go func() {
+		begin := 0
+		step := 50000
+
+		fromConn := fromPool.Get()
+		if fromConn == nil {
+			logPanicHandler(log, "test.get.from.toconn.but.return.nil")
+		}
+		defer fromPool.Put(fromConn)
+		toConn := toPool.Get()
+		if toConn == nil {
+			logPanicHandler(log, "test.get.from.toconn.but.return.nil")
+		}
+		defer toPool.Put(toConn)
+
+		// Cleanup From table first.
+		sql := fmt.Sprintf("drop table if exists `%s`.`%s`", mockCfg.FromDatabase, mockCfg.FromTable)
+		if _, err := fromConn.Execute(sql); err != nil {
+			log.Panicf("test.drop.from.table.error:%+v", err)
+		}
+
+		// Cleanup To table.
+		sql = fmt.Sprintf("drop table if exists `%s`.`%s`", mockCfg.ToDatabase, mockCfg.ToTable)
+		if _, err := toConn.Execute(sql); err != nil {
+			log.Panicf("test.drop.to.table.error:%+v", err)
+		}
+
+		// Create database on from.
+		sql = fmt.Sprintf("create database if not exists `%s`", mockCfg.FromDatabase)
+		if _, err := fromConn.Execute(sql); err != nil {
+			log.Panicf("test.prepare.database.error:%+v", err)
+		}
+
+		// Create table on from.
+		sql = fmt.Sprintf("create table `%s`.`%s`(a int primary key, b int, c varchar(200), d DOUBLE NULL DEFAULT NULL, e json DEFAULT NULL, f INT UNSIGNED DEFAULT NULL, g BIGINT DEFAULT NULL, h BIGINT UNSIGNED DEFAULT NULL, i TINYINT NULL, j TINYINT UNSIGNED DEFAULT NULL, k SMALLINT DEFAULT NULL, l SMALLINT UNSIGNED DEFAULT NULL, m MEDIUMINT DEFAULT NULL, n INT UNSIGNED DEFAULT NULL, o bit(1) default NULL, p text COLLATE utf8_bin, q longblob, r datetime DEFAULT NULL)", mockCfg.FromDatabase, mockCfg.FromTable)
+		if _, err := fromConn.Execute(sql); err != nil {
+			log.Panicf("test.prepare.from.table.error:%+v", err)
+		}
+
+		for i := begin; i < begin+step; i++ {
+			select {
+			case <-c:
+				log.Info("test.gets.signal.done.and.insert.nums:%v", i-1)
+				i = 50000
+			default:
+			}
+			sql := fmt.Sprintf("insert into `%s`.`%s`(a,b,c,o,p,q,r) values(%d,%d,'%d', B'1', 0x6B313134363020666638303831383135646534373733633031356465343762353138653030303020E799BDE4BAAC2031302E3131362E32352E3137322C31312E312E31302E313420737061636520636F6E66696775726174696F6E207570646174656420737061636573207479706520676C6F62616C207374617475732063757272656E74206E616D65206B65792073706320686F6D65207061676520706167653A20762E31202833323831383229, 0x6B313134363020666638303831383135646534373733633031356465343762353138653030303020E799BDE4BAAC2031302E3131362E32352E3137322C31312E312E31302E313420737061636520636F6E66696775726174696F6E207570646174656420737061636573207479706520676C6F62616C207374617475732063757272656E74206E616D65206B65792073706320686F6D65207061676520706167653A20762E31202833323831383229, '2019-4-19 18:03:43')", mockCfg.FromDatabase, mockCfg.FromTable, i, i, i)
+			_, err := fromConn.Execute(sql)
+			assert.Nil(t, err)
+		}
+		log.Debug("test.shift.insert.done")
+		wg.Done()
+	}()
+
+	// Sleep 1s so that tb1 has some rows before we start canal and dump
+	time.Sleep(time.Second * 1)
+
+	// Start
+	var errstart error
+	errstart = shift.Start()
+	assert.Nil(t, errstart)
+
+	// Wait
+	errorch := make(chan error)
+	var wg2 sync.WaitGroup
+	wg2.Add(1)
+	go func() {
+		defer wg2.Done()
+		err := shift.WaitFinish()
+		errorch <- err
+	}()
+
+	// get stop signal and exit with error
+	shift.SetStopSignal()
+	// send true to stop writing
+	c <- true
+	err := <-errorch
+	assert.NotNil(t, err)
 }

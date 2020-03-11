@@ -41,7 +41,7 @@ func TestPool(t *testing.T) {
 		Checksum:  true,
 	}
 
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	poolNormal, err := NewPool(log, 4, cfg.From, cfg.FromUser, cfg.FromPassword)
 	assert.Nil(t, err)
 
@@ -107,7 +107,7 @@ func TestConnReconnect(t *testing.T) {
 	}
 
 	maxIdleTime = 1
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	pool, err := NewPool(log, 4, cfg.From, cfg.FromUser, cfg.FromPassword)
 	// Sleep 1.1s to make sure elapsed time > maxIdleTime and reconnect
 	time.Sleep(1100 * time.Millisecond)
@@ -140,7 +140,7 @@ func TestGetConnBlockOrDeadlock(t *testing.T) {
 		Checksum:  true,
 	}
 
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
 	pool, err := NewPool(log, 4, cfg.From, cfg.FromUser, cfg.FromPassword)
 	assert.Nil(t, err)
 	// First, we make the pool empty and leave one element
