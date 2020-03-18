@@ -349,3 +349,22 @@ func TestCleanupDropErr(t *testing.T) {
 		assert.NotNil(t, err)
 	}
 }
+
+func TestCleanupReadOnly(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+
+	address := proxy.Address()
+	client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+	assert.Nil(t, err)
+
+	// set radon readonly.
+	proxy.SetReadOnly(true)
+	query := "radon cleanup"
+	fakedbs.AddQuery(query, &sqltypes.Result{})
+	_, err = client.FetchAll(query, -1)
+	want := "The MySQL server is running with the --read-only option so it cannot execute this statement (errno 1290) (sqlstate 42000)"
+	got := err.Error()
+	assert.Equal(t, want, got)
+}
