@@ -353,6 +353,7 @@ Request: {
 			"to-database":               "Destination database",                                              [required]
 			"to-table":                  "Destination table",                                                 [required]
 			"radonurl":                  "Radon RESTful api(default: http://peer-address)",
+			"rebalance":                 "Rebalance means a rebalance operation, which from table need cleanup after shifted(default false)",
 			"cleanup":                   "Cleanup the from table after shifted(defaults false)",
 			"mysqldump":                 "mysqldump path",
 			"threads":                   "shift threads num(defaults 16)",

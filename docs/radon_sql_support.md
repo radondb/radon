@@ -52,6 +52,7 @@ Contents
       * [RADON ATTACHLIST](#radon-attachlist)
       * [RADON DETACH](#radon-detach)
       * [RADON RESHARD](#radon-reshard) 
+      * [RADON CLEANUP](#radon-cleanup)
     * [Others](#others)
       * [Using AUTO_INCREMENT](#using-auto-increment)
 
@@ -1258,6 +1259,21 @@ mysql> select * from new_tb;
 | 2 | b    |
 +---+------+
 2 rows in set (1.09 sec)
+```
+
+### RADON CLEANUP
+
+`Syntax`
+```
+RADON CLEANUP
+```
+
+`Instructions`
+* RADON CLEANUP can clean up the old data after shifted.
+
+```
+mysql> radon cleanup;
+Query OK, 0 rows affected (0.13 sec)
 ```
 
 ## Others
