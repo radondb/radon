@@ -1,0 +1,8 @@
+create database integrate_test DEFAULT CHARSET=utf8;
+
+create table integrate_test.t(a int key, b int) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+insert into integrate_test.t(a, b) values(0,1), (2,3);
+select a, b c from integrate_test.t where a in (0,1,2) order by a desc;
+drop table integrate_test.t;
+
+drop database integrate_test;

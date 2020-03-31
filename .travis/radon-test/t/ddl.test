@@ -1,0 +1,17 @@
+create database integrate_test DEFAULT CHARSET=utf8;
+
+create table integrate_test.t(
+        a int key, 
+        b int) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+show create table integrate_test.t;
+drop table integrate_test.t;
+
+create table integrate_test.t(
+        a int,
+        b int,
+        c char(10),
+        primary key(a, b)) PARTITION BY HASH(a) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+show create table integrate_test.t;
+drop table integrate_test.t;
+
+drop database integrate_test;

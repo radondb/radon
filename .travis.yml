@@ -28,9 +28,15 @@ script:
   - make build
   - make test
   - make coverage
-  # testshift is used for make test on shift. We take it out alone because it needs to build at 
+  # testshift is used for make test on shift. We take it out alone because it needs to build at
   # least three mysql instances, so we just test it on ci. Of course you can build a test env on your machine.
   - make testshift
+
+
+# integration_test is used to do integrate test on radondb 
+  - cd .travis/radon-test
+  - bash mtr.sh
+  - cd -
 
 after_success:
   # send coverage reports to Codecov
