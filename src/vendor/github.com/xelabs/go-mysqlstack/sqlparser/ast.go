@@ -571,6 +571,10 @@ type DDL struct {
 	DatabaseOptions DatabaseOptionListOpt
 	TableSpec       *TableSpec
 
+	// [UNIQUE | FULLTEXT | SPATIAL] index.
+	IndexType string
+	IndexOpts *IndexOptions
+
 	// Tables is set if Action is DropStr.
 	Tables TableNames
 
@@ -607,6 +611,14 @@ const (
 	PartitionTableList      = "partitiontablelist"
 )
 
+// Index key type strings.
+const (
+	IndexStr    = "index "
+	FullTextStr = "fulltext index "
+	SpatialStr  = "spatial index "
+	UniqueStr   = "unique index "
+)
+
 // Format formats the node.
 func (node *DDL) Format(buf *TrackedBuffer) {
 	switch node.Action {
@@ -634,7 +646,7 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 			buf.Myprintf("%s%s %v %v", node.Action, ifnotexists, node.NewName, node.TableSpec)
 		}
 	case CreateIndexStr:
-		buf.Myprintf("%s %s on %v", node.Action, node.IndexName, node.NewName)
+		buf.Myprintf("create %s%s on %v%v", node.IndexType, node.IndexName, node.NewName, node.IndexOpts)
 	case DropTableStr:
 		exists := ""
 		if node.IfExists {
@@ -797,6 +809,139 @@ func (opts TableOptions) Format(buf *TrackedBuffer) {
 // WalkSubtree walks the nodes of the subtree.
 func (opts TableOptions) WalkSubtree(visit Visit) error {
 	return nil
+}
+
+// IndexOptionType is the type for IndexOption.
+type IndexOptionType int
+
+const (
+	// IndexOptionNone enum.
+	IndexOptionNone IndexOptionType = iota
+	// IndexOptionComment is 'comment' enum.
+	IndexOptionComment
+	// IndexOptionUsing is 'using' enum.
+	IndexOptionUsing
+	// IndexOptionBlockSize is 'key_block_size' enum.
+	IndexOptionBlockSize
+	// IndexOptionParser is 'with parser' enum.
+	IndexOptionParser
+	// IndexOptionAlgorithm is 'algorithm' enum.
+	IndexOptionAlgorithm
+	// IndexOptionLock is 'lock' enum.
+	IndexOptionLock
+)
+
+// IndexOption represents the index options.
+// See https://dev.mysql.com/doc/refman/5.7/en/create-index.html.
+type IndexOption struct {
+	Type IndexOptionType
+	Val  *SQLVal
+}
+
+// IndexOptionList ...
+type IndexOptionList []*IndexOption
+
+// IndexOptions is used by IndexOpts.
+type IndexOptions struct {
+	Columns   []*IndexColumn
+	Using     string
+	Comment   string
+	BlockSize *SQLVal
+	Parser    string
+	Algorithm string
+	Lock      string
+}
+
+// NewIndexOptions use to create IndexOptions.
+func NewIndexOptions(columns []*IndexColumn, idxOptList IndexOptionList) *IndexOptions {
+	idxOpts := &IndexOptions{
+		Columns: columns,
+	}
+	for _, idxOpt := range idxOptList {
+		switch idxOpt.Type {
+		case IndexOptionComment:
+			idxOpts.Comment = String(idxOpt.Val)
+		case IndexOptionUsing:
+			idxOpts.Using = String(idxOpt.Val)
+		case IndexOptionBlockSize:
+			idxOpts.BlockSize = idxOpt.Val
+		case IndexOptionParser:
+			idxOpts.Parser = String(idxOpt.Val)
+		case IndexOptionAlgorithm:
+			idxOpts.Algorithm = String(idxOpt.Val)
+		case IndexOptionLock:
+			idxOpts.Lock = String(idxOpt.Val)
+		}
+	}
+	return idxOpts
+}
+
+// Format formats the node.
+func (opts *IndexOptions) Format(buf *TrackedBuffer) {
+	buf.Myprintf("(")
+	for i, col := range opts.Columns {
+		if i != 0 {
+			buf.Myprintf(", `%s`", col.Column.String())
+		} else {
+			buf.Myprintf("`%s`", col.Column.String())
+		}
+		if col.Length != nil {
+			buf.Myprintf("(%v)", col.Length)
+		}
+	}
+	buf.Myprintf(")")
+	if opts.Using != "" {
+		buf.Myprintf(" using %s", opts.Using)
+	}
+	if opts.Comment != "" {
+		buf.Myprintf(" comment %s", opts.Comment)
+	}
+	if opts.BlockSize != nil {
+		buf.Myprintf(" key_block_size = %v", opts.BlockSize)
+	}
+	if opts.Parser != "" {
+		buf.Myprintf(" WITH PARSER %s", opts.Parser)
+	}
+	if opts.Algorithm != "" {
+		buf.Myprintf(" algorithm = %s", opts.Algorithm)
+	}
+	if opts.Lock != "" {
+		buf.Myprintf(" lock = %s", opts.Lock)
+	}
+}
+
+// WalkSubtree walks the nodes of the subtree.
+func (opts *IndexOptions) WalkSubtree(visit Visit) error {
+	if opts == nil {
+		return nil
+	}
+
+	for _, n := range opts.Columns {
+		if err := Walk(visit, n.Column); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// CheckIndexLock use to check if the string value matches a supported value.
+// Supported values: default, exclusive, none, shared.
+func CheckIndexLock(lock string) bool {
+	switch strings.ToLower(lock) {
+	case "default", "exclusive", "none", "shared":
+		return true
+	}
+	return false
+}
+
+// CheckIndexAlgorithm use to check if the string value matches a supported value.
+// Supported values: inplace, copy, default.
+func CheckIndexAlgorithm(algorithm string) bool {
+	switch strings.ToLower(algorithm) {
+	case "copy", "default", "inplace":
+		return true
+	}
+	return false
 }
 
 // TableSpec describes the structure of a table from a CREATE TABLE statement
@@ -1038,27 +1183,21 @@ func (ct *ColumnType) WalkSubtree(visit Visit) error {
 
 // IndexDefinition describes an index in a CREATE TABLE statement
 type IndexDefinition struct {
-	Info    *IndexInfo
-	Columns []*IndexColumn
+	Type    string
+	Name    ColIdent
+	Opts    *IndexOptions
+	Primary bool
+	Unique  bool
 }
 
 // Format formats the node.
 func (idx *IndexDefinition) Format(buf *TrackedBuffer) {
-	buf.Myprintf("%v (", idx.Info)
-	for i, col := range idx.Columns {
-		if i != 0 {
-			buf.Myprintf(", `%s`", col.Column.String())
-		} else {
-			buf.Myprintf("`%s`", col.Column.String())
-		}
-		if col.Length != nil {
-			buf.Myprintf("(%v)", col.Length)
-		}
+	if idx.Primary {
+		buf.Myprintf("%s", idx.Type)
+	} else {
+		buf.Myprintf("%s `%v`", idx.Type, idx.Name)
 	}
-	buf.Myprintf(")")
-	if idx.Info.Fulltext {
-		buf.Myprintf(" WITH PARSER ngram")
-	}
+	buf.Myprintf(" %v", idx.Opts)
 }
 
 // WalkSubtree walks the nodes of the subtree.
@@ -1066,37 +1205,7 @@ func (idx *IndexDefinition) WalkSubtree(visit Visit) error {
 	if idx == nil {
 		return nil
 	}
-
-	for _, n := range idx.Columns {
-		if err := Walk(visit, n.Column); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// IndexInfo describes the name and type of an index in a CREATE TABLE statement
-type IndexInfo struct {
-	Type     string
-	Name     ColIdent
-	Primary  bool
-	Unique   bool
-	Fulltext bool
-}
-
-// Format formats the node.
-func (ii *IndexInfo) Format(buf *TrackedBuffer) {
-	if ii.Primary {
-		buf.Myprintf("%s", ii.Type)
-	} else {
-		buf.Myprintf("%s `%v`", ii.Type, ii.Name)
-	}
-}
-
-// WalkSubtree walks the nodes of the subtree.
-func (ii *IndexInfo) WalkSubtree(visit Visit) error {
-	return Walk(visit, ii.Name)
+	return Walk(visit, idx.Opts)
 }
 
 // IndexColumn describes a column in an index definition with optional length

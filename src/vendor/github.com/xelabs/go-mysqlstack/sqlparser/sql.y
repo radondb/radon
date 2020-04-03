@@ -99,9 +99,10 @@ func forceEOF(yylex interface{}) {
   LengthScaleOption LengthScaleOption
   columnDefinition *ColumnDefinition
   indexDefinition *IndexDefinition
-  indexInfo     *IndexInfo
   indexColumn   *IndexColumn
   indexColumns  []*IndexColumn
+  indexOptionList IndexOptionList
+  indexOption *IndexOption
   columnOptionListOpt ColumnOptionListOpt
   columnOptionList  ColumnOptionList
   columnOption      *ColumnOption
@@ -133,11 +134,15 @@ func forceEOF(yylex interface{}) {
 	FOR
 
 
-// FULLTEXT.
+// INDEX.
 %token	<bytes>
+	ALGORITHM
+	BTREE
 	FULLTEXT
-	PARSER
+	KEY_BLOCK_SIZE
 	NGRAM
+	PARSER
+	SPATIAL
 
 
 // Resolve shift/reduce conflict on 'UNIQUE KEY', if we don`t define the precedence, the code
@@ -721,7 +726,6 @@ func forceEOF(yylex interface{}) {
 	non_rename_operation
 	to_opt
 	index_opt
-	constraint_opt
 
 %type	<bytes>
 	reserved_keyword
@@ -786,7 +790,6 @@ func forceEOF(yylex interface{}) {
 	id_or_string
 
 %type	<str>
-	collate_name_or_default
 	opt_charset
 	opt_equal
 	opt_default
@@ -835,14 +838,29 @@ func forceEOF(yylex interface{}) {
 %type	<tableOption>
 	table_option
 
-%type	<indexInfo>
-	index_info
-
 %type	<indexColumn>
 	index_column
 
 %type	<indexColumns>
 	index_column_list
+
+%type   <indexOptionList>
+	fulltext_key_opts
+	lock_algorithm_opts
+	normal_key_opts
+	spatial_key_opts
+
+%type   <indexOption>
+	all_key_opt
+	fulltext_key_opt
+	index_using_opt
+	lock_algorithm_opt
+	normal_key_opt
+
+%type   <str>
+	constraint_opt
+	index_using_str
+	id_or_default
 
 %type	<columnOptionListOpt>
 	column_option_list_opt
@@ -1100,10 +1118,145 @@ create_statement:
 		}
 		$$ = &DDL{Action: CreateDBStr, IfNotExists: ifnotexists, Database: $4, DatabaseOptions: $5}
 	}
-|	CREATE constraint_opt INDEX ID ON table_name ddl_force_eof
+|	CREATE constraint_opt INDEX ID ON table_name openb index_column_list closeb normal_key_opts lock_algorithm_opts
 	{
-		// Change this to an alter statement
-		$$ = &DDL{Action: CreateIndexStr, IndexName: string($4), Table: $6, NewName: $6}
+		$$ = &DDL{Action: CreateIndexStr, IndexType: $2, IndexName: string($4), Table: $6, NewName: $6, IndexOpts: NewIndexOptions($8, append($10, $11...))}
+	}
+|	CREATE FULLTEXT INDEX ID ON table_name openb index_column_list closeb fulltext_key_opts lock_algorithm_opts
+	{
+		$$ = &DDL{Action: CreateIndexStr, IndexType: FullTextStr, IndexName: string($4), Table: $6, NewName: $6, IndexOpts: NewIndexOptions($8, append($10, $11...))}
+	}
+|	CREATE SPATIAL INDEX ID ON table_name openb index_column_list closeb spatial_key_opts lock_algorithm_opts
+    {
+		$$ = &DDL{Action: CreateIndexStr, IndexType: SpatialStr, IndexName: string($4), Table: $6, NewName: $6, IndexOpts: NewIndexOptions($8, append($10, $11...))}
+	}
+
+index_using_str:
+	HASH
+	{
+		$$ = "hash"
+	}
+|	BTREE
+	{
+		$$ = "btree"
+	}
+
+id_or_default:
+	ID
+	{
+		$$ = string($1)
+	}
+|	DEFAULT
+	{
+		$$ = "default"
+	}
+
+index_using_opt:
+	USING index_using_str
+	{
+		$$ = &IndexOption{
+			Type: IndexOptionUsing,
+			Val:  NewStrValWithoutQuote([]byte($2)),
+		}
+	}
+
+all_key_opt:
+	KEY_BLOCK_SIZE opt_equal INTEGRAL
+	{
+		$$ = &IndexOption{
+			Type: IndexOptionBlockSize,
+			Val:  NewIntVal($3),
+		}
+	}
+|	COMMENT_KEYWORD STRING
+	{
+		$$ = &IndexOption{
+			Type: IndexOptionComment,
+			Val:  NewStrVal($2),
+		}
+	}
+
+normal_key_opts:
+	{
+		$$ = []*IndexOption{}
+	}
+|	normal_key_opts normal_key_opt
+	{
+		$$ = append($1, $2)
+	}
+
+normal_key_opt:
+	all_key_opt
+	{
+		$$ = $1
+	}
+|	index_using_opt
+	{
+		$$ = $1
+	}
+
+fulltext_key_opts:
+	{
+		$$ = []*IndexOption{}
+	}
+|	fulltext_key_opts fulltext_key_opt
+	{
+		$$ = append($1, $2)
+	}
+
+fulltext_key_opt:
+	all_key_opt
+	{
+		$$ = $1
+	}
+|	WITH PARSER NGRAM
+	{
+		$$ = &IndexOption{
+			Type: IndexOptionParser,
+			Val:  NewStrValWithoutQuote($3),
+		}
+	}
+
+spatial_key_opts:
+	{
+		$$ = []*IndexOption{}
+	}
+|	spatial_key_opts all_key_opt
+	{
+		$$ = append($1, $2)
+	}
+
+lock_algorithm_opts:
+	{
+		$$ = []*IndexOption{}
+	}
+|	lock_algorithm_opts lock_algorithm_opt
+	{
+		$$ = append($1, $2)
+	}
+
+lock_algorithm_opt:
+	LOCK opt_equal id_or_default
+	{
+		if !CheckIndexLock($3) {
+			yylex.Error("unknown lock type")
+			return 1
+		}
+		$$ = &IndexOption{
+			Type: IndexOptionLock,
+			Val:  NewStrValWithoutQuote([]byte($3)),
+		}
+	}
+|	ALGORITHM opt_equal id_or_default
+	{
+		if !CheckIndexAlgorithm($3) {
+			yylex.Error("unknown algorithm type")
+			return 1
+		}
+		$$ = &IndexOption{
+			Type: IndexOptionAlgorithm,
+			Val:  NewStrValWithoutQuote([]byte($3)),
+		}
 	}
 
 database_option_list_opt:
@@ -1126,7 +1279,7 @@ database_option_list:
 	}
 
 database_option:
-	opt_default COLLATE opt_equal collate_name_or_default
+	opt_default COLLATE opt_equal id_or_default
 	{
 		$$ = &DatabaseOption{
 			CharsetOrCollate: string($2),
@@ -1159,16 +1312,6 @@ opt_charset:
 |	CHARACTER SET
 	{
 		$$ = "character set"
-	}
-
-collate_name_or_default:
-	ID
-	{
-		$$ = string($1)
-	}
-|	DEFAULT
-	{
-		$$ = "default"
 	}
 
 charset_name_or_default:
@@ -1760,35 +1903,65 @@ column_comment_opt:
 	}
 
 index_definition:
-	index_info '(' index_column_list ')'
+	PRIMARY KEY '(' index_column_list ')'
 	{
-		$$ = &IndexDefinition{Info: $1, Columns: $3}
+		$$ = &IndexDefinition {
+			Type: string($1) + " " + string($2),
+			Name: NewColIdent("PRIMARY"),
+			Opts: NewIndexOptions($4, nil),
+			Primary: true,
+			Unique: true,
+		}
 	}
-|	index_info '(' index_column_list ')' WITH PARSER NGRAM
+|	UNIQUE index_or_key ID '(' index_column_list ')'  normal_key_opts
 	{
-		$$ = &IndexDefinition{Info: $1, Columns: $3}
+		$$ = &IndexDefinition {
+			Type: string($1) + " " + string($2),
+			Name: NewColIdent(string($3)),
+			Opts: NewIndexOptions($5, $7),
+			Primary: false,
+			Unique: true,
+		}
 	}
-
-index_info:
-	PRIMARY KEY
+|	UNIQUE ID '(' index_column_list ')' normal_key_opts
 	{
-		$$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent("PRIMARY"), Primary: true, Unique: true}
+		$$ = &IndexDefinition {
+			Type: string($1),
+			Name: NewColIdent(string($2)),
+			Opts: NewIndexOptions($4, $6),
+			Primary: false,
+			Unique: true,
+		}
 	}
-|	UNIQUE index_or_key ID
+|	index_or_key ID '(' index_column_list ')' normal_key_opts
 	{
-		$$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent(string($3)), Primary: false, Unique: true}
+		$$ = &IndexDefinition {
+			Type: string($1),
+			Name: NewColIdent(string($2)),
+			Opts: NewIndexOptions($4, $6),
+			Primary: false,
+			Unique: false,
+		}
 	}
-|	UNIQUE ID
+|	FULLTEXT index_or_key ID '(' index_column_list ')' fulltext_key_opts
 	{
-		$$ = &IndexInfo{Type: string($1), Name: NewColIdent(string($2)), Primary: false, Unique: true}
+		$$ = &IndexDefinition {
+			Type: string($1) + " " + string($2),
+			Name: NewColIdent(string($3)),
+			Opts: NewIndexOptions($5, $7),
+			Primary: false,
+			Unique: false,
+		}
 	}
-|	index_or_key ID
+|	SPATIAL index_or_key ID '(' index_column_list ')' spatial_key_opts
 	{
-		$$ = &IndexInfo{Type: string($1), Name: NewColIdent(string($2)), Primary: false, Unique: false}
-	}
-|	FULLTEXT index_or_key ID
-	{
-		$$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent(string($3)), Primary: false, Unique: false, Fulltext: true}
+		$$ = &IndexDefinition {
+			Type: string($1) + " " + string($2),
+			Name: NewColIdent(string($3)),
+			Opts: NewIndexOptions($5, $7),
+			Primary: false,
+			Unique: false,
+		}
 	}
 
 index_or_key:
@@ -3409,15 +3582,11 @@ index_opt:
 
 constraint_opt:
 	{
-		$$ = struct{}{}
+		$$ = IndexStr
 	}
 |	UNIQUE
 	{
-		$$ = struct{}{}
-	}
-|	sql_id
-	{
-		$$ = struct{}{}
+		$$ = UniqueStr
 	}
 
 sql_id:
@@ -3596,8 +3765,10 @@ reserved_keyword:
 */
 non_reserved_keyword:
 	AGAINST
+|	ALGORITHM
 |	BIT
 |	BOOL
+|	CLEANUP
 |	COMMENT_KEYWORD
 |	DATE
 |	DATETIME
@@ -3634,7 +3805,6 @@ non_reserved_keyword:
 |	DETACH
 |	ATTACHLIST
 |	RESHARD
-|   CLEANUP
 
 openb:
 	'('
