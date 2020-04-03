@@ -463,7 +463,28 @@ RadonDB only supports the `CREATE/DROP INDEX` syntax in order to simplify the in
 
 `Syntax`
 ```
-CREATE INDEX index_name ON table_name (index_col_name,...)
+CREATE [UNIQUE | FULLTEXT | SPATIAL] INDEX index_name
+    ON tbl_name (key_part,...)
+    [index_option]
+    [algorithm_option | lock_option] ...
+	
+key_part:
+    col_name [(length)]
+
+index_option:
+    KEY_BLOCK_SIZE [=] value
+  | index_type
+  | WITH PARSER NGRAM
+  | COMMENT 'string'
+
+index_type:
+    USING {BTREE | HASH}
+
+algorithm_option:
+    ALGORITHM [=] {DEFAULT | INPLACE | COPY}
+
+lock_option:
+    LOCK [=] {DEFAULT | NONE | SHARED | EXCLUSIVE}
 ```
 
 `Instructions`

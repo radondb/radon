@@ -16,8 +16,10 @@ limitations under the License.
 
 package sqlparser
 
-import "strings"
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestValid(t *testing.T) {
 	validSQL := []struct {
@@ -655,8 +657,8 @@ func TestValid(t *testing.T) {
 		input:  "create table if not exists a (\n\t`a` int\n)",
 		output: "create table if not exists a (\n\t`a` int\n)",
 	}, {
-		input:  "create index a on b",
-		output: "create index a on b",
+		input:  "create index a on b(c)",
+		output: "create index a on b(`c`)",
 	}, {
 		input:  "drop table a",
 		output: "drop table a",
@@ -797,8 +799,8 @@ func TestCaseSensitivity(t *testing.T) {
 	}{{
 		input: "create table A (\n\t`B` int\n)",
 	}, {
-		input:  "create index b on A",
-		output: "create index b on A",
+		input:  "create index b on A(B)",
+		output: "create index b on A(`B`)",
 	}, {
 		input:  "alter table A foo",
 		output: "alter table A",

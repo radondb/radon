@@ -78,9 +78,8 @@ func tryGetShardKey(ddl *sqlparser.DDL) (string, error) {
 		// constraint check in index definition
 		for _, index := range ddl.TableSpec.Indexes {
 			constraintCheckOK = false
-			info := index.Info
-			if info.Unique || info.Primary {
-				for _, colIdx := range index.Columns {
+			if index.Unique || index.Primary {
+				for _, colIdx := range index.Opts.Columns {
 					colName := colIdx.Column.String()
 					if colName == shardKey {
 						constraintCheckOK = true
@@ -103,10 +102,9 @@ func tryGetShardKey(ddl *sqlparser.DDL) (string, error) {
 		}
 		// constraint check in index definition.
 		for _, index := range ddl.TableSpec.Indexes {
-			info := index.Info
-			if info.Unique || info.Primary {
-				if len(index.Columns) == 1 {
-					return index.Columns[0].Column.String(), nil
+			if index.Unique || index.Primary {
+				if len(index.Opts.Columns) == 1 {
+					return index.Opts.Columns[0].Column.String(), nil
 				}
 			}
 		}

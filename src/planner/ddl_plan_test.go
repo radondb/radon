@@ -24,7 +24,7 @@ func TestDDLPlan1(t *testing.T) {
 		"{\n\t\"RawQuery\": \"create table G(a int)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.G (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend1\",\n\t\t\t\"Range\": \"\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.G (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"\"\n\t\t}\n\t]\n}",
 		"{\n\t\"RawQuery\": \"create table S(a int)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.S (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend1\",\n\t\t\t\"Range\": \"\"\n\t\t}\n\t]\n}",
 		"{\n\t\"RawQuery\": \"alter table A engine = tokudb\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table sbtest.A0 engine = tokudb\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table sbtest.A2 engine = tokudb\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table sbtest.A4 engine = tokudb\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table sbtest.A8 engine = tokudb\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
-		"{\n\t\"RawQuery\": \"create index idx_a on A(a)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create index idx_a on sbtest.A0\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create index idx_a on sbtest.A2\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create index idx_a on sbtest.A4\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create index idx_a on sbtest.A8\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"create index idx_a on A(a)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create index idx_a on sbtest.A0(`a`)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create index idx_a on sbtest.A2(`a`)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create index idx_a on sbtest.A4(`a`)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create index idx_a on sbtest.A8(`a`)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
 		"{\n\t\"RawQuery\": \"drop index idx_a on sbtest.A\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"drop index idx_a on sbtest.A0\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"drop index idx_a on sbtest.A2\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"drop index idx_a on sbtest.A4\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"drop index idx_a on sbtest.A8\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
 		"{\n\t\"RawQuery\": \"alter table A add column(b int)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table sbtest.A0 add column (\\n\\t`b` int\\n)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table sbtest.A2 add column (\\n\\t`b` int\\n)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table sbtest.A4 add column (\\n\\t`b` int\\n)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table sbtest.A8 add column (\\n\\t`b` int\\n)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
 		"{\n\t\"RawQuery\": \"alter table sbtest.A add column(b int)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"alter table sbtest.A0 add column (\\n\\t`b` int\\n)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table sbtest.A2 add column (\\n\\t`b` int\\n)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table sbtest.A4 add column (\\n\\t`b` int\\n)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"alter table sbtest.A8 add column (\\n\\t`b` int\\n)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
@@ -202,13 +202,117 @@ func TestDDLAlterError(t *testing.T) {
 	}
 }
 
-func TestDDLPlanCreateIndexWithTableNameIssue10(t *testing.T) {
+func TestDDLPlanCreateIndex(t *testing.T) {
 	results := []string{
-		"{\n\t\"RawQuery\": \"create index idx_A_id on A(a)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create index idx_A_id on sbtest.A0\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create index idx_A_id on sbtest.A2\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create index idx_A_id on sbtest.A4\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create index idx_A_id on sbtest.A8\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
+		`{
+	"RawQuery": "create index idx_A_id on A(a)",
+	"Partitions": [
+		{
+			"Query": "create index idx_A_id on sbtest.A0(` + "`a`" + `)",
+			"Backend": "backend0",
+			"Range": "[0-2)"
+		},
+		{
+			"Query": "create index idx_A_id on sbtest.A2(` + "`a`" + `)",
+			"Backend": "backend2",
+			"Range": "[2-4)"
+		},
+		{
+			"Query": "create index idx_A_id on sbtest.A4(` + "`a`" + `)",
+			"Backend": "backend4",
+			"Range": "[4-8)"
+		},
+		{
+			"Query": "create index idx_A_id on sbtest.A8(` + "`a`" + `)",
+			"Backend": "backend8",
+			"Range": "[8-4096)"
+		}
+	]
+}`,
+		`{
+	"RawQuery": "create fulltext index idx on A(a) with parser ngram lock=none algorithm=copy",
+	"Partitions": [
+		{
+			"Query": "create fulltext index idx on sbtest.A0(` + "`a`" + `) WITH PARSER ngram algorithm = copy lock = none",
+			"Backend": "backend0",
+			"Range": "[0-2)"
+		},
+		{
+			"Query": "create fulltext index idx on sbtest.A2(` + "`a`" + `) WITH PARSER ngram algorithm = copy lock = none",
+			"Backend": "backend2",
+			"Range": "[2-4)"
+		},
+		{
+			"Query": "create fulltext index idx on sbtest.A4(` + "`a`" + `) WITH PARSER ngram algorithm = copy lock = none",
+			"Backend": "backend4",
+			"Range": "[4-8)"
+		},
+		{
+			"Query": "create fulltext index idx on sbtest.A8(` + "`a`" + `) WITH PARSER ngram algorithm = copy lock = none",
+			"Backend": "backend8",
+			"Range": "[8-4096)"
+		}
+	]
+}`,
+		`{
+	"RawQuery": "create index idx on A(a) using hash comment 'c' lock=shared",
+	"Partitions": [
+		{
+			"Query": "create index idx on sbtest.A0(` + "`a`" + `) using hash comment 'c' lock = shared",
+			"Backend": "backend0",
+			"Range": "[0-2)"
+		},
+		{
+			"Query": "create index idx on sbtest.A2(` + "`a`" + `) using hash comment 'c' lock = shared",
+			"Backend": "backend2",
+			"Range": "[2-4)"
+		},
+		{
+			"Query": "create index idx on sbtest.A4(` + "`a`" + `) using hash comment 'c' lock = shared",
+			"Backend": "backend4",
+			"Range": "[4-8)"
+		},
+		{
+			"Query": "create index idx on sbtest.A8(` + "`a`" + `) using hash comment 'c' lock = shared",
+			"Backend": "backend8",
+			"Range": "[8-4096)"
+		}
+	]
+}`,
+		`{
+	"RawQuery": "create spatial index idx on A(gis) key_block_size=10 algorithm=default",
+	"Partitions": [
+		{
+			"Query": "create spatial index idx on sbtest.A0(` + "`gis`" + `) key_block_size = 10 algorithm = default",
+			"Backend": "backend0",
+			"Range": "[0-2)"
+		},
+		{
+			"Query": "create spatial index idx on sbtest.A2(` + "`gis`" + `) key_block_size = 10 algorithm = default",
+			"Backend": "backend2",
+			"Range": "[2-4)"
+		},
+		{
+			"Query": "create spatial index idx on sbtest.A4(` + "`gis`" + `) key_block_size = 10 algorithm = default",
+			"Backend": "backend4",
+			"Range": "[4-8)"
+		},
+		{
+			"Query": "create spatial index idx on sbtest.A8(` + "`gis`" + `) key_block_size = 10 algorithm = default",
+			"Backend": "backend8",
+			"Range": "[8-4096)"
+		}
+	]
+}`,
 	}
 
 	querys := []string{
+		// issue 10.
 		"create index idx_A_id on A(a)",
+		// issue 592.
+		"create fulltext index idx on A(a) with parser ngram lock=none algorithm=copy",
+		"create index idx on A(a) using hash comment 'c' lock=shared",
+		"create spatial index idx on A(gis) key_block_size=10 algorithm=default",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -252,6 +356,8 @@ func TestDDLPlanWithQuote(t *testing.T) {
 		"{\n\t\"RawQuery\": \"create table sbtest.A (\\n\\t`a` int\\n)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.A0 (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.A2 (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.A4 (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.A8 (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
 		"{\n\t\"RawQuery\": \"create table sbtest.A (\\n\\t`a` int\\n)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.A0 (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.A2 (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.A4 (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.A8 (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
 		"{\n\t\"RawQuery\": \"create table sbtest.A (\\n\\t`a` int\\n)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.A0 (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend0\",\n\t\t\t\"Range\": \"[0-2)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.A2 (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[2-4)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.A4 (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend4\",\n\t\t\t\"Range\": \"[4-8)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.A8 (\\n\\t`a` int\\n)\",\n\t\t\t\"Backend\": \"backend8\",\n\t\t\t\"Range\": \"[8-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"create table B (\\n\\t`a` int,\\n\\t`b` varchar(10),\\n\\tunique key `a_idx` (`a`) using btree comment 'key'\\n)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.B0 (\\n\\t`a` int,\\n\\t`b` varchar(10),\\n\\tunique key `a_idx` (`a`) using btree comment 'key'\\n)\",\n\t\t\t\"Backend\": \"backend1\",\n\t\t\t\"Range\": \"[0-512)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.B1 (\\n\\t`a` int,\\n\\t`b` varchar(10),\\n\\tunique key `a_idx` (`a`) using btree comment 'key'\\n)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[512-4096)\"\n\t\t}\n\t]\n}",
+		"{\n\t\"RawQuery\": \"create table B (\\n\\t`b` varchar(10),\\n\\tfulltext index `b_idx` (`b`) key_block_size = 10 WITH PARSER ngram\\n)\",\n\t\"Partitions\": [\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.B0 (\\n\\t`b` varchar(10),\\n\\tfulltext index `b_idx` (`b`) key_block_size = 10 WITH PARSER ngram\\n)\",\n\t\t\t\"Backend\": \"backend1\",\n\t\t\t\"Range\": \"[0-512)\"\n\t\t},\n\t\t{\n\t\t\t\"Query\": \"create table sbtest.B1 (\\n\\t`b` varchar(10),\\n\\tfulltext index `b_idx` (`b`) key_block_size = 10 WITH PARSER ngram\\n)\",\n\t\t\t\"Backend\": \"backend2\",\n\t\t\t\"Range\": \"[512-4096)\"\n\t\t}\n\t]\n}",
 	}
 
 	querys := []string{
@@ -262,6 +368,8 @@ func TestDDLPlanWithQuote(t *testing.T) {
 		"create table sbtest.`A`(a int)",
 		"create table `sbtest`.A(a int)",
 		"create table `sbtest`.`A`(a int)",
+		"create table B(a int, b varchar(10), unique key a_idx(a) using btree comment 'key')",
+		"create table B(b varchar(10), fulltext index b_idx(b) with parser ngram key_block_size=10)",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -270,7 +378,7 @@ func TestDDLPlanWithQuote(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig())
+	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		log.Debug("%v", query)

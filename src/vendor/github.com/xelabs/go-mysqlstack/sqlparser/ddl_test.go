@@ -483,17 +483,23 @@ func TestDDL1(t *testing.T) {
 				")",
 		},
 
-		// Fulltext.
+		// TODO: SPATIAL INDEX only support Spatial Data Types, now radon donot support.
 		{
 			input: "create table t (\n" +
-				"	id INT PRIMARY KEY,\n" +
+				"	id INT,\n" +
 				"	title VARCHAR(200),\n" +
-				"   FULLTEXT KEY ngram_idx(title,body) /*!50100 WITH PARSER `ngram` */ \n" +
+				"	gis int,\n" +
+				"	UNIQUE KEY id_idx(id) using btree comment 'a',\n" +
+				"	FULLTEXT INDEX ngram_idx(title) WITH PARSER ngram,\n" +
+				"	SPATIAL INDEX gis_idx(gis) key_block_size=10\n" +
 				")",
 			output: "create table t (\n" +
-				"	`id` int primary key,\n" +
+				"	`id` int,\n" +
 				"	`title` varchar(200),\n" +
-				"	fulltext key `ngram_idx` (`title`, `body`) WITH PARSER ngram\n" +
+				"	`gis` int,\n" +
+				"	unique key `id_idx` (`id`) using btree comment 'a',\n" +
+				"	fulltext index `ngram_idx` (`title`) WITH PARSER ngram,\n" +
+				"	spatial index `gis_idx` (`gis`) key_block_size = 10\n" +
 				")",
 		},
 
@@ -681,28 +687,24 @@ func TestDDL1(t *testing.T) {
 
 		// Index.
 		{
-			input:  "create index idx on test(a,b)",
-			output: "create index idx on test",
+			input:  "create index idx on test(a,b) using hash comment 'c' lock=EXCLUSIVE",
+			output: "create index idx on test(`a`, `b`) using hash comment 'c' lock = EXCLUSIVE",
 		},
 		{
 			input:  "drop index idx on test",
 			output: "drop index idx on test",
 		},
 		{
-			input:  "create unique index a on b",
-			output: "create index a on b",
+			input:  "create unique index a on b(foo) using btree key_block_size=10 algorithm=copy",
+			output: "create unique index a on b(`foo`) using btree key_block_size = 10 algorithm = copy",
 		},
 		{
-			input:  "create unique index a on b(foo)",
-			output: "create index a on b",
+			input:  "create fulltext index a on b(foo) with parser ngram comment 'c' lock=none algorithm=inplace",
+			output: "create fulltext index a on b(`foo`) comment 'c' WITH PARSER ngram algorithm = inplace lock = none",
 		},
 		{
-			input:  "create fulltext index a on b(foo)",
-			output: "create index a on b",
-		},
-		{
-			input:  "create spatial index a on b(foo)",
-			output: "create index a on b",
+			input:  "create spatial index a on b(foo) comment 'c' key_block_size=10 algorithm=default lock=shared",
+			output: "create spatial index a on b(`foo`) comment 'c' key_block_size = 10 algorithm = default lock = shared",
 		},
 
 		// Add column.
@@ -957,6 +959,26 @@ func TestDDL1ParseError(t *testing.T) {
 				"	`name` varchar(10)\n" +
 				") single engine=tokudb comment 'str' charset \"utf8\" partition by hash(id)",
 			output: "SINGLE or GLOBAL should not be used simultaneously with PARTITION at position 140",
+		},
+		{ // create index without index columns.
+			input:  "create unique index a on b",
+			output: "syntax error at position 28",
+		},
+		{ // create index lock type error.
+			input:  "create index idx on t(a,b) lock=d",
+			output: "unknown lock type at position 34 near 'd'",
+		},
+		{ // create index algorithm type error.
+			input:  "create index idx on t(a,b) algorithm=d",
+			output: "unknown algorithm type at position 39 near 'd'",
+		},
+		{ // create index in the wrong order.
+			input:  "create index idx on t(a,b) algorithm=default using btree",
+			output: "syntax error at position 51 near 'using'",
+		},
+		{ // create index use wrong options.
+			input:  "create unique index idx on t(a,b) with parser ngram",
+			output: "syntax error at position 39 near 'with'",
 		},
 	}
 

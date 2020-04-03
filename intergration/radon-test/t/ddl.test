@@ -14,4 +14,25 @@ create table integrate_test.t(
 show create table integrate_test.t;
 drop table integrate_test.t;
 
+create table integrate_test.t(
+        a int,
+        b int,
+        c char(10),
+        unique key a_idx(a) using btree comment 'unique',
+        fulltext index c_idx(c) KEY_BLOCK_SIZE=10 WITH PARSER ngram
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+show create table integrate_test.t;
+drop table integrate_test.t;
+
+create table integrate_test.t(
+        a int,
+        b int,
+        c char(10)
+        )  PARTITION BY HASH(a) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+create unique index a_idx on integrate_test.t(a);
+create index b_idx on integrate_test.t(b) using btree KEY_BLOCK_SIZE=10 LOCK=DEFAULT ALGORITHM=COPY;
+create FULLTEXT index c_idx on integrate_test.t(c) WITH PARSER ngram comment 'fulltext' ALGORITHM=DEFAULT LOCK=SHARED;
+show create table integrate_test.t;
+drop table integrate_test.t;
+
 drop database integrate_test;

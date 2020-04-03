@@ -101,8 +101,7 @@ func (p *DDLPlan) checkUnsupportedOperations(database, table string) error {
 			}
 			// constraint check in index definition
 			for _, index := range node.TableSpec.Indexes {
-				info := index.Info
-				if info.Unique || info.Primary {
+				if index.Unique || index.Primary {
 					err := fmt.Sprintf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
 					return errors.New(err)
 				}
