@@ -243,7 +243,7 @@ func TestConnectionExecuteThreadSafe(t *testing.T) {
 }
 
 func TestTruncateQueryLog(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	var querys []string
 	var queryLogMaxLen = 30
 	querys = []string{

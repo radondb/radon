@@ -681,7 +681,7 @@ func TestSqlParserTableAs(t *testing.T) {
 }
 
 func TestSqlSet(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
 	querys := []string{
 		"set @@SESSION.radon_streaming_fetch='ON', @@GLOBAL.xx='OFF'",
@@ -710,7 +710,7 @@ func TestSqlSet(t *testing.T) {
 }
 
 func TestSqlBindVariables(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
 	tests := []struct {
 		query string

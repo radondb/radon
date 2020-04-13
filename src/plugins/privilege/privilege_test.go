@@ -147,7 +147,7 @@ func TestLoadUserPrivilege(t *testing.T) {
 }
 
 func TestLoadUserPrivilegeDenied(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
 	// Create scatter and query handler.
 	scatter, fakedbs, cleanup := backend.MockScatter(log, 4)
@@ -201,7 +201,7 @@ func TestLoadUserPrivilegeDenied(t *testing.T) {
 }
 
 func TestIsSuperPriv(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
 	// Create scatter and query handler.
 	scatter, fakedbs, cleanup := backend.MockScatter(log, 2)
@@ -358,7 +358,7 @@ func TestCheckPrivilegeSkipCol(t *testing.T) {
 }
 
 func TestBackendNull(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
 	// Create scatter and query handler.
 	scatter, fakedbs, cleanup := backend.MockScatter(log, 0)

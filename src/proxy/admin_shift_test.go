@@ -12,7 +12,7 @@ import (
 
 // to test the coverage
 func TestReshardShiftError(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.WARNING))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
 	address := proxy.Address()
