@@ -641,7 +641,7 @@ func TestProxyQueryTxnUnion_428(t *testing.T) {
 }
 
 func TestProxyQueryFixJdbcPanic495(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
 	address := proxy.Address()
@@ -665,7 +665,7 @@ func TestProxyQueryFixJdbcPanic495(t *testing.T) {
 }
 
 func TestProxyQuerySubQuery(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
 	address := proxy.Address()

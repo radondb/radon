@@ -185,7 +185,7 @@ func TestPeerNum(t *testing.T) {
 }
 
 func TestMonitorStart(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	var conf config.Config
 	conf.Proxy = config.DefaultProxyConfig()
 	conf.Audit = config.DefaultAuditConfig()

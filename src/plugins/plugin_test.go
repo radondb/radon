@@ -19,7 +19,7 @@ import (
 )
 
 func TestPlugins(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
 	//Create scatter and query handler.
 	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)

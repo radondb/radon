@@ -25,7 +25,7 @@ func testRemovePeerdir() {
 }
 
 func TestPeer(t *testing.T) {
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
 	// Create test dir "_test_syncer_peer"
 	if err := os.MkdirAll(testPeerdir, os.ModePerm); err != nil {
@@ -85,7 +85,7 @@ func TestPeer(t *testing.T) {
 func TestPeerError(t *testing.T) {
 	defer testRemovePeerdir()
 
-	log := xlog.NewStdLog(xlog.Level(xlog.DEBUG))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	peer := NewPeer(log, testPeerdir, "192.168.0.1:8080")
 
 	// Dir not exist, add fail.

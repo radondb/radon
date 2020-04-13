@@ -116,7 +116,7 @@ func TestPluginAutoincModifyForAutoinc(t *testing.T) {
 
 func TestPluginAutoIncrement(t *testing.T) {
 	db := "db1"
-	log := xlog.NewStdLog(xlog.Level(xlog.ERROR))
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 
 	// Router.
 	route, cleanup := router.MockNewRouter(log)
