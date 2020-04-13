@@ -179,19 +179,19 @@ func TestAuthWithoutSecure(t *testing.T) {
 	want.authResponseLen = 20
 	want.clientFlags = DefaultClientCapability &^ sqldb.CLIENT_SECURE_CONNECTION &^ sqldb.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA
 	want.clientFlags |= sqldb.CLIENT_CONNECT_WITH_DB
-	want.authResponse = nativePassword("sbtest", DefaultSalt)
-	want.user = "sbtest"
-	want.database = "sbtest"
+	want.authResponse = nativePassword("password", DefaultSalt)
+	want.user = "root"
+	want.database = "test_db"
 	want.pluginName = DefaultAuthPluginName
 
 	got := NewAuth()
 	err := got.UnPack(want.Pack(
 		DefaultClientCapability&^sqldb.CLIENT_SECURE_CONNECTION,
 		0x02,
-		"sbtest",
-		"sbtest",
+		"root",
+		"password",
 		DefaultSalt,
-		"sbtest",
+		"test_db",
 	))
 	got.authResponseLen = 20
 	assert.Nil(t, err)

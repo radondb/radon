@@ -97,7 +97,10 @@ func (a *Auth) UnPack(payload []byte) error {
 			return fmt.Errorf("auth.unpack: can't read authResponse")
 		}
 	} else {
-		if a.authResponse, err = buf.ReadBytesNUL(); err != nil {
+		if a.authResponse, err = buf.ReadBytes(20); err != nil {
+			return fmt.Errorf("auth.unpack: can't read authResponse")
+		}
+		if err = buf.ReadZero(1); err != nil {
 			return fmt.Errorf("auth.unpack: can't read authResponse")
 		}
 	}
