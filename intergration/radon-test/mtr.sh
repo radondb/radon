@@ -22,7 +22,7 @@ do
             # record every sql executed to tmp file 
             echo $sqlWithoutSemi";" >> $tmpFile
             # execute and record result to tmp file
-            mysql -uroot -P3308 -h127.0.0.1 -e "$sqlWithoutSemi" >> $tmpFile
+            mysql --line-numbers=0 -uroot -P3308 -h127.0.0.1 -e "$sqlWithoutSemi" >> $tmpFile 2>&1
         else
             echo "empty sql, skip and continue"
         fi

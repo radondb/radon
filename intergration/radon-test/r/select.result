@@ -10,6 +10,9 @@ a	c
 2	3
 0	1
 
+select c from integrate_test.t;
+ERROR 1054 (42S22): Unknown column 'c' in 'field list'
+
 drop table integrate_test.t;
 
 

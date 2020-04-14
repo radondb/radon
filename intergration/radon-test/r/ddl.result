@@ -59,4 +59,10 @@ t	CREATE TABLE `t` (\n  `a` int(11) DEFAULT NULL,\n  `b` int(11) DEFAULT NULL,\n
 drop table integrate_test.t;
 
 
+create table integrate_test.t(
+        a int,
+        b int key) ENGINE=InnoDB DEFAULT CHARSET=utf8 PARTITION BY HASH(a);
+ERROR 1105 (HY000): The unique/primary constraint should be only defined on the sharding key column[a]
+
+
 drop database integrate_test;
