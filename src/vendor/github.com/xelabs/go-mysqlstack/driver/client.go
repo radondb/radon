@@ -388,7 +388,6 @@ func (c *conn) Close() error {
 		select {
 		case <-ctx.Done():
 			c.Cleanup()
-			close(quitCh)
 		case <-quitCh:
 			c.Cleanup()
 		}
