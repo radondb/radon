@@ -35,4 +35,8 @@ create FULLTEXT index c_idx on integrate_test.t(c) WITH PARSER ngram comment 'fu
 show create table integrate_test.t;
 drop table integrate_test.t;
 
+create table integrate_test.t(
+        a int,
+        b int key) ENGINE=InnoDB DEFAULT CHARSET=utf8 PARTITION BY HASH(a);
+
 drop database integrate_test;
