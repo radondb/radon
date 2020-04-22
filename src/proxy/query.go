@@ -19,6 +19,7 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
@@ -233,8 +234,20 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 		spanner.auditLog(session, W, xbase.UPDATE, query, qr, status)
 		return returnQuery(qr, callback, err)
 	case *sqlparser.Select:
+		streamingFetch := false
 		txSession := spanner.sessions.getTxnSession(session)
 		if txSession.getStreamingFetchVar() {
+			streamingFetch = true
+		} else {
+			if len(node.Comments) > 0 {
+				comment := strings.Replace(common.BytesToString(node.Comments[0]), " ", "", -1)
+				if comment == "/*+streaming*/" {
+					streamingFetch = true
+				}
+			}
+		}
+
+		if streamingFetch {
 			if err = spanner.handleSelectStream(session, query, node, callback); err != nil {
 				log.Error("proxy.select.for.backup:[%s].error:%+v", xbase.TruncateQuery(query, 256), err)
 				return err
