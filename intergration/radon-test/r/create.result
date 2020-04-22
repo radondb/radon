@@ -327,7 +327,7 @@ create table integrate_test.t2 (a int) page_checksum=1 DEFAULT CHARSET=utf8;
 ERROR 1149 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use, syntax error at position 53 near 'page_checksum'
 
 create table integrate_test.t3 (a int) row_format=page DEFAULT CHARSET=utf8;
-ERROR 1149 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use, syntax error at position 50 near 'row_format'
+ERROR 1149 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use, syntax error at position 55 near 'page'
 
 drop table if exists integrate_test.t1,integrate_test.t2,integrate_test.t3;
 

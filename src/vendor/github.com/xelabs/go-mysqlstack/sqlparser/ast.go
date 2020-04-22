@@ -717,7 +717,32 @@ const (
 	TableOptionCharset
 	TableOptionTableType
 	TableOptionAutoInc
+	TableOptionAvgRowLength
+	TableOptionChecksum
+	TableOptionCollate
+	TableOptionCompression
+	TableOptionConnection
+	TableOptionDataDirectory
+	TableOptionIndexDirectory
+	TableOptionDelayKeyWrite
+	TableOptionEncryption
+	TableOptionInsertMethod
+	TableOptionKeyBlockSize
+	TableOptionMaxRows
+	TableOptionMinRows
+	TableOptionPackKeys
+	TableOptionPassword
+	TableOptionRowFormat
+	TableOptionStatsAutoRecalc
+	TableOptionStatsPersistent
+	TableOptionStatsSamplePages
+	TableOptionTableSpace
 )
+
+// StrToLower use to convert str to lower string
+func StrToLower(str string) string {
+	return strings.ToLower(str)
+}
 
 // TableOption represents the table options.
 // See https://dev.mysql.com/doc/refman/5.7/en/create-table.html
@@ -736,11 +761,30 @@ type TableOptionListOpt struct {
 // that each option should only be appeared just one time in RadonDB.
 func (tblOptList *TableOptionListOpt) CheckIfTableOptDuplicate() string {
 	var optOnce = map[TableOptionType]bool{
-		TableOptionComment:   false,
-		TableOptionEngine:    false,
-		TableOptionCharset:   false,
-		TableOptionTableType: false,
-		TableOptionAutoInc:   false,
+		TableOptionComment:          false,
+		TableOptionEngine:           false,
+		TableOptionCharset:          false,
+		TableOptionTableType:        false,
+		TableOptionAutoInc:          false,
+		TableOptionAvgRowLength:     false,
+		TableOptionChecksum:         false,
+		TableOptionCollate:          false,
+		TableOptionCompression:      false,
+		TableOptionConnection:       false,
+		TableOptionDataDirectory:    false,
+		TableOptionIndexDirectory:   false,
+		TableOptionDelayKeyWrite:    false,
+		TableOptionEncryption:       false,
+		TableOptionInsertMethod:     false,
+		TableOptionKeyBlockSize:     false,
+		TableOptionMaxRows:          false,
+		TableOptionMinRows:          false,
+		TableOptionPackKeys:         false,
+		TableOptionPassword:         false,
+		TableOptionRowFormat:        false,
+		TableOptionStatsAutoRecalc:  false,
+		TableOptionStatsPersistent:  false,
+		TableOptionStatsSamplePages: false,
 	}
 	for _, opt := range tblOptList.TblOptList {
 		switch opt.Type {
@@ -769,7 +813,106 @@ func (tblOptList *TableOptionListOpt) CheckIfTableOptDuplicate() string {
 				return "Duplicate table option for keyword 'auto_increment', the option should only be appeared just one time in RadonDB."
 			}
 			optOnce[TableOptionAutoInc] = true
-
+		case TableOptionAvgRowLength:
+			if optOnce[TableOptionAvgRowLength] {
+				return "Duplicate table option for keyword 'avg_row_length', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionAvgRowLength] = true
+		case TableOptionChecksum:
+			if optOnce[TableOptionChecksum] {
+				return "Duplicate table option for keyword 'checksum', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionChecksum] = true
+		case TableOptionCollate:
+			if optOnce[TableOptionCollate] {
+				return "Duplicate table option for table option keyword 'collate', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionCollate] = true
+		case TableOptionCompression:
+			if optOnce[TableOptionCompression] {
+				return "Duplicate table option for keyword 'compression', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionCompression] = true
+		case TableOptionConnection:
+			if optOnce[TableOptionConnection] {
+				return "Duplicate table option for keyword 'connection', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionConnection] = true
+		case TableOptionDataDirectory:
+			if optOnce[TableOptionDataDirectory] {
+				return "Duplicate table option for keyword 'data directory', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionDataDirectory] = true
+		case TableOptionIndexDirectory:
+			if optOnce[TableOptionIndexDirectory] {
+				return "Duplicate table option for keyword 'index directory', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionIndexDirectory] = true
+		case TableOptionDelayKeyWrite:
+			if optOnce[TableOptionDelayKeyWrite] {
+				return "Duplicate table option for keyword 'delay_key_write', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionDelayKeyWrite] = true
+		case TableOptionEncryption:
+			if optOnce[TableOptionEncryption] {
+				return "Duplicate table option for keyword 'encryption', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionEncryption] = true
+		case TableOptionInsertMethod:
+			if optOnce[TableOptionInsertMethod] {
+				return "Duplicate table option for keyword 'insert_method', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionInsertMethod] = true
+		case TableOptionKeyBlockSize:
+			if optOnce[TableOptionKeyBlockSize] {
+				return "Duplicate table option for keyword 'key_block_size', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionKeyBlockSize] = true
+		case TableOptionMaxRows:
+			if optOnce[TableOptionMaxRows] {
+				return "Duplicate table option for keyword 'max_rows', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionMaxRows] = true
+		case TableOptionMinRows:
+			if optOnce[TableOptionMinRows] {
+				return "Duplicate table option for keyword 'min_rows', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionMinRows] = true
+		case TableOptionPackKeys:
+			if optOnce[TableOptionPackKeys] {
+				return "Duplicate table option for keyword 'pack_keys', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionPackKeys] = true
+		case TableOptionPassword:
+			if optOnce[TableOptionPassword] {
+				return "Duplicate table option for keyword 'password', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionPassword] = true
+		case TableOptionRowFormat:
+			if optOnce[TableOptionRowFormat] {
+				return "Duplicate table option for keyword 'row_format', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionRowFormat] = true
+		case TableOptionStatsAutoRecalc:
+			if optOnce[TableOptionStatsAutoRecalc] {
+				return "Duplicate table option for keyword 'stats_auto_recalc', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionStatsAutoRecalc] = true
+		case TableOptionStatsPersistent:
+			if optOnce[TableOptionStatsPersistent] {
+				return "Duplicate table option for keyword 'stats_persistent', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionStatsPersistent] = true
+		case TableOptionStatsSamplePages:
+			if optOnce[TableOptionStatsSamplePages] {
+				return "Duplicate table option for keyword 'stats_sample_pages', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionStatsSamplePages] = true
+		case TableOptionTableSpace:
+			if optOnce[TableOptionTableSpace] {
+				return "Duplicate table option for keyword 'tablespace', the option should only be appeared just one time in RadonDB."
+			}
+			optOnce[TableOptionTableSpace] = true
 		}
 	}
 	return ""
@@ -787,10 +930,30 @@ func (tblOptList *TableOptionListOpt) GetTableOptValByType(optType TableOptionTy
 
 // TableOptions is used by TableSpec
 type TableOptions struct {
-	Comment string
-	Engine  string
-	Charset string
-	Type    string
+	Comment          string
+	Engine           string
+	Charset          string
+	Type             string
+	AvgRowLength     string
+	Checksum         string
+	Collate          string
+	Compression      string
+	Connection       string
+	DataDirectory    string
+	IndexDirectory   string
+	DelayKeyWrite    string
+	Encryption       string
+	InsertMethod     string
+	KeyBlockSize     string
+	MaxRows          string
+	MinRows          string
+	PackKeys         string
+	Password         string
+	RowFormat        string
+	StatsAutoRecalc  string
+	StatsPersistent  string
+	StatsSamplePages string
+	TableSpace       string
 }
 
 // Format formats the node.
@@ -803,6 +966,66 @@ func (opts TableOptions) Format(buf *TrackedBuffer) {
 	}
 	if opts.Charset != "" {
 		buf.Myprintf(" default charset=%s", opts.Charset)
+	}
+	if opts.AvgRowLength != "" {
+		buf.Myprintf(" avg_row_length=%s", opts.AvgRowLength)
+	}
+	if opts.Checksum != "" {
+		buf.Myprintf(" checksum=%s", opts.Checksum)
+	}
+	if opts.Collate != "" {
+		buf.Myprintf(" collate=%s", opts.Collate)
+	}
+	if opts.Compression != "" {
+		buf.Myprintf(" compression=%s", opts.Compression)
+	}
+	if opts.Connection != "" {
+		buf.Myprintf(" connection=%s", opts.Connection)
+	}
+	if opts.DataDirectory != "" {
+		buf.Myprintf(" data directory=%s", opts.DataDirectory)
+	}
+	if opts.IndexDirectory != "" {
+		buf.Myprintf(" index directory=%s", opts.IndexDirectory)
+	}
+	if opts.DelayKeyWrite != "" {
+		buf.Myprintf(" delay_key_write=%s", opts.DelayKeyWrite)
+	}
+	if opts.Encryption != "" {
+		buf.Myprintf(" encryption=%s", opts.Encryption)
+	}
+	if opts.InsertMethod != "" {
+		buf.Myprintf(" insert_method=%s", opts.InsertMethod)
+	}
+	if opts.InsertMethod != "" {
+		buf.Myprintf(" key_block_size=%s", opts.KeyBlockSize)
+	}
+	if opts.MaxRows != "" {
+		buf.Myprintf(" max_rows=%s", opts.MaxRows)
+	}
+	if opts.MinRows != "" {
+		buf.Myprintf(" min_rows=%s", opts.MinRows)
+	}
+	if opts.PackKeys != "" {
+		buf.Myprintf(" pack_keys=%s", opts.PackKeys)
+	}
+	if opts.Password != "" {
+		buf.Myprintf(" password=%s", opts.Password)
+	}
+	if opts.RowFormat != "" {
+		buf.Myprintf(" row_format=%s", opts.RowFormat)
+	}
+	if opts.StatsAutoRecalc != "" {
+		buf.Myprintf(" stats_auto_recalc=%s", opts.StatsAutoRecalc)
+	}
+	if opts.StatsPersistent != "" {
+		buf.Myprintf(" stats_persistent=%s", opts.StatsPersistent)
+	}
+	if opts.StatsSamplePages != "" {
+		buf.Myprintf(" stats_sample_pages=%s", opts.StatsSamplePages)
+	}
+	if opts.TableSpace != "" {
+		buf.Myprintf(" tablespace=%s", opts.TableSpace)
 	}
 }
 
@@ -1046,6 +1269,15 @@ const (
 
 	// UniquekeyOption enum.
 	ColumnOptionKeyUniqueOpt
+
+	// CollateOption enum
+	ColumnOptionCollate
+
+	// ColumnFormatOption enum
+	ColumnOptionFormat
+
+	// ColumnStorageOption enum
+	ColumnOptionStorage
 )
 
 type ColumnOption struct {
@@ -1055,7 +1287,10 @@ type ColumnOption struct {
 	Autoincrement BoolVal
 	Default       *SQLVal
 	Comment       *SQLVal
-	OnUpdate      *SQLVal
+	OnUpdate      string
+	Collate       *SQLVal
+	ColumnFormat  string
+	Storage       string
 	// Key specification
 	PrimaryKeyOpt ColumnPrimaryKeyOption
 	UniqueKeyOpt  ColumnUniqueKeyOption
@@ -1084,7 +1319,10 @@ func (co *ColumnOptionListOpt) GetColumnOption(opt ColumnOpt) *ColumnOption {
 		Autoincrement: false,
 		Default:       nil,
 		Comment:       nil,
-		OnUpdate:      nil,
+		OnUpdate:      "",
+		Collate:       nil,
+		ColumnFormat:  "",
+		Storage:       "",
 		PrimaryKeyOpt: ColKeyPrimaryNone,
 		UniqueKeyOpt:  ColKeyUniqueNone,
 	}
@@ -1100,8 +1338,11 @@ type ColumnType struct {
 	NotNull       BoolVal
 	Autoincrement BoolVal
 	Default       *SQLVal
-	OnUpdate      *SQLVal
+	OnUpdate      string
 	Comment       *SQLVal
+	Collate       *SQLVal
+	ColumnFormat  string
+	Storage       string
 
 	// Numeric field options
 	Length   *SQLVal
@@ -1111,7 +1352,6 @@ type ColumnType struct {
 
 	// Text field options
 	Charset string
-	Collate string
 
 	// Enum values
 	EnumValues []string
@@ -1146,8 +1386,14 @@ func (ct *ColumnType) Format(buf *TrackedBuffer) {
 	if ct.Charset != "" {
 		opts = append(opts, keywordStrings[CHARACTER], keywordStrings[SET], ct.Charset)
 	}
-	if ct.Collate != "" {
-		opts = append(opts, keywordStrings[COLLATE], ct.Collate)
+	if ct.Collate != nil {
+		opts = append(opts, keywordStrings[COLLATE], String(ct.Collate))
+	}
+	if ct.ColumnFormat != "" {
+		opts = append(opts, keywordStrings[COLUMN_FORMAT], ct.ColumnFormat)
+	}
+	if ct.Storage != "" {
+		opts = append(opts, keywordStrings[STORAGE], ct.Storage)
 	}
 	if ct.NotNull {
 		opts = append(opts, keywordStrings[NOT], keywordStrings[NULL])
@@ -1155,8 +1401,8 @@ func (ct *ColumnType) Format(buf *TrackedBuffer) {
 	if ct.Default != nil {
 		opts = append(opts, keywordStrings[DEFAULT], String(ct.Default))
 	}
-	if ct.OnUpdate != nil {
-		opts = append(opts, keywordStrings[ON], keywordStrings[UPDATE], String(ct.OnUpdate))
+	if ct.OnUpdate != "" {
+		opts = append(opts, keywordStrings[ON], keywordStrings[UPDATE], ct.OnUpdate)
 	}
 	if ct.Autoincrement {
 		opts = append(opts, keywordStrings[AUTO_INCREMENT])

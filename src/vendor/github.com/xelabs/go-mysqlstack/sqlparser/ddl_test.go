@@ -227,11 +227,28 @@ func TestDDL1(t *testing.T) {
 			input: "create table test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
-				") engine=tokudb comment='comment option' character set 'utf8' partition by hash(id)",
+				") tableSpace=storage stats_sample_pageS=65535 stats_persistenT=default Stats_auto_recalC=1 Row_forMat=dynamic PassWord='pwd' pack_keys=default max_rows=3 min_rows=2 key_block_size=1 insert_method=First encryption='n' delay_key_write=1 data directory='/data' index directory='/index' connection='id' comPression='lz4' default collate='utf8_bin' checksum=1 avg_row_length=123 engine=tokudb comment='comment option' character set 'utf8' partition by hash(id)",
 			output: "create table test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
-				") comment='comment option' engine=tokudb default charset='utf8'",
+				") comment='comment option' engine=tokudb default charset='utf8' avg_row_length=123 checksum=1 collate='utf8_bin' compression='lz4' connection='id' data directory='/data' index directory='/index' delay_key_write=1 encryption='n' insert_method=First key_block_size=1 max_rows=3 min_rows=2 pack_keys=default password='pwd' row_format=dynamic stats_auto_recalc=1 stats_persistent=default stats_sample_pages=65535 tablespace=storage",
+		},
+
+		{
+			input: "create table test.t (\n" +
+				"	`name` varchar(10)\n" +
+				") row_format=tokudb_Quicklz engine=tokudb comment 'comment option' charset \"utf8\" partition by hash(id)",
+			output: "create table test.t (\n" +
+				"	`name` varchar(10)\n" +
+				") comment='comment option' engine=tokudb default charset='utf8' row_format=tokudb_quicklz",
+		},
+		{
+			input: "create table test.t (\n" +
+				"	`name` varchar(10)\n" +
+				") Stats_auto_recalC=default engine=tokudb comment 'comment option' charset \"utf8\" partition by hash(id)",
+			output: "create table test.t (\n" +
+				"	`name` varchar(10)\n" +
+				") comment='comment option' engine=tokudb default charset='utf8' stats_auto_recalc=default",
 		},
 		// GLOBAL.
 		{
@@ -460,12 +477,16 @@ func TestDDL1(t *testing.T) {
 			input: "create table t (\n" +
 				"	`id` int primary key,\n" +
 				"	`t1` timestamp default current_timestamp,\n" +
-				"	`t2`  timestamp ON UPDATE CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' ON UPDATE CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n" +
+				"	`t2`  timestamp ON UPDATE CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' ON UPDATE CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
+				"	`t3` timestamp on Update current_timestamp(),\n" +
+				"	`t4` timestamp(5) on Update current_timestamp(5)\n" +
 				") partition by hash(id)",
 			output: "create table t (\n" +
 				"	`id` int primary key,\n" +
 				"	`t1` timestamp default current_timestamp,\n" +
-				"	`t2` timestamp not null default current_timestamp on update current_timestamp comment 'currenttimestamp'\n" +
+				"	`t2` timestamp not null default current_timestamp on update current_timestamp comment 'currenttimestamp',\n" +
+				"	`t3` timestamp on update current_timestamp(),\n" +
+				"	`t4` timestamp(5) on update current_timestamp(5)\n" +
 				")",
 		},
 
@@ -945,6 +966,223 @@ func TestDDL1ParseError(t *testing.T) {
 				"	`name` varchar(10)\n" +
 				") engine=tokudb comment 'comment option' comment 'radondb' charset \"utf8\" partition by hash(id)",
 			output: "Duplicate table option for keyword 'comment', the option should only be appeared just one time in RadonDB. at position 149 near 'partition'",
+		},
+		{ // Duplicate keyword avg_row_length
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb avg_row_length=123 avg_row_length=123 charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'avg_row_length', the option should only be appeared just one time in RadonDB. at position 144 near 'partition'",
+		},
+		{ // Duplicate keyword checksum
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb checksum=1 checksum=1 charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'checksum', the option should only be appeared just one time in RadonDB. at position 128 near 'partition'",
+		},
+		{ // Duplicate keyword collate
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb default collate='utf8_bin' collate='utf8_bin' charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for table option keyword 'collate', the option should only be appeared just one time in RadonDB. at position 152 near 'partition'",
+		},
+		{ // Duplicate keyword compression
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb compression 'zlib' COMPRESSION='Zlib' charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'compression', the option should only be appeared just one time in RadonDB. at position 144 near 'partition'",
+		},
+		{ // Wrong keyword compression
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb compression 'xlib' charset \"utf8\" partition by hash(id)",
+			output: "Invalid compression option, argument (should be 'ZLIB', 'LZ4' or 'NONE') at position 100 near 'xlib'",
+		},
+		{ // Duplicate keyword connection
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb connection='str' connection 'str2' charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'connection', the option should only be appeared just one time in RadonDB. at position 141 near 'partition'",
+		},
+		{ // Duplicate keyword data directory
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb data directory='/data' data directory '/data2' charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'data directory', the option should only be appeared just one time in RadonDB. at position 153 near 'partition'",
+		},
+		{ // Duplicate keyword index directory
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb index directory='/data' index directory '/data2' charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'index directory', the option should only be appeared just one time in RadonDB. at position 155 near 'partition'",
+		},
+		{ // Duplicate keyword DELAY_KEY_WRITE
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb delay_key_write=0 delay_key_write=1 charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'delay_key_write', the option should only be appeared just one time in RadonDB. at position 142 near 'partition'",
+		},
+		{ // Duplicate keyword ENCRYPTION
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb encryption='n' encryption='n' charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'encryption', the option should only be appeared just one time in RadonDB. at position 136 near 'partition'",
+		},
+		{ // Invalid keyword ENCRYPTION option
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb encryption='y' charset \"utf8\" partition by hash(id)",
+			output: "The encryption option is parsed but ignored by all storage engines. at position 96 near 'y'",
+		},
+		{ // Invalid keyword ENCRYPTION option
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb encryption='x' charset \"utf8\" partition by hash(id)",
+			output: "Invalid encryption option, argument (should be Y or N) at position 96 near 'x'",
+		},
+		{ // Duplicate keyword INSERT_METHOD
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb insert_method=no insert_method=first charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'insert_method', the option should only be appeared just one time in RadonDB. at position 143 near 'partition'",
+		},
+		{ // Invalid keyword INSERT_METHOD
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb insert_method=noo charset \"utf8\" partition by hash(id)",
+			output: "Invalid insert_method option, argument (should be NO, FIRST or LAST) at position 99 near 'noo'",
+		},
+		{ // Invalid keyword KEY_BLOCK_SIZE value
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb key_block_size=-1 charset \"utf8\" partition by hash(id)",
+			output: "syntax error at position 98",
+		},
+		{ // Duplicate keyword KEY_BLOCK_SIZE
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb key_block_size=1 key_block_size=1 charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'key_block_size', the option should only be appeared just one time in RadonDB. at position 140 near 'partition'",
+		},
+		{ // Duplicate keyword MAX_ROWS
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb max_rows=1 max_rows=1 charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'max_rows', the option should only be appeared just one time in RadonDB. at position 128 near 'partition'",
+		},
+		{ // Duplicate keyword MIN_ROWS
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb min_rows=1 min_rows=1 charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'min_rows', the option should only be appeared just one time in RadonDB. at position 128 near 'partition'",
+		},
+		{ // Invalid keyword MAX_ROWS value
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb max_rows=-1 charset \"utf8\" partition by hash(id)",
+			output: "syntax error at position 92",
+		},
+		{ // Invalid keyword MIN_ROWS value
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb min_rows=-1 charset \"utf8\" partition by hash(id)",
+			output: "syntax error at position 92",
+		},
+		{ // Invalid keyword pack_keys value
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb pack_keys=-8 charset \"utf8\" partition by hash(id)",
+			output: "syntax error at position 93",
+		},
+		{ // Duplicate keyword PACK_KEYS
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb pack_keys=1 pack_keys=1 charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'pack_keys', the option should only be appeared just one time in RadonDB. at position 130 near 'partition'",
+		},
+		{ // Duplicate keyword PASSWORD
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb password='pwd' password='pwd' charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'password', the option should only be appeared just one time in RadonDB. at position 136 near 'partition'",
+		},
+		{ // Duplicate keyword ROW_FORMAT
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb row_format=default row_format=dynamic charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'row_format', the option should only be appeared just one time in RadonDB. at position 144 near 'partition'",
+		},
+		{ // Duplicate keyword STATS_AUTO_RECALC
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb sTats_auto_recalc=0 stats_auto_recalc=0 charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'stats_auto_recalc', the option should only be appeared just one time in RadonDB. at position 146 near 'partition'",
+		},
+		{ // Invalid keyword STATS_AUTO_RECALC option
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb stats_auto_recalc=-1 charset \"utf8\" partition by hash(id)",
+			output: "syntax error at position 101",
+		},
+		{ // Duplicate keyword STATS_PERSISTENT
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb sTats_persistenT=0 sTats_persistenT=0 charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'stats_persistent', the option should only be appeared just one time in RadonDB. at position 144 near 'partition'",
+		},
+		{ // Invalid keyword STATS_PERSISTENT option
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb stats_persisTent=-1 charset \"utf8\" partition by hash(id)",
+			output: "syntax error at position 100",
+		},
+		{ // Duplicate keyword STATS_SAMPLE_PAGES
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb stats_sample_pageS=1 stats_sample_Pages=2 charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'stats_sample_pages', the option should only be appeared just one time in RadonDB. at position 148 near 'partition'",
+		},
+		{ // Invalid keyword STATS_SAMPLE_PAGES option
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb stats_sample_pages=-1 charset \"utf8\" partition by hash(id)",
+			output: "syntax error at position 102",
+		},
+		{ // Duplicate keyword STATS_SAMPLE_PAGES
+			input: "create table test.t (\n" +
+				"	`id` int primary key,\n" +
+				"	`name` varchar(10)\n" +
+				") engine=tokudb tablespace=aa tablespace=bb charset \"utf8\" partition by hash(id)",
+			output: "Duplicate table option for keyword 'tablespace', the option should only be appeared just one time in RadonDB. at position 134 near 'partition'",
 		},
 		{ // The content of comment should be quoted with \' or \"
 			input: "create table test.t (\n" +
