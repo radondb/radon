@@ -163,8 +163,16 @@ func (p *InsertPlan) Build() error {
 		val.vals = append(val.vals, row)
 	}
 
+	// sorts SQL by rewrittenTable in increasing order to avoid deadlock #605.
+	ks := []string{}
+	for k, _ := range vals {
+		ks = append(ks, k)
+	}
+	sort.Strings(ks)
+
 	// Rebuild querys with router info.
-	for rewritten, v := range vals {
+	for _, rewritten := range ks {
+		v := vals[rewritten]
 		buf := sqlparser.NewTrackedBuffer(nil)
 		buf.Myprintf("%s %v%sinto %s.%s%v %v%v", node.Action, node.Comments, node.Ignore, database, rewritten, node.Columns, v.vals, node.OnDup)
 		tuple := xcontext.QueryTuple{

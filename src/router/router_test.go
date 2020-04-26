@@ -94,6 +94,9 @@ func TestRouterAdd(t *testing.T) {
 		want := "router.add.db[sbtest].table[A].exists"
 		got := err.Error()
 		assert.Equal(t, want, got)
+
+		err = router.addTable("sbtest", MockTableDeadLockConfig())
+		assert.NotNil(t, err)
 	}
 
 	// unsupport shardtype
