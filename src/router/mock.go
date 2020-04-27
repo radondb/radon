@@ -105,6 +105,31 @@ func MockTableMConfig() *config.TableConfig {
 	return mock
 }
 
+// MockTableDeadLockConfig config.
+func MockTableDeadLockConfig() *config.TableConfig {
+	mock := &config.TableConfig{
+		Name:       "A",
+		ShardType:  "HASH",
+		ShardKey:   "id",
+		Partitions: make([]*config.PartitionConfig, 0, 16),
+	}
+
+	S256512 := &config.PartitionConfig{
+		Table:   "A5",
+		Segment: "0-512",
+		Backend: "backend6",
+	}
+
+	S5121024 := &config.PartitionConfig{
+		Table:   "A6",
+		Segment: "512-4096",
+		Backend: "backend6",
+	}
+
+	mock.Partitions = append(mock.Partitions,S256512, S5121024)
+	return mock
+}
+
 // MockTableBConfig config.
 func MockTableBConfig() *config.TableConfig {
 	mock := &config.TableConfig{

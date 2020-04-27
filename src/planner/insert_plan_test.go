@@ -96,6 +96,71 @@ func TestInsertPlan(t *testing.T) {
 	}
 }
 
+func TestInsertPlanSort(t *testing.T) {
+	results := []string{
+		`{
+	"RawQuery": "insert into sbtest.A(id, b, c) values(1,2,3), (23,4,5), (65536,3,4)",
+	"Partitions": [
+		{
+			"Query": "insert into sbtest.A5(id, b, c) values (65536, 3, 4)",
+			"Backend": "backend6",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "insert into sbtest.A6(id, b, c) values (1, 2, 3), (23, 4, 5)",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+		`{
+	"RawQuery": "insert into sbtest.A(id, b, c) values(65536,3,4), (23,4,5), (1,2,3)",
+	"Partitions": [
+		{
+			"Query": "insert into sbtest.A5(id, b, c) values (65536, 3, 4)",
+			"Backend": "backend6",
+			"Range": "[0-512)"
+		},
+		{
+			"Query": "insert into sbtest.A6(id, b, c) values (23, 4, 5), (1, 2, 3)",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
+	}
+	querys := []string{
+		"insert into sbtest.A(id, b, c) values(1,2,3), (23,4,5), (65536,3,4)",
+		"insert into sbtest.A(id, b, c) values(65536,3,4), (23,4,5), (1,2,3)",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.AddForTest(database, router.MockTableDeadLockConfig())
+	assert.Nil(t, err)
+	for i, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewInsertPlan(log, database, query, node.(*sqlparser.Insert), route)
+
+		// plan build
+		{
+			err := plan.Build()
+			assert.Nil(t, err)
+			got := plan.JSON()
+			log.Info(got)
+			want := results[i]
+			assert.Equal(t, want, got)
+			plan.Type()
+			plan.Size()
+		}
+	}
+}
+
 func TestInsertUnsupportedPlan(t *testing.T) {
 	querys := []string{
 		"insert into sbtest.A(b, c, id) values(1,2)",
