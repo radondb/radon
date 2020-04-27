@@ -198,8 +198,6 @@ func (p *InsertPlan) JSON() string {
 	}
 
 	var parts []xcontext.QueryTuple
-	// Sort.
-	sort.Sort(xcontext.QueryTuples(p.Querys))
 	parts = append(parts, p.Querys...)
 	exp := &explain{
 		RawQuery:   p.RawQuery,
