@@ -489,7 +489,7 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 	}
 
 	sort.Strings(be.Pools)
-	if b, err := json.MarshalIndent(be, "", "\t\t\t"); err != nil {
+	if b, err := json.MarshalIndent(be, "", "\t"); err != nil {
 		poolJSON = []byte(err.Error())
 	} else {
 		poolJSON = b
@@ -518,7 +518,7 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 			}
 		}
 		buff := bytes.NewBuffer(make([]byte, 0, 256))
-		fmt.Fprintf(buff, `{"name": "%s","tables": "%s", "datasize":"%s"}`, backend, tables, datasize)
+		fmt.Fprintf(buff, "{'name': '%s', 'tables': '%s', 'datasize':'%s'}", backend, tables, datasize)
 		bs.Backends = append(bs.Backends, buff.String())
 	}
 
@@ -534,7 +534,7 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 	}
 
 	sort.Strings(bs.Backends)
-	if b, err := json.MarshalIndent(bs, "", "\t\t\t"); err != nil {
+	if b, err := json.MarshalIndent(bs, "", "\t"); err != nil {
 		backendsJSON = []byte(err.Error())
 	} else {
 		backendsJSON = b

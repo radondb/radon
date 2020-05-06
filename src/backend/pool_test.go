@@ -50,7 +50,7 @@ func TestPool(t *testing.T) {
 			assert.Nil(t, err)
 			pool.Put(conn)
 		}
-		want := "{\"name\": \"node1\",\"capacity\": 64, \"counters\":\"{\"#pool.get\": 1, \"#pool.miss\": 1, \"#pool.put\": 164}\"}"
+		want := "{'name': 'node1@" + pool.address + "', 'capacity': 64, 'counters': {'#pool.get': 1, '#pool.miss': 1, '#pool.put': 164}}"
 		got := pool.JSON()
 		assert.Equal(t, want, got)
 	}

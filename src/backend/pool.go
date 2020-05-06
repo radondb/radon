@@ -47,6 +47,7 @@ var (
 type Pool struct {
 	mu          sync.RWMutex
 	log         *xlog.Log
+	address     string
 	conf        *config.BackendConfig
 	counters    *stats.Counters
 	connections chan Connection
@@ -57,14 +58,14 @@ type Pool struct {
 
 // NewPool creates the new Pool.
 func NewPool(log *xlog.Log, conf *config.BackendConfig) *Pool {
-	p := &Pool{
+	return &Pool{
 		log:         log,
+		address:     conf.Address,
 		conf:        conf,
 		connections: make(chan Connection, conf.MaxConnections),
 		counters:    stats.NewCounters(conf.Name + "@" + conf.Address),
 		maxIdleTime: int64(maxIdleTime),
 	}
-	return p
 }
 
 func (p *Pool) reconnect() (Connection, error) {
@@ -166,6 +167,6 @@ func (p *Pool) getConns() chan Connection {
 // available is the number of currently unused connections.
 func (p *Pool) JSON() string {
 	b := bytes.NewBuffer(make([]byte, 0, 256))
-	fmt.Fprintf(b, `{"name": "%s","capacity": %d, "counters":"%s"}`, p.conf.Name, p.conf.MaxConnections, p.counters.String())
+	fmt.Fprintf(b, "{'name': '%s@%s', 'capacity': %d, 'counters': %s}", p.conf.Name, p.address, p.conf.MaxConnections, p.counters.String())
 	return b.String()
 }
