@@ -74,7 +74,7 @@ func NewConnection(log *xlog.Log, pool *Pool) Connection {
 		pool:     pool,
 		user:     conf.User,
 		password: conf.Password,
-		address:  conf.Address,
+		address:  pool.address,
 		charset:  conf.Charset,
 		counters: pool.counters,
 	}

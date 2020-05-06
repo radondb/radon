@@ -73,7 +73,7 @@ func (c *Counters) String() string {
 		} else {
 			fmt.Fprintf(b, ", ")
 		}
-		fmt.Fprintf(b, "\"%v\": %v", v.name, v.count)
+		fmt.Fprintf(b, "'%v': %v", v.name, v.count)
 	}
 	fmt.Fprintf(b, "}")
 	return b.String()
@@ -156,7 +156,7 @@ func (f CountersFunc) String() string {
 		} else {
 			fmt.Fprintf(b, ", ")
 		}
-		fmt.Fprintf(b, "\"%v\": %v", k, v)
+		fmt.Fprintf(b, "'%v': %v", k, v)
 	}
 	fmt.Fprintf(b, "}")
 	return b.String()

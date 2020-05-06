@@ -19,8 +19,8 @@ func TestCounters(t *testing.T) {
 	c.Add("c1", 1)
 	c.Add("c2", 1)
 	c.Add("c2", 1)
-	want1 := `{"c1": 1, "c2": 2}`
-	want2 := `{"c2": 2, "c1": 1}`
+	want1 := `{'c1': 1, 'c2': 2}`
+	want2 := `{'c2': 2, 'c1': 1}`
 	if s := c.String(); s != want1 && s != want2 {
 		t.Errorf("want %s or %s, got %s", want1, want2, s)
 	}
@@ -65,8 +65,8 @@ func TestMultiCounters(t *testing.T) {
 	c.Add([]string{"c1a", "c1b"}, 1)
 	c.Add([]string{"c2a", "c2b"}, 1)
 	c.Add([]string{"c2a", "c2b"}, 1)
-	want1 := `{"c1a.c1b": 1, "c2a.c2b": 2}`
-	want2 := `{"c2a.c2b": 2, "c1a.c1b": 1}`
+	want1 := `{'c1a.c1b': 1, 'c2a.c2b': 2}`
+	want2 := `{'c2a.c2b': 2, 'c1a.c1b': 1}`
 	if s := c.String(); s != want1 && s != want2 {
 		t.Errorf("want %s or %s, got %s", want1, want2, s)
 	}
