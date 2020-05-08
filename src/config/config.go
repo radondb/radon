@@ -28,6 +28,7 @@ type ProxyConfig struct {
 	MetaDir     string   `json:"meta-dir"`
 	Endpoint    string   `json:"endpoint"`
 	TwopcEnable bool     `json:"twopc-enable"`
+	LoadBalance int      `json:"load-balance"` // 0 -- disable balance, 1 -- enable balance to replica
 
 	MaxConnections   int    `json:"max-connections"`
 	MaxResultSize    int    `json:"max-result-size"`
@@ -49,6 +50,7 @@ func DefaultProxyConfig() *ProxyConfig {
 	return &ProxyConfig{
 		MetaDir:          "./radon-meta",
 		Endpoint:         "127.0.0.1:3308",
+		LoadBalance:      0,
 		MaxConnections:   1024,
 		MaxResultSize:    1024 * 1024 * 1024, // 1GB
 		MaxJoinRows:      32768,
@@ -151,6 +153,7 @@ func (c *MonitorConfig) UnmarshalJSON(b []byte) error {
 type BackendConfig struct {
 	Name           string `json:"name"`
 	Address        string `json:"address"`
+	Replica        string `json:"replica-address"`
 	User           string `json:"user"`
 	Password       string `json:"password"`
 	DBName         string `json:"database"`

@@ -24,12 +24,13 @@ import (
 )
 
 var (
-	txnCounterTxnCreate             = "#txn.create"
-	txnCounterTwopcConnectionError  = "#get.twopc.connection.error"
-	txnCounterNormalConnectionError = "#get.normal.connection.error"
-	txnCounterTxnBegin              = "#txn.begin"
-	txnCounterTxnFinish             = "#txn.finish"
-	txnCounterTxnAbort              = "#txn.abort"
+	txnCounterTxnCreate              = "#txn.create"
+	txnCounterTwopcConnectionError   = "#get.twopc.connection.error"
+	txnCounterNormalConnectionError  = "#get.normal.connection.error"
+	txnCounterReplicaConnectionError = "#get.replica.connection.error"
+	txnCounterTxnBegin               = "#txn.begin"
+	txnCounterTxnFinish              = "#txn.finish"
+	txnCounterTxnAbort               = "#txn.abort"
 )
 
 type txnState int32
@@ -65,6 +66,7 @@ type Transaction interface {
 	SetMultiStmtTxn()
 	SetSessionID(id uint32)
 
+	SetLoadBalance(loadBalance int)
 	SetTimeout(timeout int)
 	SetMaxResult(max int)
 	SetMaxJoinRows(max int)
@@ -76,47 +78,56 @@ type Transaction interface {
 
 // Txn tuple.
 type Txn struct {
-	log               *xlog.Log
-	id                uint64
-	xid               string
-	sessionID         uint32
-	mu                sync.Mutex
-	mgr               *TxnManager
-	req               *xcontext.RequestContext
-	txnd              *TxnDetail
-	twopc             bool
-	isMultiStmtTxn    bool
-	start             time.Time
-	state             sync2.AtomicInt32
-	xaState           sync2.AtomicInt32
-	backends          map[string]*Pool
-	timeout           int
-	maxResult         int
-	maxJoinRows       int
-	errors            int
-	twopcConnections  map[string]Connection
-	normalConnections []Connection
-	twopcConnMu       sync.RWMutex
-	normalConnMu      sync.RWMutex
+	log                *xlog.Log
+	id                 uint64
+	xid                string
+	sessionID          uint32
+	mu                 sync.Mutex
+	mgr                *TxnManager
+	req                *xcontext.RequestContext
+	txnd               *TxnDetail
+	twopc              bool
+	loadBalance        int
+	isMultiStmtTxn     bool
+	start              time.Time
+	state              sync2.AtomicInt32
+	xaState            sync2.AtomicInt32
+	backends           map[string]*Poolz
+	timeout            int
+	maxResult          int
+	maxJoinRows        int
+	errors             int
+	twopcConnections   map[string]Connection
+	normalConnections  []Connection
+	replicaConnections []Connection
+	twopcConnMu        sync.RWMutex
+	normalConnMu       sync.RWMutex
+	replicaConnMu      sync.RWMutex
 }
 
 // NewTxn creates the new Txn.
-func NewTxn(log *xlog.Log, txid uint64, mgr *TxnManager, backends map[string]*Pool) (*Txn, error) {
+func NewTxn(log *xlog.Log, txid uint64, mgr *TxnManager, backends map[string]*Poolz) (*Txn, error) {
 	txn := &Txn{
-		log:               log,
-		id:                txid,
-		mgr:               mgr,
-		backends:          backends,
-		start:             time.Now(),
-		twopcConnections:  make(map[string]Connection),
-		normalConnections: make([]Connection, 0, 8),
-		state:             sync2.NewAtomicInt32(int32(txnStateLive)),
+		log:                log,
+		id:                 txid,
+		mgr:                mgr,
+		backends:           backends,
+		start:              time.Now(),
+		twopcConnections:   make(map[string]Connection),
+		normalConnections:  make([]Connection, 0, 8),
+		replicaConnections: make([]Connection, 0, 8),
+		state:              sync2.NewAtomicInt32(int32(txnStateLive)),
 	}
 	txnd := NewTxnDetail(txn)
 	txn.txnd = txnd
 	tz.Add(txnd)
 	txnCounters.Add(txnCounterTxnCreate, 1)
 	return txn, nil
+}
+
+// SetLoadBalance used to set the txn loadBalance.
+func (txn *Txn) SetLoadBalance(loadBalance int) {
+	txn.loadBalance = loadBalance
 }
 
 // SetTimeout used to set the txn timeout.
@@ -172,12 +183,12 @@ func (txn *Txn) twopcConnection(backend string) (Connection, error) {
 	conn, ok := txn.twopcConnections[backend]
 	txn.twopcConnMu.RUnlock()
 	if !ok {
-		pool, ok := txn.backends[backend]
+		poolz, ok := txn.backends[backend]
 		if !ok {
 			txnCounters.Add(txnCounterTwopcConnectionError, 1)
 			return nil, errors.Errorf("txn.can.not.get.twopc.connection.by.backend[%+v].from.pool", backend)
 		}
-		conn, err = pool.Get()
+		conn, err = poolz.normal.Get()
 		if err != nil {
 			return nil, err
 		}
@@ -202,12 +213,12 @@ func (txn *Txn) reFetchTwopcConnection(backend string) (Connection, error) {
 // normalConnection used to get a connection via backend name from pool.
 // The Connection is stored in normalConnections for recycling.
 func (txn *Txn) normalConnection(backend string) (Connection, error) {
-	pool, ok := txn.backends[backend]
+	poolz, ok := txn.backends[backend]
 	if !ok {
 		txnCounters.Add(txnCounterNormalConnectionError, 1)
 		return nil, errors.Errorf("txn.can.not.get.normal.connection.by.backend[%+v].from.pool", backend)
 	}
-	conn, err := pool.Get()
+	conn, err := poolz.normal.Get()
 	if err != nil {
 		return nil, err
 	}
@@ -217,9 +228,35 @@ func (txn *Txn) normalConnection(backend string) (Connection, error) {
 	return conn, nil
 }
 
-func (txn *Txn) fetchOneConnection(back string) (Connection, error) {
+func (txn *Txn) replicaConnection(backend string) (Connection, error) {
+	poolz, ok := txn.backends[backend]
+	if !ok || poolz.replica == nil {
+		txnCounters.Add(txnCounterReplicaConnectionError, 1)
+		return nil, errors.Errorf("txn.can.not.get.replica.connection.by.backend[%+v].from.pool", backend)
+	}
+	conn, err := poolz.replica.Get()
+	if err != nil {
+		return nil, err
+	}
+	txn.replicaConnMu.Lock()
+	txn.replicaConnections = append(txn.replicaConnections, conn)
+	txn.replicaConnMu.Unlock()
+	return conn, nil
+}
+
+func (txn *Txn) fetchOneConnection(back string, txnMode xcontext.TxnMode) (Connection, error) {
 	var err error
 	var conn Connection
+	log := txn.log
+
+	if txn.loadBalance == 1 && !txn.isMultiStmtTxn && txnMode == xcontext.TxnRead {
+		conn, err = txn.replicaConnection(back)
+		if err == nil {
+			return conn, nil
+		}
+		log.Warning("txn.can.not.get.replica.connection.by.backend[%+v].from.pool", back)
+	}
+
 	if txn.twopc {
 		if conn, err = txn.twopcConnection(back); err != nil {
 			return nil, err
@@ -416,12 +453,12 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 	}
 
 	// Execute backend-querys.
-	oneShard := func(back string, txn *Txn, querys []string) {
+	oneShard := func(back string, txnMode xcontext.TxnMode, txn *Txn, querys []string) {
 		var x error
 		var c Connection
 		defer wg.Done()
 
-		if c, x = txn.fetchOneConnection(back); x != nil {
+		if c, x = txn.fetchOneConnection(back, txnMode); x != nil {
 			log.Error("txn.fetch.connection.on[%s].querys[%v].error:%+v", back, querys, x)
 		} else {
 			log.Debug("conn[%v].txn.sessid[%v].execute[%v]", c.ID(), txn.sessionID, querys[0])
@@ -451,29 +488,29 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 	// it is random sometimes, be careful.
 	case xcontext.ReqSingle:
 		qs := []string{req.RawQuery}
-		for back, pool := range txn.backends {
-			if pool.conf.Role != config.NormalBackend {
+		for back, poolz := range txn.backends {
+			if poolz.conf.Role != config.NormalBackend {
 				continue
 			}
 
 			wg.Add(1)
-			oneShard(back, txn, qs)
+			oneShard(back, req.TxnMode, txn, qs)
 			break
 		}
 	// ReqScatter mode: execute on the all shards of txn.backends.
 	case xcontext.ReqScatter:
 		qs := []string{req.RawQuery}
 		beLen := len(txn.backends)
-		for back, pool := range txn.backends {
-			if pool.conf.Role != config.NormalBackend {
+		for back, poolz := range txn.backends {
+			if poolz.conf.Role != config.NormalBackend {
 				continue
 			}
 
 			wg.Add(1)
 			if beLen > 1 {
-				go oneShard(back, txn, qs)
+				go oneShard(back, req.TxnMode, txn, qs)
 			} else {
-				oneShard(back, txn, qs)
+				oneShard(back, req.TxnMode, txn, qs)
 			}
 		}
 	// ReqNormal mode: execute on the some shards of txn.backends.
@@ -493,9 +530,9 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 		for back, qs := range queryMap {
 			wg.Add(1)
 			if beLen > 1 {
-				go oneShard(back, txn, qs)
+				go oneShard(back, req.TxnMode, txn, qs)
 			} else {
-				oneShard(back, txn, qs)
+				oneShard(back, req.TxnMode, txn, qs)
 			}
 		}
 	}
@@ -539,7 +576,7 @@ func (txn *Txn) ExecuteStreamFetch(req *xcontext.RequestContext, callback func(*
 
 	for _, qt := range req.Querys {
 		var conn Connection
-		if conn, err = txn.fetchOneConnection(qt.Backend); err != nil {
+		if conn, err = txn.fetchOneConnection(qt.Backend, req.TxnMode); err != nil {
 			return err
 		}
 		wg.Add(1)
@@ -727,6 +764,15 @@ func (txn *Txn) Finish() error {
 			conn.Recycle()
 		}
 	}
+
+	// replica connections.
+	for _, conn := range txn.replicaConnections {
+		if txn.errors > 0 {
+			conn.Close()
+		} else {
+			conn.Recycle()
+		}
+	}
 	txn.mgr.Remove()
 	return nil
 }
@@ -764,6 +810,13 @@ func (txn *Txn) Abort() error {
 		conn.Kill("txn.abort")
 	}
 	txn.normalConnMu.RUnlock()
+
+	// replica connections.
+	txn.replicaConnMu.RLock()
+	for _, conn := range txn.replicaConnections {
+		conn.Kill("txn.abort")
+	}
+	txn.replicaConnMu.RUnlock()
 	txn.mgr.Remove()
 	return nil
 }

@@ -97,6 +97,21 @@ func MockBackendConfigAttach(name, addr string) *config.BackendConfig {
 	}
 }
 
+// MockBackendConfigReplica mocks new backend config with replica.
+func MockBackendConfigReplica(name, addr, replica string) *config.BackendConfig {
+	return &config.BackendConfig{
+		Name:           name,
+		Address:        addr,
+		Replica:        replica,
+		User:           "mock",
+		Password:       "pwd",
+		DBName:         "sbtest",
+		Charset:        "utf8",
+		MaxConnections: 1024,
+		Role:           0,
+	}
+}
+
 // MockScatterDefault mocks new xacheck config.
 func MockScatterDefault(log *xlog.Log) *config.ScatterConfig {
 	dir := fakedb.GetTmpDir("/tmp", "xacheck", log)
@@ -120,13 +135,12 @@ func MockScatterDefault2(dir string) *config.ScatterConfig {
 func MockScatter(log *xlog.Log, n int) (*Scatter, *fakedb.DB, func()) {
 	scatter := NewScatter(log, "")
 	fakedb := fakedb.New(log, n)
-	backends := make(map[string]*Pool)
+	backends := make(map[string]*Poolz)
 	addrs := fakedb.Addrs()
 	for i, addr := range addrs {
 		name := fmt.Sprintf("backend%d", i)
 		conf := MockBackendConfigDefault(name, addr)
-		pool := NewPool(log, conf)
-		backends[name] = pool
+		backends[name] = NewPoolz(log, conf)
 	}
 	scatter.backends = backends
 
@@ -143,7 +157,7 @@ func MockClient(log *xlog.Log, addr string) (Connection, func()) {
 
 // MockClientWithConfig mocks a client with backendconfig.
 func MockClientWithConfig(log *xlog.Log, conf *config.BackendConfig) (Connection, func()) {
-	pool := NewPool(log, conf)
+	pool := NewPool(log, conf, conf.Address)
 	conn := NewConnection(log, pool)
 	if err := conn.Dial(); err != nil {
 		log.Panic("mock.conn.with.config.error:%+v", err)
@@ -154,15 +168,15 @@ func MockClientWithConfig(log *xlog.Log, conf *config.BackendConfig) (Connection
 }
 
 // MockTxnMgr mocks txn manager.
-func MockTxnMgr(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool, []string, func()) {
+func MockTxnMgr(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Poolz, []string, func()) {
 	fakedb := fakedb.New(log, n+1)
-	backends := make(map[string]*Pool)
+	backends := make(map[string]*Poolz)
 	addrs := fakedb.Addrs()
 	for i := 0; i < len(addrs)-1; i++ {
 		addr := addrs[i]
 		conf := MockBackendConfigDefault(addr, addr)
-		pool := NewPool(log, conf)
-		backends[addr] = pool
+		poolz := NewPoolz(log, conf)
+		backends[addr] = poolz
 	}
 
 	txnMgr := NewTxnManager(log)
@@ -176,22 +190,45 @@ func MockTxnMgr(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool
 }
 
 // MockTxnMgrWithAttach mocks txn manager with attach backend.
-func MockTxnMgrWithAttach(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool, []string, func()) {
+func MockTxnMgrWithAttach(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Poolz, []string, func()) {
 	fakedb := fakedb.New(log, n+1)
-	backends := make(map[string]*Pool)
+	backends := make(map[string]*Poolz)
 	addrs := fakedb.Addrs()
 	for i := 0; i < len(addrs)-1; i++ {
 		if i == len(addrs)-2 {
 			addr := addrs[i]
 			conf := MockBackendConfigAttach(addr, addr)
-			pool := NewPool(log, conf)
-			backends[addr] = pool
+			poolz := NewPoolz(log, conf)
+			backends[addr] = poolz
 		} else {
 			addr := addrs[i]
 			conf := MockBackendConfigDefault(addr, addr)
-			pool := NewPool(log, conf)
-			backends[addr] = pool
+			poolz := NewPoolz(log, conf)
+			backends[addr] = poolz
 		}
+	}
+
+	txnMgr := NewTxnManager(log)
+	return fakedb, txnMgr, backends, addrs, func() {
+		time.Sleep(time.Millisecond * 10)
+		for _, v := range backends {
+			v.Close()
+		}
+		fakedb.Close()
+	}
+}
+
+// MockTxnMgrWithReplica mocks txn manager with replica-address.
+func MockTxnMgrWithReplica(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Poolz, []string, func()) {
+	fakedb := fakedb.New(log, n*2)
+	backends := make(map[string]*Poolz)
+	addrs := fakedb.Addrs()
+	for i := 0; i < n; i++ {
+		addr := addrs[i]
+		replica := addrs[i+n]
+		conf := MockBackendConfigReplica(addr, addr, replica)
+		poolz := NewPoolz(log, conf)
+		backends[addr] = poolz
 	}
 
 	txnMgr := NewTxnManager(log)
@@ -206,15 +243,15 @@ func MockTxnMgrWithAttach(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[st
 
 // MockTxnMgrScatter used to mock a txnMgr and a scatter.
 // commit err and rollback err will WriteXaCommitErrLog, need the scatter
-func MockTxnMgrScatter(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Pool, []string, *Scatter, func()) {
+func MockTxnMgrScatter(log *xlog.Log, n int) (*fakedb.DB, *TxnManager, map[string]*Poolz, []string, *Scatter, func()) {
 	scatter := NewScatter(log, "")
 	fakedb := fakedb.New(log, n)
-	backends := make(map[string]*Pool)
+	backends := make(map[string]*Poolz)
 	addrs := fakedb.Addrs()
 	for _, addr := range addrs {
 		conf := MockBackendConfigDefault(addr, addr)
-		pool := NewPool(log, conf)
-		backends[addr] = pool
+		poolz := NewPoolz(log, conf)
+		backends[addr] = poolz
 	}
 	scatter.backends = backends
 

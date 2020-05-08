@@ -266,6 +266,14 @@ func (p *Proxy) SetReadOnly(val bool) {
 	p.spanner.SetReadOnly(val)
 }
 
+// SetLoadBalance used to set loadbalance.
+func (p *Proxy) SetLoadBalance(val int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.log.Info("proxy.SetLoadBalance:[%v->%v]", p.conf.Proxy.LoadBalance, val)
+	p.conf.Proxy.LoadBalance = val
+}
+
 // PeerAddress returns the peer address.
 func (p *Proxy) PeerAddress() string {
 	return p.conf.Proxy.PeerAddress

@@ -483,7 +483,7 @@ func (spanner *Spanner) handleShowStatus(session *driver.Session, query string, 
 		Pools []string
 	}
 	be := poolShow{}
-	poolz := scatter.PoolClone()
+	poolz := scatter.PoolzClone()
 	for _, v := range poolz {
 		be.Pools = append(be.Pools, v.JSON())
 	}

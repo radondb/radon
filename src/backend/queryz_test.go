@@ -25,7 +25,7 @@ func TestQueryz(t *testing.T) {
 	defer fakedb.Close()
 	addr := fakedb.Addrs()[0]
 	conf := MockBackendConfigDefault(addr, addr)
-	pool := NewPool(log, conf)
+	pool := NewPool(log, conf, addr)
 
 	querys := []string{
 		"SELECT1",

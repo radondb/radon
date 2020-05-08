@@ -157,7 +157,7 @@ func TestScatter(t *testing.T) {
 
 	// pool clone.
 	{
-		clone := scatter.PoolClone()
+		clone := scatter.PoolzClone()
 		assert.Equal(t, clone["node1"], scatter.backends["node1"])
 	}
 

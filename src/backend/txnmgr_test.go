@@ -21,12 +21,12 @@ func TestTxnManager(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedb := fakedb.New(log, 2)
 	defer fakedb.Close()
-	backends := make(map[string]*Pool)
+	backends := make(map[string]*Poolz)
 	addrs := fakedb.Addrs()
 	for _, addr := range addrs {
 		conf := MockBackendConfigDefault(addr, addr)
-		pool := NewPool(log, conf)
-		backends[addr] = pool
+		poolz := NewPoolz(log, conf)
+		backends[addr] = poolz
 	}
 	txnmgr := NewTxnManager(log)
 
