@@ -1074,6 +1074,14 @@ func TestCreateTable(t *testing.T) {
 			"	`col_mediumint` mediumint,\n" +
 			"	`col_mediumint5` mediumint(5) unsigned not null,\n" +
 			"	`col_int` int,\n" +
+			"	`col_int` int storage default,\n" +
+			"	`col_int` int storage disk,\n" +
+			"	`col_int` int storage memory,\n" +
+			"	`col_int` int column_format default,\n" +
+			"	`col_int` int column_format dynamic,\n" +
+			"	`col_int` int column_format fixed,\n" +
+			"	`col_int` int collate utf8_bin,\n" +
+			"	`col_int` int collate 'utf8_general_ci',\n" +
 			"	`col_int10` int(10) not null,\n" +
 			"	`col_integer` integer comment 'this is an integer',\n" +
 			"	`col_bigint` bigint,\n" +
@@ -1098,11 +1106,11 @@ func TestCreateTable(t *testing.T) {
 			"	`col_char` char,\n" +
 			"	`col_char2` char(2),\n" +
 			"	`col_char3` char(3) character set ascii,\n" +
-			"	`col_char4` char(4) character set ascii collate ascii_bin,\n" +
+			"	`col_char4` char(4) character set ascii collate 'ascii_bin',\n" +
 			"	`col_varchar` varchar,\n" +
 			"	`col_varchar2` varchar(2),\n" +
 			"	`col_varchar3` varchar(3) character set ascii,\n" +
-			"	`col_varchar4` varchar(4) character set ascii collate ascii_bin,\n" +
+			"	`col_varchar4` varchar(4) character set ascii collate 'ascii_bin',\n" +
 			"	`col_binary` binary,\n" +
 			"	`col_varbinary` varbinary(10),\n" +
 			"	`col_tinyblob` tinyblob,\n" +
@@ -1113,7 +1121,7 @@ func TestCreateTable(t *testing.T) {
 			"	`col_text` text,\n" +
 			"	`col_mediumtext` mediumtext,\n" +
 			"	`col_longtext` longtext,\n" +
-			"	`col_text` text character set ascii collate ascii_bin,\n" +
+			"	`col_text` text character set ascii collate 'ascii_bin',\n" +
 			"	`col_json` json,\n" +
 			"	`col_enum` enum('a', 'b', 'c', 'd')\n" +
 			")",

@@ -776,6 +776,10 @@ func TestProxyDDLCreateTable(t *testing.T) {
 		"create table t4(a int, b int)engine=tokudb PARTITION  BY hash(a)  ",
 		"create table t5(a int, b int) default charset=utf8  PARTITION  BY hash(a)  ",
 		"create table t6(a int, b int)engine=tokudb auto_increment=10 default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t7(a int collate utf8_bin Collate 'utf8_bin' collate \"utf8_bin\") partition by hash(a)",
+		"create table t8(a int, b int) partition by hash(a)",
+		"create table t9(a int, b timestamp(5) on update current_timestamp(5) column_format fixed column_format default column_format dynamic) partition by hash(a)",
+		"create table t10(a int column_format fixed column_format default column_format dynamic) partition by hash(a) comment='comment option' engine=tokudb default charset='utf8' avg_row_length=123 checksum=1 collate='utf8_bin' compression='lz4' connection='id' data directory='/data' index directory='/index' delay_key_write=1 encryption='n' insert_method=First key_block_size=1 max_rows=3 min_rows=2 pack_keys=default password='pwd' row_format=dynamic stats_auto_recalc=1 stats_persistent=default stats_sample_pages=65535 tablespace=storage",
 	}
 
 	for _, query := range querys {
