@@ -513,3 +513,71 @@ func TestProxyExecutPrivilegeN(t *testing.T) {
 		assert.Equal(t, want, got)
 	}
 }
+
+func TestProxyExecuteLoadBalance(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+	proxy.SetLoadBalance(1)
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "create table test.t1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// select with non-2pc.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "select * from test.t1"
+		fakedbs.AddQuery(query, fakedb.Result3)
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// select /*+ loadbalance */ with non-2pc.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "select /*+ loadbalance=0 */ * from test.t1"
+		fakedbs.AddQuery(query, fakedb.Result3)
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// select /*+ loadbalance */ with 2PC.
+	{
+		proxy.conf.Proxy.TwopcEnable = true
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "select /*+ loadbalance=1 */ * from test.t1"
+		fakedbs.AddQuery(query, fakedb.Result3)
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+}

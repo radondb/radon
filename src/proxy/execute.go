@@ -9,6 +9,8 @@
 package proxy
 
 import (
+	"strings"
+
 	"executor"
 	"optimizer"
 	"planner"
@@ -18,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
@@ -65,7 +68,7 @@ func (spanner *Spanner) ExecuteSingleStmtTxnTwoPC(session *driver.Session, datab
 	txn.SetTimeout(conf.Proxy.QueryTimeout)
 	txn.SetMaxResult(conf.Proxy.MaxResultSize)
 	txn.SetMaxJoinRows(conf.Proxy.MaxJoinRows)
-	txn.SetLoadBalance(conf.Proxy.LoadBalance)
+	txn.SetIsExecOnRep(isExecOnRep(conf.Proxy.LoadBalance, node))
 
 	// binding.
 	sessions.TxnBinding(session, txn, node, query)
@@ -142,7 +145,7 @@ func (spanner *Spanner) executeWithTimeout(session *driver.Session, database str
 	txn.SetTimeout(timeout)
 	txn.SetMaxResult(conf.Proxy.MaxResultSize)
 	txn.SetMaxJoinRows(conf.Proxy.MaxJoinRows)
-	txn.SetLoadBalance(conf.Proxy.LoadBalance)
+	txn.SetIsExecOnRep(isExecOnRep(conf.Proxy.LoadBalance, node))
 
 	// binding.
 	sessions.TxnBinding(session, txn, node, query)
@@ -259,4 +262,23 @@ func (spanner *Spanner) ExecuteOnThisBackend(backend string, query string) (*sql
 	}
 	defer txn.Finish()
 	return txn.ExecuteOnThisBackend(backend, query)
+}
+
+// isExecOnRep will be called when the query is not in multi-statement txn:
+// 1. When the query is Select, the parameter `loadBalance` can take effect.
+// 2. By using hint can directly decide the load-balance mode, instead of check `loadBalance`.
+func isExecOnRep(loadBalance int, node sqlparser.Statement) bool {
+	if node, ok := node.(*sqlparser.Select); ok {
+		if len(node.Comments) > 0 {
+			comment := strings.Replace(common.BytesToString(node.Comments[0]), " ", "", -1)
+			if comment == "/*+loadbalance=0*/" {
+				return false
+			}
+			if comment == "/*+loadbalance=1*/" {
+				return true
+			}
+		}
+		return loadBalance != 0
+	}
+	return false
 }
