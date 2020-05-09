@@ -97,6 +97,14 @@ func TestProxy1(t *testing.T) {
 		assert.Equal(t, false, proxy.spanner.ReadOnly())
 	}
 
+	// SetLoadBalance
+	{
+		proxy.SetLoadBalance(1)
+		assert.Equal(t, 1, proxy.conf.Proxy.LoadBalance)
+		proxy.SetLoadBalance(0)
+		assert.Equal(t, 0, proxy.conf.Proxy.LoadBalance)
+	}
+
 	// FlushConfig.
 	{
 		err := proxy.FlushConfig()

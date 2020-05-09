@@ -43,6 +43,45 @@ var (
 	errClosed   = errors.New("can't get connection from the closed DB")
 )
 
+// Poolz ...
+// Add replica and normal pool to distribute SQL between
+// read and write in some cases for load-balance.
+type Poolz struct {
+	log     *xlog.Log
+	conf    *config.BackendConfig
+	normal  *Pool
+	replica *Pool
+}
+
+// NewPoolz create the new Poolz.
+func NewPoolz(log *xlog.Log, conf *config.BackendConfig) *Poolz {
+	return &Poolz{
+		log:     log,
+		conf:    conf,
+		normal:  NewPool(log, conf, conf.Address),
+		replica: NewPool(log, conf, conf.Replica),
+	}
+}
+
+// Close used to close the poolz.
+func (p *Poolz) Close() {
+	if p.normal != nil {
+		p.normal.Close()
+	}
+	if p.replica != nil {
+		p.replica.Close()
+	}
+}
+
+// JSON returns the available string.
+func (p *Poolz) JSON() string {
+	str := p.normal.JSON()
+	if p.replica != nil {
+		str += ", " + p.replica.JSON()
+	}
+	return str
+}
+
 // Pool tuple.
 type Pool struct {
 	mu          sync.RWMutex
@@ -57,13 +96,16 @@ type Pool struct {
 }
 
 // NewPool creates the new Pool.
-func NewPool(log *xlog.Log, conf *config.BackendConfig) *Pool {
+func NewPool(log *xlog.Log, conf *config.BackendConfig, address string) *Pool {
+	if address == "" {
+		return nil
+	}
 	return &Pool{
 		log:         log,
-		address:     conf.Address,
+		address:     address,
 		conf:        conf,
 		connections: make(chan Connection, conf.MaxConnections),
-		counters:    stats.NewCounters(conf.Name + "@" + conf.Address),
+		counters:    stats.NewCounters(conf.Name + "@" + address),
 		maxIdleTime: int64(maxIdleTime),
 	}
 }

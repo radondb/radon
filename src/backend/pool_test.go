@@ -20,6 +20,38 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
+func TestPoolz(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+
+	// MySQL Server starts 1...
+	th1 := driver.NewTestHandler(log)
+	svr1, err := driver.MockMysqlServer(log, th1)
+	assert.Nil(t, err)
+	defer svr1.Close()
+	addr1 := svr1.Addr()
+
+	// MySQL Server starts 2...
+	th2 := driver.NewTestHandler(log)
+	svr2, err := driver.MockMysqlServer(log, th2)
+	assert.Nil(t, err)
+	defer svr2.Close()
+	addr2 := svr2.Addr()
+
+	// Connection
+	conf := MockBackendConfigReplica("node1", addr1, addr2)
+	conf.MaxConnections = 64
+	poolz := NewPoolz(log, conf)
+	defer poolz.Close()
+
+	// json.
+	{
+		want := "{'name': 'node1@" + addr1 + "', 'capacity': 64, 'counters': {}}, {'name': 'node1@" + addr2 + "', 'capacity': 64, 'counters': {}}"
+		got := poolz.JSON()
+		assert.Equal(t, want, got)
+	}
+}
+
 func TestPool(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -34,7 +66,7 @@ func TestPool(t *testing.T) {
 	// Connection
 	conf := MockBackendConfigDefault("node1", addr)
 	conf.MaxConnections = 64
-	pool := NewPool(log, conf)
+	pool := NewPool(log, conf, addr)
 
 	// get
 	{
@@ -78,7 +110,7 @@ func TestPoolConcurrent(t *testing.T) {
 	// Connection
 	conf := MockBackendConfigDefault(addr, addr)
 	conf.MaxConnections = 64
-	pool := NewPool(log, conf)
+	pool := NewPool(log, conf, addr)
 
 	ch1 := make(chan bool)
 	ch2 := make(chan bool)
@@ -139,7 +171,7 @@ func TestPoolTimeout(t *testing.T) {
 	// Connection
 	conf := MockBackendConfigDefault(addr, addr)
 	conf.MaxConnections = 64
-	pool := NewPool(log, conf)
+	pool := NewPool(log, conf, addr)
 
 	ch2 := make(chan bool)
 

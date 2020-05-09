@@ -42,6 +42,7 @@ func TestCtlV1RadonConfig(t *testing.T) {
 			DDLTimeout       int      `json:"ddl-timeout"`
 			QueryTimeout     int      `json:"query-timeout"`
 			TwoPCEnable      bool     `json:"twopc-enable"`
+			LoadBalance      int      `json:"load-balance"`
 			AllowIP          []string `json:"allowip,omitempty"`
 			AuditMode        string   `json:"audit-mode"`
 			StreamBufferSize int      `json:"stream-buffer-size"`
@@ -57,6 +58,7 @@ func TestCtlV1RadonConfig(t *testing.T) {
 				MaxJoinRows:      32767,
 				QueryTimeout:     33,
 				TwoPCEnable:      true,
+				LoadBalance:      1,
 				AllowIP:          []string{"127.0.0.1", "127.0.0.2"},
 				AuditMode:        "A",
 				StreamBufferSize: 16777216,
@@ -72,6 +74,7 @@ func TestCtlV1RadonConfig(t *testing.T) {
 			assert.Equal(t, 0, radonConf.Proxy.DDLTimeout)
 			assert.Equal(t, 33, radonConf.Proxy.QueryTimeout)
 			assert.Equal(t, true, radonConf.Proxy.TwopcEnable)
+			assert.Equal(t, 1, radonConf.Proxy.LoadBalance)
 			assert.Equal(t, []string{"127.0.0.1", "127.0.0.2"}, radonConf.Proxy.IPS)
 			assert.Equal(t, "A", radonConf.Audit.Mode)
 			assert.Equal(t, 16777216, radonConf.Proxy.StreamBufferSize)

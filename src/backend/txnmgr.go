@@ -71,7 +71,7 @@ func (mgr *TxnManager) Remove() error {
 }
 
 // CreateTxn creates new txn.
-func (mgr *TxnManager) CreateTxn(backends map[string]*Pool) (*Txn, error) {
+func (mgr *TxnManager) CreateTxn(backends map[string]*Poolz) (*Txn, error) {
 	if len(backends) == 0 {
 		return nil, errors.New("backends.is.NULL")
 	}

@@ -93,6 +93,28 @@ func TestTxnNormalExecute(t *testing.T) {
 		want.AppendResult(result1)
 		assert.Equal(t, want, got)
 	}
+
+	// loadbalance=1.
+	{
+		rctx := &xcontext.RequestContext{
+			Querys:  querys,
+			TxnMode: xcontext.TxnRead,
+		}
+
+		txn, err := txnMgr.CreateTxn(backends)
+		assert.Nil(t, err)
+		defer txn.Finish()
+
+		txn.SetLoadBalance(1)
+		got, err := txn.Execute(rctx)
+		assert.Nil(t, err)
+
+		want := &sqltypes.Result{}
+		want.AppendResult(result1)
+		want.AppendResult(result2)
+		want.AppendResult(result2)
+		assert.Equal(t, want, got)
+	}
 }
 
 func TestTxnNormalExecuteWithAttach(t *testing.T) {
@@ -143,6 +165,118 @@ func TestTxnNormalExecuteWithAttach(t *testing.T) {
 
 		want := &sqltypes.Result{}
 		want.AppendResult(result2)
+		assert.Equal(t, want, got)
+	}
+}
+
+func TestTxnNormalExecuteWithReplica(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgrWithReplica(log, 2)
+	defer cleanup()
+
+	querys := []xcontext.QueryTuple{
+		xcontext.QueryTuple{Query: "select * from node1", Backend: addrs[0]},
+		xcontext.QueryTuple{Query: "select * from node2", Backend: addrs[1]},
+		xcontext.QueryTuple{Query: "select * from node3", Backend: addrs[1]},
+	}
+
+	fakedb.AddQuery(querys[0].Query, result1)
+	fakedb.AddQueryDelay(querys[1].Query, result2, 100)
+	fakedb.AddQueryDelay(querys[2].Query, result2, 110)
+
+	// normal execute.
+	{
+		rctx := &xcontext.RequestContext{
+			Querys:  querys,
+			TxnMode: xcontext.TxnRead,
+		}
+
+		txn, err := txnMgr.CreateTxn(backends)
+		assert.Nil(t, err)
+		defer txn.Finish()
+
+		txn.SetLoadBalance(1)
+		got, err := txn.Execute(rctx)
+		assert.Nil(t, err)
+
+		want := &sqltypes.Result{}
+		want.AppendResult(result1)
+		want.AppendResult(result2)
+		want.AppendResult(result2)
+		assert.Equal(t, want, got)
+	}
+
+	// single execute.
+	{
+		rctx := &xcontext.RequestContext{
+			Mode:     xcontext.ReqSingle,
+			RawQuery: querys[0].Query,
+			TxnMode:  xcontext.TxnRead,
+		}
+
+		txn, err := txnMgr.CreateTxn(backends)
+		assert.Nil(t, err)
+		defer txn.Finish()
+
+		txn.SetLoadBalance(1)
+		got, err := txn.Execute(rctx)
+		assert.Nil(t, err)
+
+		assert.Equal(t, result1, got)
+	}
+
+	// scatter execute.
+	{
+		rctx := &xcontext.RequestContext{
+			Mode:     xcontext.ReqScatter,
+			RawQuery: querys[0].Query,
+			TxnMode:  xcontext.TxnRead,
+		}
+
+		txn, err := txnMgr.CreateTxn(backends)
+		assert.Nil(t, err)
+		defer txn.Finish()
+
+		txn.SetLoadBalance(1)
+		got, err := txn.Execute(rctx)
+		assert.Nil(t, err)
+
+		want := &sqltypes.Result{}
+		want.AppendResult(result1)
+		want.AppendResult(result1)
+		assert.Equal(t, want, got)
+	}
+}
+
+func TestTxnExecuteReplicaError(t *testing.T) {
+	defer leaktest.Check(t)()
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedb, txnMgr, backends, _, cleanup := MockTxnMgrWithReplica(log, 2)
+	defer cleanup()
+
+	fakedb.AddQuery("select * from node1", result1)
+	querys := []xcontext.QueryTuple{
+		xcontext.QueryTuple{Query: "select * from node1", Backend: "xx"},
+		xcontext.QueryTuple{Query: "select * from node2", Backend: "xx"},
+	}
+
+	// Fetch replica connection fail, retry fetch normal connection error.
+	{
+		rctx := &xcontext.RequestContext{
+			Querys:  querys,
+			TxnMode: xcontext.TxnRead,
+		}
+
+		txn, err := txnMgr.CreateTxn(backends)
+		assert.Nil(t, err)
+		defer txn.Finish()
+
+		txn.SetLoadBalance(1)
+		_, err = txn.Execute(rctx)
+		want := "txn.can.not.get.normal.connection.by.backend[xx].from.pool"
+		got := err.Error()
 		assert.Equal(t, want, got)
 	}
 }

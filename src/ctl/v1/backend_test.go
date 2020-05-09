@@ -40,6 +40,7 @@ func TestCtlV1BackendAdd(t *testing.T) {
 		p := &backendParams{
 			Name:           "backend6",
 			Address:        "192.168.0.1:3306",
+			Replica:        "192.168.0.2:3306",
 			User:           "mock",
 			Password:       "pwd",
 			MaxConnections: 1024,

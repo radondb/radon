@@ -65,6 +65,7 @@ func (spanner *Spanner) ExecuteSingleStmtTxnTwoPC(session *driver.Session, datab
 	txn.SetTimeout(conf.Proxy.QueryTimeout)
 	txn.SetMaxResult(conf.Proxy.MaxResultSize)
 	txn.SetMaxJoinRows(conf.Proxy.MaxJoinRows)
+	txn.SetLoadBalance(conf.Proxy.LoadBalance)
 
 	// binding.
 	sessions.TxnBinding(session, txn, node, query)
@@ -141,6 +142,7 @@ func (spanner *Spanner) executeWithTimeout(session *driver.Session, database str
 	txn.SetTimeout(timeout)
 	txn.SetMaxResult(conf.Proxy.MaxResultSize)
 	txn.SetMaxJoinRows(conf.Proxy.MaxJoinRows)
+	txn.SetLoadBalance(conf.Proxy.LoadBalance)
 
 	// binding.
 	sessions.TxnBinding(session, txn, node, query)

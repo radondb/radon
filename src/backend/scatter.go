@@ -32,7 +32,7 @@ type Scatter struct {
 	mu       sync.RWMutex
 	txnMgr   *TxnManager
 	metadir  string
-	backends map[string]*Pool
+	backends map[string]*Poolz
 }
 
 // NewScatter creates a new scatter.
@@ -41,7 +41,7 @@ func NewScatter(log *xlog.Log, metadir string) *Scatter {
 		log:      log,
 		txnMgr:   NewTxnManager(log),
 		metadir:  metadir,
-		backends: make(map[string]*Pool),
+		backends: make(map[string]*Poolz),
 	}
 }
 
@@ -65,8 +65,7 @@ func (scatter *Scatter) add(config *config.BackendConfig) error {
 		}
 	}
 
-	pool := NewPool(scatter.log, config)
-	scatter.backends[config.Name] = pool
+	scatter.backends[config.Name] = NewPoolz(log, config)
 	monitor.BackendInc("backend")
 	return nil
 }
@@ -116,7 +115,7 @@ func (scatter *Scatter) clear() {
 	for _, v := range scatter.backends {
 		v.Close()
 	}
-	scatter.backends = make(map[string]*Pool)
+	scatter.backends = make(map[string]*Poolz)
 }
 
 // FlushConfig used to write the backends to file.
@@ -228,15 +227,15 @@ func (scatter *Scatter) CheckBackend(backenName string) bool {
 	return false
 }
 
-// PoolClone used to copy backends to new map.
-func (scatter *Scatter) PoolClone() map[string]*Pool {
-	poolMap := make(map[string]*Pool)
+// PoolzClone used to copy backends to new map.
+func (scatter *Scatter) PoolzClone() map[string]*Poolz {
+	poolzMap := make(map[string]*Poolz)
 	scatter.mu.RLock()
 	defer scatter.mu.RUnlock()
 	for k, v := range scatter.backends {
-		poolMap[k] = v
+		poolzMap[k] = v
 	}
-	return poolMap
+	return poolzMap
 }
 
 // BackendConfigsClone used to clone all the backend configs.
@@ -252,5 +251,5 @@ func (scatter *Scatter) BackendConfigsClone() []*config.BackendConfig {
 
 // CreateTransaction used to create a transaction.
 func (scatter *Scatter) CreateTransaction() (*Txn, error) {
-	return scatter.txnMgr.CreateTxn(scatter.PoolClone())
+	return scatter.txnMgr.CreateTxn(scatter.PoolzClone())
 }

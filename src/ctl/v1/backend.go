@@ -22,6 +22,7 @@ import (
 type backendParams struct {
 	Name           string `json:"name"`
 	Address        string `json:"address"`
+	Replica        string `json:"replica-address"`
 	User           string `json:"user"`
 	Password       string `json:"password"`
 	MaxConnections int    `json:"max-connections"`
@@ -41,7 +42,7 @@ func initBackend(proxy *proxy.Proxy, backend string, log *xlog.Log) error {
 
 	// create db from router on the new backend, make sure the db not exists, or else return err.
 	tblList := router.Tables()
-	for db, _ := range tblList {
+	for db := range tblList {
 		query := fmt.Sprintf("create database %s", db)
 		_, err := spanner.ExecuteOnThisBackend(backend, query)
 		if err != nil {
@@ -65,6 +66,7 @@ func addBackendHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter,
 	conf := &config.BackendConfig{
 		Name:           p.Name,
 		Address:        p.Address,
+		Replica:        p.Replica,
 		User:           p.User,
 		Password:       p.Password,
 		Charset:        "utf8",

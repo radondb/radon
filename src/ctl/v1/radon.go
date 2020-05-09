@@ -24,6 +24,7 @@ type radonParams struct {
 	DDLTimeout       *int     `json:"ddl-timeout"`
 	QueryTimeout     *int     `json:"query-timeout"`
 	TwoPCEnable      *bool    `json:"twopc-enable"`
+	LoadBalance      *int     `json:"load-balance"`
 	AllowIP          []string `json:"allowip,omitempty"`
 	AuditMode        *string  `json:"audit-mode"`
 	StreamBufferSize *int     `json:"stream-buffer-size"`
@@ -65,6 +66,9 @@ func radonConfigHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter
 	}
 	if p.TwoPCEnable != nil {
 		proxy.SetTwoPC(*p.TwoPCEnable)
+	}
+	if p.LoadBalance != nil {
+		proxy.SetLoadBalance(*p.LoadBalance)
 	}
 	proxy.SetAllowIP(p.AllowIP)
 	if p.AuditMode != nil {
