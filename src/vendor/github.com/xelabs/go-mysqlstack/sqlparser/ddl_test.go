@@ -490,6 +490,47 @@ func TestDDL1(t *testing.T) {
 				")",
 		},
 
+		// BOOL and BOOLEAN.
+		{
+			input: "create table t (\n" +
+				"	`id` int primary key,\n" +
+				"	`a` bool,\n" +
+				"	`b` boolean\n" +
+				") partition by hash(id)",
+			output: "create table t (\n" +
+				"	`id` int primary key,\n" +
+				"	`a` bool,\n" +
+				"	`b` boolean\n" +
+				")",
+		},
+
+		// SPATIAL TYPE.
+
+		{
+			input: "create table gis (\n" +
+				"	`id` int primary key,\n" +
+				"	`a` GEOMETRY,\n" +
+				"	`b` POINT,\n" +
+				"	`c` LINESTRING,\n" +
+				"	`d` POLYGON,\n" +
+				"	`e` GEOMETRYCOLLECTION,\n" +
+				"	`f` MULTIPOINT,\n" +
+				"	`g` MULTILINESTRING,\n" +
+				"	`h` MULTIPOLYGON\n" +
+				") partition by hash(id)",
+			output: "create table gis (\n" +
+				"	`id` int primary key,\n" +
+				"	`a` geometry,\n" +
+				"	`b` point,\n" +
+				"	`c` linestring,\n" +
+				"	`d` polygon,\n" +
+				"	`e` geometrycollection,\n" +
+				"	`f` multipoint,\n" +
+				"	`g` multilinestring,\n" +
+				"	`h` multipolygon\n" +
+				")",
+		},
+
 		// Fulltext.
 		{
 			input: "create table t (\n" +
@@ -504,12 +545,11 @@ func TestDDL1(t *testing.T) {
 				")",
 		},
 
-		// TODO: SPATIAL INDEX only support Spatial Data Types, now radon donot support.
 		{
 			input: "create table t (\n" +
 				"	id INT,\n" +
 				"	title VARCHAR(200),\n" +
-				"	gis int,\n" +
+				"	gis GEOMETRY,\n" +
 				"	UNIQUE KEY id_idx(id) using btree comment 'a',\n" +
 				"	FULLTEXT INDEX ngram_idx(title) WITH PARSER ngram,\n" +
 				"	SPATIAL INDEX gis_idx(gis) key_block_size=10\n" +
@@ -517,7 +557,7 @@ func TestDDL1(t *testing.T) {
 			output: "create table t (\n" +
 				"	`id` int,\n" +
 				"	`title` varchar(200),\n" +
-				"	`gis` int,\n" +
+				"	`gis` geometry,\n" +
 				"	unique key `id_idx` (`id`) using btree comment 'a',\n" +
 				"	fulltext index `ngram_idx` (`title`) WITH PARSER ngram,\n" +
 				"	spatial index `gis_idx` (`gis`) key_block_size = 10\n" +
