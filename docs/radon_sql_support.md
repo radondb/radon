@@ -55,6 +55,8 @@ Contents
       * [RADON CLEANUP](#radon-cleanup)
     * [Others](#others)
       * [Using AUTO_INCREMENT](#using-auto-increment)
+      * [Streaming fetch](#Streaming-fetch)
+      * [Read-write Separation](#Read-write-Separation)
 
 # Radon SQL support
 
@@ -1331,4 +1333,37 @@ mysql> SELECT * FROM animals;
 | 1553090617754346086 | ostrich |
 +---------------------+---------+
 6 rows in set (0.02 sec)
+```
+
+### Streaming fetch
+
+`Instructions`
+* When the query result set is relatively large, the result set can be fetched by streaming.
+* Method 1: Execute `set @@ SESSION.radon_streaming_fetch = 'ON'` to turn on streaming fetch. After the query is executed, `set @@ SESSION.radon_streaming_fetch = 'OFF'` to turn off streaming fetch.
+* Method 2: Add hint `/*+ streaming */` to the query statement.
+* *Doesnot support complex queries*
+
+`Example: `
+
+```
+mysql> select /*+ streaming */ * from t1;
+Empty set (0.00 sec)
+```
+
+### Read-write Separation
+
+`Instructions`
+* If `load-balance` is 1, the query can route to the `replica-address`.
+* The query must be read and not in multi-statement txn.
+* By using `/*+ loadbalance=0 */`, the query will be forced to execute on normal `address`.
+* By using `/*+ loadbalance=1 */`, the query will be forced to execute on `replica-address`.
+
+`Example: `
+
+```
+mysql> select /*+ loadbalance=0 */ * from t1;
+Empty set (0.00 sec)
+
+mysql> select /*+ loadbalance=1 */ * from t1;
+Empty set (0.00 sec)
 ```

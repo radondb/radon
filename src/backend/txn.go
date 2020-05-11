@@ -66,7 +66,7 @@ type Transaction interface {
 	SetMultiStmtTxn()
 	SetSessionID(id uint32)
 
-	SetLoadBalance(loadBalance int)
+	SetIsExecOnRep(isExecOnRep bool)
 	SetTimeout(timeout int)
 	SetMaxResult(max int)
 	SetMaxJoinRows(max int)
@@ -87,7 +87,7 @@ type Txn struct {
 	req                *xcontext.RequestContext
 	txnd               *TxnDetail
 	twopc              bool
-	loadBalance        int
+	isExecOnRep        bool
 	isMultiStmtTxn     bool
 	start              time.Time
 	state              sync2.AtomicInt32
@@ -125,9 +125,9 @@ func NewTxn(log *xlog.Log, txid uint64, mgr *TxnManager, backends map[string]*Po
 	return txn, nil
 }
 
-// SetLoadBalance used to set the txn loadBalance.
-func (txn *Txn) SetLoadBalance(loadBalance int) {
-	txn.loadBalance = loadBalance
+// SetIsExecOnRep used to set the txn isExecOnRep, true -- execute on the replica.
+func (txn *Txn) SetIsExecOnRep(isExecOnRep bool) {
+	txn.isExecOnRep = isExecOnRep
 }
 
 // SetTimeout used to set the txn timeout.
@@ -244,12 +244,12 @@ func (txn *Txn) replicaConnection(backend string) (Connection, error) {
 	return conn, nil
 }
 
-func (txn *Txn) fetchOneConnection(back string, txnMode xcontext.TxnMode) (Connection, error) {
+func (txn *Txn) fetchOneConnection(back string) (Connection, error) {
 	var err error
 	var conn Connection
 	log := txn.log
 
-	if txn.loadBalance == 1 && !txn.isMultiStmtTxn && txnMode == xcontext.TxnRead {
+	if txn.isExecOnRep {
 		conn, err = txn.replicaConnection(back)
 		if err == nil {
 			return conn, nil
@@ -453,12 +453,12 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 	}
 
 	// Execute backend-querys.
-	oneShard := func(back string, txnMode xcontext.TxnMode, txn *Txn, querys []string) {
+	oneShard := func(back string, txn *Txn, querys []string) {
 		var x error
 		var c Connection
 		defer wg.Done()
 
-		if c, x = txn.fetchOneConnection(back, txnMode); x != nil {
+		if c, x = txn.fetchOneConnection(back); x != nil {
 			log.Error("txn.fetch.connection.on[%s].querys[%v].error:%+v", back, querys, x)
 		} else {
 			log.Debug("conn[%v].txn.sessid[%v].execute[%v]", c.ID(), txn.sessionID, querys[0])
@@ -494,7 +494,7 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 			}
 
 			wg.Add(1)
-			oneShard(back, req.TxnMode, txn, qs)
+			oneShard(back, txn, qs)
 			break
 		}
 	// ReqScatter mode: execute on the all shards of txn.backends.
@@ -508,9 +508,9 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 
 			wg.Add(1)
 			if beLen > 1 {
-				go oneShard(back, req.TxnMode, txn, qs)
+				go oneShard(back, txn, qs)
 			} else {
-				oneShard(back, req.TxnMode, txn, qs)
+				oneShard(back, txn, qs)
 			}
 		}
 	// ReqNormal mode: execute on the some shards of txn.backends.
@@ -530,9 +530,9 @@ func (txn *Txn) execute(req *xcontext.RequestContext) (*sqltypes.Result, error) 
 		for back, qs := range queryMap {
 			wg.Add(1)
 			if beLen > 1 {
-				go oneShard(back, req.TxnMode, txn, qs)
+				go oneShard(back, txn, qs)
 			} else {
-				oneShard(back, req.TxnMode, txn, qs)
+				oneShard(back, txn, qs)
 			}
 		}
 	}
@@ -576,7 +576,7 @@ func (txn *Txn) ExecuteStreamFetch(req *xcontext.RequestContext, callback func(*
 
 	for _, qt := range req.Querys {
 		var conn Connection
-		if conn, err = txn.fetchOneConnection(qt.Backend, req.TxnMode); err != nil {
+		if conn, err = txn.fetchOneConnection(qt.Backend); err != nil {
 			return err
 		}
 		wg.Add(1)

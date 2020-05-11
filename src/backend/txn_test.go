@@ -105,7 +105,7 @@ func TestTxnNormalExecute(t *testing.T) {
 		assert.Nil(t, err)
 		defer txn.Finish()
 
-		txn.SetLoadBalance(1)
+		txn.SetIsExecOnRep(true)
 		got, err := txn.Execute(rctx)
 		assert.Nil(t, err)
 
@@ -197,7 +197,7 @@ func TestTxnNormalExecuteWithReplica(t *testing.T) {
 		assert.Nil(t, err)
 		defer txn.Finish()
 
-		txn.SetLoadBalance(1)
+		txn.SetIsExecOnRep(true)
 		got, err := txn.Execute(rctx)
 		assert.Nil(t, err)
 
@@ -220,7 +220,7 @@ func TestTxnNormalExecuteWithReplica(t *testing.T) {
 		assert.Nil(t, err)
 		defer txn.Finish()
 
-		txn.SetLoadBalance(1)
+		txn.SetIsExecOnRep(true)
 		got, err := txn.Execute(rctx)
 		assert.Nil(t, err)
 
@@ -239,7 +239,7 @@ func TestTxnNormalExecuteWithReplica(t *testing.T) {
 		assert.Nil(t, err)
 		defer txn.Finish()
 
-		txn.SetLoadBalance(1)
+		txn.SetIsExecOnRep(true)
 		got, err := txn.Execute(rctx)
 		assert.Nil(t, err)
 
@@ -273,7 +273,7 @@ func TestTxnExecuteReplicaError(t *testing.T) {
 		assert.Nil(t, err)
 		defer txn.Finish()
 
-		txn.SetLoadBalance(1)
+		txn.SetIsExecOnRep(true)
 		_, err = txn.Execute(rctx)
 		want := "txn.can.not.get.normal.connection.by.backend[xx].from.pool"
 		got := err.Error()

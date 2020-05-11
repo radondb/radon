@@ -93,7 +93,7 @@ func (spanner *Spanner) ExecuteBegin(session *driver.Session, query string, node
 	txn.SetMaxResult(conf.Proxy.MaxResultSize)
 	txn.SetMaxJoinRows(conf.Proxy.MaxJoinRows)
 	txn.SetMultiStmtTxn()
-	txn.SetLoadBalance(conf.Proxy.LoadBalance)
+	txn.SetIsExecOnRep(false)
 
 	sessions.MultiStmtTxnBinding(session, txn, node, query)
 	if err := txn.BeginScatter(); err != nil {

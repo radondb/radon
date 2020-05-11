@@ -64,6 +64,7 @@ Request: {
 			"allowip":         ["allow-ip-1", "allow-ip-2"],
 			"audit-mode":      The audit log mode, "N": disabled, "R": read enabled, "W": write enabled, "A": read/write enabled,
 			"blocks-readonly": The size of a block when create hash tables,
+			"load-balance":    Enables(0 or 1) load balance, for read-write separation.
          }
          
 ```
@@ -75,7 +76,7 @@ Request: {
 ```
 `Example: `
 ```
-$ curl -i -H 'Content-Type: application/json' -X PUT -d '{"max-connections":1024, "max-result-size":1073741824, "max-join-rows":32768, "ddl-timeout":3600, "query-timeout":600, "twopc-enable":true, "allowip": ["127.0.0.1", "127.0.0.2"]}' http://127.0.0.1:8080/v1/radon/config
+$ curl -i -H 'Content-Type: application/json' -X PUT -d '{"max-connections":1024, "max-result-size":1073741824, "max-join-rows":32768, "ddl-timeout":3600, "query-timeout":600, "twopc-enable":true, "load-balance" 1, "allowip": ["127.0.0.1", "127.0.0.2"]}' http://127.0.0.1:8080/v1/radon/config
 
 ---Response---
 HTTP/1.1 200 OK
@@ -419,6 +420,7 @@ Method:  POST
 Request: {
 			"name":            "The unique name of this backend",												[required]
 			"address":         "The endpoint of this backend",													[required]
+			"replica-address": "The slave node of this backend, readonly",
 			"user":            "The user(super) for radon to be able to connect to the backend MySQL server",	[required]
 			"password":        "The password of the user",														[required]
 			"max-connections": The maximum permitted number of backend connection pool,							[optional]
@@ -436,7 +438,7 @@ Request: {
 `Example: `
 
 ```
-$ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend1", "address": "127.0.0.1:3306", "user": "root", "password": "318831", "max-connections":1024}' http://127.0.0.1:8080/v1/radon/backend
+$ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend1", "address": "127.0.0.1:3306", "replica-address": "127.0.0.1:3306", "user": "root", "password": "318831", "max-connections":1024}' http://127.0.0.1:8080/v1/radon/backend
 
 ---Response---
 HTTP/1.1 200 OK
