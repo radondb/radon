@@ -385,6 +385,15 @@ func forceEOF(yylex interface{}) {
 	JSON
 	ENUM
 
+%token <bytes>
+	GEOMETRY
+	POINT
+	LINESTRING
+	POLYGON
+	GEOMETRYCOLLECTION
+	MULTIPOINT
+	MULTILINESTRING
+	MULTIPOLYGON
 
 // Type Modifiers
 %token	<bytes>
@@ -808,6 +817,7 @@ func forceEOF(yylex interface{}) {
 	numeric_type
 	time_type
 	char_type
+	spatial_type
 
 // table options
 %type	<optVal>
@@ -1998,6 +2008,7 @@ column_type:
 	}
 |	char_type
 |	time_type
+|	spatial_type
 
 column_option_list_opt:
 	{
@@ -2103,6 +2114,14 @@ numeric_type:
 
 int_type:
 	BIT
+	{
+		$$ = ColumnType{Type: string($1)}
+	}
+|	BOOL
+	{
+		$$ = ColumnType{Type: string($1)}
+	}
+|	BOOLEAN
 	{
 		$$ = ColumnType{Type: string($1)}
 	}
@@ -2241,6 +2260,40 @@ char_type:
 |	ENUM '(' enum_values ')'
 	{
 		$$ = ColumnType{Type: string($1), EnumValues: $3}
+	}
+
+spatial_type:
+	GEOMETRY
+	{
+		$$ = ColumnType{Type: string($1)}
+	}
+|	POINT
+	{
+		$$ = ColumnType{Type: string($1)}
+	}
+|	LINESTRING
+	{
+		$$ = ColumnType{Type: string($1)}
+	}
+|	POLYGON
+	{
+		$$ = ColumnType{Type: string($1)}
+	}
+|	GEOMETRYCOLLECTION
+	{
+		$$ = ColumnType{Type: string($1)}
+	}
+|	MULTIPOINT
+	{
+		$$ = ColumnType{Type: string($1)}
+	}
+|	MULTILINESTRING
+	{
+		$$ = ColumnType{Type: string($1)}
+	}
+|	MULTIPOLYGON
+	{
+		$$ = ColumnType{Type: string($1)}
 	}
 
 enum_values:
@@ -4343,6 +4396,7 @@ non_reserved_keyword:
 |	AVG_ROW_LENGTH
 |	BIT
 |	BOOL
+|	BOOLEAN
 |	CLEANUP
 |	COMMENT_KEYWORD
 |   COLUMN_FORMAT
@@ -4363,20 +4417,28 @@ non_reserved_keyword:
 |	FIXED
 |	FLOAT_TYPE
 |	FULLTEXT
+|	GEOMETRY
+|	GEOMETRYCOLLECTION
 |	GLOBAL
 |   INSERT_METHOD
 |	JSON
 |   KEY_BLOCK_SIZE
 |	LANGUAGE
 |	LAST_INSERT_ID
+|	LINESTRING
 |   MAX_ROWS
 |	MODE
 |	MEMORY
 |   MIN_ROWS
+|	MULTILINESTRING
+|	MULTIPOINT
+|	MULTIPOLYGON
 |	NCHAR
 |	OFFSET
 |   PACK_KEYS
 |   PASSWORD
+|	POINT
+|	POLYGON
 |	QUERY
 |	REPAIR
 |	ROW_FORMAT
