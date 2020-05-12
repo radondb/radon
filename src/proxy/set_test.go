@@ -75,6 +75,16 @@ func TestProxySet(t *testing.T) {
 			_, err := client.FetchAll(query, -1)
 			assert.NotNil(t, err)
 		}
+		{
+			query := "SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE, READ WRITE"
+			_, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
+		{
+			query := "set session autocommit = off, global wait_timeout = 2147483"
+			_, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
 	}
 }
 
@@ -112,6 +122,50 @@ func TestProxySetAutocommit(t *testing.T) {
 		}
 		{
 			query := "set autocommit=1"
+			_, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "commit"
+			_, err = client.FetchAll(query, -1)
+			assert.NotNil(t, err)
+		}
+		{
+			query := "set autocommit=false"
+			_, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "select 1"
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "commit"
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
+		{
+			query := "set autocommit=true"
+			_, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "commit"
+			_, err = client.FetchAll(query, -1)
+			assert.NotNil(t, err)
+		}
+		{
+			query := "set autocommit='off'"
+			_, err := client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "select 1"
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+
+			query = "commit"
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
+		{
+			query := "set autocommit=on"
 			_, err := client.FetchAll(query, -1)
 			assert.Nil(t, err)
 

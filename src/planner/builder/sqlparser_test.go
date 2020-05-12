@@ -696,11 +696,11 @@ func TestSqlSet(t *testing.T) {
 			log.Debug("node:%T, %+v", node, node)
 			switch setexpr := node.(type) {
 			case *sqlparser.SetExpr:
-				switch expr := setexpr.Expr.(type) {
+				switch expr := setexpr.Val.(*sqlparser.OptVal).Value.(type) {
 				case *sqlparser.SQLVal:
 					switch expr.Type {
 					case sqlparser.StrVal:
-						log.Debug("%s,%s", setexpr.Name, expr.Val)
+						log.Debug("%s,%s", setexpr.Type, expr.Val)
 					}
 				}
 			}

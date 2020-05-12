@@ -16,8 +16,10 @@ limitations under the License.
 
 package sqlparser
 
-import "strings"
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestSet(t *testing.T) {
 	validSQL := []struct {
@@ -39,11 +41,35 @@ func TestSet(t *testing.T) {
 		},
 		{
 			input:  "SET SESSION wait_timeout = 2147483",
-			output: "set wait_timeout = 2147483",
+			output: "set session wait_timeout = 2147483",
 		},
 		{
 			input:  "SET NAMES utf8",
-			output: "set names = 'utf8'",
+			output: "set names 'utf8'",
+		},
+		{
+			input:  "SET NAMES latin1 COLLATE latin1_german2_ci",
+			output: "set names 'latin1' collate latin1_german2_ci",
+		},
+		{
+			input:  "set session autocommit = ON, global wait_timeout = 2147483",
+			output: "set session autocommit = 'on', global wait_timeout = 2147483",
+		},
+		{
+			input:  "SET LOCAL TRANSACTION ISOLATION LEVEL READ COMMITTED",
+			output: "set session transaction isolation level read committed",
+		},
+		{
+			input:  "SET GLOBAL TRANSACTION ISOLATION LEVEL SERIALIZABLE, READ WRITE",
+			output: "set global transaction isolation level serializable, read write",
+		},
+		{
+			input:  "SET SESSION TRANSACTION READ ONLY",
+			output: "set session transaction read only",
+		},
+		{
+			input:  "SET TRANSACTION READ WRITE, ISOLATION LEVEL SERIALIZABLE",
+			output: "set transaction isolation level serializable, read write",
 		},
 	}
 
