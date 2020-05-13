@@ -206,24 +206,6 @@ type Select struct {
 	ForBackup   string
 }
 
-// Select.Distinct
-const (
-	DistinctStr      = "distinct "
-	StraightJoinHint = "straight_join "
-)
-
-// Select.Lock
-const (
-	ForUpdateStr = " for update"
-	ShareModeStr = " lock in share mode"
-)
-
-// Select.Cache
-const (
-	SQLCacheStr   = "sql_cache "
-	SQLNoCacheStr = "sql_no_cache "
-)
-
 // AddOrder adds an order by element
 func (node *Select) AddOrder(order *Order) {
 	node.OrderBy = append(node.OrderBy, order)
@@ -345,13 +327,6 @@ type Union struct {
 	Lock        string
 }
 
-// Union.Type
-const (
-	UnionStr         = "union"
-	UnionAllStr      = "union all"
-	UnionDistinctStr = "union distinct"
-)
-
 // AddOrder adds an order by element
 func (node *Union) AddOrder(order *Order) {
 	node.OrderBy = append(node.OrderBy, order)
@@ -396,13 +371,6 @@ type Insert struct {
 	Rows     InsertRows
 	OnDup    OnDup
 }
-
-const (
-	// InsertStr represents insert action.
-	InsertStr = "insert"
-	// ReplaceStr represents replace action.
-	ReplaceStr = "replace"
-)
 
 // Format formats the node.
 func (node *Insert) Format(buf *TrackedBuffer) {
@@ -506,12 +474,6 @@ type Set struct {
 	Exprs    SetExprs
 }
 
-// Set.Scope or Show.Scope
-const (
-	SessionStr = "session"
-	GlobalStr  = "global"
-)
-
 // Format formats the node.
 func (node *Set) Format(buf *TrackedBuffer) {
 	buf.Myprintf("set %v%v", node.Comments, node.Exprs)
@@ -586,38 +548,6 @@ type DDL struct {
 	PartitionOptions PartitionOptions
 	PartitionNum     *SQLVal
 }
-
-// DDL strings.
-const (
-	CreateDBStr             = "create database"
-	CreateTableStr          = "create table"
-	CreatePartitionTableStr = "create partition table"
-	CreateIndexStr          = "create index"
-	DropDBStr               = "drop database"
-	DropTableStr            = "drop table"
-	DropIndexStr            = "drop index"
-	AlterStr                = "alter"
-	AlterEngineStr          = "alter table"
-	AlterCharsetStr         = "alter table charset"
-	AlterAddColumnStr       = "alter table add column"
-	AlterDropColumnStr      = "alter table drop column"
-	AlterModifyColumnStr    = "alter table modify column"
-	RenameStr               = "rename table"
-	TruncateTableStr        = "truncate table"
-	SingleTableType         = "singletable"
-	GlobalTableType         = "globaltable"
-	PartitionTableHash      = "partitiontablehash"
-	NormalTableType         = "normaltable"
-	PartitionTableList      = "partitiontablelist"
-)
-
-// Index key type strings.
-const (
-	IndexStr    = "index "
-	FullTextStr = "fulltext index "
-	SpatialStr  = "spatial index "
-	UniqueStr   = "unique index "
-)
 
 // Format formats the node.
 func (node *DDL) Format(buf *TrackedBuffer) {
@@ -1499,26 +1429,6 @@ type Show struct {
 	Filter   *ShowFilter
 }
 
-// The following constants represent SHOW statements.
-const (
-	ShowDatabasesStr      = "databases"
-	ShowCreateDatabaseStr = "create database"
-	ShowTableStatusStr    = "table status"
-	ShowTablesStr         = "tables"
-	ShowColumnsStr        = "columns"
-	ShowCreateTableStr    = "create table"
-	ShowEnginesStr        = "engines"
-	ShowStatusStr         = "status"
-	ShowVersionsStr       = "versions"
-	ShowProcesslistStr    = "processlist"
-	ShowQueryzStr         = "queryz"
-	ShowTxnzStr           = "txnz"
-	ShowWarningsStr       = "warnings"
-	ShowVariablesStr      = "variables"
-	ShowBinlogEventsStr   = "binlog events"
-	ShowUnsupportedStr    = "unsupported"
-)
-
 // Format formats the node.
 func (node *Show) Format(buf *TrackedBuffer) {
 	switch node.Type {
@@ -1970,17 +1880,6 @@ type JoinTableExpr struct {
 	On        Expr
 }
 
-// JoinTableExpr.Join
-const (
-	JoinStr             = "join"
-	StraightJoinStr     = "straight_join"
-	LeftJoinStr         = "left join"
-	RightJoinStr        = "right join"
-	NaturalJoinStr      = "natural join"
-	NaturalLeftJoinStr  = "natural left join"
-	NaturalRightJoinStr = "natural right join"
-)
-
 // Format formats the node.
 func (node *JoinTableExpr) Format(buf *TrackedBuffer) {
 	buf.Myprintf("%v %s %v", node.LeftExpr, node.Join, node.RightExpr)
@@ -2007,13 +1906,6 @@ type IndexHints struct {
 	Type    string
 	Indexes []ColIdent
 }
-
-// Index hints.
-const (
-	UseStr    = "use "
-	IgnoreStr = "ignore "
-	ForceStr  = "force "
-)
 
 // Format formats the node.
 func (node *IndexHints) Format(buf *TrackedBuffer) {
@@ -2044,12 +1936,6 @@ type Where struct {
 	Type string
 	Expr Expr
 }
-
-// Where.Type
-const (
-	WhereStr  = "where"
-	HavingStr = "having"
-)
 
 // NewWhere creates a WHERE or HAVING clause out
 // of a Expr. If the expression is nil, it returns nil.
@@ -2314,25 +2200,6 @@ type ComparisonExpr struct {
 	Escape      Expr
 }
 
-// ComparisonExpr.Operator
-const (
-	EqualStr             = "="
-	LessThanStr          = "<"
-	GreaterThanStr       = ">"
-	LessEqualStr         = "<="
-	GreaterEqualStr      = ">="
-	NotEqualStr          = "!="
-	NullSafeEqualStr     = "<=>"
-	InStr                = "in"
-	NotInStr             = "not in"
-	LikeStr              = "like"
-	NotLikeStr           = "not like"
-	RegexpStr            = "regexp"
-	NotRegexpStr         = "not regexp"
-	JSONExtractOp        = "->"
-	JSONUnquoteExtractOp = "->>"
-)
-
 // Format formats the node.
 func (node *ComparisonExpr) Format(buf *TrackedBuffer) {
 	buf.Myprintf("%v %s %v", node.Left, node.Operator, node.Right)
@@ -2374,12 +2241,6 @@ type RangeCond struct {
 	From, To Expr
 }
 
-// RangeCond.Operator
-const (
-	BetweenStr    = "between"
-	NotBetweenStr = "not between"
-)
-
 // Format formats the node.
 func (node *RangeCond) Format(buf *TrackedBuffer) {
 	buf.Myprintf("%v %s %v and %v", node.Left, node.Operator, node.From, node.To)
@@ -2416,16 +2277,6 @@ type IsExpr struct {
 	Operator string
 	Expr     Expr
 }
-
-// IsExpr.Operator
-const (
-	IsNullStr     = "is null"
-	IsNotNullStr  = "is not null"
-	IsTrueStr     = "is true"
-	IsNotTrueStr  = "is not true"
-	IsFalseStr    = "is false"
-	IsNotFalseStr = "is not false"
-)
 
 // Format formats the node.
 func (node *IsExpr) Format(buf *TrackedBuffer) {
@@ -2779,21 +2630,6 @@ type BinaryExpr struct {
 	Left, Right Expr
 }
 
-// BinaryExpr.Operator
-const (
-	BitAndStr     = "&"
-	BitOrStr      = "|"
-	BitXorStr     = "^"
-	PlusStr       = "+"
-	MinusStr      = "-"
-	MultStr       = "*"
-	DivStr        = "/"
-	IntDivStr     = "div"
-	ModStr        = "%"
-	ShiftLeftStr  = "<<"
-	ShiftRightStr = ">>"
-)
-
 // Format formats the node.
 func (node *BinaryExpr) Format(buf *TrackedBuffer) {
 	buf.Myprintf("%v %s %v", node.Left, node.Operator, node.Right)
@@ -2828,15 +2664,6 @@ type UnaryExpr struct {
 	Operator string
 	Expr     Expr
 }
-
-// UnaryExpr.Operator
-const (
-	UPlusStr  = "+"
-	UMinusStr = "-"
-	TildaStr  = "~"
-	BangStr   = "!"
-	BinaryStr = "binary "
-)
 
 // Format formats the node.
 func (node *UnaryExpr) Format(buf *TrackedBuffer) {
@@ -2910,7 +2737,10 @@ type CollateExpr struct {
 
 // Format formats the node.
 func (node *CollateExpr) Format(buf *TrackedBuffer) {
-	buf.Myprintf("%v collate %s", node.Expr, node.Charset)
+	buf.Myprintf("%v", node.Expr)
+	if node.Charset != "" {
+		buf.Myprintf(" collate %s", node.Charset)
+	}
 }
 
 // WalkSubtree walks the nodes of the subtree.
@@ -3209,11 +3039,6 @@ type ConvertType struct {
 	Charset  string
 }
 
-// this string is "character set" and this comment is required
-const (
-	CharacterSetStr = " character set"
-)
-
 // Format formats the node.
 func (node *ConvertType) Format(buf *TrackedBuffer) {
 	buf.Myprintf("%s", node.Type)
@@ -3240,14 +3065,6 @@ type MatchExpr struct {
 	Expr    Expr
 	Option  string
 }
-
-// MatchExpr.Option
-const (
-	BooleanModeStr                           = " in boolean mode"
-	NaturalLanguageModeStr                   = " in natural language mode"
-	NaturalLanguageModeWithQueryExpansionStr = " in natural language mode with query expansion"
-	QueryExpansionStr                        = " with query expansion"
-)
 
 // Format formats the node
 func (node *MatchExpr) Format(buf *TrackedBuffer) {
@@ -3458,12 +3275,6 @@ type Order struct {
 	Direction string
 }
 
-// Order.Direction
-const (
-	AscScr  = "asc"
-	DescScr = "desc"
-)
-
 // Format formats the node.
 func (node *Order) Format(buf *TrackedBuffer) {
 	if node, ok := node.Expr.(*NullVal); ok {
@@ -3608,6 +3419,7 @@ func (node SetExprs) Format(buf *TrackedBuffer) {
 	}
 }
 
+// WalkSubtree walks the nodes of the subtree.
 func (node SetExprs) WalkSubtree(visit Visit) error {
 	for _, n := range node {
 		if err := Walk(visit, n); err != nil {
@@ -3619,25 +3431,92 @@ func (node SetExprs) WalkSubtree(visit Visit) error {
 
 // SetExpr represents a set expression.
 type SetExpr struct {
-	Name ColIdent
-	Expr Expr
+	// global|session
+	Scope string
+	Type  ColIdent
+	Val   SetVal
 }
 
 // Format formats the node.
 func (node *SetExpr) Format(buf *TrackedBuffer) {
+	if node.Scope != "" {
+		buf.WriteString(node.Scope)
+		buf.WriteString(" ")
+	}
 	// We don't have to backtick set variable names.
-	buf.Myprintf("%s = %v", node.Name.String(), node.Expr)
+	switch {
+	case node.Type.EqualString("charset") || node.Type.EqualString("names") || node.Type.EqualString("transaction"):
+		buf.Myprintf("%s %v", node.Type.String(), node.Val)
+	default:
+		buf.Myprintf("%s = %v", node.Type.String(), node.Val)
+	}
 }
 
+// WalkSubtree walks the nodes of the subtree.
 func (node *SetExpr) WalkSubtree(visit Visit) error {
 	if node == nil {
 		return nil
 	}
 	return Walk(
 		visit,
-		node.Name,
-		node.Expr,
+		node.Type,
+		node.Val,
 	)
+}
+
+// SetVal represents a set variable value.
+type SetVal interface {
+	SQLNode
+	iSetVal()
+}
+
+func (*OptVal) iSetVal() {}
+func (*TxnVal) iSetVal() {}
+
+// OptVal represents the set variable value.
+// See https://dev.mysql.com/doc/refman/5.7/en/set-variable.html
+type OptVal struct {
+	Value Expr
+}
+
+// Format formats the node.
+func (node *OptVal) Format(buf *TrackedBuffer) {
+	buf.Myprintf("%v", node.Value)
+}
+
+// WalkSubtree walks the nodes of the subtree.
+func (node *OptVal) WalkSubtree(visit Visit) error {
+	if node == nil {
+		return nil
+	}
+	return Walk(
+		visit,
+		node.Value,
+	)
+}
+
+// TxnVal represents the set-transaction characteristic.
+// See https://dev.mysql.com/doc/refman/5.7/en/set-transaction.html
+type TxnVal struct {
+	Level string
+	Mode  string
+}
+
+// Format formats the node.
+func (node *TxnVal) Format(buf *TrackedBuffer) {
+	var prefix string
+	if node.Level != "" {
+		buf.WriteString("isolation level " + node.Level)
+		prefix = ", "
+	}
+	if node.Mode != "" {
+		buf.Myprintf("%s%s", prefix, node.Mode)
+	}
+}
+
+// WalkSubtree walks the nodes of the subtree.
+func (node *TxnVal) WalkSubtree(visit Visit) error {
+	return nil
 }
 
 // ColIdent is a case insensitive SQL identifier. It will be escaped with
@@ -3841,14 +3720,6 @@ type Radon struct {
 	Table   TableName
 	NewName TableName
 }
-
-const (
-	AttachStr     = "attach"
-	DetachStr     = "detach"
-	AttachListStr = "attachlist"
-	ReshardStr    = "reshard"
-	CleanupStr    = "cleanup"
-)
 
 func (*Radon) iStatement() {}
 

@@ -83,6 +83,7 @@ func forceEOF(yylex interface{}) {
   updateExpr    *UpdateExpr
   setExprs      SetExprs
   setExpr       *SetExpr
+  setVal        SetVal
   colIdent      ColIdent
   colIdents     []ColIdent
   tableIdent    TableIdent
@@ -539,8 +540,18 @@ func forceEOF(yylex interface{}) {
 // SET tokens
 %token	<bytes>
 	GLOBAL
+	LOCAL
 	SESSION
 	NAMES
+	ISOLATION
+	LEVEL
+	READ
+	WRITE
+	ONLY
+	REPEATABLE
+	COMMITTED
+	UNCOMMITTED
+	SERIALIZABLE
 
 
 // Radon Tokens
@@ -748,9 +759,21 @@ func forceEOF(yylex interface{}) {
 
 %type	<setExprs>
 	set_list
+	txn_list
 
 %type	<setExpr>
+	set_opt_vals
 	set_expression
+
+%type	<setVal>
+	set_txn_vals
+
+%type	<str>
+	access_mode
+	access_mode_opt
+	isolation_level
+	isolation_level_opt
+	isolation_types
 
 %type	<expr>
 	charset_value
@@ -1094,19 +1117,9 @@ set_statement:
 	{
 		$$ = &Set{Comments: Comments($2), Exprs: $3}
 	}
-|	SET comment_opt set_session_or_global set_list
+|	SET comment_opt txn_list
 	{
-		$$ = &Set{Comments: Comments($2), Exprs: $4}
-	}
-
-set_session_or_global:
-	SESSION
-	{
-		$$ = SessionStr
-	}
-|	GLOBAL
-	{
-		$$ = GlobalStr
+		$$ = &Set{Comments: Comments($2), Exprs: $3}
 	}
 
 partition_definitions:
@@ -4079,13 +4092,36 @@ set_list:
 	}
 
 set_expression:
-	reserved_sql_id '=' expression
+	set_opt_vals
 	{
-		$$ = &SetExpr{Name: $1, Expr: $3}
+		$$ = $1
 	}
-|	charset_or_character_set charset_value collate_opt
+|	set_session_or_global set_opt_vals
 	{
-		$$ = &SetExpr{Name: NewColIdent(string($1)), Expr: $2}
+		$2.Scope = $1
+		$$ = $2
+	}
+
+set_opt_vals:
+	reserved_sql_id '=' ON
+	{
+		$$ = &SetExpr{Type: $1, Val: &OptVal{Value: NewStrVal([]byte("on"))}}
+	}
+|	reserved_sql_id '=' OFF
+	{
+		$$ = &SetExpr{Type: $1, Val: &OptVal{Value: NewStrVal([]byte("off"))}}
+	}
+|	reserved_sql_id '=' expression
+	{
+		$$ = &SetExpr{Type: $1, Val: &OptVal{Value: $3}}
+	}
+|	charset_or_character_set charset_value
+	{
+		$$ = &SetExpr{Type: NewColIdent(string($1)), Val: &OptVal{Value: $2}}
+	}
+|	NAMES charset_value collate_opt
+	{
+		$$ = &SetExpr{Type: NewColIdent(string($1)), Val: &OptVal{Value: &CollateExpr{Expr: $2, Charset: $3}}}
 	}
 
 charset_or_character_set:
@@ -4094,7 +4130,6 @@ charset_or_character_set:
 	{
 		$$ = []byte("charset")
 	}
-|	NAMES
 
 charset_value:
 	sql_id
@@ -4108,6 +4143,94 @@ charset_value:
 |	DEFAULT
 	{
 		$$ = &Default{}
+	}
+
+txn_list:
+	TRANSACTION set_txn_vals
+	{
+		$$ = SetExprs{&SetExpr{Type: NewColIdent(string($1)), Val: $2}}
+	}
+|	set_session_or_global TRANSACTION set_txn_vals
+	{
+		$$ = SetExprs{&SetExpr{Scope: $1, Type: NewColIdent(string($2)), Val: $3}}
+	}
+
+set_txn_vals:
+	isolation_level access_mode_opt
+	{
+		$$ =  &TxnVal{Level: $1, Mode: $2}
+	}
+|	access_mode isolation_level_opt
+	{
+		$$ =  &TxnVal{Level: $2, Mode: $1}
+	}
+
+isolation_level_opt:
+	/* empty */
+	{
+		$$ = ""
+	}
+|	',' isolation_level
+	{
+		$$ = $2
+	}
+
+isolation_level:
+	ISOLATION LEVEL isolation_types
+	{
+		$$ = $3
+	}
+
+isolation_types:
+	REPEATABLE READ
+	{
+		$$ = RepeatableRead
+	}
+|	READ COMMITTED
+	{
+		$$ = ReadCommitted
+	}
+|	READ UNCOMMITTED
+	{
+		$$ = ReadUncommitted
+	}
+|	SERIALIZABLE
+	{
+		$$ = Serializable
+	}
+
+access_mode_opt:
+	/* empty */
+	{
+		$$ = ""
+	}
+|	',' access_mode
+	{
+		$$ = $2
+	}
+
+access_mode:
+	READ WRITE
+	{
+		$$ = TxReadWrite
+	}
+|	READ ONLY
+	{
+		$$ = TxReadOnly
+	}
+
+set_session_or_global:
+	LOCAL
+    {
+		$$ = SessionStr
+	}
+|	SESSION
+	{
+		$$ = SessionStr
+	}
+|	GLOBAL
+	{
+		$$ = GlobalStr
 	}
 
 for_from:

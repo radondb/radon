@@ -28,14 +28,14 @@ func (spanner *Spanner) handleSet(session *driver.Session, query string, node *s
 	txSession := spanner.sessions.getTxnSession(session)
 
 	for _, expr := range node.Exprs {
-		name := expr.Name.Lowered()
+		name := expr.Type.Lowered()
 		if strings.HasPrefix(name, "@@session.") {
 			name = strings.TrimPrefix(name, "@@session.")
 		}
 
 		switch name {
 		case var_radon_streaming_fetch:
-			switch expr := expr.Expr.(type) {
+			switch expr := expr.Val.(*sqlparser.OptVal).Value.(type) {
 			case *sqlparser.SQLVal:
 				switch expr.Type {
 				case sqlparser.StrVal:
@@ -60,13 +60,21 @@ func (spanner *Spanner) handleSet(session *driver.Session, query string, node *s
 		case var_mysql_autocommit:
 			var autocommit = true
 
-			switch expr := expr.Expr.(type) {
+			switch expr := expr.Val.(*sqlparser.OptVal).Value.(type) {
 			case *sqlparser.SQLVal:
 				switch expr.Type {
 				case sqlparser.IntVal:
 					if expr.Val[0] == '0' {
 						autocommit = false
 					}
+				case sqlparser.StrVal:
+					if strings.ToLower(string(expr.Val)) == "off" {
+						autocommit = false
+					}
+				}
+			case sqlparser.BoolVal:
+				if !expr {
+					autocommit = false
 				}
 			}
 			if !autocommit && spanner.isAutocommitFalseIsTxn() {
