@@ -1,0 +1,47 @@
+SET SESSION sql_mode = 'TRADITIONAL';
+
+SET LOCAL sql_mode = 'TRADITIONAL';
+
+SET @@SESSION.sql_mode = 'TRADITIONAL';
+
+SET @@LOCAL.sql_mode = 'TRADITIONAL';
+
+SET @@sql_mode = 'TRADITIONAL';
+
+SET sql_mode = 'TRADITIONAL';
+
+set session autocommit = 0;
+
+set session autocommit = on;
+
+set charset latin1;
+
+set CHARACTER SET gbk;
+
+set names gbk;
+
+set names 'latin1' collate latin1_german2_ci;
+
+set @@SESSION.radon_streaming_fetch=true;
+
+set @@SESSION.radon_streaming_fetch=false;
+
+SET GLOBAL sort_buffer_size = 1000000, SESSION sort_buffer_size = 1000000;
+
+SET @@GLOBAL.sort_buffer_size = 1000000, @@LOCAL.sort_buffer_size = 1000000;
+
+SET GLOBAL max_connections = 1000, sort_buffer_size = 1000000;
+
+set session transaction read only;
+
+set global transaction read write;
+
+set transaction isolation level repeatable read;
+
+set global transaction isolation level read committed;
+
+set transaction isolation level read uncommitted;
+
+set transaction isolation level serializable;
+
+set transaction isolation level serializable, read write;
