@@ -62,7 +62,9 @@ func TestUnionPlan(t *testing.T) {
 		route, cleanup := router.MockNewRouter(log)
 		defer cleanup()
 
-		err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableSConfig(), router.MockTableGConfig())
+		err := route.CreateDatabase(database)
+		assert.Nil(t, err)
+		err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableSConfig(), router.MockTableGConfig())
 		assert.Nil(t, err)
 		for i, query := range querys {
 			node, err := sqlparser.Parse(query)

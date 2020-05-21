@@ -25,7 +25,9 @@ func TestScanTableExprs(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableCConfig(), router.MockTableGConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableCConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 	// single table.
 	{
@@ -352,7 +354,9 @@ func TestScanTableExprsList(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(),
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(),
 		router.MockTableCConfig(), router.MockTableGConfig(), router.MockTableListConfig())
 	assert.Nil(t, err)
 
@@ -652,7 +656,9 @@ func TestScanTableExprsListErrorDebug(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(),
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(),
 		router.MockTableCConfig(), router.MockTableGConfig(), router.MockTableListConfig())
 	assert.Nil(t, err)
 
@@ -722,7 +728,9 @@ func TestScanTableExprsError(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
@@ -768,7 +776,9 @@ func TestScanTableExprsListError(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(),
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(),
 		router.MockTableGConfig(), router.MockTableListConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {

@@ -35,7 +35,8 @@ func TestDDLExecutor(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig())
+	err := route.CreateDatabase(database)
+	err = route.AddForTest(database, router.MockTableAConfig())
 	assert.Nil(t, err)
 
 	// create table

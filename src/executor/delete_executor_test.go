@@ -32,7 +32,9 @@ func TestDeleteExecutor(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableAConfig())
 	assert.Nil(t, err)
 
 	// delete.

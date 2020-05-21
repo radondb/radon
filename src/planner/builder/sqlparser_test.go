@@ -517,7 +517,9 @@ func TestSQLSelectAggregator(t *testing.T) {
 	}
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
-	err := route.AddForTest("sbtest", router.MockTableMConfig(), router.MockTableBConfig())
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest("sbtest", router.MockTableMConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
 	for _, query := range querys {
 		log.Debug("query:%s", query)
@@ -559,7 +561,9 @@ func TestSQLSelectRewritten(t *testing.T) {
 	}
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
-	err := route.AddForTest("sbtest", router.MockTableMConfig())
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest("sbtest", router.MockTableMConfig())
 	assert.Nil(t, err)
 	for _, query := range querys {
 		log.Debug("query:%s", query)

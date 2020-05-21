@@ -77,6 +77,8 @@ func TestRouterAdd(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	// router
 	{
@@ -139,6 +141,8 @@ func TestRouteraddGlobal(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	// router
 	{
@@ -177,6 +181,8 @@ func TestRouteraddSingle(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	// router
 	{
@@ -203,6 +209,8 @@ func TestRouterRemove(t *testing.T) {
 		assert.Equal(t, want, got)
 	}
 
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 	// router
 	{
 		err := router.removeTable("", MockTableCConfig().Name)
@@ -255,6 +263,8 @@ func TestRouterLookup(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	// add router of sbtest.A
 	{
@@ -272,6 +282,8 @@ func TestRouterLookupError(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	// add router of sbtest.A
 	{
@@ -303,6 +315,8 @@ func TestRouterShardKey(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	// add router of sbtest.A
 	{
@@ -320,6 +334,8 @@ func TestRouterPartitionType(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	{
 		// add router of sbtest.A
@@ -343,6 +359,8 @@ func TestRouterShardKeyError(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	// add router of sbtest.A
 	{
@@ -430,6 +448,8 @@ func TestRouterTableConfig(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	// add router of sbtest.A
 	{
@@ -447,7 +467,9 @@ func TestRouterGetIndex(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
-	err := router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig(), MockTableSConfig())
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig(), MockTableSConfig())
 	assert.Nil(t, err)
 	// hash.
 	{
@@ -477,7 +499,9 @@ func TestRouterGetIndexError(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
-	err := router.AddForTest("sbtest", MockTableMConfig())
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = router.AddForTest("sbtest", MockTableMConfig())
 	assert.Nil(t, err)
 	// no database.
 	{
@@ -513,7 +537,9 @@ func TestRouterGetSegments(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
-	err := router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig(), MockTableSConfig(), MockTableListConfig())
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig(), MockTableSConfig(), MockTableListConfig())
 	assert.Nil(t, err)
 	// hash.
 	{
@@ -576,7 +602,9 @@ func TestRouterGetSegmentsError(t *testing.T) {
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
 	assert.NotNil(t, router)
-	err := router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig(), MockTableSConfig())
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = router.AddForTest("sbtest", MockTableGConfig(), MockTableMConfig(), MockTableSConfig())
 	assert.Nil(t, err)
 	// no database.
 	{
@@ -624,13 +652,16 @@ func TestRouterTables(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	// sbtest with tables.
-	err := router.AddForTest("sbtest", MockTableMConfig())
+	err = router.AddForTest("sbtest", MockTableMConfig())
 	assert.Nil(t, err)
 
 	// tables is empty.
 	router.CreateDatabase("nulldatabase")
+	assert.Nil(t, err)
 
 	want := make(map[string][]string)
 	want["sbtest"] = []string{"A"}
@@ -643,9 +674,11 @@ func TestRouterGetRenameTableConfig(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	// sbtest with tables.
-	err := router.AddForTest("sbtest", MockTableMConfig())
+	err = router.AddForTest("sbtest", MockTableMConfig())
 	assert.Nil(t, err)
 
 	_, err = router.getRenameTableConfig("sbtest", "A", "B")
@@ -665,9 +698,11 @@ func TestRouterIsPartitionHash(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	router, cleanup := MockNewRouter(log)
 	defer cleanup()
+	err := router.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	// sbtest with tables.
-	err := router.AddForTest("sbtest", MockTableMConfig())
+	err = router.AddForTest("sbtest", MockTableMConfig())
 	assert.Nil(t, err)
 
 	isHash := router.IsPartitionHash(methodTypeHash)

@@ -37,7 +37,9 @@ func TestOrderByPlan(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
-	err := route.AddForTest("sbtest", router.MockTableMConfig())
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest("sbtest", router.MockTableMConfig())
 	assert.Nil(t, err)
 	for _, query := range querys {
 		tree, err := sqlparser.Parse(query)
@@ -73,7 +75,9 @@ func TestOrderByPlanError(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
-	err := route.AddForTest("sbtest", router.MockTableMConfig(), router.MockTableBConfig())
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest("sbtest", router.MockTableMConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		tree, err := sqlparser.Parse(query)

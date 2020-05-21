@@ -36,7 +36,9 @@ func TestExecutor1(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
 
 	planTree := planner.NewPlanTree()

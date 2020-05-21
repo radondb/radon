@@ -13,10 +13,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 
 	"config"
 
 	"github.com/pkg/errors"
+	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 )
 
@@ -28,6 +30,11 @@ const (
 	TableTypePartitionHash  = "hash"
 	TableTypePartitionList  = "list"
 	TableTypePartitionRange = "range"
+)
+
+const (
+	NAME_CHAR_LEN     = 64
+	TABLE_NAME_SUFFIX = 5 // table name suffix: "_0032"
 )
 
 // writeTableFrmData used to write table's json schema to file.
@@ -120,12 +127,23 @@ func (r *Router) CreateDatabase(db string) error {
 	defer r.mu.Unlock()
 
 	log := r.log
+	if len(db) > NAME_CHAR_LEN {
+		return sqldb.NewSQLError(sqldb.ER_TOO_LONG_IDENT, db)
+	}
+	if r.checkNameInvalid(db) {
+		log.Error("frm.check.database.name[%v].invalid.contains.char:'/' or space ' '", db)
+		return errors.Errorf("invalid.database.name.currently.not.support.dbname[%v].contains.with.char:'/' or space ' '", db)
+	}
 	if err := r.addDatabase(db); err != nil {
 		log.Error("frm.create.addDatabase.error:%v", err)
 		return err
 	}
 	if err := r.writeDatabaseFrmData(db); err != nil {
 		log.Error("frm.writeTableFrmData[db:%v].file.error:%+v", db, err)
+		// if write fail, drop db in memory cache added by addDatabase
+		if err := r.dropDatabase(db); err != nil {
+			log.Error("frm.drop.database[db:%v].error.from.router.cache.when.write.to.disk.failed:%+v", db, err)
+		}
 		return err
 	}
 	if err := config.UpdateVersion(r.metadir); err != nil {
@@ -167,9 +185,18 @@ func (r *Router) DropDatabase(db string) error {
 func (r *Router) CheckDatabase(db string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	return r.checkDatabase(db)
+}
+
+// checkDatabase is used to check the database exists or not without lock,
+// only used in internal of router.
+func (r *Router) checkDatabase(db string) error {
+	if db == "" {
+		return sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)
+	}
 
 	if _, ok := r.Schemas[db]; !ok {
-		return errors.Errorf("router.can.not.find.db[%v]", db)
+		return sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, db)
 	}
 	return nil
 }
@@ -182,18 +209,16 @@ func (r *Router) CheckTable(database string, tableName string) (isExist bool, er
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	if database == "" {
-		return false, errors.Errorf("database.is.empty")
+	// check database exists or not
+	if err := r.checkDatabase(database); err != nil {
+		return false, err
 	}
 	if tableName == "" {
 		return false, errors.Errorf("tableName.is.empty")
 	}
 
 	// schema
-	var schema *Schema
-	if schema, ok = r.Schemas[database]; !ok {
-		return false, errors.Errorf("router.can.not.find.db[%v]", database)
-	}
+	schema, _ := r.Schemas[database]
 
 	// table
 	if _, ok = schema.Tables[tableName]; !ok {
@@ -284,9 +309,29 @@ func (r *Router) CreateListTable(db, table, shardKey string, tableType string,
 	return r.createTable(db, table, tableConf)
 }
 
+// checkNameInvalid used to check if db or table name contains invalid char '/'.
+func (r *Router) checkNameInvalid(name string) bool {
+	// 1. Currently radon don`t support db/table name like `a/a`, in MySQL, `/` will be converted to `@002f`
+	// by func strconvert(), e.g.:`a/a` will first converted to `a@002fa` and then write to disk.
+	// see: https://github.com/mysql/mysql-server/blob/5.7/sql/sql_table.cc#L518
+	// 2. For space ' ', if last_char_is_space, mysql don`t support, otherwise,
+	// space will be changed to `@0020f`, we both don`t support in radon.
+	// see func check_table_name(): https://github.com/mysql/mysql-server/blob/5.7/sql/table.cc#L4284
+	return strings.ContainsAny(name, " /")
+}
+
 func (r *Router) createTable(db, table string, tableConf *config.TableConfig) error {
 	var err error
 	log := r.log
+
+	// see func in mysql sql/table.cc: check_and_convert_db_name() and check_table_name()
+	if (len(table) + TABLE_NAME_SUFFIX) > NAME_CHAR_LEN {
+		return sqldb.NewSQLError(sqldb.ER_TOO_LONG_IDENT, table)
+	}
+	if r.checkNameInvalid(table) {
+		log.Error("frm.check.table.name[%v].invalid.contains.char:'/' or space ' '", table)
+		return errors.Errorf("invalid.table.name.currently.not.support.tablename[%v].contains.with.char:'/' or space ' '", table)
+	}
 
 	// add config to router.
 	if err = r.addTable(db, tableConf); err != nil {
@@ -294,6 +339,8 @@ func (r *Router) createTable(db, table string, tableConf *config.TableConfig) er
 		return err
 	}
 	if err = r.writeTableFrmData(db, table, tableConf); err != nil {
+		// clear db/table cache in memory
+		r.removeTable(db, table)
 		log.Error("frm.create.table[db:%v, table:%v].file.error:%+v", db, tableConf.Name, err)
 		return err
 	}

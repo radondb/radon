@@ -128,7 +128,9 @@ func TestAggregatePlan(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
-	err := route.AddForTest("sbtest", router.MockTableMConfig())
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest("sbtest", router.MockTableMConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		tree, err := sqlparser.Parse(query)
@@ -273,7 +275,10 @@ func TestAggregatePlanUpperCase(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
-	err := route.AddForTest("sbtest", router.MockTableMConfig())
+
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest("sbtest", router.MockTableMConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		tree, err := sqlparser.Parse(query)
@@ -332,7 +337,10 @@ func TestAggregatePlanHaving(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
-	err := route.AddForTest("sbtest", router.MockTableMConfig())
+
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest("sbtest", router.MockTableMConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		tree, err := sqlparser.Parse(query)
@@ -377,7 +385,10 @@ func TestAggregatePlanUnsupported(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
-	err := route.AddForTest("sbtest", router.MockTableMConfig())
+
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest("sbtest", router.MockTableMConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		tree, err := sqlparser.Parse(query)
@@ -471,7 +482,10 @@ func TestAggregatePlans(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
-	err := route.AddForTest("sbtest", router.MockTableMConfig())
+
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest("sbtest", router.MockTableMConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		tree, err := sqlparser.Parse(query)
