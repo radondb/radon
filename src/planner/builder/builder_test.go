@@ -362,7 +362,9 @@ func TestProcessSelect(t *testing.T) {
 		route, cleanup := router.MockNewRouter(log)
 		defer cleanup()
 
-		err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableSConfig(), router.MockTableGConfig())
+		err := route.CreateDatabase(database)
+		assert.Nil(t, err)
+		err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableSConfig(), router.MockTableGConfig())
 		assert.Nil(t, err)
 		for _, tcase := range tcases {
 			node, err := sqlparser.Parse(tcase.query)
@@ -464,7 +466,9 @@ func TestSelectDatabaseIsNull(t *testing.T) {
 		route, cleanup := router.MockNewRouter(log)
 		defer cleanup()
 
-		err := route.AddForTest("sbtest", router.MockTableMConfig())
+		err := route.CreateDatabase("sbtest")
+		assert.Nil(t, err)
+		err = route.AddForTest("sbtest", router.MockTableMConfig())
 		assert.Nil(t, err)
 		for _, tcase := range tcases {
 			node, err := sqlparser.Parse(tcase.query)
@@ -571,7 +575,9 @@ func TestSelectUnsupported(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig(), router.MockTableCConfig())
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig(), router.MockTableCConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
@@ -625,7 +631,9 @@ func TestSelectSupported(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 	for _, query := range querys {
 		node, err := sqlparser.Parse(query)
@@ -723,7 +731,9 @@ func TestSelectPlanAs(t *testing.T) {
 		route, cleanup := router.MockNewRouter(log)
 		defer cleanup()
 
-		err := route.AddForTest(database, router.MockTableMConfig())
+		err := route.CreateDatabase("sbtest")
+		assert.Nil(t, err)
+		err = route.AddForTest(database, router.MockTableMConfig())
 		assert.Nil(t, err)
 		for _, tcase := range tcases {
 			node, err := sqlparser.Parse(tcase.query)
@@ -751,7 +761,9 @@ func TestSelectDatabaseNotFound(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig())
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig())
 	assert.Nil(t, err)
 
 	databaseNull := ""
@@ -772,7 +784,9 @@ func TestUnsportStatement(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
 
 	databaseNull := ""
@@ -798,7 +812,9 @@ func TestSelectPlanGlobal(t *testing.T) {
 		route, cleanup := router.MockNewRouter(log)
 		defer cleanup()
 
-		err := route.AddForTest(database, router.MockTableGConfig(), router.MockTableG1Config())
+		err := route.CreateDatabase("sbtest")
+		assert.Nil(t, err)
+		err = route.AddForTest(database, router.MockTableGConfig(), router.MockTableG1Config())
 		assert.Nil(t, err)
 		for _, query := range querys {
 			node, err := sqlparser.Parse(query)
@@ -884,7 +900,9 @@ func TestSelectPlanJoin(t *testing.T) {
 		route, cleanup := router.MockNewRouter(log)
 		defer cleanup()
 
-		err := route.AddForTest(database, router.MockTableGConfig(), router.MockTableBConfig(), router.MockTableG1Config())
+		err := route.CreateDatabase("sbtest")
+		assert.Nil(t, err)
+		err = route.AddForTest(database, router.MockTableGConfig(), router.MockTableBConfig(), router.MockTableG1Config())
 		assert.Nil(t, err)
 		for _, tcase := range tcases {
 			node, err := sqlparser.Parse(tcase.query)
@@ -925,7 +943,9 @@ func TestSelectPlanJoinErr(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableGConfig(), router.MockTableMConfig(), router.MockTableBConfig())
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableGConfig(), router.MockTableMConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
@@ -1025,7 +1045,9 @@ func TestProcessUnion(t *testing.T) {
 		route, cleanup := router.MockNewRouter(log)
 		defer cleanup()
 
-		err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableSConfig(), router.MockTableGConfig())
+		err := route.CreateDatabase("sbtest")
+		assert.Nil(t, err)
+		err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableSConfig(), router.MockTableGConfig())
 		assert.Nil(t, err)
 		for _, tcase := range tcases {
 			node, err := sqlparser.Parse(tcase.query)
@@ -1069,7 +1091,9 @@ func TestUnionUnsupported(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
@@ -1094,7 +1118,9 @@ func TestGenerateFieldQuery(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
 
 	node, err := sqlparser.Parse(query)
@@ -1129,7 +1155,9 @@ func TestSelectPlanList(t *testing.T) {
 		route, cleanup := router.MockNewRouter(log)
 		defer cleanup()
 
-		err := route.AddForTest(database, router.MockTableListConfig(), router.MockTableList1Config())
+		err := route.CreateDatabase("sbtest")
+		assert.Nil(t, err)
+		err = route.AddForTest(database, router.MockTableListConfig(), router.MockTableList1Config())
 		assert.Nil(t, err)
 		for i, query := range querys {
 			node, err := sqlparser.Parse(query)
@@ -1172,7 +1200,9 @@ func TestSelectSupportedPlanList(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(),
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(),
 		router.MockTableGConfig(), router.MockTableListConfig())
 	assert.Nil(t, err)
 	for _, query := range querys {

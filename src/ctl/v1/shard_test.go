@@ -199,7 +199,11 @@ func TestCtlV1ShardBalanceAdviceGlobal(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := proxy.MockProxy(log)
 	defer cleanup()
-	proxy.Router().AddForTest("sbtest", router.MockTableGConfig())
+	route := proxy.Router()
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest("sbtest", router.MockTableGConfig())
+	assert.Nil(t, err)
 
 	rdbs := &sqltypes.Result{
 		Fields: []*querypb.Field{
@@ -303,7 +307,11 @@ func TestCtlV1ShardBalanceAdviceSingle(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := proxy.MockProxy(log)
 	defer cleanup()
-	proxy.Router().AddForTest("sbtest", router.MockTableSConfig())
+	route := proxy.Router()
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest("sbtest", router.MockTableSConfig())
+	assert.Nil(t, err)
 
 	rdbs := &sqltypes.Result{
 		Fields: []*querypb.Field{
@@ -407,7 +415,11 @@ func TestCtlV1ShardBalanceAdviceList(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := proxy.MockProxy(log)
 	defer cleanup()
-	proxy.Router().AddForTest("sbtest", router.MockTableListConfig())
+	route := proxy.Router()
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
+	err = route.AddForTest("sbtest", router.MockTableListConfig())
+	assert.Nil(t, err)
 
 	rdbs := &sqltypes.Result{
 		Fields: []*querypb.Field{
@@ -1256,6 +1268,9 @@ func TestCtlV1Globals(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	_, proxy, cleanup := proxy.MockProxy(log)
 	defer cleanup()
+	route := proxy.Router()
+	err := route.CreateDatabase("sbtest")
+	assert.Nil(t, err)
 
 	{
 		err := proxy.Router().AddForTest("sbtest", router.MockTableMConfig())

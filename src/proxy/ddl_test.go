@@ -814,10 +814,12 @@ func TestProxyDDLCreateTableError(t *testing.T) {
 	querys := []string{
 		"create table t2(a int, partition int) PARTiITION BY hash(a)",
 		"create table dual(a int) partition by hash(a)",
+		"create table t(a int) engine=unkown partition by hash(a)",
 	}
 	results := []string{
 		"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use, syntax error at position 33 near 'partition' (errno 1149) (sqlstate 42000)",
 		"spanner.ddl.check.create.table[dual].error:not support (errno 1105) (sqlstate HY000)",
+		"Unknown storage engine 'unkown', currently we only support InnoDB and TokuDB (errno 1286) (sqlstate 42000)",
 	}
 
 	for i, query := range querys {

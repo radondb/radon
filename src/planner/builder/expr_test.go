@@ -42,7 +42,9 @@ func TestGetDMLRouting(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableBConfig(), router.MockTableMConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableBConfig(), router.MockTableMConfig())
 	assert.Nil(t, err)
 
 	for i, query := range querys {
@@ -71,7 +73,9 @@ func TestGetDMLRoutingErr(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableBConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableBConfig())
 	assert.Nil(t, err)
 
 	for _, testcase := range testcases {
@@ -97,7 +101,9 @@ func TestParserWhereOrJoinExprs(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig())
 	assert.Nil(t, err)
 
 	for _, query := range querys {
@@ -130,7 +136,9 @@ func TestWhereFilters(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 
 	for _, query := range querys {
@@ -160,7 +168,9 @@ func TestWhereFiltersError(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 
 	node, err := sqlparser.Parse(query)
@@ -205,7 +215,9 @@ func TestParserHaving(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 
 	for _, query := range querys {
@@ -244,7 +256,9 @@ func TestParserHavingError(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 
 	for i, query := range querys {
@@ -275,7 +289,9 @@ func TestReplaceCol(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
 
 	node, err := sqlparser.Parse(query)

@@ -122,9 +122,11 @@ func TestPluginAutoIncrement(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
+	err := route.CreateDatabase(db)
+	assert.Nil(t, err)
 	// Plugin.
 	autoplug := NewAutoIncrement(log, route)
-	err := autoplug.Init()
+	err = autoplug.Init()
 	assert.Nil(t, err)
 	defer autoplug.Close()
 

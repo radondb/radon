@@ -1,3 +1,5 @@
+drop database if exists integrate_test;
+
 create database integrate_test DEFAULT CHARSET=utf8;
 
 
@@ -33,7 +35,7 @@ ERROR 1075 (42000): Incorrect table definition; there can be only one auto colum
 
 
 create table not_existing_database.test (a int) partition by hash(a) DEFAULT CHARSET=utf8;
-ERROR 1046 (3D000): No database selected
+ERROR 1049 (42000): Unknown database 'not_existing_database'
 
 
 create table integrate_test.t1 (a bigint default 100 auto_increment key) DEFAULT CHARSET=utf8;
@@ -336,6 +338,37 @@ CREATE TABLE integrate_test.t1 (v varchar(65535) key) DEFAULT CHARSET=utf8;
 ERROR 1074 (42000): Column length too big for column 'v' (max = 21845); use BLOB or TEXT instead
 
 DROP TABLE IF EXISTS integrate_test.t1;
+
+
+create /*testing bad database, database not exists*/ table not_existing_database.test (a int key);
+ERROR 1049 (42000): Unknown database 'not_existing_database'
+
+create /*testing table name with char '/', currently we don`t support it*/ table integrate_test.`a/a` (a int key);
+ERROR 1105 (HY000): invalid.table.name.currently.not.support.tablename[a/a].contains.with.char:'/' or space ' '
+
+create /*testing table name with char ' ', currently we don`t support it*/ table integrate_test.`a a` (a int key);
+ERROR 1105 (HY000): invalid.table.name.currently.not.support.tablename[a a].contains.with.char:'/' or space ' '
+
+
+create /*testing invalid database name*/ database `database bad/name/db/`;
+ERROR 1105 (HY000): invalid.database.name.currently.not.support.dbname[database bad/name/db/].contains.with.char:'/' or space ' '
+
+create /*testing invalid database name with space char ' '*/ database `database bad`;
+ERROR 1105 (HY000): invalid.database.name.currently.not.support.dbname[database bad].contains.with.char:'/' or space ' '
+
+create /*testing invalid database name with '/' */ database `database/bad`;
+ERROR 1105 (HY000): invalid.database.name.currently.not.support.dbname[database/bad].contains.with.char:'/' or space ' '
+
+
+create /*testing invalid engine name*/ table integrate_test.t(a int) engine=unkown partition by hash(a);
+ERROR 1286 (42000): Unknown storage engine 'unkown', currently we only support InnoDB and TokuDB
+
+
+CREATE /*testing db name bigger than max_len(64)*/ DATABASE t01234567890123456789012345678901234567890123456789012345678901234567890123456789;
+ERROR 1059 (42000): Identifier name 't01234567890123456789012345678901234567890123456789012345678901234567890123456789' is too long
+
+CREATE /*testing table name bigger than max_len(64)*/ table integrate_test.t01234567890123456789012345678901234567890123456789012345678901234567890123456789(a int key);
+ERROR 1059 (42000): Identifier name 't01234567890123456789012345678901234567890123456789012345678901234567890123456789' is too long
 
 
 drop database integrate_test;

@@ -126,7 +126,9 @@ func TestDeletePlan(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig(), router.MockTableGConfig(), router.MockTableSConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableGConfig(), router.MockTableSConfig())
 	assert.Nil(t, err)
 	planTree := NewPlanTree()
 	for i, query := range querys {
@@ -168,7 +170,9 @@ func TestDeleteUnsupportedPlan(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
@@ -194,7 +198,9 @@ func TestDeleteErrorPlan(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableMConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig())
 	assert.Nil(t, err)
 	databaseNull := ""
 	node, err := sqlparser.Parse(query)

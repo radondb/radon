@@ -1,3 +1,4 @@
+drop database if exists integrate_test;
 create database integrate_test DEFAULT CHARSET=utf8;
 
 create table integrate_test.t1 (b char(0)) partition by hash(b) DEFAULT CHARSET=utf8;
@@ -149,5 +150,18 @@ drop table if exists integrate_test.t1,integrate_test.t2,integrate_test.t3;
 
 CREATE TABLE integrate_test.t1 (v varchar(65535) key) DEFAULT CHARSET=utf8;
 DROP TABLE IF EXISTS integrate_test.t1;
+
+create /*testing bad database, database not exists*/ table not_existing_database.test (a int key);
+create /*testing table name with char '/', currently we don`t support it*/ table integrate_test.`a/a` (a int key);
+create /*testing table name with char ' ', currently we don`t support it*/ table integrate_test.`a a` (a int key);
+
+create /*testing invalid database name*/ database `database bad/name/db/`;
+create /*testing invalid database name with space char ' '*/ database `database bad`;
+create /*testing invalid database name with '/' */ database `database/bad`;
+
+create /*testing invalid engine name*/ table integrate_test.t(a int) engine=unkown partition by hash(a);
+
+CREATE /*testing db name bigger than max_len(64)*/ DATABASE t01234567890123456789012345678901234567890123456789012345678901234567890123456789;
+CREATE /*testing table name bigger than max_len(64)*/ table integrate_test.t01234567890123456789012345678901234567890123456789012345678901234567890123456789(a int key);
 
 drop database integrate_test;

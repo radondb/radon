@@ -55,7 +55,9 @@ func TestDDLPlan1(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableGConfig(), router.MockTableSConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableAConfig(), router.MockTableGConfig(), router.MockTableSConfig())
 	assert.Nil(t, err)
 	planTree := NewPlanTree()
 	for i, query := range querys {
@@ -102,7 +104,9 @@ func TestDROPPlan(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableGConfig(), router.MockTableSConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableAConfig(), router.MockTableGConfig(), router.MockTableSConfig())
 	assert.Nil(t, err)
 	planTree := NewPlanTree()
 	for i, query := range querys {
@@ -180,7 +184,9 @@ func TestDDLAlterError(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableAConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		log.Debug("%v", query)
@@ -320,7 +326,9 @@ func TestDDLPlanCreateIndex(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableAConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		log.Debug("%v", query)
@@ -378,7 +386,9 @@ func TestDDLPlanWithQuote(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		log.Debug("%v", query)
@@ -422,7 +432,9 @@ func TestDDLPlanWithSameColumn(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableAConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		log.Debug("%v", query)
@@ -476,7 +488,9 @@ func TestDDLPlanWithRename(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableRConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableRConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		log.Debug("%v", query)
@@ -510,7 +524,9 @@ func TestDDLPlanWithRenameNoshard(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableSConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableSConfig())
 	assert.Nil(t, err)
 	for i, query := range querys {
 		log.Debug("%v", query)

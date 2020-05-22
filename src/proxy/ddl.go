@@ -21,27 +21,21 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
-var (
-	supportEngines = []string{
-		"innodb",
-		"tokudb",
-	}
-)
-
-func checkEngine(ddl *sqlparser.DDL) {
-	check := false
+func checkEngine(ddl *sqlparser.DDL) error {
 	engine := ddl.TableSpec.Options.Engine
-	for _, eng := range supportEngines {
-		if eng == strings.ToLower(engine) {
-			check = true
-			break
-		}
+	if engine == "" {
+		// default set engine InnoDB if engine is empty.
+		ddl.TableSpec.Options.Engine = "InnoDB"
+		return nil
 	}
 
-	// Change the storage engine to InnoDB.
-	if !check {
-		ddl.TableSpec.Options.Engine = "InnoDB"
+	// see: https://github.com/mysql/mysql-server/blob/5.7/sql/sql_yacc.yy#L6181
+	// for mysql support engine type(named: enum legacy_db_type)
+	// see: https://github.com/mysql/mysql-server/blob/5.7/sql/handler.h#L397
+	if strings.ToLower(engine) == "innodb" || strings.ToLower(engine) == "tokudb" {
+		return nil
 	}
+	return sqldb.NewSQLError(sqldb.ER_UNKNOWN_STORAGE_ENGINE, engine)
 }
 
 func tryGetShardKey(ddl *sqlparser.DDL) (string, error) {
@@ -112,12 +106,6 @@ func tryGetShardKey(ddl *sqlparser.DDL) (string, error) {
 	return "", fmt.Errorf("The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication")
 }
 
-func checkDatabaseExists(database string, router *router.Router) bool {
-	tblList := router.Tables()
-	_, ok := tblList[database]
-	return ok
-}
-
 func checkTableExists(database string, table string, router *router.Router) bool {
 	tblList := router.Tables()
 	tables, ok := tblList[database]
@@ -184,16 +172,22 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 
 	switch ddl.Action {
 	case sqlparser.CreateDBStr:
-		if node.IfNotExists && checkDatabaseExists(database, route) {
-			return &sqltypes.Result{}, nil
+		if err := route.CheckDatabase(database); err == nil {
+			// If database already exists and the flag is "if not exists", return
+			if node.IfNotExists {
+				return &sqltypes.Result{}, nil
+			}
 		}
 		if err := route.CreateDatabase(database); err != nil {
 			return nil, err
 		}
 		return spanner.ExecuteScatter(query)
 	case sqlparser.DropDBStr:
-		if node.IfExists && !checkDatabaseExists(database, route) {
-			return &sqltypes.Result{}, nil
+		if err := route.CheckDatabase(database); err != nil {
+			// If database not exists and the flag is "if exists", return
+			if node.IfExists {
+				return &sqltypes.Result{}, nil
+			}
 		}
 		// Execute the ddl.
 		qr, err := spanner.ExecuteScatter(query)
@@ -212,8 +206,8 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		shardKey := ddl.PartitionName
 		tableType := router.TableTypeUnknown
 
-		if !checkDatabaseExists(database, route) {
-			return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)
+		if err := route.CheckDatabase(database); err != nil {
+			return nil, err
 		}
 
 		// Check table exists.
@@ -222,7 +216,9 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		}
 
 		// Check engine.
-		checkEngine(ddl)
+		if err := checkEngine(ddl); err != nil {
+			return nil, err
+		}
 
 		autoinc, err := autoincrement.GetAutoIncrement(node)
 		if err != nil {
@@ -303,9 +299,9 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 				query = fmt.Sprintf("drop table %s.%s", db, table)
 			}
 
-			// Check the database and table is exists.
-			if !checkDatabaseExists(db, route) {
-				return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, db)
+			// Check the database
+			if err := route.CheckDatabase(db); err != nil {
+				return nil, err
 			}
 
 			// Check table exists.
@@ -332,9 +328,9 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		sqlparser.AlterAddColumnStr, sqlparser.AlterDropColumnStr, sqlparser.AlterModifyColumnStr,
 		sqlparser.TruncateTableStr:
 
-		// Check the database and table is exists.
-		if !checkDatabaseExists(database, route) {
-			return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, database)
+		// Check the database
+		if err := route.CheckDatabase(database); err != nil {
+			return nil, err
 		}
 
 		table := ddl.Table.Name.String()
@@ -355,8 +351,8 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		toTable := ddl.NewName.Name.String()
 
 		// Check the database, fromTable is exists, toTable is not exists.
-		if !checkDatabaseExists(database, route) {
-			return nil, sqldb.NewSQLError(sqldb.ER_BAD_DB_ERROR, database)
+		if err := route.CheckDatabase(database); err != nil {
+			return nil, err
 		}
 
 		if !checkTableExists(database, fromTable, route) {

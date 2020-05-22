@@ -72,25 +72,21 @@ func NewRouter(log *xlog.Log, metadir string, conf *config.RouterConfig) *Router
 
 // addTable -- used to add a table router to schema map.
 func (r *Router) addTable(db string, tbl *config.TableConfig) error {
-	var ok bool
-	var schema *Schema
 	var table *Table
 
-	if db == "" {
-		return errors.New("db.can't.be.null")
+	// check db exists or not
+	if err := r.checkDatabase(db); err != nil {
+		return err
 	}
 	if tbl == nil {
 		return errors.New("table.config..can't.be.nil")
 	}
 
-	// schema
-	if schema, ok = r.Schemas[db]; !ok {
-		schema = &Schema{DB: db, Tables: make(map[string]*Table)}
-		r.Schemas[db] = schema
-	}
+	// get schema
+	schema, _ := r.Schemas[db]
 
 	// table
-	if _, ok = schema.Tables[tbl.Name]; !ok {
+	if _, ok := schema.Tables[tbl.Name]; !ok {
 		table = &Table{
 			Name:        tbl.Name,
 			ShardKey:    tbl.ShardKey,
@@ -180,6 +176,9 @@ func (r *Router) getRenameTableConfig(db, fromTable, toTable string) (*config.Ta
 }
 
 func (r *Router) addDatabase(db string) error {
+	if db == "" {
+		return errors.Errorf("router.database.should.not.be.empty")
+	}
 	if _, ok := r.Schemas[db]; !ok {
 		schema := &Schema{DB: db, Tables: make(map[string]*Table)}
 		r.Schemas[db] = schema

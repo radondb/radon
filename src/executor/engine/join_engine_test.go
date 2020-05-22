@@ -239,7 +239,9 @@ func TestJoinEngine(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 
 	// Create scatter and query handler.
@@ -476,7 +478,9 @@ func TestMaxRowErr(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig(), router.MockTableSConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig(), router.MockTableSConfig())
 	assert.Nil(t, err)
 
 	// Create scatter and query handler.
@@ -533,7 +537,9 @@ func TestGetFieldErr(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig(), router.MockTableGConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
 
 	// Create scatter and query handler.
@@ -576,7 +582,9 @@ func TestMockErr(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
-	err := route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig())
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableAConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
 
 	// Create scatter and query handler.
