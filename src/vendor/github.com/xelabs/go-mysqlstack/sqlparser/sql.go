@@ -79,26 +79,26 @@ type yySymType struct {
 	tableIdent            TableIdent
 	convertType           *ConvertType
 	aliasedTableName      *AliasedTableExpr
-	TableSpec             *TableSpec
-	TableOptionListOpt    TableOptionListOpt
-	TableOptionList       TableOptionList
+	tableSpec             *TableSpec
+	tableOptionListOpt    TableOptionListOpt
+	tableOptionList       []*TableOption
 	tableOption           *TableOption
 	columnType            ColumnType
 	colPrimaryKeyOpt      ColumnPrimaryKeyOption
 	colUniqueKeyOpt       ColumnUniqueKeyOption
 	optVal                *SQLVal
-	LengthScaleOption     LengthScaleOption
+	lengthScaleOption     LengthScaleOption
 	columnDefinition      *ColumnDefinition
 	indexDefinition       *IndexDefinition
 	indexColumn           *IndexColumn
 	indexColumns          []*IndexColumn
-	indexOptionList       IndexOptionList
+	indexOptionList       []*IndexOption
 	indexOption           *IndexOption
 	columnOptionListOpt   ColumnOptionListOpt
-	columnOptionList      ColumnOptionList
+	columnOptionList      []*ColumnOption
 	columnOption          *ColumnOption
 	databaseOptionListOpt DatabaseOptionListOpt
-	databaseOptionList    DatabaseOptionList
+	databaseOptionList    []*DatabaseOption
 	databaseOption        *DatabaseOption
 	partitionDefinition   *PartitionDefinition
 	partitionDefinitions  []*PartitionDefinition
@@ -2946,7 +2946,7 @@ yydefault:
 //line sql.y:1157
 		{
 			yyDollar[1].ddl.Action = CreateTableStr
-			yyDollar[1].ddl.TableSpec = yyDollar[2].TableSpec
+			yyDollar[1].ddl.TableSpec = yyDollar[2].tableSpec
 			yyVAL.statement = yyDollar[1].ddl
 		}
 	case 45:
@@ -2954,10 +2954,10 @@ yydefault:
 //line sql.y:1163
 		{
 			yyDollar[1].ddl.Action = CreateTableStr
-			yyDollar[1].ddl.TableSpec = yyDollar[2].TableSpec
+			yyDollar[1].ddl.TableSpec = yyDollar[2].tableSpec
 			yyDollar[1].ddl.PartitionName = yyDollar[7].colIdent.String()
 			yyDollar[1].ddl.PartitionNum = yyDollar[9].optVal
-			if yyDollar[2].TableSpec.Options.Type == GlobalTableType || yyDollar[2].TableSpec.Options.Type == SingleTableType {
+			if yyDollar[2].tableSpec.Options.Type == GlobalTableType || yyDollar[2].tableSpec.Options.Type == SingleTableType {
 				yylex.Error("SINGLE or GLOBAL should not be used simultaneously with PARTITION")
 				return 1
 			} else {
@@ -2970,7 +2970,7 @@ yydefault:
 //line sql.y:1177
 		{
 			yyDollar[1].ddl.Action = CreateTableStr
-			yyDollar[1].ddl.TableSpec = yyDollar[2].TableSpec
+			yyDollar[1].ddl.TableSpec = yyDollar[2].tableSpec
 			yyDollar[1].ddl.PartitionName = yyDollar[7].colIdent.String()
 			yyDollar[1].ddl.TableSpec.Options.Type = PartitionTableList
 			yyDollar[1].ddl.PartitionOptions = yyDollar[10].partitionDefinitions
@@ -2981,9 +2981,9 @@ yydefault:
 //line sql.y:1186
 		{
 			yyDollar[1].ddl.Action = CreateTableStr
-			yyDollar[1].ddl.TableSpec = yyDollar[2].TableSpec
+			yyDollar[1].ddl.TableSpec = yyDollar[2].tableSpec
 			yyDollar[1].ddl.BackendName = yyDollar[6].colIdent.String()
-			if yyDollar[2].TableSpec.Options.Type == GlobalTableType || yyDollar[2].TableSpec.Options.Type == SingleTableType {
+			if yyDollar[2].tableSpec.Options.Type == GlobalTableType || yyDollar[2].tableSpec.Options.Type == SingleTableType {
 				yylex.Error("SINGLE or GLOBAL should not be used simultaneously with DISTRIBUTED")
 				return 1
 			} else {
@@ -3278,113 +3278,113 @@ yydefault:
 		yyDollar = yyS[yypt-4 : yypt+1]
 //line sql.y:1429
 		{
-			yyVAL.TableSpec = yyDollar[2].TableSpec
+			yyVAL.tableSpec = yyDollar[2].tableSpec
 
-			if len(yyDollar[4].TableOptionListOpt.TblOptList) != 0 {
-				if str := yyDollar[4].TableOptionListOpt.CheckIfTableOptDuplicate(); str != "" {
+			if len(yyDollar[4].tableOptionListOpt.TblOptList) != 0 {
+				if str := yyDollar[4].tableOptionListOpt.CheckIfTableOptDuplicate(); str != "" {
 					yylex.Error(str)
 					return 1
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionComment); val != nil {
-					yyVAL.TableSpec.Options.Comment = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionComment); val != nil {
+					yyVAL.tableSpec.Options.Comment = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionEngine); val != nil {
-					yyVAL.TableSpec.Options.Engine = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionEngine); val != nil {
+					yyVAL.tableSpec.Options.Engine = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionCharset); val != nil {
-					yyVAL.TableSpec.Options.Charset = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionCharset); val != nil {
+					yyVAL.tableSpec.Options.Charset = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionTableType); val != nil {
-					yyVAL.TableSpec.Options.Type = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionTableType); val != nil {
+					yyVAL.tableSpec.Options.Type = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionAvgRowLength); val != nil {
-					yyVAL.TableSpec.Options.AvgRowLength = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionAvgRowLength); val != nil {
+					yyVAL.tableSpec.Options.AvgRowLength = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionChecksum); val != nil {
-					yyVAL.TableSpec.Options.Checksum = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionChecksum); val != nil {
+					yyVAL.tableSpec.Options.Checksum = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionCollate); val != nil {
-					yyVAL.TableSpec.Options.Collate = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionCollate); val != nil {
+					yyVAL.tableSpec.Options.Collate = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionCompression); val != nil {
-					yyVAL.TableSpec.Options.Compression = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionCompression); val != nil {
+					yyVAL.tableSpec.Options.Compression = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionConnection); val != nil {
-					yyVAL.TableSpec.Options.Connection = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionConnection); val != nil {
+					yyVAL.tableSpec.Options.Connection = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionDataDirectory); val != nil {
-					yyVAL.TableSpec.Options.DataDirectory = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionDataDirectory); val != nil {
+					yyVAL.tableSpec.Options.DataDirectory = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionIndexDirectory); val != nil {
-					yyVAL.TableSpec.Options.IndexDirectory = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionIndexDirectory); val != nil {
+					yyVAL.tableSpec.Options.IndexDirectory = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionDelayKeyWrite); val != nil {
-					yyVAL.TableSpec.Options.DelayKeyWrite = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionDelayKeyWrite); val != nil {
+					yyVAL.tableSpec.Options.DelayKeyWrite = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionEncryption); val != nil {
-					yyVAL.TableSpec.Options.Encryption = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionEncryption); val != nil {
+					yyVAL.tableSpec.Options.Encryption = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionInsertMethod); val != nil {
-					yyVAL.TableSpec.Options.InsertMethod = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionInsertMethod); val != nil {
+					yyVAL.tableSpec.Options.InsertMethod = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionKeyBlockSize); val != nil {
-					yyVAL.TableSpec.Options.KeyBlockSize = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionKeyBlockSize); val != nil {
+					yyVAL.tableSpec.Options.KeyBlockSize = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionMaxRows); val != nil {
-					yyVAL.TableSpec.Options.MaxRows = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionMaxRows); val != nil {
+					yyVAL.tableSpec.Options.MaxRows = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionMinRows); val != nil {
-					yyVAL.TableSpec.Options.MinRows = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionMinRows); val != nil {
+					yyVAL.tableSpec.Options.MinRows = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionPackKeys); val != nil {
-					yyVAL.TableSpec.Options.PackKeys = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionPackKeys); val != nil {
+					yyVAL.tableSpec.Options.PackKeys = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionPassword); val != nil {
-					yyVAL.TableSpec.Options.Password = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionPassword); val != nil {
+					yyVAL.tableSpec.Options.Password = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionRowFormat); val != nil {
-					yyVAL.TableSpec.Options.RowFormat = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionRowFormat); val != nil {
+					yyVAL.tableSpec.Options.RowFormat = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionStatsAutoRecalc); val != nil {
-					yyVAL.TableSpec.Options.StatsAutoRecalc = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionStatsAutoRecalc); val != nil {
+					yyVAL.tableSpec.Options.StatsAutoRecalc = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionStatsPersistent); val != nil {
-					yyVAL.TableSpec.Options.StatsPersistent = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionStatsPersistent); val != nil {
+					yyVAL.tableSpec.Options.StatsPersistent = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionStatsSamplePages); val != nil {
-					yyVAL.TableSpec.Options.StatsSamplePages = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionStatsSamplePages); val != nil {
+					yyVAL.tableSpec.Options.StatsSamplePages = String(val)
 				}
-				if val := yyDollar[4].TableOptionListOpt.GetTableOptValByType(TableOptionTableSpace); val != nil {
-					yyVAL.TableSpec.Options.TableSpace = String(val)
+				if val := yyDollar[4].tableOptionListOpt.GetTableOptValByType(TableOptionTableSpace); val != nil {
+					yyVAL.tableSpec.Options.TableSpace = String(val)
 				}
 			}
-			if yyVAL.TableSpec.Options.Type == "" {
-				yyVAL.TableSpec.Options.Type = NormalTableType
+			if yyVAL.tableSpec.Options.Type == "" {
+				yyVAL.tableSpec.Options.Type = NormalTableType
 			}
 		}
 	case 90:
 		yyDollar = yyS[yypt-0 : yypt+1]
 //line sql.y:1516
 		{
-			yyVAL.TableOptionListOpt.TblOptList = []*TableOption{}
+			yyVAL.tableOptionListOpt.TblOptList = []*TableOption{}
 		}
 	case 91:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line sql.y:1520
 		{
-			yyVAL.TableOptionListOpt.TblOptList = yyDollar[1].TableOptionList
+			yyVAL.tableOptionListOpt.TblOptList = yyDollar[1].tableOptionList
 		}
 	case 92:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line sql.y:1526
 		{
-			yyVAL.TableOptionList = append(yyVAL.TableOptionList, yyDollar[1].tableOption)
+			yyVAL.tableOptionList = append(yyVAL.tableOptionList, yyDollar[1].tableOption)
 		}
 	case 93:
 		yyDollar = yyS[yypt-2 : yypt+1]
 //line sql.y:1530
 		{
-			yyVAL.TableOptionList = append(yyDollar[1].TableOptionList, yyDollar[2].tableOption)
+			yyVAL.tableOptionList = append(yyDollar[1].tableOptionList, yyDollar[2].tableOption)
 		}
 	case 94:
 		yyDollar = yyS[yypt-1 : yypt+1]
@@ -3916,20 +3916,20 @@ yydefault:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line sql.y:1976
 		{
-			yyVAL.TableSpec = &TableSpec{}
-			yyVAL.TableSpec.AddColumn(yyDollar[1].columnDefinition)
+			yyVAL.tableSpec = &TableSpec{}
+			yyVAL.tableSpec.AddColumn(yyDollar[1].columnDefinition)
 		}
 	case 166:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line sql.y:1981
 		{
-			yyVAL.TableSpec.AddColumn(yyDollar[3].columnDefinition)
+			yyVAL.tableSpec.AddColumn(yyDollar[3].columnDefinition)
 		}
 	case 167:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line sql.y:1985
 		{
-			yyVAL.TableSpec.AddIndex(yyDollar[3].indexDefinition)
+			yyVAL.tableSpec.AddIndex(yyDollar[3].indexDefinition)
 		}
 	case 168:
 		yyDollar = yyS[yypt-3 : yypt+1]
@@ -4153,40 +4153,40 @@ yydefault:
 //line sql.y:2168
 		{
 			yyVAL.columnType = ColumnType{Type: string(yyDollar[1].bytes)}
-			yyVAL.columnType.Length = yyDollar[2].LengthScaleOption.Length
-			yyVAL.columnType.Scale = yyDollar[2].LengthScaleOption.Scale
+			yyVAL.columnType.Length = yyDollar[2].lengthScaleOption.Length
+			yyVAL.columnType.Scale = yyDollar[2].lengthScaleOption.Scale
 		}
 	case 201:
 		yyDollar = yyS[yypt-2 : yypt+1]
 //line sql.y:2174
 		{
 			yyVAL.columnType = ColumnType{Type: string(yyDollar[1].bytes)}
-			yyVAL.columnType.Length = yyDollar[2].LengthScaleOption.Length
-			yyVAL.columnType.Scale = yyDollar[2].LengthScaleOption.Scale
+			yyVAL.columnType.Length = yyDollar[2].lengthScaleOption.Length
+			yyVAL.columnType.Scale = yyDollar[2].lengthScaleOption.Scale
 		}
 	case 202:
 		yyDollar = yyS[yypt-2 : yypt+1]
 //line sql.y:2180
 		{
 			yyVAL.columnType = ColumnType{Type: string(yyDollar[1].bytes)}
-			yyVAL.columnType.Length = yyDollar[2].LengthScaleOption.Length
-			yyVAL.columnType.Scale = yyDollar[2].LengthScaleOption.Scale
+			yyVAL.columnType.Length = yyDollar[2].lengthScaleOption.Length
+			yyVAL.columnType.Scale = yyDollar[2].lengthScaleOption.Scale
 		}
 	case 203:
 		yyDollar = yyS[yypt-2 : yypt+1]
 //line sql.y:2186
 		{
 			yyVAL.columnType = ColumnType{Type: string(yyDollar[1].bytes)}
-			yyVAL.columnType.Length = yyDollar[2].LengthScaleOption.Length
-			yyVAL.columnType.Scale = yyDollar[2].LengthScaleOption.Scale
+			yyVAL.columnType.Length = yyDollar[2].lengthScaleOption.Length
+			yyVAL.columnType.Scale = yyDollar[2].lengthScaleOption.Scale
 		}
 	case 204:
 		yyDollar = yyS[yypt-2 : yypt+1]
 //line sql.y:2192
 		{
 			yyVAL.columnType = ColumnType{Type: string(yyDollar[1].bytes)}
-			yyVAL.columnType.Length = yyDollar[2].LengthScaleOption.Length
-			yyVAL.columnType.Scale = yyDollar[2].LengthScaleOption.Scale
+			yyVAL.columnType.Length = yyDollar[2].lengthScaleOption.Length
+			yyVAL.columnType.Scale = yyDollar[2].lengthScaleOption.Scale
 		}
 	case 205:
 		yyDollar = yyS[yypt-1 : yypt+1]
@@ -4379,13 +4379,13 @@ yydefault:
 		yyDollar = yyS[yypt-0 : yypt+1]
 //line sql.y:2333
 		{
-			yyVAL.LengthScaleOption = LengthScaleOption{}
+			yyVAL.lengthScaleOption = LengthScaleOption{}
 		}
 	case 237:
 		yyDollar = yyS[yypt-5 : yypt+1]
 //line sql.y:2337
 		{
-			yyVAL.LengthScaleOption = LengthScaleOption{
+			yyVAL.lengthScaleOption = LengthScaleOption{
 				Length: NewIntVal(yyDollar[2].bytes),
 				Scale:  NewIntVal(yyDollar[4].bytes),
 			}
@@ -4394,13 +4394,13 @@ yydefault:
 		yyDollar = yyS[yypt-0 : yypt+1]
 //line sql.y:2345
 		{
-			yyVAL.LengthScaleOption = LengthScaleOption{}
+			yyVAL.lengthScaleOption = LengthScaleOption{}
 		}
 	case 239:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line sql.y:2349
 		{
-			yyVAL.LengthScaleOption = LengthScaleOption{
+			yyVAL.lengthScaleOption = LengthScaleOption{
 				Length: NewIntVal(yyDollar[2].bytes),
 			}
 		}
@@ -4408,7 +4408,7 @@ yydefault:
 		yyDollar = yyS[yypt-5 : yypt+1]
 //line sql.y:2355
 		{
-			yyVAL.LengthScaleOption = LengthScaleOption{
+			yyVAL.lengthScaleOption = LengthScaleOption{
 				Length: NewIntVal(yyDollar[2].bytes),
 				Scale:  NewIntVal(yyDollar[4].bytes),
 			}
@@ -4772,7 +4772,7 @@ yydefault:
 		yyDollar = yyS[yypt-7 : yypt+1]
 //line sql.y:2656
 		{
-			yyVAL.statement = &DDL{Action: AlterAddColumnStr, Table: yyDollar[4].tableName, NewName: yyDollar[4].tableName, TableSpec: yyDollar[7].TableSpec}
+			yyVAL.statement = &DDL{Action: AlterAddColumnStr, Table: yyDollar[4].tableName, NewName: yyDollar[4].tableName, TableSpec: yyDollar[7].tableSpec}
 		}
 	case 294:
 		yyDollar = yyS[yypt-7 : yypt+1]
@@ -6161,8 +6161,8 @@ yydefault:
 //line sql.y:3744
 		{
 			yyVAL.convertType = &ConvertType{Type: string(yyDollar[1].bytes)}
-			yyVAL.convertType.Length = yyDollar[2].LengthScaleOption.Length
-			yyVAL.convertType.Scale = yyDollar[2].LengthScaleOption.Scale
+			yyVAL.convertType.Length = yyDollar[2].lengthScaleOption.Length
+			yyVAL.convertType.Scale = yyDollar[2].lengthScaleOption.Scale
 		}
 	case 530:
 		yyDollar = yyS[yypt-1 : yypt+1]
