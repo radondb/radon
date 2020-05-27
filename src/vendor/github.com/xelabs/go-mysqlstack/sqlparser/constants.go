@@ -184,4 +184,16 @@ const (
 	// Transaction access mode.
 	TxReadOnly  = "read only"
 	TxReadWrite = "read write"
+
+	// StartTxnStr represents the txn start transaction.
+	StartTxnStr = "start transaction"
+
+	// BeginTxnStr represents the txn begin.
+	BeginTxnStr = "begin"
+
+	// RollbackTxnStr represents the txn rollback.
+	RollbackTxnStr = "rollback"
+
+	// CommitTxnStr represents the txn commit.
+	CommitTxnStr = "commit"
 )

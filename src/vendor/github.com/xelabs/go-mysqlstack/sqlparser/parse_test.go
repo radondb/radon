@@ -1185,6 +1185,35 @@ func TestCreateTable(t *testing.T) {
 	}
 }
 
+func TestCreateTableEscaped(t *testing.T) {
+	testCases := []struct {
+		input  string
+		output string
+	}{{
+		input: "create table `a`(`id` int, primary key(`id`))",
+		output: "create table a (\n" +
+			"\t`id` int,\n" +
+			"\tprimary key (`id`)\n" +
+			")",
+	}, {
+		input: "create table `insert`(`update` int, primary key(`delete`))",
+		output: "create table `insert` (\n" +
+			"\t`update` int,\n" +
+			"\tprimary key (`delete`)\n" +
+			")",
+	}}
+	for _, tcase := range testCases {
+		tree, err := ParseStrictDDL(tcase.input)
+		if err != nil {
+			t.Errorf("input: %s, err: %v", tcase.input, err)
+			continue
+		}
+		if got, want := String(tree.(*DDL)), tcase.output; got != want {
+			t.Errorf("Parse(%s):\n%s, want\n%s", tcase.input, got, want)
+		}
+	}
+}
+
 func TestErrors(t *testing.T) {
 	invalidSQL := []struct {
 		input  string

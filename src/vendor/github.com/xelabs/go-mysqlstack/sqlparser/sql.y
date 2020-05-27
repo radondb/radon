@@ -48,71 +48,71 @@ func forceEOF(yylex interface{}) {
 %}
 
 %union {
-  empty         struct{}
-  statement     Statement
-  selStmt       SelectStatement
-  ddl           *DDL
-  ins           *Insert
-  byt           byte
-  bytes         []byte
-  bytes2        [][]byte
-  str           string
-  strs          []string
-  selectExprs   SelectExprs
-  selectExpr    SelectExpr
-  columns       Columns
-  colName       *ColName
-  tableExprs    TableExprs
-  tableExpr     TableExpr
-  tableName     TableName
-  tableNames    TableNames
-  indexHints    *IndexHints
-  expr          Expr
-  exprs         Exprs
-  boolVal       BoolVal
-  colTuple      ColTuple
-  values        Values
-  valTuple      ValTuple
-  subquery      *Subquery
-  whens         []*When
-  when          *When
-  orderBy       OrderBy
-  order         *Order
-  limit         *Limit
-  updateExprs   UpdateExprs
-  updateExpr    *UpdateExpr
-  setExprs      SetExprs
-  setExpr       *SetExpr
-  setVal        SetVal
-  colIdent      ColIdent
-  colIdents     []ColIdent
-  tableIdent    TableIdent
-  convertType   *ConvertType
-  aliasedTableName *AliasedTableExpr
-  TableSpec  *TableSpec
-  TableOptionListOpt TableOptionListOpt
-  TableOptionList    TableOptionList
-  tableOption        *TableOption
-  columnType    ColumnType
-  colPrimaryKeyOpt   ColumnPrimaryKeyOption
-  colUniqueKeyOpt    ColumnUniqueKeyOption
-  optVal        *SQLVal
-  LengthScaleOption LengthScaleOption
-  columnDefinition *ColumnDefinition
-  indexDefinition *IndexDefinition
-  indexColumn   *IndexColumn
-  indexColumns  []*IndexColumn
-  indexOptionList IndexOptionList
-  indexOption *IndexOption
-  columnOptionListOpt ColumnOptionListOpt
-  columnOptionList  ColumnOptionList
-  columnOption      *ColumnOption
-  databaseOptionListOpt DatabaseOptionListOpt
-  databaseOptionList  DatabaseOptionList
-  databaseOption      *DatabaseOption
-  partitionDefinition *PartitionDefinition
-  partitionDefinitions []*PartitionDefinition
-  showFilter    *ShowFilter
+	empty                 struct{}
+	statement             Statement
+	selStmt               SelectStatement
+	ddl                   *DDL
+	ins                   *Insert
+	byt                   byte
+	bytes                 []byte
+	bytes2                [][]byte
+	str                   string
+	strs                  []string
+	selectExprs           SelectExprs
+	selectExpr            SelectExpr
+	columns               Columns
+	colName               *ColName
+	tableExprs            TableExprs
+	tableExpr             TableExpr
+	tableName             TableName
+	tableNames            TableNames
+	indexHints            *IndexHints
+	expr                  Expr
+	exprs                 Exprs
+	boolVal               BoolVal
+	colTuple              ColTuple
+	values                Values
+	valTuple              ValTuple
+	subquery              *Subquery
+	whens                 []*When
+	when                  *When
+	orderBy               OrderBy
+	order                 *Order
+	limit                 *Limit
+	updateExprs           UpdateExprs
+	updateExpr            *UpdateExpr
+	setExprs              SetExprs
+	setExpr               *SetExpr
+	setVal                SetVal
+	colIdent              ColIdent
+	colIdents             []ColIdent
+	tableIdent            TableIdent
+	convertType           *ConvertType
+	aliasedTableName      *AliasedTableExpr
+	tableSpec             *TableSpec
+	tableOptionListOpt    TableOptionListOpt
+	tableOptionList       []*TableOption
+	tableOption           *TableOption
+	columnType            ColumnType
+	colPrimaryKeyOpt      ColumnPrimaryKeyOption
+	colUniqueKeyOpt       ColumnUniqueKeyOption
+	optVal                *SQLVal
+	lengthScaleOption     LengthScaleOption
+	columnDefinition      *ColumnDefinition
+	indexDefinition       *IndexDefinition
+	indexColumn           *IndexColumn
+	indexColumns          []*IndexColumn
+	indexOptionList       []*IndexOption
+	indexOption           *IndexOption
+	columnOptionListOpt   ColumnOptionListOpt
+	columnOptionList      []*ColumnOption
+	columnOption          *ColumnOption
+	databaseOptionListOpt DatabaseOptionListOpt
+	databaseOptionList    []*DatabaseOption
+	databaseOption        *DatabaseOption
+	partitionDefinition   *PartitionDefinition
+	partitionDefinitions  []*PartitionDefinition
+	showFilter            *ShowFilter
 }
 
 %token LEX_ERROR
@@ -894,7 +894,7 @@ func forceEOF(yylex interface{}) {
 	unsigned_opt
 	zero_fill_opt
 
-%type	<LengthScaleOption>
+%type	<lengthScaleOption>
 	float_length_opt
 	decimal_length_opt
 
@@ -920,14 +920,14 @@ func forceEOF(yylex interface{}) {
 %type	<str>
 	index_or_key
 
-%type	<TableSpec>
+%type	<tableSpec>
 	table_spec
 	table_column_list
 
-%type	<TableOptionListOpt>
+%type	<tableOptionListOpt>
 	table_option_list_opt
 
-%type	<TableOptionList>
+%type	<tableOptionList>
 	table_option_list
 
 %type	<tableOption>
