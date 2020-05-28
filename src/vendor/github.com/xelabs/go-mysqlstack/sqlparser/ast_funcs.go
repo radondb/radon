@@ -33,15 +33,26 @@ func Walk(visit Visit, nodes ...SQLNode) error {
 		if node == nil {
 			continue
 		}
-		kontinue, err := visit(node)
+		var err error
+		var kontinue bool
+		pre := func(cursor *Cursor) bool {
+			// If we already have found an error, don't visit these nodes, just exit early
+			if err != nil {
+				return false
+			}
+			kontinue, err = visit(cursor.Node())
+			if err != nil {
+				return true // we have to return true here so that post gets called
+			}
+			return kontinue
+		}
+		post := func(cursor *Cursor) bool {
+			return err == nil // now we can abort the traversal if an error was found
+		}
+
+		Rewrite(node, pre, post)
 		if err != nil {
 			return err
-		}
-		if kontinue {
-			err = node.WalkSubtree(visit)
-			if err != nil {
-				return err
-			}
 		}
 	}
 	return nil
@@ -621,41 +632,39 @@ func NewWhere(typ string, expr Expr) *Where {
 	return &Where{Type: typ, Expr: expr}
 }
 
+// ReplaceExpr finds the from expression from root
+// and replaces it with to. If from matches root,
+// then to is returned.
+func ReplaceExpr(root, from, to Expr) Expr {
+	tmp := Rewrite(root, replaceExpr(from, to), nil)
+	expr, success := tmp.(Expr)
+	if !success {
+		// log.Errorf("Failed to rewrite expression. Rewriter returned a non-expression: " + String(tmp))
+		// Unreachable.
+		return from
+	}
+	return expr
+}
+
+func replaceExpr(from, to Expr) func(cursor *Cursor) bool {
+	return func(cursor *Cursor) bool {
+		if cursor.Node() == from {
+			cursor.Replace(to)
+		}
+		switch cursor.Node().(type) {
+		case *ExistsExpr, *SQLVal, *Subquery, *ValuesFuncExpr, *Default:
+			return false
+		}
+		return true
+	}
+}
+
 // CloneSelectExpr used to copy a new SelectExpr.
 func CloneSelectExpr(node SelectExpr) SelectExpr {
 	if node == nil {
 		return nil
 	}
 	return node.clone()
-}
-
-// ReplaceExpr finds the from expression from root
-// and replaces it with to. If from matches root,
-// then to is returned.
-func ReplaceExpr(root, from, to Expr) Expr {
-	if root == from {
-		return to
-	}
-	root.replace(from, to)
-	return root
-}
-
-// replaceExprs is a convenience function used by implementors
-// of the replace method.
-func replaceExprs(from, to Expr, exprs ...*Expr) bool {
-	for _, expr := range exprs {
-		if *expr == nil {
-			continue
-		}
-		if *expr == from {
-			*expr = to
-			return true
-		}
-		if (*expr).replace(from, to) {
-			return true
-		}
-	}
-	return false
 }
 
 // CloneExpr used to copy a new Expr.
