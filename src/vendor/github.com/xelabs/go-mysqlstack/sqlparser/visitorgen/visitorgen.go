@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//Package visitorgen is responsible for taking the ast.go of Vitess and
+//Package visitorgen is responsible for taking the ast.go of Vitess
 //and producing visitor infrastructure for it.
 //
 //This is accomplished in a few steps.

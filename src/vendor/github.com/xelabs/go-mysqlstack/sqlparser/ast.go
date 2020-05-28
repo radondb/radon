@@ -1040,6 +1040,11 @@ func (optList DatabaseOptionListOpt) Format(buf *TrackedBuffer) {
 	}
 }
 
+// WalkSubtree walks the nodes of the subtree.
+func (optList DatabaseOptionListOpt) WalkSubtree(visit Visit) error {
+	return nil
+}
+
 // Format formats the node.
 func (opts TableOptions) Format(buf *TrackedBuffer) {
 	if opts.Comment != "" {

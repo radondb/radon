@@ -7,5 +7,8 @@ MAKEFLAGS = -s
 sql.go: sql.y
 	goyacc -o sql.go sql.y
 
+visitor:
+	go generate rewriter.go
+
 clean:
 	rm -f y.output sql.go
