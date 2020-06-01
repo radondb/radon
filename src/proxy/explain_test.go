@@ -250,11 +250,11 @@ func TestProxyExplainError(t *testing.T) {
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
-		query := "explain select xx sdf"
-		qr, err := client.FetchAll(query, -1)
-		assert.Nil(t, err)
-		want := "unsupported: cannot.explain.the.query: select xx sdf"
-		got := string(qr.Rows[0][0].Raw())
+		query := "explain select xx from sdf"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+		want := "Table 'test.sdf' doesn't exist (errno 1146) (sqlstate 42S02)"
+		got := err.Error()
 		assert.Equal(t, want, got)
 	}
 
