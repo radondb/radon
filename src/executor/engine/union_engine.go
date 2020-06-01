@@ -10,13 +10,13 @@ package engine
 
 import (
 	"errors"
-	"sync"
 
 	"backend"
 	"executor/engine/operator"
 	"planner/builder"
 	"xcontext"
 
+	"github.com/golang/sync/errgroup"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
@@ -46,26 +46,19 @@ func NewUnionEngine(log *xlog.Log, node *builder.UnionNode, txn backend.Transact
 
 // Execute used to execute the executor.
 func (u *UnionEngine) Execute(ctx *xcontext.ResultContext) error {
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-	allErrors := make([]error, 0, 2)
-	oneExec := func(exec PlanEngine, ctx *xcontext.ResultContext) {
-		defer wg.Done()
-		if err := exec.Execute(ctx); err != nil {
-			mu.Lock()
-			allErrors = append(allErrors, err)
-			mu.Unlock()
-		}
-	}
+	var eg errgroup.Group
+
 	lctx := xcontext.NewResultContext()
 	rctx := xcontext.NewResultContext()
-	wg.Add(1)
-	go oneExec(u.left, lctx)
-	wg.Add(1)
-	go oneExec(u.right, rctx)
-	wg.Wait()
-	if len(allErrors) > 0 {
-		return allErrors[0]
+
+	eg.Go(func() error {
+		return u.left.Execute(lctx)
+	})
+	eg.Go(func() error {
+		return u.right.Execute(rctx)
+	})
+	if err := eg.Wait(); err != nil {
+		return err
 	}
 
 	if len(lctx.Results.Fields) != len(rctx.Results.Fields) {
