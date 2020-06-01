@@ -9,13 +9,12 @@
 package engine
 
 import (
-	"sync"
-
 	"backend"
 	"executor/engine/operator"
 	"planner/builder"
 	"xcontext"
 
+	"github.com/golang/sync/errgroup"
 	"github.com/pkg/errors"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
@@ -45,17 +44,8 @@ func NewJoinEngine(log *xlog.Log, node *builder.JoinNode, txn backend.Transactio
 
 // Execute used to execute the executor.
 func (j *JoinEngine) Execute(ctx *xcontext.ResultContext) error {
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-	allErrors := make([]error, 0, 2)
-	oneExec := func(exec PlanEngine, ctx *xcontext.ResultContext) {
-		defer wg.Done()
-		if err := exec.Execute(ctx); err != nil {
-			mu.Lock()
-			allErrors = append(allErrors, err)
-			mu.Unlock()
-		}
-	}
+	var eg errgroup.Group
+	var err error
 
 	maxrow := j.txn.MaxJoinRows()
 	if j.node.Strategy == builder.NestLoop {
@@ -66,13 +56,15 @@ func (j *JoinEngine) Execute(ctx *xcontext.ResultContext) error {
 	} else {
 		lctx := xcontext.NewResultContext()
 		rctx := xcontext.NewResultContext()
-		wg.Add(1)
-		go oneExec(j.left, lctx)
-		wg.Add(1)
-		go oneExec(j.right, rctx)
-		wg.Wait()
-		if len(allErrors) > 0 {
-			return allErrors[0]
+
+		eg.Go(func() error {
+			return j.left.Execute(lctx)
+		})
+		eg.Go(func() error {
+			return j.right.Execute(rctx)
+		})
+		if err = eg.Wait(); err != nil {
+			return err
 		}
 
 		ctx.Results = &sqltypes.Result{}
@@ -81,7 +73,6 @@ func (j *JoinEngine) Execute(ctx *xcontext.ResultContext) error {
 			return nil
 		}
 
-		var err error
 		if len(rctx.Results.Rows) == 0 {
 			err = concatLeftAndNil(lctx.Results.Rows, j.node, ctx.Results, maxrow)
 		} else {
