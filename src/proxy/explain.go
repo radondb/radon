@@ -75,12 +75,7 @@ func (spanner *Spanner) handleExplain(session *driver.Session, query string, nod
 	planTree, err := simOptimizer.BuildPlanTree()
 	if err != nil {
 		log.Error("proxy.explain.error:%+v", err)
-		msg := fmt.Sprintf("unsupported: cannot.explain.the.query:%s", cutQuery)
-		row := []sqltypes.Value{
-			sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte(msg)),
-		}
-		qr.Rows = append(qr.Rows, row)
-		return qr, nil
+		return nil, err
 	}
 
 	if len(planTree.Plans()) > 0 {
