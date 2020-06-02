@@ -10,10 +10,10 @@ package backend
 
 import (
 	"fmt"
-	"sync"
 	"time"
 	"xcontext"
 
+	"github.com/golang/sync/errgroup"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 )
 
@@ -64,19 +64,15 @@ func (txn *Txn) executeXACommand(query string, state txnXAState) error {
 
 // executeXA only used to execute the 'XA START','XA END', 'XA PREPARE', 'XA COMMIT'/'XA ROLLBACK' statements.
 func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error {
-	var err error
-	var mu sync.Mutex
-	var wg sync.WaitGroup
+	var eg errgroup.Group
 
 	log := txn.log
-	allErrors := make([]error, 0, 8)
 
 	txn.state.Set(int32(txnStateExecutingTwoPC))
 	defer queryStats.Record("txn.2pc.execute", time.Now())
-	oneShard := func(state txnXAState, back string, txn *Txn, query string) {
+	oneShard := func(state txnXAState, back string, txn *Txn, query string) error {
 		var x error
 		var c Connection
-		defer wg.Done()
 
 		switch state {
 		case txnXAStateStart, txnXAStateEnd, txnXAStatePrepare:
@@ -124,12 +120,7 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 				break
 			}
 		}
-
-		if x != nil {
-			mu.Lock()
-			allErrors = append(allErrors, x)
-			mu.Unlock()
-		}
+		return x
 	}
 
 	switch req.Mode {
@@ -152,9 +143,11 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 				defer txn.mgr.CommitUnlock()
 			}
 
-			for back := range backends {
-				wg.Add(1)
-				go oneShard(state, back, txn, req.RawQuery)
+			for b := range backends {
+				back := b
+				eg.Go(func() error {
+					return oneShard(state, back, txn, req.RawQuery)
+				})
 			}
 		}
 	case xcontext.ReqScatter:
@@ -166,17 +159,14 @@ func (txn *Txn) executeXA(req *xcontext.RequestContext, state txnXAState) error 
 			defer txn.mgr.CommitUnlock()
 		}
 
-		for back := range backends {
-			wg.Add(1)
-			go oneShard(state, back, txn, req.RawQuery)
+		for b := range backends {
+			back := b
+			eg.Go(func() error {
+				return oneShard(state, back, txn, req.RawQuery)
+			})
 		}
 	}
-
-	wg.Wait()
-	if len(allErrors) > 0 {
-		err = allErrors[0]
-	}
-	return err
+	return eg.Wait()
 }
 
 func (txn *Txn) xaStart() error {
