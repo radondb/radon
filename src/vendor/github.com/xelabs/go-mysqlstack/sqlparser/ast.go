@@ -297,7 +297,8 @@ type IndexOptions struct {
 
 // IndexDefinition describes an index in a CREATE TABLE statement
 type IndexDefinition struct {
-	Type    string
+	Type string
+	// TODO() in the future will refactor type ColIdent to string to make format code more clear
 	Name    ColIdent
 	Opts    *IndexOptions
 	Primary bool
@@ -1109,7 +1110,10 @@ func (idx *IndexDefinition) Format(buf *TrackedBuffer) {
 	if idx.Primary {
 		buf.Myprintf("%s", idx.Type)
 	} else {
-		buf.Myprintf("%s `%v`", idx.Type, idx.Name)
+		buf.Myprintf("%s", idx.Type)
+		if idx.Name.val != "" {
+			buf.Myprintf(" `%v`", idx.Name)
+		}
 	}
 	buf.Myprintf(" %v", idx.Opts)
 }
