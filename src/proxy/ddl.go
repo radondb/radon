@@ -39,54 +39,19 @@ func checkEngine(ddl *sqlparser.DDL) error {
 }
 
 func tryGetShardKey(ddl *sqlparser.DDL) (string, error) {
-	shardKey := ddl.PartitionName
 	table := ddl.Table.Name.String()
-
 	if "dual" == table {
 		return "", fmt.Errorf("spanner.ddl.check.create.table[%s].error:not support", table)
 	}
 
-	if shardKey != "" {
-		shardKeyOK := false
-		constraintCheckOK := true
-		// shardKey check and constraint check in column definition
-		for _, col := range ddl.TableSpec.Columns {
-			colName := col.Name.String()
-			if colName == shardKey {
-				shardKeyOK = true
-			} else {
-				if col.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
-					col.Type.UniqueKeyOpt == sqlparser.ColKeyUniqueKey {
-					constraintCheckOK = false
-				}
-			}
-		}
-
-		if !shardKeyOK {
-			return "", fmt.Errorf("Sharding Key column '%s' doesn't exist in table", shardKey)
-		}
-		if !constraintCheckOK {
-			return "", fmt.Errorf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
-		}
-
-		// constraint check in index definition
-		for _, index := range ddl.TableSpec.Indexes {
-			constraintCheckOK = false
-			if index.Unique || index.Primary {
-				for _, colIdx := range index.Opts.Columns {
-					colName := colIdx.Column.String()
-					if colName == shardKey {
-						constraintCheckOK = true
-						break
-					}
-				}
-				if !constraintCheckOK {
-					return "", fmt.Errorf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
-				}
-			}
-		}
-		return shardKey, nil
-	} else {
+	switch partOpt := ddl.PartitionOption.(type) {
+	case *sqlparser.PartOptHash:
+		shardKey := partOpt.Name
+		return shardKey, checkShardKey(ddl, shardKey)
+	case *sqlparser.PartOptList:
+		shardKey := partOpt.Name
+		return shardKey, checkShardKey(ddl, shardKey)
+	case *sqlparser.PartOptNormal:
 		for _, col := range ddl.TableSpec.Columns {
 			colName := col.Name.String()
 			if col.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
@@ -102,8 +67,52 @@ func tryGetShardKey(ddl *sqlparser.DDL) (string, error) {
 				}
 			}
 		}
+	case *sqlparser.PartOptGlobal, *sqlparser.PartOptSingle:
+		return "", nil
 	}
 	return "", fmt.Errorf("The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication")
+}
+
+func checkShardKey(ddl *sqlparser.DDL, shardKey string) error {
+	shardKeyOK := false
+	constraintCheckOK := true
+	// shardKey check and constraint check in column definition
+	for _, col := range ddl.TableSpec.Columns {
+		colName := col.Name.String()
+		if colName == shardKey {
+			shardKeyOK = true
+		} else {
+			if col.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
+				col.Type.UniqueKeyOpt == sqlparser.ColKeyUniqueKey {
+				constraintCheckOK = false
+			}
+		}
+	}
+
+	if !shardKeyOK {
+		return fmt.Errorf("Sharding Key column '%s' doesn't exist in table", shardKey)
+	}
+	if !constraintCheckOK {
+		return fmt.Errorf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
+	}
+
+	// constraint check in index definition
+	for _, index := range ddl.TableSpec.Indexes {
+		constraintCheckOK = false
+		if index.Unique || index.Primary {
+			for _, colIdx := range index.Opts.Columns {
+				colName := colIdx.Column.String()
+				if colName == shardKey {
+					constraintCheckOK = true
+					break
+				}
+			}
+			if !constraintCheckOK {
+				return fmt.Errorf("The unique/primary constraint should be only defined on the sharding key column[%s]", shardKey)
+			}
+		}
+	}
+	return nil
 }
 
 func checkTableExists(database string, table string, router *router.Router) bool {
@@ -200,10 +209,8 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 		}
 		return qr, nil
 	case sqlparser.CreateTableStr:
-		var err error
 		table := ddl.Table.Name.String()
 		backends := scatter.Backends()
-		shardKey := ddl.PartitionName
 		tableType := router.TableTypeUnknown
 
 		if err := route.CheckDatabase(database); err != nil {
@@ -220,6 +227,11 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 			return nil, err
 		}
 
+		shardKey, err := tryGetShardKey(ddl)
+		if err != nil {
+			return nil, err
+		}
+
 		autoinc, err := autoincrement.GetAutoIncrement(node)
 		if err != nil {
 			return nil, err
@@ -228,40 +240,37 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 			AutoIncrement: autoinc,
 		}
 
-		switch ddl.TableSpec.Options.Type {
-		case sqlparser.PartitionTableHash, sqlparser.NormalTableType:
-			if shardKey, err = tryGetShardKey(ddl); err != nil {
-				return nil, err
-			}
-
+		switch partOpt := ddl.PartitionOption.(type) {
+		case *sqlparser.PartOptHash:
 			tableType = router.TableTypePartitionHash
-			if err := route.CreateHashTable(database, table, shardKey, tableType, backends, ddl.PartitionNum, extra); err != nil {
+			if err := route.CreateHashTable(database, table, shardKey, tableType, backends, partOpt.PartitionNum, extra); err != nil {
 				return nil, err
 			}
-		case sqlparser.PartitionTableList:
-			if shardKey, err = tryGetShardKey(ddl); err != nil {
+		case *sqlparser.PartOptNormal:
+			tableType = router.TableTypePartitionHash
+			if err := route.CreateHashTable(database, table, shardKey, tableType, backends, nil, extra); err != nil {
 				return nil, err
 			}
-
+		case *sqlparser.PartOptList:
 			tableType = router.TableTypePartitionList
-			if err := route.CreateListTable(database, table, shardKey, tableType, ddl.PartitionOptions, extra); err != nil {
+			if err := route.CreateListTable(database, table, shardKey, tableType, partOpt.PartDefs, extra); err != nil {
 				return nil, err
 			}
-		case sqlparser.GlobalTableType:
+		case *sqlparser.PartOptGlobal:
 			tableType = router.TableTypeGlobal
 			if err := route.CreateNonPartTable(database, table, tableType, backends, extra); err != nil {
 				return nil, err
 			}
-		case sqlparser.SingleTableType:
+		case *sqlparser.PartOptSingle:
 			tableType = router.TableTypeSingle
-			if ddl.BackendName != "" {
+			if partOpt.BackendName != "" {
 				// TODO(andy): distributed by a list of backends
-				if isExist := scatter.CheckBackend(ddl.BackendName); !isExist {
+				if isExist := scatter.CheckBackend(partOpt.BackendName); !isExist {
 					log.Error("spanner.ddl.execute[%v].backend.doesn't.exist", query)
-					return nil, fmt.Errorf("create table distributed by backend '%s' doesn't exist", ddl.BackendName)
+					return nil, fmt.Errorf("create table distributed by backend '%s' doesn't exist", partOpt.BackendName)
 				}
 
-				assignedBackends := []string{ddl.BackendName}
+				assignedBackends := []string{partOpt.BackendName}
 				if err := route.CreateNonPartTable(database, table, tableType, assignedBackends, extra); err != nil {
 					return nil, err
 				}

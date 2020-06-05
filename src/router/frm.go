@@ -284,7 +284,7 @@ func (r *Router) CreateHashTable(db, table, shardKey string, tableType string, b
 
 // CreateListTable used to add a list table to router and flush the schema to disk.
 func (r *Router) CreateListTable(db, table, shardKey string, tableType string,
-	partitionDef sqlparser.PartitionOptions, extra *Extra) error {
+	partitionDef sqlparser.PartitionDefinitions, extra *Extra) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

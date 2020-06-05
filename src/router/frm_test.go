@@ -101,7 +101,7 @@ func TestFrmTable(t *testing.T) {
 
 	// Add list table.
 	{
-		partitionDef := sqlparser.PartitionOptions{
+		partitionDef := sqlparser.PartitionDefinitions{
 			&sqlparser.PartitionDefinition{
 				Backend: "node1",
 				Row:     sqlparser.ValTuple{sqlparser.NewStrVal([]byte("2"))},
@@ -547,7 +547,7 @@ func TestFrmTableCreateListTable(t *testing.T) {
 
 	// Add list table.
 	{
-		partitionDef := sqlparser.PartitionOptions{
+		partitionDef := sqlparser.PartitionDefinitions{
 			&sqlparser.PartitionDefinition{
 				Backend: "node1",
 				Row:     sqlparser.ValTuple{sqlparser.NewStrVal([]byte("2"))},
@@ -567,7 +567,7 @@ func TestFrmTableCreateListTable(t *testing.T) {
 		err = router.CreateListTable("test", "l", "", TableTypePartitionHash, partitionDef, nil)
 		assert.NotNil(t, err)
 
-		err = router.CreateListTable("test", "l", "id", TableTypePartitionList, sqlparser.PartitionOptions{}, nil)
+		err = router.CreateListTable("test", "l", "id", TableTypePartitionList, sqlparser.PartitionDefinitions{}, nil)
 		assert.NotNil(t, err)
 
 		err = router.CreateListTable("test", "l", "id", TableTypePartitionList, partitionDef, &Extra{&config.AutoIncrement{"id"}})

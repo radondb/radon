@@ -18,31 +18,31 @@ limitations under the License.
 package sqlparser
 
 func setParseTree(yylex interface{}, stmt Statement) {
-  yylex.(*Tokenizer).ParseTree = stmt
+	yylex.(*Tokenizer).ParseTree = stmt
 }
 
 func setAllowComments(yylex interface{}, allow bool) {
-  yylex.(*Tokenizer).AllowComments = allow
+	yylex.(*Tokenizer).AllowComments = allow
 }
 
 func setDDL(yylex interface{}, ddl *DDL) {
-  yylex.(*Tokenizer).partialDDL = ddl
+	yylex.(*Tokenizer).partialDDL = ddl
 }
 
 func incNesting(yylex interface{}) bool {
-  yylex.(*Tokenizer).nesting++
-  if yylex.(*Tokenizer).nesting == 200 {
-    return true
-  }
-  return false
+	yylex.(*Tokenizer).nesting++
+	if yylex.(*Tokenizer).nesting == 200 {
+		return true
+	}
+	return false
 }
 
 func decNesting(yylex interface{}) {
-  yylex.(*Tokenizer).nesting--
+	yylex.(*Tokenizer).nesting--
 }
 
 func forceEOF(yylex interface{}) {
-  yylex.(*Tokenizer).ForceEOF = true
+	yylex.(*Tokenizer).ForceEOF = true
 }
 
 %}
@@ -112,6 +112,7 @@ func forceEOF(yylex interface{}) {
 	databaseOption        *DatabaseOption
 	partitionDefinition   *PartitionDefinition
 	partitionDefinitions  []*PartitionDefinition
+	partitionOption       PartitionOption
 	showFilter            *ShowFilter
 }
 
@@ -417,43 +418,43 @@ func forceEOF(yylex interface{}) {
 	SIGNED
 	UNSIGNED
 	ZEROFILL
-    FIXED
-    DYNAMIC
-    STORAGE
-    DISK
-    MEMORY
-    COLUMN_FORMAT
-    AVG_ROW_LENGTH
-    COMPRESSION
-    CONNECTION
-    DATA
-    DIRECTORY
-    DELAY_KEY_WRITE
-    ENCRYPTION
-    INSERT_METHOD
-    MAX_ROWS
-    MIN_ROWS
-    PACK_KEYS
-    PASSWORD
-    ROW_FORMAT
-    STATS_AUTO_RECALC
-    STATS_PERSISTENT
-    STATS_SAMPLE_PAGES
-    TABLESPACE
+	FIXED
+	DYNAMIC
+	STORAGE
+	DISK
+	MEMORY
+	COLUMN_FORMAT
+	AVG_ROW_LENGTH
+	COMPRESSION
+	CONNECTION
+	DATA
+	DIRECTORY
+	DELAY_KEY_WRITE
+	ENCRYPTION
+	INSERT_METHOD
+	MAX_ROWS
+	MIN_ROWS
+	PACK_KEYS
+	PASSWORD
+	ROW_FORMAT
+	STATS_AUTO_RECALC
+	STATS_PERSISTENT
+	STATS_SAMPLE_PAGES
+	TABLESPACE
 
 // ROW_FORMAT options
 %token	<bytes>
-    COMPRESSED
-    REDUNDANT
-    COMPACT
-    TOKUDB_DEFAULT
-    TOKUDB_FAST
-    TOKUDB_SMALL
-    TOKUDB_ZLIB
-    TOKUDB_QUICKLZ
-    TOKUDB_LZMA
-    TOKUDB_SNAPPY
-    TOKUDB_UNCOMPRESSED
+	COMPRESSED
+	REDUNDANT
+	COMPACT
+	TOKUDB_DEFAULT
+	TOKUDB_FAST
+	TOKUDB_SMALL
+	TOKUDB_ZLIB
+	TOKUDB_QUICKLZ
+	TOKUDB_LZMA
+	TOKUDB_SNAPPY
+	TOKUDB_UNCOMPRESSED
 
 // Supported SHOW tokens
 %token	<bytes>
@@ -832,7 +833,6 @@ func forceEOF(yylex interface{}) {
 
 %type	<empty>
 	force_eof
-	ddl_force_eof
 
 %type	<str>
 	charset
@@ -863,7 +863,6 @@ func forceEOF(yylex interface{}) {
 	table_engine_option
 	parts_num_opt
 	table_charset_option
-	table_type_option
 	table_auto_opt
 	table_comment_opt
 	table_avg_row_length_opt
@@ -995,6 +994,9 @@ func forceEOF(yylex interface{}) {
 
 %type	<partitionDefinitions>
 	partition_definitions
+
+%type	<partitionOption>
+	partition_option
 
 
 %start	any_command
@@ -1168,46 +1170,11 @@ parts_num_opt:
 	}
 
 create_statement:
-	create_table_prefix table_spec
+	create_table_prefix table_spec partition_option
 	{
 		$1.Action = CreateTableStr
 		$1.TableSpec = $2
-		$$ = $1
-	}
-|	create_table_prefix table_spec PARTITION BY HASH openb col_id closeb parts_num_opt ddl_force_eof
-	{
-		$1.Action = CreateTableStr
-		$1.TableSpec = $2
-		$1.PartitionName = $7.String()
-		$1.PartitionNum = $9
-		if $2.Options.Type == GlobalTableType || $2.Options.Type == SingleTableType {
-			yylex.Error("SINGLE or GLOBAL should not be used simultaneously with PARTITION")
-			return 1
-		} else {
-			$1.TableSpec.Options.Type = PartitionTableHash
-		}
-		$$ = $1
-	}
-|	create_table_prefix table_spec PARTITION BY LIST openb col_id closeb openb partition_definitions closeb ddl_force_eof
-	{
-		$1.Action = CreateTableStr
-		$1.TableSpec = $2
-		$1.PartitionName = $7.String()
-		$1.TableSpec.Options.Type = PartitionTableList
-		$1.PartitionOptions = $10
-		$$ = $1
-	}
-|	create_table_prefix table_spec DISTRIBUTED BY openb col_id closeb ddl_force_eof
-	{
-		$1.Action = CreateTableStr
-		$1.TableSpec = $2
-		$1.BackendName = $6.String()
-		if $2.Options.Type == GlobalTableType || $2.Options.Type == SingleTableType {
-			yylex.Error("SINGLE or GLOBAL should not be used simultaneously with DISTRIBUTED")
-			return 1
-		} else {
-			$1.TableSpec.Options.Type = SingleTableType
-		}
+		$1.PartitionOption = $3
 		$$ = $1
 	}
 |	CREATE DATABASE not_exists_opt table_id database_option_list_opt
@@ -1227,8 +1194,42 @@ create_statement:
 		$$ = &DDL{Action: CreateIndexStr, IndexType: FullTextStr, IndexName: string($4), Table: $6, NewName: $6, IndexOpts: NewIndexOptions($8, append($10, $11...))}
 	}
 |	CREATE SPATIAL INDEX ID ON table_name openb index_column_list closeb spatial_key_opts lock_algorithm_opts
-    {
+	{
 		$$ = &DDL{Action: CreateIndexStr, IndexType: SpatialStr, IndexName: string($4), Table: $6, NewName: $6, IndexOpts: NewIndexOptions($8, append($10, $11...))}
+	}
+
+partition_option:
+	/* empty */
+	{
+		$$ = &PartOptNormal{}
+	}
+|	GLOBAL
+	{
+		$$ = &PartOptGlobal{}
+	}
+|	SINGLE
+	{
+		$$ = &PartOptSingle{}
+	}
+|	DISTRIBUTED BY openb col_id closeb
+	{
+		$$ = &PartOptSingle{
+			BackendName: $4.String(),
+		}
+	}
+|	PARTITION BY LIST openb col_id closeb openb partition_definitions closeb
+	{
+		$$ = &PartOptList{
+			Name:     $5.String(),
+			PartDefs: $8,
+		}
+	}
+|	PARTITION BY HASH openb col_id closeb parts_num_opt
+	{
+		$$ = &PartOptHash{
+			Name: $5.String(),
+			PartitionNum: $7,
+		}
 	}
 
 index_using_str:
@@ -1459,9 +1460,6 @@ table_spec:
 			if val := $4.GetTableOptValByType(TableOptionCharset); val != nil {
 				$$.Options.Charset = String(val)
 			}
-			if val := $4.GetTableOptValByType(TableOptionTableType); val != nil {
-				$$.Options.Type = String(val)
-			}
 			if val := $4.GetTableOptValByType(TableOptionAvgRowLength); val != nil {
 				$$.Options.AvgRowLength = String(val)
 			}
@@ -1523,9 +1521,6 @@ table_spec:
 				$$.Options.TableSpace = String(val)
 			}
 		}
-		if $$.Options.Type == "" {
-			$$.Options.Type = NormalTableType
-		}
 	}
 
 table_option_list_opt:
@@ -1569,13 +1564,6 @@ table_option:
 			Val:  $1,
 		}
 	}
-|	table_type_option
-	{
-		$$ = &TableOption{
-			Type: TableOptionTableType,
-			Val:  $1,
-		}
-	}
 |	table_auto_opt
 	{
 		$$ = &TableOption{
@@ -1603,126 +1591,126 @@ table_option:
 			Type: TableOptionCollate,
 			Val:  $1,
 		}
-    }
+	}
 |   table_compression_opt
 	{
 		$$ = &TableOption{
 			Type: TableOptionCompression,
 			Val:  $1,
 		}
-    }
+	}
 |   table_connection_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionConnection,
 			Val:  $1,
 		}
-    }
+	}
 |   table_data_directory_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionDataDirectory,
 			Val:  $1,
 		}
-    }
+	}
 |   table_index_directory_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionIndexDirectory,
 			Val:  $1,
 		}
-    }
+	}
 |   table_delay_key_write_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionDelayKeyWrite,
 			Val:  $1,
 		}
-    }
+	}
 |   table_encryption_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionEncryption,
 			Val:  $1,
 		}
-    }
+	}
 |   table_insert_method_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionInsertMethod,
 			Val:  $1,
 		}
-    }
+	}
 |   table_key_block_size_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionKeyBlockSize,
 			Val:  $1,
 		}
-    }
+	}
 |   table_max_rows_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionMaxRows,
 			Val:  $1,
 		}
-    }
+	}
 |   table_min_rows_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionMinRows,
 			Val:  $1,
 		}
-    }
+	}
 |   table_pack_keys_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionPackKeys,
 			Val:  $1,
 		}
-    }
+	}
 |   table_password_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionPassword,
 			Val:  $1,
 		}
-    }
+	}
 |   table_row_format_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionRowFormat,
 			Val:  $1,
 		}
-    }
+	}
 |   table_stats_auto_recalc_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionStatsAutoRecalc,
 			Val:  $1,
 		}
-    }
+	}
 |   table_stats_persistent_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionStatsPersistent,
 			Val:  $1,
 		}
-    }
+	}
 |   table_stats_sample_pages_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionStatsSamplePages,
 			Val:  $1,
 		}
-    }
+	}
 |   table_tablespace_opt
-    {
+	{
 		$$ = &TableOption{
 			Type: TableOptionTableSpace,
 			Val:  $1,
 		}
-    }
+	}
 
 table_auto_opt:
 	AUTO_INCREMENT opt_equal INTEGRAL
@@ -1731,8 +1719,8 @@ table_auto_opt:
 table_avg_row_length_opt:
 	AVG_ROW_LENGTH opt_equal INTEGRAL
 	{
-        $$ = NewIntVal($3)
-    }
+		$$ = NewIntVal($3)
+	}
 
 table_collate_opt:
 	opt_default COLLATE opt_equal id_or_string
@@ -1743,13 +1731,13 @@ table_collate_opt:
 table_compression_opt:
 	COMPRESSION opt_equal STRING
 	{
-        switch StrToLower(string($3)) {
-        case "zlib", "lz4", "none":
-            break
-        default:
-            yylex.Error("Invalid compression option, argument (should be 'ZLIB', 'LZ4' or 'NONE')")
-            return 1
-        }
+		switch StrToLower(string($3)) {
+		case "zlib", "lz4", "none":
+			break
+		default:
+			yylex.Error("Invalid compression option, argument (should be 'ZLIB', 'LZ4' or 'NONE')")
+			return 1
+		}
 		$$ = NewStrVal($3)
 	}
 
@@ -1780,29 +1768,29 @@ table_delay_key_write_opt:
 table_encryption_opt:
 	ENCRYPTION opt_equal STRING
 	{
-        switch string($3) {
-        case "Y", "y":
-            yylex.Error("The encryption option is parsed but ignored by all storage engines.")
-            return 1
-        case "N", "n":
-            break
-        default:
-            yylex.Error("Invalid encryption option, argument (should be Y or N)")
-            return 1
-        }
+		switch string($3) {
+		case "Y", "y":
+			yylex.Error("The encryption option is parsed but ignored by all storage engines.")
+			return 1
+		case "N", "n":
+			break
+		default:
+			yylex.Error("Invalid encryption option, argument (should be Y or N)")
+			return 1
+		}
 		$$ = NewStrVal($3)
 	}
 
 table_insert_method_opt:
 	INSERT_METHOD opt_equal ID
 	{
-        switch StrToLower(string($3)) {
-        case "no", "first", "last":
-            break
-        default:
-            yylex.Error("Invalid insert_method option, argument (should be NO, FIRST or LAST)")
-            return 1
-        }
+		switch StrToLower(string($3)) {
+		case "no", "first", "last":
+			break
+		default:
+			yylex.Error("Invalid insert_method option, argument (should be NO, FIRST or LAST)")
+			return 1
+		}
 		$$ = NewStrValWithoutQuote($3)
 	}
 
@@ -1830,9 +1818,9 @@ table_pack_keys_opt:
 		$$ = NewStrValWithoutQuote($3)
 	}
 |   PACK_KEYS opt_equal DEFAULT
-    {
+	{
 		$$ = NewStrValWithoutQuote($3)
-    }
+	}
 
 table_password_opt:
 	PASSWORD opt_equal STRING
@@ -1906,9 +1894,9 @@ table_stats_auto_recalc_opt:
 		$$ = NewStrValWithoutQuote($3)
 	}
 |   STATS_AUTO_RECALC opt_equal DEFAULT
-    {
+	{
 		$$ = NewStrValWithoutQuote($3)
-    }
+	}
 
 table_stats_persistent_opt:
 	STATS_PERSISTENT opt_equal INTEGRAL
@@ -1916,9 +1904,9 @@ table_stats_persistent_opt:
 		$$ = NewStrValWithoutQuote($3)
 	}
 |   STATS_PERSISTENT opt_equal DEFAULT
-    {
+	{
 		$$ = NewStrValWithoutQuote($3)
-    }
+	}
 
 // In MySQL, STATS_SAMPLE_PAGES=N(Where 0<N<=65535) or STAS_SAMPLE_PAGES=DEFAULT.
 table_stats_sample_pages_opt:
@@ -1927,9 +1915,9 @@ table_stats_sample_pages_opt:
 		$$ = NewStrValWithoutQuote($3)
 	}
 |   STATS_SAMPLE_PAGES opt_equal DEFAULT
-    {
+	{
 		$$ = NewStrValWithoutQuote($3)
-    }
+	}
 
 table_tablespace_opt:
 	TABLESPACE opt_equal ID
@@ -1944,8 +1932,8 @@ table_tablespace_opt:
 table_checksum_opt:
 	CHECKSUM opt_equal INTEGRAL
 	{
-        $$ = NewIntVal($3)
-    }
+		$$ = NewIntVal($3)
+	}
 
 id_or_string:
 	ID
@@ -1975,16 +1963,6 @@ table_charset_option:
 	opt_default opt_charset opt_equal id_or_string
 	{
 		$$ = $4
-	}
-
-table_type_option:
-	GLOBAL
-	{
-		$$ = NewStrValWithoutQuote([]byte(GlobalTableType))
-	}
-|	SINGLE
-	{
-		$$ = NewStrValWithoutQuote([]byte(SingleTableType))
 	}
 
 table_column_list:
@@ -2128,7 +2106,7 @@ column_option:
 			typ:      ColumnOptionStorage,
 			Storage: $1,
 		}
-    }
+	}
 
 numeric_type:
 	int_type length_opt
@@ -2445,34 +2423,34 @@ on_update_opt:
 	}
 
 now_sym_with_frac_opt:
-    now_sym
-    {
-        $$ = string($1)
-    }
+	now_sym
+	{
+		$$ = string($1)
+	}
 |   now_sym '(' ')'
-    {
+	{
 		$$ = string($1)+"("+")"
-    }
+	}
 |   now_sym '(' INTEGRAL ')'
-    {
+	{
 		$$ = string($1)+"("+string($3)+")"
-    }
+	}
 
 // See https://dev.mysql.com/doc/refman/5.7/en/date-and-time-functions.html#function_localtime
 // TODO: Process other three keywords, see function_call_nonkeyword, and we'll abandon function_call_nonkeyword in the future.
 now_sym:
-    CURRENT_TIMESTAMP
-    {
+	CURRENT_TIMESTAMP
+	{
 		$$ = $1
-    }
+	}
 |   LOCALTIME
-    {
+	{
 		$$ = $1
-    }
+	}
 |   LOCALTIMESTAMP
-    {
+	{
 		$$ = $1
-    }
+	}
 
 
 auto_increment_opt:
@@ -2512,33 +2490,33 @@ collate_opt:
 
 column_format_opt:
 COLUMN_FORMAT FIXED
-    {
+	{
 		$$ = string($2)
-    }
+	}
 |   COLUMN_FORMAT  DYNAMIC
-    {
+	{
 		$$ = string($2)
-    }
+	}
 |   COLUMN_FORMAT  DEFAULT
-    {
+	{
 		$$ = string($2)
-    }
+	}
 
 storage_opt:
 STORAGE DEFAULT
-    {
-        // "default" is not in official doc: https://dev.mysql.com/doc/refman/5.7/en/create-table.html
-        // but actually mysql support it, see: https://github.com/mysql/mysql-server/blob/5.7/sql/sql_yacc.yy#L6953
+	{
+		// "default" is not in official doc: https://dev.mysql.com/doc/refman/5.7/en/create-table.html
+		// but actually mysql support it, see: https://github.com/mysql/mysql-server/blob/5.7/sql/sql_yacc.yy#L6953
 		$$ = string($2)
-    }
+	}
 |   STORAGE DISK
-    {
+	{
 		$$ = string($2)
-    }
+	}
 |   STORAGE MEMORY
-    {
+	{
 		$$ = string($2)
-    }
+	}
 
 column_primary_key_opt:
 	PRIMARY KEY
@@ -2897,7 +2875,7 @@ radon_statement:
 		$$ = &Radon{Action: ReshardStr, Table: $3, NewName: $5}
 	}
 |   RADON CLEANUP force_eof
-    {
+	{
 		$$ = &Radon{Action: CleanupStr}
 	}
 
@@ -4350,7 +4328,7 @@ access_mode:
 
 set_session_or_global:
 	LOCAL
-    {
+	{
 		$$ = SessionStr
 	}
 |	SESSION
@@ -4729,19 +4707,6 @@ closeb:
 	}
 
 force_eof:
-	{
-		forceEOF(yylex)
-	}
-
-ddl_force_eof:
-	{
-		forceEOF(yylex)
-	}
-|	openb
-	{
-		forceEOF(yylex)
-	}
-|	reserved_sql_id
 	{
 		forceEOF(yylex)
 	}

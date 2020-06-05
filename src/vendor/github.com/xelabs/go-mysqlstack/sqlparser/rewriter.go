@@ -188,10 +188,6 @@ func replaceDDLNewName(newNode, parent SQLNode) {
 	parent.(*DDL).NewName = newNode.(TableName)
 }
 
-func replaceDDLPartitionNum(newNode, parent SQLNode) {
-	parent.(*DDL).PartitionNum = newNode.(*SQLVal)
-}
-
 func replaceDDLTable(newNode, parent SQLNode) {
 	parent.(*DDL).Table = newNode.(TableName)
 }
@@ -792,7 +788,6 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 		a.apply(node, n.IndexOpts, replaceDDLIndexOpts)
 		a.apply(node, n.ModifyColumnDef, replaceDDLModifyColumnDef)
 		a.apply(node, n.NewName, replaceDDLNewName)
-		a.apply(node, n.PartitionNum, replaceDDLPartitionNum)
 		a.apply(node, n.Table, replaceDDLTable)
 		a.apply(node, n.TableSpec, replaceDDLTableSpec)
 		a.apply(node, n.Tables, replaceDDLTables)

@@ -16,7 +16,7 @@ create table integrate_test.t(
         a int,
         b int,
         c char(10),
-        primary key(a, b)) PARTITION BY HASH(a) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        primary key(a, b)) ENGINE=InnoDB DEFAULT CHARSET=utf8 PARTITION BY HASH(a);
 
 show create table integrate_test.t;
 Table	Create Table
@@ -44,7 +44,7 @@ create table integrate_test.t(
         a int,
         b int,
         c char(10)
-        )  PARTITION BY HASH(a) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 PARTITION BY HASH(a);
 
 create unique index a_idx on integrate_test.t(a);
 

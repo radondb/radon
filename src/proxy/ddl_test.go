@@ -259,8 +259,8 @@ func TestProxyDDLTable(t *testing.T) {
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
 		querys := []string{
-			"create table if not exists t4(a int, b int) SINGLE comment 'comment test' charset='utf8'",
-			"create table if not exists t5(a int, b int) Global default charset utf8",
+			"create table if not exists t4(a int, b int) comment 'comment test' charset='utf8' SINGLE",
+			"create table if not exists t5(a int, b int) default charset utf8 Global",
 			"create table if not exists t6(a int key, b int) default character set='utf8' comment 'test' engine innodb",
 		}
 		for _, query := range querys {
@@ -779,7 +779,7 @@ func TestProxyDDLCreateTable(t *testing.T) {
 		"create table t7(a int collate utf8_bin Collate 'utf8_bin' collate \"utf8_bin\") partition by hash(a)",
 		"create table t8(a int, b int) partition by hash(a)",
 		"create table t9(a int, b timestamp(5) on update current_timestamp(5) column_format fixed column_format default column_format dynamic) partition by hash(a)",
-		"create table t10(a int column_format fixed column_format default column_format dynamic) partition by hash(a) comment='comment option' engine=tokudb default charset='utf8' avg_row_length=123 checksum=1 collate='utf8_bin' compression='lz4' connection='id' data directory='/data' index directory='/index' delay_key_write=1 encryption='n' insert_method=First key_block_size=1 max_rows=3 min_rows=2 pack_keys=default password='pwd' row_format=dynamic stats_auto_recalc=1 stats_persistent=default stats_sample_pages=65535 tablespace=storage",
+		"create table t10(a int column_format fixed column_format default column_format dynamic) comment='comment option' engine=tokudb default charset='utf8' avg_row_length=123 checksum=1 collate='utf8_bin' compression='lz4' connection='id' data directory='/data' index directory='/index' delay_key_write=1 encryption='n' insert_method=First key_block_size=1 max_rows=3 min_rows=2 pack_keys=default password='pwd' row_format=dynamic stats_auto_recalc=1 stats_persistent=default stats_sample_pages=65535 tablespace=storage partition by hash(a)",
 	}
 
 	for _, query := range querys {
@@ -1181,6 +1181,7 @@ func TestProxyDDLGlobalSingleNormalList(t *testing.T) {
 		"CREATE TABLE t5(a int ,b int, primary key(a))",
 		"CREATE TABLE t6(a int ,b int, primary key(a, b))",
 		"create table t7(a int, b int unique)",
+		"create table `t8/t/t`(a int,b int, primary key(a))",
 
 		// partition list
 		"CREATE TABLE l(a int primary key,b int ) partition by list(a)(" +
@@ -1206,6 +1207,7 @@ func TestProxyDDLGlobalSingleNormalList(t *testing.T) {
 		"",
 		"The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication (errno 1105) (sqlstate HY000)",
 		"",
+		"invalid.table.name.currently.not.support.tablename[t8/t/t].contains.with.char:'/' or space ' ' (errno 1105) (sqlstate HY000)",
 
 		// partition list
 		"",
