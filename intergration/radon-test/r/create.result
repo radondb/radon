@@ -150,7 +150,7 @@ drop table integrate_test.t1;
 create table integrate_test.t1 (a tinyint, b smallint, c mediumint, d int, e bigint, f float(3,2), g double(4,3), h decimal(5,4), i year, j date, k timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, l datetime, m enum('a','b'), o char(10)) partition by hash(a) DEFAULT CHARSET=utf8;
 
 show create table integrate_test.t1\G
-drop table integrate_test.t1;
+select sleep(0.1);
 *************************** 1. row ***************************
        Table: t1
 Create Table: CREATE TABLE `t1` (
@@ -170,6 +170,10 @@ Create Table: CREATE TABLE `t1` (
   `o` char(10) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 /*!50100 PARTITION BY HASH(a) */
+sleep(0.1)
+0
+
+drop table integrate_test.t1;
 
 
 create table integrate_test.t1(str varchar(10) default 'def',strnull varchar(10),intg int default '10',rel double default '3.14') partition by hash(intg) num=8 DEFAULT CHARSET=utf8;
@@ -248,6 +252,10 @@ create database if not exists mysqltest character set latin2 DEFAULT CHARSET=utf
 show create database mysqltest;
 Database	Create Database
 mysqltest	CREATE DATABASE `mysqltest` /*!40100 DEFAULT CHARACTER SET utf8 */
+
+select sleep(0.1);
+sleep(0.1)
+0
 
 drop database mysqltest;
 
@@ -369,6 +377,70 @@ ERROR 1059 (42000): Identifier name 't012345678901234567890123456789012345678901
 
 CREATE /*testing table name bigger than max_len(64)*/ table integrate_test.t01234567890123456789012345678901234567890123456789012345678901234567890123456789(a int key);
 ERROR 1059 (42000): Identifier name 't01234567890123456789012345678901234567890123456789012345678901234567890123456789' is too long
+
+
+drop table if exists integrate_test.t;
+
+create /*test multi primary key on index definition*/ table integrate_test.t (id INT, title VARCHAR(200), gis GEOMETRY not null, INDEX (id) using btree comment 'radon', INDEX id_idx1(id) using btree comment 'a', KEY id_idx2(id) using btree comment 'a',KEY id_idx3 using btree(id) using btree comment 'a',CONSTRAINT symbol UNIQUE id_idx4(id) using btree comment 'a',CONSTRAINT UNIQUE KEY id_idx5(id) using btree comment 'a',UNIQUE INDEX id_idx6(id) using btree comment 'a',FULLTEXT INDEX ngram_idx(title) WITH PARSER ngram,SPATIAL INDEX gis_idx(gis) key_block_size=10,CONSTRAINT symbol PRIMARY KEY using rtree(id) using btree comment 'a',CONSTRAINT PRIMARY KEY Using rtree(id) using btree comment 'a',PRIMARY KEY Using rtree(id) using btree comment 'a') partition by hash(id) num=8;
+ERROR 1068 (42000): Multiple primary key defined
+
+
+drop table if exists integrate_test.t;
+
+create table integrate_test.t (id INT, title VARCHAR(200), gis GEOMETRY not null, INDEX (id) using btree comment 'radon', INDEX id_idx1(id) using btree comment 'a', KEY id_idx2(id) using btree comment 'a',KEY id_idx3 using btree(id) using btree comment 'a',CONSTRAINT symbol UNIQUE id_idx4(id) using btree comment 'a',CONSTRAINT UNIQUE KEY id_idx5(id) using btree comment 'a',UNIQUE INDEX id_idx6(id) using btree comment 'a',FULLTEXT INDEX ngram_idx(title) WITH PARSER ngram,SPATIAL INDEX gis_idx(gis) key_block_size=10,CONSTRAINT symbol PRIMARY KEY using rtree(id) using btree comment 'a') partition by hash(id) num=8;
+
+show create table integrate_test.t\G
+select sleep(0.1);
+*************************** 1. row ***************************
+       Table: t
+Create Table: CREATE TABLE `t` (
+  `id` int(11) NOT NULL,
+  `title` varchar(200) DEFAULT NULL,
+  `gis` geometry NOT NULL,
+  PRIMARY KEY (`id`) USING BTREE COMMENT 'a',
+  UNIQUE KEY `id_idx4` (`id`) USING BTREE COMMENT 'a',
+  UNIQUE KEY `id_idx5` (`id`) USING BTREE COMMENT 'a',
+  UNIQUE KEY `id_idx6` (`id`) USING BTREE COMMENT 'a',
+  KEY `id` (`id`) USING BTREE COMMENT 'radon',
+  KEY `id_idx1` (`id`) USING BTREE COMMENT 'a',
+  KEY `id_idx2` (`id`) USING BTREE COMMENT 'a',
+  KEY `id_idx3` (`id`) USING BTREE COMMENT 'a',
+  SPATIAL KEY `gis_idx` (`gis`) KEY_BLOCK_SIZE=10,
+  FULLTEXT KEY `ngram_idx` (`title`) /*!50100 WITH PARSER `ngram` */ 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+/*!50100 PARTITION BY HASH(id) */
+sleep(0.1)
+0
+
+
+drop table if exists integrate_test.t;
+
+create /*test index definition*/ table integrate_test.t (a int not null, b int, primary key(a), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b), key (b));
+
+
+drop table if exists integrate_test.t;
+
+CREATE /*test index definition*/ TABLE integrate_test.t(a int key, c1 VARCHAR(33), KEY USING BTREE (c1));
+
+
+drop table if exists integrate_test.t;
+
+create /*test index definition*/ table integrate_test.t (`primary` int key, index(`primary`));
+
+
+drop table if exists integrate_test.t;
+
+CREATE /*test start used as column name*/ TABLE integrate_test.t(id varchar(15) NOT NULL, proc varchar(100) NOT NULL, runID varchar(16) NOT NULL, start datetime NOT NULL, PRIMARY KEY  (id,proc,runID,start)) partition by hash(id);
+ 
+
+drop table if exists integrate_test.t;
+
+create /*test default true or false*/ table integrate_test.t (b bool not null default true, a int key);
+
+
+drop table if exists integrate_test.t;
+
+create /*test set type*/ table integrate_test.t (a tinyint, b smallint, c mediumint, d int key, e bigint, f float(3,2), g double(4,3), h decimal(5,4), i year, j date, k timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, l datetime, m enum('a','b'), n set('a','b'), o char(10));
 
 
 drop database integrate_test;

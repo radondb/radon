@@ -135,15 +135,28 @@ func forceEOF(yylex interface{}) {
 	FOR
 
 
+%type   <bytes>
+	index_type
+	index_type_opt
+	index_type_name
+	constraint_keyword_opt
+	spatial_or_fulltext
+
+%type   <str>
+	index_name
+
 // INDEX.
 %token	<bytes>
 	ALGORITHM
 	BTREE
+	CONSTRAINT
 	FULLTEXT
+	HASH
 	KEY_BLOCK_SIZE
-	NGRAM
 	PARSER
+	RTREE
 	SPATIAL
+	SYMBOL
 
 
 // Resolve shift/reduce conflict on 'UNIQUE KEY', if we don`t define the precedence, the code
@@ -504,7 +517,6 @@ func forceEOF(yylex interface{}) {
 %token	<empty>
 	PARTITION
 	PARTITIONS
-	HASH
 	LIST
 	XA
 	DISTRIBUTED
@@ -919,6 +931,7 @@ func forceEOF(yylex interface{}) {
 
 %type	<str>
 	index_or_key
+	index_or_key_opt
 
 %type	<tableSpec>
 	table_spec
@@ -944,6 +957,7 @@ func forceEOF(yylex interface{}) {
 	lock_algorithm_opts
 	normal_key_opts
 	spatial_key_opts
+	index_options
 
 %type   <indexOption>
 	all_key_opt
@@ -951,6 +965,7 @@ func forceEOF(yylex interface{}) {
 	index_using_opt
 	lock_algorithm_opt
 	normal_key_opt
+	index_option
 
 %type   <str>
 	constraint_opt
@@ -1236,6 +1251,7 @@ id_or_default:
 		$$ = "default"
 	}
 
+// TODO() in the future we'll refactor the index opt code with index_options
 index_using_opt:
 	USING index_using_str
 	{
@@ -1294,7 +1310,7 @@ fulltext_key_opt:
 	{
 		$$ = $1
 	}
-|	WITH PARSER NGRAM
+|	WITH PARSER ID
 	{
 		$$ = &IndexOption{
 			Type: IndexOptionParser,
@@ -2274,6 +2290,10 @@ char_type:
 	{
 		$$ = ColumnType{Type: string($1), EnumValues: $3}
 	}
+|	SET '(' enum_values ')'
+	{
+		$$ = ColumnType{Type: string($1), EnumValues: $3}
+	}
 
 spatial_type:
 	GEOMETRY
@@ -2409,6 +2429,14 @@ column_default_opt:
 	{
 		$$ = NewValArg($2)
 	}
+|	DEFAULT boolean_value
+	{
+        if $2 {
+		    $$ = NewStrValWithoutQuote([]byte("true"))
+        } else {
+		    $$ = NewStrValWithoutQuote([]byte("false"))
+        }
+	}
 
 on_update_opt:
 	ON UPDATE now_sym_with_frac_opt
@@ -2542,66 +2570,167 @@ column_comment_opt:
 	}
 
 index_definition:
-	PRIMARY KEY '(' index_column_list ')'
+    index_or_key index_name index_type_opt '(' index_column_list ')' index_options
 	{
+        // TODO(): in the future we'll support format out index_type, currently skip it.
+        // If index_name is empty, becarful that the `name` result will be diffirent when doing format.
 		$$ = &IndexDefinition {
-			Type: string($1) + " " + string($2),
+			Type: string($1),
+			Name: NewColIdent($2),
+			Opts: NewIndexOptions($5, $7),
+			Primary: false,
+			Unique: false,
+		}
+	}
+|   spatial_or_fulltext index_or_key_opt index_name '(' index_column_list ')' index_options
+	{
+        typ := string($1)
+        if $3 != "" {
+            typ = typ + " " + string($2)
+        }
+		$$ = &IndexDefinition {
+			Type: typ,
+			Name: NewColIdent($3),
+			Opts: NewIndexOptions($5, $7),
+			Primary: false,
+			Unique: false,
+		}
+	}
+|   constraint_keyword_opt PRIMARY KEY index_type_opt '(' index_column_list ')' index_options
+	{
+        // TODO(): in the future we'll support format out index_type, currently skip it
+		$$ = &IndexDefinition {
+			Type: string($2) + " " + string($3),
 			Name: NewColIdent("PRIMARY"),
-			Opts: NewIndexOptions($4, nil),
+			Opts: NewIndexOptions($6, $8),
 			Primary: true,
 			Unique: true,
 		}
 	}
-|	UNIQUE index_or_key ID '(' index_column_list ')'  normal_key_opts
+|	constraint_keyword_opt UNIQUE index_or_key_opt index_name index_type_opt '(' index_column_list ')'  index_options
 	{
+        // TODO(): in the future we'll support format out index_type, currently skip it
+        typ := string($2)
+        if $3 != "" {
+            typ = typ + " " + string($3)
+        }
 		$$ = &IndexDefinition {
-			Type: string($1) + " " + string($2),
-			Name: NewColIdent(string($3)),
-			Opts: NewIndexOptions($5, $7),
+			Type: typ,
+			Name: NewColIdent($4),
+			Opts: NewIndexOptions($7, $9),
 			Primary: false,
 			Unique: true,
 		}
 	}
-|	UNIQUE ID '(' index_column_list ')' normal_key_opts
+
+index_name:
+    {
+        $$ = ""
+    }
+|   ID
+    {
+        $$ = string($1)
+    }
+
+index_option:
+	KEY_BLOCK_SIZE opt_equal INTEGRAL
 	{
-		$$ = &IndexDefinition {
-			Type: string($1),
-			Name: NewColIdent(string($2)),
-			Opts: NewIndexOptions($4, $6),
-			Primary: false,
-			Unique: true,
+		$$ = &IndexOption{
+			Type: IndexOptionBlockSize,
+			Val:  NewIntVal($3),
 		}
 	}
-|	index_or_key ID '(' index_column_list ')' normal_key_opts
+|	index_type
+    {
+		$$ = &IndexOption{
+			Type: IndexOptionUsing,
+			Val:  NewStrValWithoutQuote($1),
+		}
+    }
+|	COMMENT_KEYWORD STRING
 	{
-		$$ = &IndexDefinition {
-			Type: string($1),
-			Name: NewColIdent(string($2)),
-			Opts: NewIndexOptions($4, $6),
-			Primary: false,
-			Unique: false,
+		$$ = &IndexOption{
+			Type: IndexOptionComment,
+			Val:  NewStrVal($2),
 		}
 	}
-|	FULLTEXT index_or_key ID '(' index_column_list ')' fulltext_key_opts
+|	WITH PARSER ID
 	{
-		$$ = &IndexDefinition {
-			Type: string($1) + " " + string($2),
-			Name: NewColIdent(string($3)),
-			Opts: NewIndexOptions($5, $7),
-			Primary: false,
-			Unique: false,
+		$$ = &IndexOption{
+			Type: IndexOptionParser,
+			Val:  NewStrValWithoutQuote($3),
 		}
 	}
-|	SPATIAL index_or_key ID '(' index_column_list ')' spatial_key_opts
+
+index_options:
 	{
-		$$ = &IndexDefinition {
-			Type: string($1) + " " + string($2),
-			Name: NewColIdent(string($3)),
-			Opts: NewIndexOptions($5, $7),
-			Primary: false,
-			Unique: false,
-		}
+		$$ = []*IndexOption{}
 	}
+|	index_options index_option
+	{
+		$$ = append($1, $2)
+	}
+
+// Currently we ignore keyword [constraint [symbol]], just parser it, in the future we may do refactor.
+constraint_keyword_opt:
+    {
+    }
+|   CONSTRAINT
+    {
+    }
+|   CONSTRAINT SYMBOL
+    {
+    }
+
+// In MySQL, support type index_type_name, we will support it in the future
+index_type:
+    USING index_type_name
+    {
+        $$=$2
+    }
+
+index_type_opt:
+    {
+    }
+|   index_type
+    {
+        $$ = $1
+    }
+
+index_type_name:
+    HASH
+    {
+        $$=$1
+    }
+|   BTREE
+    {
+        $$=$1
+    }
+|   RTREE
+    {
+        $$=$1
+    }
+
+spatial_or_fulltext:
+    SPATIAL
+    {
+        $$ = $1
+    }
+|   FULLTEXT
+    {
+        $$ = $1
+    }
+
+index_or_key_opt:
+    {
+        // set empty
+        $$ = ""
+    }
+|   index_or_key
+    {
+        $$ = $1 
+    }
+
 
 index_or_key:
 	INDEX
@@ -4568,6 +4697,7 @@ non_reserved_keyword:
 |	SHARE
 |	SIGNED
 |	SINGLE
+|	START
 |	STATUS
 |	STORAGE
 |	TEXT

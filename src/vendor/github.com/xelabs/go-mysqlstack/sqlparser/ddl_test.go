@@ -32,11 +32,19 @@ func TestDDL1(t *testing.T) {
 		{
 			input: "create table t (\n" +
 				"	`id` int primary key,\n" +
-				"	`name` varchar(10)\n" +
+				"	`name` varchar(10),\n" +
+				"	start varchar(10),\n" +
+				"	c bool not null default true,\n" +
+				"	d bool not null default false,\n" +
+				"	e set('a', \"b\", 'c')\n" +
 				") partition by hash(id)",
 			output: "create table t (\n" +
 				"	`id` int primary key,\n" +
-				"	`name` varchar(10)\n" +
+				"	`name` varchar(10),\n" +
+				"	`start` varchar(10),\n" +
+				"	`c` bool not null default true,\n" +
+				"	`d` bool not null default false,\n" +
+				"	`e` set('a', 'b', 'c')\n" +
 				")",
 		},
 
@@ -531,7 +539,7 @@ func TestDDL1(t *testing.T) {
 				")",
 		},
 
-		// Fulltext.
+		// index definition.
 		{
 			input: "create table t (\n" +
 				"	id INT PRIMARY KEY,\n" +
@@ -550,17 +558,35 @@ func TestDDL1(t *testing.T) {
 				"	id INT,\n" +
 				"	title VARCHAR(200),\n" +
 				"	gis GEOMETRY,\n" +
-				"	UNIQUE KEY id_idx(id) using btree comment 'a',\n" +
+				"	INDEX (id) using btree comment 'a',\n" +
+				"	INDEX id_idx(id) using btree comment 'a',\n" +
+				"	KEY id_idx(id) using btree comment 'a',\n" +
+				"	KEY id_idx using btree(id) using btree comment 'a',\n" +
+				"	CONSTRAINT symbol UNIQUE id_idx(id) using btree comment 'a',\n" +
+				"	CONSTRAINT UNIQUE KEY id_idx(id) using btree comment 'a',\n" +
+				"	UNIQUE INDEX id_idx(id) using btree comment 'a',\n" +
 				"	FULLTEXT INDEX ngram_idx(title) WITH PARSER ngram,\n" +
-				"	SPATIAL INDEX gis_idx(gis) key_block_size=10\n" +
+				"	SPATIAL INDEX gis_idx(gis) key_block_size=10,\n" +
+				"	CONSTRAINT symbol PRIMARY KEY using rtree(id) using btree comment 'a',\n" +
+				"	CONSTRAINT PRIMARY KEY Using rtree(id) using btree comment 'a',\n" +
+				"	PRIMARY KEY Using rtree(id) using btree comment 'a'\n" +
 				")",
 			output: "create table t (\n" +
 				"	`id` int,\n" +
 				"	`title` varchar(200),\n" +
 				"	`gis` geometry,\n" +
+				"	index (`id`) using btree comment 'a',\n" +
+				"	index `id_idx` (`id`) using btree comment 'a',\n" +
+				"	key `id_idx` (`id`) using btree comment 'a',\n" +
+				"	key `id_idx` (`id`) using btree comment 'a',\n" +
+				"	unique `id_idx` (`id`) using btree comment 'a',\n" +
 				"	unique key `id_idx` (`id`) using btree comment 'a',\n" +
+				"	unique index `id_idx` (`id`) using btree comment 'a',\n" +
 				"	fulltext index `ngram_idx` (`title`) WITH PARSER ngram,\n" +
-				"	spatial index `gis_idx` (`gis`) key_block_size = 10\n" +
+				"	spatial index `gis_idx` (`gis`) key_block_size = 10,\n" +
+				"	primary key (`id`) using btree comment 'a',\n" +
+				"	primary key (`id`) using btree comment 'a',\n" +
+				"	primary key (`id`) using btree comment 'a'\n" +
 				")",
 		},
 
