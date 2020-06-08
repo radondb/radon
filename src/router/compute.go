@@ -147,7 +147,7 @@ func (r *Router) SingleUniform(table string, backends []string) (*config.TableCo
 	}, nil
 }
 
-func listMergePartition(partitionDef sqlparser.PartitionOptions) (map[string]string, error) {
+func listMergePartition(partitionDef sqlparser.PartitionDefinitions) (map[string]string, error) {
 	partitionMap := make(map[string]string)
 	for _, onePart := range partitionDef {
 		row := onePart.Row
@@ -167,7 +167,7 @@ func listMergePartition(partitionDef sqlparser.PartitionOptions) (map[string]str
 }
 
 // ListUniform used to uniform the list table to backends.
-func (r *Router) ListUniform(table string, shardkey string, partitionDef sqlparser.PartitionOptions) (*config.TableConfig, error) {
+func (r *Router) ListUniform(table string, shardkey string, partitionDef sqlparser.PartitionDefinitions) (*config.TableConfig, error) {
 	if table == "" {
 		return nil, errors.New("table.cant.be.null")
 	}

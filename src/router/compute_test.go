@@ -381,20 +381,20 @@ func TestRouterComputeListError(t *testing.T) {
 	// Shardkey is NULL.
 	{
 		assert.NotNil(t, router)
-		_, err := router.ListUniform("t1", "", sqlparser.PartitionOptions{})
+		_, err := router.ListUniform("t1", "", sqlparser.PartitionDefinitions{})
 		assert.NotNil(t, err)
 	}
 
 	// Table is NULL.
 	{
 		assert.NotNil(t, router)
-		_, err := router.ListUniform("", "i", sqlparser.PartitionOptions{})
+		_, err := router.ListUniform("", "i", sqlparser.PartitionDefinitions{})
 		assert.NotNil(t, err)
 	}
 
 	// different backends with the same list value.
 	{
-		partitionDef := sqlparser.PartitionOptions{
+		partitionDef := sqlparser.PartitionDefinitions{
 			&sqlparser.PartitionDefinition{
 				Backend: "node1",
 				Row:     sqlparser.ValTuple{sqlparser.NewStrVal([]byte("1"))},
@@ -410,10 +410,10 @@ func TestRouterComputeListError(t *testing.T) {
 		assert.NotNil(t, err)
 	}
 
-	// empty PartitionOptions
+	// empty PartitionDefinitions
 	{
 		assert.NotNil(t, router)
-		_, err := router.ListUniform("t1", "i", sqlparser.PartitionOptions{})
+		_, err := router.ListUniform("t1", "i", sqlparser.PartitionDefinitions{})
 		assert.NotNil(t, err)
 	}
 }
@@ -449,7 +449,7 @@ func TestRouterComputeList(t *testing.T) {
 	defer cleanup()
 	assert.NotNil(t, router)
 
-	partitionDef := sqlparser.PartitionOptions{
+	partitionDef := sqlparser.PartitionDefinitions{
 		&sqlparser.PartitionDefinition{
 			Backend: "node1",
 			Row:     sqlparser.ValTuple{sqlparser.NewStrVal([]byte("2"))},

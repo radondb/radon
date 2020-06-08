@@ -1,12 +1,12 @@
 drop database if exists integrate_test;
 create database integrate_test DEFAULT CHARSET=utf8;
 
-create table integrate_test.t1 (b char(0)) partition by hash(b) DEFAULT CHARSET=utf8;
+create table integrate_test.t1 (b char(0)) DEFAULT CHARSET=utf8 partition by hash(b);
 insert into integrate_test.t1(b) values (""),(null);
 select * from integrate_test.t1;
 drop table if exists integrate_test.t1;
 
-create table integrate_test.t1 (b char(0) not null) partition by hash(b) DEFAULT CHARSET=utf8;
+create table integrate_test.t1 (b char(0) not null) DEFAULT CHARSET=utf8 partition by hash(b);
 create table if not exists integrate_test.t1 (b char(0) not null) DEFAULT CHARSET=utf8;
 insert into integrate_test.t1(b) values (""),(null);
 select * from integrate_test.t1;
@@ -15,9 +15,9 @@ drop table integrate_test.t1;
 create table integrate_test.t1 (a bigint not null auto_increment,primary key (a)) engine=innodb DEFAULT CHARSET=utf8;
 drop table integrate_test.t1;
 
-create table integrate_test.t1 (ordid bigint(8) not null auto_increment, ord  varchar(50) not null, primary key (ord,ordid)) engine=innodb partition by hash(ordid) DEFAULT CHARSET=utf8;
+create table integrate_test.t1 (ordid bigint(8) not null auto_increment, ord  varchar(50) not null, primary key (ord,ordid)) engine=innodb DEFAULT CHARSET=utf8 partition by hash(ordid);
 
-create table not_existing_database.test (a int) partition by hash(a) DEFAULT CHARSET=utf8;
+create table not_existing_database.test (a int) DEFAULT CHARSET=utf8 partition by hash(a);
 
 create table integrate_test.t1 (a bigint default 100 auto_increment key) DEFAULT CHARSET=utf8;
 create table integrate_test.t1 (a tinyint default 1000 key) DEFAULT CHARSET=utf8;
@@ -32,10 +32,10 @@ insert into integrate_test.`1ea10`(`1a20`, `1e`) values(1,1);
 select `1ea10`.`1a20`,`1e`+ 1e+10 from integrate_test.`1ea10`;
 drop table integrate_test.`1ea10`;
 
-create table integrate_test.`$test1` (`a$1` int, `$b` int, `c$` int) partition by hash(`a$1`) num=8 DEFAULT CHARSET=utf8;
+create table integrate_test.`$test1` (`a$1` int, `$b` int, `c$` int) DEFAULT CHARSET=utf8 partition by hash(`a$1`) partitions 8;
 insert into integrate_test.`$test1`(`a$1`, `$b`, `c$`) values (1,2,3);
 select `a$1`, `$b`, `c$` from integrate_test.`$test1`;
-create table integrate_test.`test2$` (a int key) partition by hash(a) num=8 DEFAULT CHARSET=utf8;
+create table integrate_test.`test2$` (a int key) DEFAULT CHARSET=utf8 partition by hash(a) partitions 8;
 drop table integrate_test.`test2$`;
 
 create table integrate_test.`` (a int key) DEFAULT CHARSET=utf8;
@@ -43,18 +43,18 @@ drop table if exists integrate_test.``;
 create table integrate_test.t1 (`` int) DEFAULT CHARSET=utf8;
 create table integrate_test.t1 (i int key, index `` (i)) DEFAULT CHARSET=utf8;
 
-create table integrate_test.t1 ( k1 varchar(2), k2 int, primary key(k1,k2)) partition by hash(k1) num=8 DEFAULT CHARSET=utf8;
+create table integrate_test.t1 ( k1 varchar(2), k2 int, primary key(k1,k2)) DEFAULT CHARSET=utf8 partition by hash(k1) partitions 8;
 insert into integrate_test.t1(k1, k2) values ("a", 1), ("b", 2);
 insert into integrate_test.t1(k1, k2) values ("c", NULL);
 insert into integrate_test.t1(k1, k2) values (NULL, 3);
 insert into integrate_test.t1(k1, k2) values (NULL, NULL);
 drop table integrate_test.t1;
 
-create table integrate_test.t1 (a int,) partition by hash(a) num=8 DEFAULT CHARSET=utf8;
-create table integrate_test.t1 (a int,,b int) partition by hash(a) num=8 DEFAULT CHARSET=utf8;
+create table integrate_test.t1 (a int,) DEFAULT CHARSET=utf8 partition by hash(a) partitions 8;
+create table integrate_test.t1 (a int,,b int) DEFAULT CHARSET=utf8 partition by hash(a) partitions 8;
 create table integrate_test.t1 (,b int key) DEFAULT CHARSET=utf8;
 
-create table integrate_test.t1(a int,b int,c int unsigned,d date,e char,f datetime,g time,h blob) partition by hash(a) num=8 DEFAULT CHARSET=utf8;
+create table integrate_test.t1(a int,b int,c int unsigned,d date,e char,f datetime,g time,h blob) DEFAULT CHARSET=utf8 partition by hash(a) partitions 8;
 insert into integrate_test.t1(a)values(1);
 insert into integrate_test.t1(a,b,c,d,e,f,g,h)
 values(2,-2,2,'1825-12-14','a','2003-1-1 3:2:1','4:3:2','binary data');
@@ -71,38 +71,38 @@ select a,
 from integrate_test.t1;
 drop table integrate_test.t1;
 
-create table integrate_test.t1 (a tinyint, b smallint, c mediumint, d int, e bigint, f float(3,2), g double(4,3), h decimal(5,4), i year, j date, k timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, l datetime, m enum('a','b'), o char(10)) partition by hash(a) DEFAULT CHARSET=utf8;
+create table integrate_test.t1 (a tinyint, b smallint, c mediumint, d int, e bigint, f float(3,2), g double(4,3), h decimal(5,4), i year, j date, k timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, l datetime, m enum('a','b'), o char(10)) DEFAULT CHARSET=utf8 partition by hash(a);
 show create table integrate_test.t1\G
 select sleep(0.1);
 drop table integrate_test.t1;
 
-create table integrate_test.t1(str varchar(10) default 'def',strnull varchar(10),intg int default '10',rel double default '3.14') partition by hash(intg) num=8 DEFAULT CHARSET=utf8;
+create table integrate_test.t1(str varchar(10) default 'def',strnull varchar(10),intg int default '10',rel double default '3.14') DEFAULT CHARSET=utf8 partition by hash(intg) partitions 8;
 insert into integrate_test.t1(str, strnull, intg, rel) values ('','',0,0.0);
 show columns from integrate_test.t1;
 drop table integrate_test.t1;
 
-create table integrate_test.t1(name varchar(10), age smallint default 1) partition by hash(name) num=8 DEFAULT CHARSET=utf8;
+create table integrate_test.t1(name varchar(10), age smallint default 1) DEFAULT CHARSET=utf8 partition by hash(name) partitions 8;
 show columns from integrate_test.t1;
-create table integrate_test.t2(name varchar(10), age smallint default 1) partition by hash(name) num=8 DEFAULT CHARSET=utf8;
+create table integrate_test.t2(name varchar(10), age smallint default 1) DEFAULT CHARSET=utf8 partition by hash(name) partitions 8;
 show columns from integrate_test.t2;
 drop table integrate_test.t1, integrate_test.t2;
 
-create table integrate_test.t1(cenum enum('a')) single DEFAULT CHARSET=utf8;
-create table integrate_test.t2(cenum enum('a','a')) global DEFAULT CHARSET=utf8;
-create table integrate_test.t3(cenum enum('a','A','a','c','c')) global DEFAULT CHARSET=utf8;
+create table integrate_test.t1(cenum enum('a')) DEFAULT CHARSET=utf8 single;
+create table integrate_test.t2(cenum enum('a','a')) DEFAULT CHARSET=utf8 global;
+create table integrate_test.t3(cenum enum('a','A','a','c','c')) DEFAULT CHARSET=utf8 global;
 drop table integrate_test.t1;
 
-CREATE TABLE integrate_test.t1(id varchar(10) NOT NULL PRIMARY KEY, dsc longtext) partition by hash(id) num=8 DEFAULT CHARSET=utf8;
+CREATE TABLE integrate_test.t1(id varchar(10) NOT NULL PRIMARY KEY, dsc longtext) DEFAULT CHARSET=utf8 partition by hash(id) partitions 8;
 INSERT INTO integrate_test.t1(id, dsc) VALUES ('5000000001', NULL),('5000000003', 'Test'),('5000000004', NULL);
-CREATE TABLE integrate_test.t2(id varchar(15) NOT NULL, proc varchar(100) NOT NULL, runID varchar(16) NOT NULL, `start` datetime NOT NULL, PRIMARY KEY  (id,proc,runID,`start`)) partition by hash(id) num=8 DEFAULT CHARSET=utf8;
+CREATE TABLE integrate_test.t2(id varchar(15) NOT NULL, proc varchar(100) NOT NULL, runID varchar(16) NOT NULL, `start` datetime NOT NULL, PRIMARY KEY  (id,proc,runID,`start`)) DEFAULT CHARSET=utf8 partition by hash(id) partitions 8;
 INSERT INTO integrate_test.t2(id, proc, runID, `start`) VALUES ('5000000001', 'proc01', '20031029090650', '2003-10-29 13:38:40'),('5000000001', 'proc02', '20031029090650', '2003-10-29 13:38:51'),('5000000001', 'proc03', '20031029090650', '2003-10-29 13:38:11'),('5000000002', 'proc09', '20031024013310', '2003-10-24 01:33:11'),('5000000002', 'proc09', '20031024153537', '2003-10-24 15:36:04'),('5000000004', 'proc01', '20031024013641', '2003-10-24 01:37:29'),('5000000004', 'proc02', '20031024013641', '2003-10-24 01:37:39');
 drop table integrate_test.t1, integrate_test.t2;
 
-create table integrate_test.t1(column.name int) single DEFAULT CHARSET=utf8;
-create table integrate_test.t1(test.column.name int) single DEFAULT CHARSET=utf8;
-create table integrate_test.t1(xyz.t1.name int) single DEFAULT CHARSET=utf8;
-create table integrate_test.t1(`t1.name` int) single DEFAULT CHARSET=utf8;
-create table integrate_test.t2(`test.t2.name` int) single DEFAULT CHARSET=utf8;
+create table integrate_test.t1(column.name int) DEFAULT CHARSET=utf8 single;
+create table integrate_test.t1(test.column.name int) DEFAULT CHARSET=utf8 single;
+create table integrate_test.t1(xyz.t1.name int) DEFAULT CHARSET=utf8 single;
+create table integrate_test.t1(`t1.name` int) DEFAULT CHARSET=utf8 single;
+create table integrate_test.t2(`test.t2.name` int) DEFAULT CHARSET=utf8 single;
 drop table integrate_test.t1,integrate_test.t2;
 
 create database mysqltest DEFAULT CHARSET=utf8;
@@ -111,14 +111,14 @@ show create database mysqltest;
 select sleep(0.1);
 drop database mysqltest;
 use integrate_test;
-create table integrate_test.t1 (a int) partition by hash(a) num=8 DEFAULT CHARSET=utf8;
-create table if not exists integrate_test.t1 (a int) partition by hash(a) num=8 DEFAULT CHARSET=utf8;
+create table integrate_test.t1 (a int) DEFAULT CHARSET=utf8 partition by hash(a) partitions 8;
+create table if not exists integrate_test.t1 (a int) DEFAULT CHARSET=utf8 partition by hash(a) partitions 8;
 drop table integrate_test.t1;
 
 create table integrate_test.t1 (upgrade int key) DEFAULT CHARSET=utf8;
 drop table integrate_test.t1;
 
-CREATE TABLE integrate_test.t1 (a bigint AUTO_INCREMENT PRIMARY KEY, b INTEGER NOT NULL) partition by hash(a) num=8 DEFAULT CHARSET=utf8;
+CREATE TABLE integrate_test.t1 (a bigint AUTO_INCREMENT PRIMARY KEY, b INTEGER NOT NULL) DEFAULT CHARSET=utf8 partition by hash(a) partitions 8;
 INSERT IGNORE INTO integrate_test.t1 (b) VALUES (5);
 DROP TABLE integrate_test.t1;
 
@@ -132,12 +132,12 @@ CREATE TABLE integrate_test.t1(
   c4 VARCHAR(255) CHARACTER SET utf8 NOT NULL DEFAULT 'a',
   c5 VARCHAR(255) NULL DEFAULT 'b',
   c6 VARCHAR(255))
-  partition by hash(c1) num=8 DEFAULT CHARSET=utf8;
+  DEFAULT CHARSET=utf8 partition by hash(c1) partitions 8;
 
 SHOW CREATE TABLE integrate_test.t1\G
 DROP TABLE integrate_test.t1;
 
-CREATE TABLE integrate_test.t1(c1 YEAR DEFAULT 2008, c2 YEAR DEFAULT 0) partition by hash(c1) num=8 DEFAULT CHARSET=utf8;
+CREATE TABLE integrate_test.t1(c1 YEAR DEFAULT 2008, c2 YEAR DEFAULT 0) DEFAULT CHARSET=utf8 partition by hash(c1) partitions 8;
 SHOW CREATE TABLE integrate_test.t1\G
 DROP TABLE integrate_test.t1;
 
@@ -167,10 +167,10 @@ CREATE /*testing db name bigger than max_len(64)*/ DATABASE t0123456789012345678
 CREATE /*testing table name bigger than max_len(64)*/ table integrate_test.t01234567890123456789012345678901234567890123456789012345678901234567890123456789(a int key);
 
 drop table if exists integrate_test.t;
-create /*test multi primary key on index definition*/ table integrate_test.t (id INT, title VARCHAR(200), gis GEOMETRY not null, INDEX (id) using btree comment 'radon', INDEX id_idx1(id) using btree comment 'a', KEY id_idx2(id) using btree comment 'a',KEY id_idx3 using btree(id) using btree comment 'a',CONSTRAINT symbol UNIQUE id_idx4(id) using btree comment 'a',CONSTRAINT UNIQUE KEY id_idx5(id) using btree comment 'a',UNIQUE INDEX id_idx6(id) using btree comment 'a',FULLTEXT INDEX ngram_idx(title) WITH PARSER ngram,SPATIAL INDEX gis_idx(gis) key_block_size=10,CONSTRAINT symbol PRIMARY KEY using rtree(id) using btree comment 'a',CONSTRAINT PRIMARY KEY Using rtree(id) using btree comment 'a',PRIMARY KEY Using rtree(id) using btree comment 'a') partition by hash(id) num=8;
+create /*test multi primary key on index definition*/ table integrate_test.t (id INT, title VARCHAR(200), gis GEOMETRY not null, INDEX (id) using btree comment 'radon', INDEX id_idx1(id) using btree comment 'a', KEY id_idx2(id) using btree comment 'a',KEY id_idx3 using btree(id) using btree comment 'a',CONSTRAINT symbol UNIQUE id_idx4(id) using btree comment 'a',CONSTRAINT UNIQUE KEY id_idx5(id) using btree comment 'a',UNIQUE INDEX id_idx6(id) using btree comment 'a',FULLTEXT INDEX ngram_idx(title) WITH PARSER ngram,SPATIAL INDEX gis_idx(gis) key_block_size=10,CONSTRAINT symbol PRIMARY KEY using rtree(id) using btree comment 'a',CONSTRAINT PRIMARY KEY Using rtree(id) using btree comment 'a',PRIMARY KEY Using rtree(id) using btree comment 'a') partition by hash(id) partitions 8;
 
 drop table if exists integrate_test.t;
-create table integrate_test.t (id INT, title VARCHAR(200), gis GEOMETRY not null, INDEX (id) using btree comment 'radon', INDEX id_idx1(id) using btree comment 'a', KEY id_idx2(id) using btree comment 'a',KEY id_idx3 using btree(id) using btree comment 'a',CONSTRAINT symbol UNIQUE id_idx4(id) using btree comment 'a',CONSTRAINT UNIQUE KEY id_idx5(id) using btree comment 'a',UNIQUE INDEX id_idx6(id) using btree comment 'a',FULLTEXT INDEX ngram_idx(title) WITH PARSER ngram,SPATIAL INDEX gis_idx(gis) key_block_size=10,CONSTRAINT symbol PRIMARY KEY using rtree(id) using btree comment 'a') partition by hash(id) num=8;
+create table integrate_test.t (id INT, title VARCHAR(200), gis GEOMETRY not null, INDEX (id) using btree comment 'radon', INDEX id_idx1(id) using btree comment 'a', KEY id_idx2(id) using btree comment 'a',KEY id_idx3 using btree(id) using btree comment 'a',CONSTRAINT symbol UNIQUE id_idx4(id) using btree comment 'a',CONSTRAINT UNIQUE KEY id_idx5(id) using btree comment 'a',UNIQUE INDEX id_idx6(id) using btree comment 'a',FULLTEXT INDEX ngram_idx(title) WITH PARSER ngram,SPATIAL INDEX gis_idx(gis) key_block_size=10,CONSTRAINT symbol PRIMARY KEY using rtree(id) using btree comment 'a') partition by hash(id) partitions 8;
 show create table integrate_test.t\G
 select sleep(0.1);
 

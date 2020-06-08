@@ -263,7 +263,7 @@ func TestSQLShardKey(t *testing.T) {
 
 		ddl := node.(*sqlparser.DDL)
 		want := "col1"
-		got := ddl.PartitionName
+		got := ddl.PartitionOption.(*sqlparser.PartOptHash).Name
 		assert.Equal(t, want, got)
 	}
 }

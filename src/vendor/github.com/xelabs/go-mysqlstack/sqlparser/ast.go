@@ -127,8 +127,6 @@ type (
 		Engine          string
 		Charset         string
 		IndexName       string
-		PartitionName   string
-		BackendName     string
 		IfExists        bool
 		IfNotExists     bool
 		Table           TableName
@@ -136,6 +134,7 @@ type (
 		Database        TableIdent
 		DatabaseOptions DatabaseOptionListOpt
 		TableSpec       *TableSpec
+		PartitionOption PartitionOption
 
 		// [UNIQUE | FULLTEXT | SPATIAL] index.
 		IndexType string
@@ -147,10 +146,6 @@ type (
 		// table column operation
 		DropColumnName  string
 		ModifyColumnDef *ColumnDefinition
-
-		// Partition options.
-		PartitionOptions PartitionOptions
-		PartitionNum     *SQLVal
 	}
 
 	// Show represents a show statement.
@@ -261,7 +256,6 @@ type TableOptions struct {
 	Comment          string
 	Engine           string
 	Charset          string
-	Type             string
 	AvgRowLength     string
 	Checksum         string
 	Collate          string

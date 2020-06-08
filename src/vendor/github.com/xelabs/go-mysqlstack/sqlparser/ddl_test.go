@@ -213,7 +213,7 @@ func TestDDL1(t *testing.T) {
 			input: "create table test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
-				") single engine=tokudb comment='comment option' default charset utf8",
+				") engine=tokudb comment='comment option' default charset utf8 single",
 			output: "create table test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
@@ -956,6 +956,11 @@ func TestDDL1(t *testing.T) {
 		if ddl.output != got {
 			t.Errorf("want:\n%s\ngot:\n%s", ddl.output, got)
 		}
+
+		// To improve the code coverage.
+		if node.PartitionOption != nil {
+			node.PartitionOption.PartitionType()
+		}
 	}
 }
 
@@ -1261,8 +1266,8 @@ func TestDDL1ParseError(t *testing.T) {
 			input: "create table test.t (\n" +
 				"	`id` int primary key,\n" +
 				"	`name` varchar(10)\n" +
-				") single engine=tokudb comment 'str' charset \"utf8\" partition by hash(id)",
-			output: "SINGLE or GLOBAL should not be used simultaneously with PARTITION at position 140",
+				") engine=tokudb comment 'str' charset \"utf8\" single partition by hash(id)",
+			output: "syntax error at position 127 near 'partition'",
 		},
 		{ // create index without index columns.
 			input:  "create unique index a on b",
