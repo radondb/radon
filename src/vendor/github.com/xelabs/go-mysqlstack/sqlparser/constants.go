@@ -174,6 +174,9 @@ const (
 	AttachListStr = "attachlist"
 	ReshardStr    = "reshard"
 	CleanupStr    = "cleanup"
+	XARecoverStr  = "xa recover"
+	XACommitStr   = "xa commit"
+	XARollbackStr = "xa rollback"
 
 	// Transaction isolation levels.
 	ReadUncommitted = "read uncommitted"

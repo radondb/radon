@@ -1894,6 +1894,12 @@ func (node *Radon) Format(buf *TrackedBuffer) {
 		buf.Myprintf("radon %s %v to %v", node.Action, node.Table, node.NewName)
 	case CleanupStr:
 		buf.Myprintf("radon %s", node.Action)
+	case XARecoverStr:
+		buf.Myprintf("radon %s", node.Action)
+	case XACommitStr:
+		buf.Myprintf("radon %s", node.Action)
+	case XARollbackStr:
+		buf.Myprintf("radon %s", node.Action)
 	}
 }
 

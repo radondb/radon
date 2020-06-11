@@ -575,6 +575,7 @@ func forceEOF(yylex interface{}) {
 	DETACH
 	RESHARD
 	CLEANUP
+	RECOVER
 
 %type	<statement>
 	command
@@ -1585,7 +1586,7 @@ table_option:
 			Val:  $1,
 		}
 	}
-|   table_collate_opt	
+|   table_collate_opt
 	{
 		$$ = &TableOption{
 			Type: TableOptionCollate,
@@ -2706,7 +2707,7 @@ index_or_key_opt:
     }
 |   index_or_key
     {
-        $$ = $1 
+        $$ = $1
     }
 
 
@@ -2874,9 +2875,21 @@ radon_statement:
 	{
 		$$ = &Radon{Action: ReshardStr, Table: $3, NewName: $5}
 	}
-|   RADON CLEANUP force_eof
+|	RADON CLEANUP force_eof
 	{
 		$$ = &Radon{Action: CleanupStr}
+	}
+|	RADON XA RECOVER force_eof
+        {
+		$$ = &Radon{Action: XARecoverStr}
+	}
+|	RADON XA COMMIT force_eof
+        {
+		$$ = &Radon{Action: XACommitStr}
+	}
+|	RADON XA ROLLBACK force_eof
+	{
+		$$ = &Radon{Action: XARollbackStr}
 	}
 
 show_statement:
@@ -4629,12 +4642,12 @@ non_reserved_keyword:
 |	BOOLEAN
 |	CLEANUP
 |	COMMENT_KEYWORD
-|   COLUMN_FORMAT
-|   CONNECTION
+|	COLUMN_FORMAT
+|	CONNECTION
 |	DATA
 |	DATE
 |	DATETIME
-|   DELAY_KEY_WRITE
+|	DELAY_KEY_WRITE
 |	DIRECTORY
 |	DISK
 |	DOUBLE
@@ -4650,23 +4663,23 @@ non_reserved_keyword:
 |	GEOMETRY
 |	GEOMETRYCOLLECTION
 |	GLOBAL
-|   INSERT_METHOD
+|	INSERT_METHOD
 |	JSON
-|   KEY_BLOCK_SIZE
+|	KEY_BLOCK_SIZE
 |	LANGUAGE
 |	LAST_INSERT_ID
 |	LINESTRING
-|   MAX_ROWS
+|	MAX_ROWS
 |	MODE
 |	MEMORY
-|   MIN_ROWS
+|	MIN_ROWS
 |	MULTILINESTRING
 |	MULTIPOINT
 |	MULTIPOLYGON
 |	NCHAR
 |	OFFSET
-|   PACK_KEYS
-|   PASSWORD
+|	PACK_KEYS
+|	PASSWORD
 |	POINT
 |	POLYGON
 |	QUERY
@@ -4690,6 +4703,7 @@ non_reserved_keyword:
 |	DETACH
 |	ATTACHLIST
 |	RESHARD
+|	RECOVER
 
 openb:
 	'('

@@ -65,6 +65,15 @@ func (spanner *Spanner) handleRadon(session *driver.Session, query string, node 
 	case sqlparser.CleanupStr:
 		cleanup := NewCleanup(log, spanner.scatter, spanner.router, spanner)
 		qr, err = cleanup.Cleanup()
+	case sqlparser.XARecoverStr:
+		adminXA := NewAdminXA(log, spanner.scatter, spanner.router, spanner)
+		qr, err = adminXA.Recover()
+	case sqlparser.XACommitStr:
+		adminXA := NewAdminXA(log, spanner.scatter, spanner.router, spanner)
+		qr, err = adminXA.Commit()
+	case sqlparser.XARollbackStr:
+		adminXA := NewAdminXA(log, spanner.scatter, spanner.router, spanner)
+		qr, err = adminXA.Rollback()
 	default:
 		log.Error("proxy.radon.unsupported[%s]", query)
 		err = sqldb.NewSQLErrorf(sqldb.ER_UNKNOWN_ERROR, "unsupported.query: %v", query)
