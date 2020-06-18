@@ -307,7 +307,9 @@ func (txn *Txn) Commit() error {
 }
 
 // Rollback used to rollback a XA transaction.
-// 1. XA ROLLBACK
+// 1. XA END
+// 2. XA PREPARE
+// 3. XA ROLLBACK
 func (txn *Txn) Rollback() error {
 	log := txn.log
 	txn.state.Set(int32(txnStateRollbacking))
@@ -328,6 +330,30 @@ func (txn *Txn) Rollback() error {
 		}
 
 		// 3. XA ROLLBACK
+		txn.xaRollback()
+	}
+	return nil
+}
+
+// RollbackPhaseOne used to rollback when the SQL return error at the phase one.
+// won't do `XA PREPARE` which will write log to binlog, especially when large Transactions happen.
+// 1. XA END
+// 2. XA ROLLBACK
+func (txn *Txn) RollbackPhaseOne() error {
+	log := txn.log
+	txn.state.Set(int32(txnStateRollbacking))
+
+	// Here, we only handle the write-txn.
+	// Rollback nothing for read-txn.
+	switch txn.req.TxnMode {
+	case xcontext.TxnWrite:
+		log.Warning("txn.rollback.phase.one.xid[%v]", txn.xid)
+		// 1. XA END.
+		if err := txn.xaEnd(); err != nil {
+			return err
+		}
+
+		// 2. XA ROLLBACK
 		txn.xaRollback()
 	}
 	return nil

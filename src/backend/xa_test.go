@@ -526,6 +526,12 @@ func TestTxnXAExecuteError(t *testing.T) {
 		fakedb.AddQueryPattern("XA .*", result1)
 	}
 
+	resetFunc1 := func(txn *Txn) {
+		fakedb.ResetAll()
+		fakedb.AddQueryError(querys[0].Query, errors.New("mock.xa.start.error"))
+		fakedb.AddQueryPattern("XA .*", result1)
+	}
+
 	// Begin never failed.
 	{
 		txn, err := txnMgr.CreateTxn(backends)
@@ -557,6 +563,27 @@ func TestTxnXAExecuteError(t *testing.T) {
 		assert.NotNil(t, err)
 	}
 
+	// Execute error, RollbackPhaseOne.
+	{
+		txn, err := txnMgr.CreateTxn(backends)
+		assert.Nil(t, err)
+		defer txn.Finish()
+		resetFunc1(txn)
+
+		err = txn.Begin()
+		assert.Nil(t, err)
+
+		rctx := &xcontext.RequestContext{
+			Mode:    xcontext.ReqNormal,
+			TxnMode: xcontext.TxnWrite,
+			Querys:  querys,
+		}
+		_, err = txn.Execute(rctx)
+		assert.NotNil(t, err)
+		err = txn.RollbackPhaseOne()
+		assert.Nil(t, err)
+	}
+
 	// Commit error.
 	{
 		// XA END error.
@@ -579,6 +606,30 @@ func TestTxnXAExecuteError(t *testing.T) {
 			_, err = txn.Execute(rctx)
 			assert.Nil(t, err)
 			err = txn.Commit()
+			assert.NotNil(t, err)
+		}
+
+		// XA END error when RollbackPhaseOne.
+		{
+			txn, err := txnMgr.CreateTxn(backends)
+			assert.Nil(t, err)
+			defer txn.Finish()
+
+			resetFunc(txn)
+			fakedb.AddQueryErrorPattern("XA START .*", errors.New("mock.xa.start.error"))
+			fakedb.AddQueryErrorPattern("XA END .*", errors.New("mock.xa.end.error"))
+
+			err = txn.Begin()
+			assert.Nil(t, err)
+
+			rctx := &xcontext.RequestContext{
+				Mode:    xcontext.ReqNormal,
+				TxnMode: xcontext.TxnWrite,
+				Querys:  querys,
+			}
+			_, err = txn.Execute(rctx)
+			assert.NotNil(t, err)
+			err = txn.RollbackPhaseOne()
 			assert.NotNil(t, err)
 		}
 
