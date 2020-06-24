@@ -127,6 +127,18 @@ func TestProxyExecute2PCError(t *testing.T) {
 		_, err = client.FetchAll(query, -1)
 		assert.NotNil(t, err)
 	}
+
+	// Insert with 2PC but execute error, RollbackPhaseOne error.
+	{
+		fakedbs.AddQueryErrorPattern("XA END .*", sqldb.NewSQLError1(1397, "XAE04", "XAER_NOTA: Unknown XID"))
+		proxy.conf.Proxy.TwopcEnable = true
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "insert into test.t1 (id, b) values(1,2),(3,4)"
+		fakedbs.AddQuery(query, fakedb.Result3)
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
 }
 
 func TestProxyExecute2PCCommitError(t *testing.T) {

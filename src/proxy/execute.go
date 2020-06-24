@@ -89,8 +89,8 @@ func (spanner *Spanner) ExecuteSingleStmtTxnTwoPC(session *driver.Session, datab
 	executors := executor.NewTree(log, plans, txn)
 	qr, err := executors.Execute()
 	if err != nil {
-		if x := txn.Rollback(); x != nil {
-			log.Error("spanner.execute.2pc.error.to.rollback.still.error:[%v]", x)
+		if x := txn.RollbackPhaseOne(); x != nil {
+			log.Error("spanner.execute.2pc.error.to.rollback.phaseOne.still.error:[%v]", x)
 		}
 		return nil, err
 	}
