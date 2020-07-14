@@ -115,16 +115,90 @@ Query OK, 0 rows affected (0.01 sec)
 #### CREATE TABLE
 
 `Syntax`
+
 ```
- CREATE TABLE [IF NOT EXISTS] table_name
+CREATE TABLE [IF NOT EXISTS] tbl_name
     (create_definition,...)
-      ENGINE [=] {InnoDB|TokuDB}
-    | AUTO_INCREMENT [=] value
-    | [DEFAULT] {CHARSET | CHARACTER SET} [=] charset_name
-    | COMMENT [=] 'string'
-    | {PARTITION BY HASH(shard-key)|SINGLE|GLOBAL|DISTRIBUTED BY (backend-name)}
+    [table_options]
+    [partition_options]
+
+create_definition: {
+    col_name column_definition
+  | {INDEX | KEY} [index_name] [index_type] (key_part,...)
+      [index_option] ...
+  | {FULLTEXT | SPATIAL} [INDEX | KEY] [index_name] (key_part,...)
+      [index_option] ...
+  | [CONSTRAINT [symbol]] PRIMARY KEY
+      [index_type] (key_part,...)
+      [index_option] ...
+  | [CONSTRAINT [symbol]] UNIQUE [INDEX | KEY]
+      [index_name] [index_type] (key_part,...)
+      [index_option] ...
+}
+
+column_definition: {
+    data_type [NOT NULL | NULL] [DEFAULT {literal | (expr)} ]
+      [AUTO_INCREMENT] [UNIQUE [KEY]] [[PRIMARY] KEY]
+      [COMMENT 'string']
+      [COLLATE collation_name]
+      [COLUMN_FORMAT {FIXED | DYNAMIC | DEFAULT}]
+      [STORAGE {DISK | MEMORY}]
+}
+
+key_part: {col_name [(length)] | (expr)} [ASC | DESC]
+
+index_type:
+    USING {BTREE | HASH}
+
+index_option: {
+    KEY_BLOCK_SIZE [=] value
+  | index_type
+  | WITH PARSER parser_name
+  | COMMENT 'string'
+}
+
+table_options:
+    table_option [[,] table_option] ...
+
+table_option: {
+    AUTO_INCREMENT [=] value
+  | AVG_ROW_LENGTH [=] value
+  | [DEFAULT] CHARACTER SET [=] charset_name
+  | CHECKSUM [=] {0 | 1}
+  | [DEFAULT] COLLATE [=] collation_name
+  | COMMENT [=] 'string'
+  | COMPRESSION [=] {'ZLIB' | 'LZ4' | 'NONE'}
+  | CONNECTION [=] 'connect_string'
+  | {DATA | INDEX} DIRECTORY [=] 'absolute path to directory'
+  | DELAY_KEY_WRITE [=] {0 | 1}
+  | ENCRYPTION [=] {'Y' | 'N'}
+  | ENGINE [=] {InnoDB | TokuDB}
+  | INSERT_METHOD [=] { NO | FIRST | LAST }
+  | KEY_BLOCK_SIZE [=] value
+  | MAX_ROWS [=] value
+  | MIN_ROWS [=] value
+  | PACK_KEYS [=] {0 | 1 | DEFAULT}
+  | PASSWORD [=] 'string'
+  | ROW_FORMAT [=] {DEFAULT | DYNAMIC | FIXED | COMPRESSED | REDUNDANT | COMPACT}
+  | STATS_AUTO_RECALC [=] {DEFAULT | 0 | 1}
+  | STATS_PERSISTENT [=] {DEFAULT | 0 | 1}
+  | STATS_SAMPLE_PAGES [=] value
+  | TABLESPACE tablespace_name [STORAGE {DISK | MEMORY}]
+}
+
+partition_options:
+    PARTITION BY HASH(shard-key)
     | PARTITION BY LIST(shard-key)(PARTITION backend VALUES IN (value_list),...)
+    | SINGLE
+    | GLOBAL
+    | DISTRIBUTED BY (backend-name)
+
 ```
+With MySQL compatibility:
+* radon not support `CREATE TEMPORARY TABLE` syntax
+* not support `CREATE TABLE [AS] query_expression` and `CREATE TABLE LIKE`
+* not support `check_constraint_definition` and `reference_definition`
+* not support FOREIGN KEY
 
 `Instructions`
 * Create partition information and generate partition tables on each partition
@@ -142,8 +216,8 @@ Query OK, 0 rows affected (0.01 sec)
 	    ->   c2 INT
 	    -> )
 	    -> PARTITION BY LIST(c1) (
-	    ->   PARTITION p0 VALUES IN (1, 4, 7),
-	    ->   PARTITION p1 VALUES IN (2, 5, 8)
+	    ->   PARTITION backend_name1 VALUES IN (1, 4, 7),
+	    ->   PARTITION backend_name2 VALUES IN (2, 5, 8)
 	    -> );
 	Query OK, 0 rows affected (0.11 sec)
 		
@@ -156,7 +230,6 @@ Query OK, 0 rows affected (0.01 sec)
 
 * The partitioning key only supports specifying one column, the data type of this column is not limited(
   except for TYPE `BINARY/NULL`)
-* table_options only support `ENGINE` `CHARSET` and `COMMENT`，Others are automatically ignored
 * The default engine for partition table is `InnoDB`
 * The default character set for partition table `UTF-8`
 * Does not support PRIMARY/UNIQUE constraints for non-partitioned keys, returning errors directly
@@ -196,7 +269,7 @@ Create Table: CREATE TABLE `t2` (
 /*!GLOBAL*/
 1 row in set (0.047 sec)
 
-mysql> CREATE TABLE t3(id int, age int) SINGLE COMMENT 'HELLO RADON';
+mysql> CREATE TABLE t3(id int, age int) COMMENT 'HELLO RADON' SINGLE;
 Query OK, 0 rows affected (1.80 sec)
 
 mysql> show create table t3\G
