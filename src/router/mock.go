@@ -126,7 +126,7 @@ func MockTableDeadLockConfig() *config.TableConfig {
 		Backend: "backend6",
 	}
 
-	mock.Partitions = append(mock.Partitions,S256512, S5121024)
+	mock.Partitions = append(mock.Partitions, S256512, S5121024)
 	return mock
 }
 

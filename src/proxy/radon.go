@@ -65,6 +65,9 @@ func (spanner *Spanner) handleRadon(session *driver.Session, query string, node 
 	case sqlparser.CleanupStr:
 		cleanup := NewCleanup(log, spanner.scatter, spanner.router, spanner)
 		qr, err = cleanup.Cleanup()
+	case sqlparser.RebalanceStr:
+		rebalance := NewRebalance(log, spanner.scatter, spanner.router, spanner, spanner.conf, spanner.plugins)
+		qr, err = rebalance.Rebalance()
 	case sqlparser.XARecoverStr:
 		adminXA := NewAdminXA(log, spanner.scatter, spanner.router, spanner)
 		qr, err = adminXA.Recover()

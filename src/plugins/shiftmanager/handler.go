@@ -61,7 +61,7 @@ type ShiftInfo struct {
 	ToTable    string
 
 	Rebalance              bool
-	Cleanup                bool
+	Cleanup                bool // if Cleanup is true, drop the FromTable.
 	Checksum               bool
 	MysqlDump              string
 	Threads                int

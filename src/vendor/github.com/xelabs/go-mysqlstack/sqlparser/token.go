@@ -305,6 +305,7 @@ var keywords = map[string]int{
 	"read_write":          UNUSED,
 	"real":                REAL,
 	"recover":             RECOVER,
+	"rebalance":           REBALANCE,
 	"references":          UNUSED,
 	"regexp":              REGEXP,
 	"release":             UNUSED,
