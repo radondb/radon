@@ -35,6 +35,7 @@ type Shift struct {
 	fromPool      *Pool
 	canal         *canal.Canal
 	behindsTicker *time.Ticker
+	closeTchan    chan bool 	// avoid leaked goroutine about behindsTicker.C in behindsCheckStart
 	handler       *EventHandler
 
 	err        chan error
@@ -49,6 +50,7 @@ func NewShift(log *xlog.Log, cfg *Config) ShiftHandler {
 	return &Shift{
 		log:           log,
 		cfg:           cfg,
+		closeTchan:    make(chan bool),
 		done:          make(chan bool),
 		err:           make(chan error),
 		behindsTicker: time.NewTicker(time.Duration(behindsDuration) * time.Millisecond),
@@ -474,52 +476,60 @@ func (shift *Shift) behindsCheckStart() error {
 		<-s.canal.WaitDumpDone()
 		prePos := s.canal.SyncedPosition()
 
-		for range s.behindsTicker.C {
-			// if allDone, the loop should be over and break, otherwise,
-			// it will caused fatal exit during waitUtilPositon
-			if s.allDone.Get() {
-				break
-			}
-			// If canal get something wrong during dumping or syncing data, we should log error
-			if s.getCanalStatus() {
-				masterPos, err := s.masterPosition()
-				if err != nil {
-					shift.err <- errors.Trace(err)
-					break
-				}
-				syncPos := s.canal.SyncedPosition()
-				behinds := int(masterPos.Pos - syncPos.Pos)
-				diff := (syncPos.Pos - prePos.Pos)
-				speed := diff / (behindsDuration / 1000)
-				log.Info("--shift.check.behinds[%d]--master[%+v]--synced[%+v]--speed:%v events/second, diff:%v", behinds, masterPos, syncPos, speed, diff)
-				if (masterPos.Name == syncPos.Name) && (behinds <= shift.cfg.Behinds) {
-					if err := shift.setRadon(); err != nil {
-						shift.err <- errors.Trace(err)
+		for {
+			select {
+			case <-s.behindsTicker.C:
+				{
+					// if allDone, the loop should be over and break, otherwise,
+					// it will caused fatal exit during waitUtilPositon
+					if s.allDone.Get() {
 						break
 					}
-				} else {
-					factor := float32(shift.cfg.Behinds+1) / float32(behinds+1)
-					log.Info("shift.set.throttle.behinds[%v].cfgbehinds[%v].factor[%v]", behinds, shift.cfg.Behinds, factor)
-					if err := shift.setRadonThrottle(factor); err != nil {
-						shift.err <- errors.Trace(err)
+					// If canal get something wrong during dumping or syncing data, we should log error
+					if s.getCanalStatus() {
+						masterPos, err := s.masterPosition()
+						if err != nil {
+							shift.err <- errors.Trace(err)
+							break
+						}
+						syncPos := s.canal.SyncedPosition()
+						behinds := int(masterPos.Pos - syncPos.Pos)
+						diff := (syncPos.Pos - prePos.Pos)
+						speed := diff / (behindsDuration / 1000)
+						log.Info("--shift.check.behinds[%d]--master[%+v]--synced[%+v]--speed:%v events/second, diff:%v", behinds, masterPos, syncPos, speed, diff)
+						if (masterPos.Name == syncPos.Name) && (behinds <= shift.cfg.Behinds) {
+							if err := shift.setRadon(); err != nil {
+								shift.err <- errors.Trace(err)
+								break
+							}
+						} else {
+							factor := float32(shift.cfg.Behinds+1) / float32(behinds+1)
+							log.Info("shift.set.throttle.behinds[%v].cfgbehinds[%v].factor[%v]", behinds, shift.cfg.Behinds, factor)
+							if err := shift.setRadonThrottle(factor); err != nil {
+								shift.err <- errors.Trace(err)
+								break
+							}
+						}
+						prePos = syncPos
+					} else {
+						log.Error("shift.canal.get.error.during.dump.or.sync.and.behinds.check.should.be.break")
 						break
 					}
 				}
-				prePos = syncPos
-			} else {
-				log.Error("shift.canal.get.error.during.dump.or.sync.and.behinds.check.should.be.break")
-				break
+			case <-s.closeTchan:
+				return
 			}
 		}
 	}(shift)
 	return nil
 }
 
-// Close used to destroy all the resource.
+// close used to destroy all the resource.
 func (shift *Shift) close() error {
 	log := shift.log
 
 	shift.behindsTicker.Stop()
+	close(shift.closeTchan)
 	shift.canal.Close()
 	shift.fromPool.Close()
 	shift.toPool.Close()
