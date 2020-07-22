@@ -35,6 +35,7 @@ test:
 	@$(MAKE) testmonitor
 	@$(MAKE) testplugins
 	@$(MAKE) testfuzz
+	@$(MAKE) testexpression
 
 testxbase:
 	go test -v -race xbase
@@ -73,6 +74,8 @@ testplugins:
 	go test -v plugins/shiftmanager
 testmysqlstack:
 	cd src/vendor/github.com/xelabs/go-mysqlstack&&make test
+testexpression:
+	go test -v expression/datum
 
 testfuzz:
 	go test -v -race fuzz/sqlparser
@@ -93,7 +96,8 @@ allpkgs =	xbase\
 			audit\
 			syncer\
 			monitor\
-			plugins/...
+			plugins/...\
+			expression/...
 coverage:
 	go build -v -o bin/gotestcover \
 	src/vendor/github.com/pierrre/gotestcover/*.go;
