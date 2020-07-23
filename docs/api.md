@@ -61,7 +61,7 @@ Request: {
 			"ddl-timeout":     The execution timeout(in millisecond) for DDL statements,
 			"query-timeout":   The execution timeout(in millisecond) for DML statements,
 			"twopc-enable":    Enables(true or false) radon two phase commit, for distrubuted transaction,
-			"allowip":         ["allow-ip-1", "allow-ip-2"],
+			"allowip":         ["allow-ip-1", "allow-ip-2", "allow-ip-regexp"],
 			"audit-mode":      The audit log mode, "N": disabled, "R": read enabled, "W": write enabled, "A": read/write enabled,
 			"blocks-readonly": The size of a block when create hash tables,
 			"load-balance":    Enables(0 or 1) load balance, for read-write separation.
@@ -76,7 +76,7 @@ Request: {
 ```
 `Example: `
 ```
-$ curl -i -H 'Content-Type: application/json' -X PUT -d '{"max-connections":1024, "max-result-size":1073741824, "max-join-rows":32768, "ddl-timeout":3600, "query-timeout":600, "twopc-enable":true, "load-balance" 1, "allowip": ["127.0.0.1", "127.0.0.2"]}' http://127.0.0.1:8080/v1/radon/config
+$ curl -i -H 'Content-Type: application/json' -X PUT -d '{"max-connections":1024, "max-result-size":1073741824, "max-join-rows":32768, "ddl-timeout":3600, "query-timeout":600, "twopc-enable":true, "load-balance" 1, "allowip": ["127.0.0.1", "127.0.0.2", "172.10.[0-9]+.[0-9]+"]}' http://127.0.0.1:8080/v1/radon/config
 
 ---Response---
 HTTP/1.1 200 OK
