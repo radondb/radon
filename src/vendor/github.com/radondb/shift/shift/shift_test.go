@@ -18,6 +18,7 @@ import (
 
 	"github.com/radondb/shift/xlog"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -1736,4 +1737,49 @@ func TestShiftSetStop(t *testing.T) {
 	c <- true
 	err := <-errorch
 	assert.NotNil(t, err)
+}
+
+// Test Leaked Goroutine about Ticker.
+type ShiftDemon struct {
+	behindsTicker *time.Ticker
+	done       chan bool
+}
+
+func (sd *ShiftDemon) behindsCheckStart() error{
+	fmt.Println("ticker start")
+	go func(s *ShiftDemon)  {
+		// the older leaked goroutine
+		//for range s.behindsTicker.C {
+		//	fmt.Println("ticker is on.")
+		//}
+		for {
+			select {
+			case <-s.behindsTicker.C:
+				fmt.Println("ticker is on.")
+			case <-s.done:
+				return
+			}
+			fmt.Println("ticker is out for.")
+		}
+	}(sd)
+	return nil
+}
+
+func (shift *ShiftDemon) close() {
+	shift.behindsTicker.Stop()
+	close(shift.done)
+}
+
+func NewShiftDemon() *ShiftDemon {
+	return &ShiftDemon{
+		behindsTicker: time.NewTicker(1000 * time.Millisecond),
+		done:          make(chan bool),
+	}
+}
+
+func TestLeakedGoroutineTicker(t *testing.T) {
+	defer leaktest.Check(t)()
+	new := NewShiftDemon()
+	new.behindsCheckStart()
+	new.close()
 }
