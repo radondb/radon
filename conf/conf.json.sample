@@ -1,5 +1,6 @@
 {
         "proxy": {
+                "allowip":["ip list(default wildcard *,allow all ip to connect to radon), you should define ip by yourself, e.g.", "192.168.0.1", "*", "172.10.[0-9]+.[0-9]+", "192.168.*"],
                 "endpoint": "{RADON-HOST}:{PORT}",
                 "meta-dir": "{RADON-META-DIR}",
                 "twopc-enable": false,

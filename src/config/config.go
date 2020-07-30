@@ -24,7 +24,7 @@ const (
 
 // ProxyConfig tuple.
 type ProxyConfig struct {
-	IPS         []string `json:"allowip,omitempty"`
+	IPS         []string `json:"allowip"`
 	MetaDir     string   `json:"meta-dir"`
 	Endpoint    string   `json:"endpoint"`
 	TwopcEnable bool     `json:"twopc-enable"`

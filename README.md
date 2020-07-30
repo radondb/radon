@@ -36,7 +36,7 @@ large-capacity database、automatic plane split table、 scalable and strong con
 ## SQL Layer
 
 ### SQL support
-On SQL syntax level, RadonDB Fully compatible with MySQL.You can view all of the SQL features RadonDB supports here  [radon_sql_support](docs/radon_sql_support.md)
+On SQL syntax level, RadonDB Fully compatible with MySQL.You can view all of the SQL features RadonDB supports here  [radon_sql_statements_manual](docs/radon_sql_statements_manual.md)
 
 ###  SQL parser, planner, executor
 

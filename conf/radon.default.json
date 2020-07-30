@@ -1,5 +1,6 @@
 {
         "proxy": {
+                "allowip":["*"],
                 "endpoint": ":3308",
                 "meta-dir": "bin/radon-meta",
                 "peer-address": ":8080"
