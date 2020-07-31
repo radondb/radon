@@ -11,6 +11,8 @@ package datum
 import (
 	"math"
 	"strings"
+
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
 // NullsafeCompare returns 0 if v1==v2, -1 if v1<v2, and 1 if v1>v2.
@@ -26,6 +28,39 @@ func NullsafeCompare(x, y Datum, cmpFunc CompareFunc) int64 {
 		return 1
 	}
 	return cmpFunc(x, y)
+}
+
+// GetCmpFunc get the CompareFunc based on the left and right.
+func GetCmpFunc(left, right *IField) CompareFunc {
+	leftResTyp, rightResTyp := left.ResTyp, right.ResTyp
+	leftConst, rightConst := left.Constant, right.Constant
+
+	if leftResTyp == IntResult && rightResTyp == IntResult {
+		return CompareInt
+	}
+	if leftResTyp == DurationResult && rightResTyp == DurationResult {
+		return CompareDuration
+	}
+	if (leftResTyp == IntResult || leftResTyp == DecimalResult) && (rightResTyp == IntResult || rightResTyp == DecimalResult) {
+		return CompareDecimal
+	}
+	if (leftResTyp == DecimalResult && !leftConst && IsStringType(rightResTyp) && rightConst) ||
+		(rightResTyp == DecimalResult && !rightConst && IsStringType(leftResTyp) && leftConst) {
+		return CompareDecimal
+	}
+	if leftResTyp == TimeResult && rightConst || rightResTyp == TimeResult && leftConst {
+		return CompareDatetime
+	}
+	if leftResTyp == DurationResult && rightConst || rightResTyp == DurationResult && leftConst {
+		return CompareDuration
+	}
+	if IsStringType(leftResTyp) && IsStringType(rightResTyp) {
+		if leftResTyp == TimeResult || rightResTyp == TimeResult {
+			return CompareDatetime
+		}
+		return CompareString
+	}
+	return CompareFloat64
 }
 
 // CompareFunc defines the compare function prototype.
@@ -92,7 +127,7 @@ func CompareString(x, y Datum) int64 {
 // CompareDatetime returns an integer comparing the DTime x to y.
 func CompareDatetime(x, y Datum) int64 {
 	f1, f2 := getFsp(x), getFsp(y)
-	fsp := TernaryOpt(f1 > f2, f1, f2).(int)
+	fsp := common.TernaryOpt(f1 > f2, f1, f2).(int)
 	if fsp < 0 {
 		fsp = 6
 	}
@@ -122,7 +157,7 @@ func CompareDatetime(x, y Datum) int64 {
 // CompareDuration returns an integer comparing the Duration x to y.
 func CompareDuration(x, y Datum) int64 {
 	f1, f2 := getFsp(x), getFsp(y)
-	fsp := TernaryOpt(f1 > f2, f1, f2).(int)
+	fsp := common.TernaryOpt(f1 > f2, f1, f2).(int)
 	if fsp < 0 {
 		fsp = 6
 	}

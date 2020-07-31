@@ -34,12 +34,12 @@ func TestNullsafeCompare(t *testing.T) {
 		},
 		{
 			v1:      NewDNull(true),
-			v2:      NewDString("2"),
+			v2:      NewDString("2", 10),
 			cmpFunc: CompareInt,
 			res:     -1,
 		},
 		{
-			v1:      NewDString("2"),
+			v1:      NewDString("2", 10),
 			v2:      NewDNull(true),
 			cmpFunc: CompareInt,
 			res:     1,
@@ -93,14 +93,14 @@ func TestNullsafeCompare(t *testing.T) {
 			res:     1,
 		},
 		{
-			v1:      NewDString("luoyang"),
-			v2:      NewDString("luohe"),
+			v1:      NewDString("luoyang", 10),
+			v2:      NewDString("luohe", 10),
 			cmpFunc: CompareString,
 			res:     1,
 		},
 		{
-			v1:      NewDString("luoyang"),
-			v2:      NewDString("luohe"),
+			v1:      NewDString("luoyang", 10),
+			v2:      NewDString("luohe", 10),
 			cmpFunc: CompareString,
 			res:     1,
 		},
@@ -112,7 +112,7 @@ func TestNullsafeCompare(t *testing.T) {
 		},
 		{
 			v1:      NewDFloat(2.33),
-			v2:      NewDString("2.33"),
+			v2:      NewDString("2.33", 10),
 			cmpFunc: CompareFloat64,
 			res:     0,
 		},
@@ -186,7 +186,7 @@ func TestNullsafeCompare(t *testing.T) {
 			res:     0,
 		},
 		{
-			v1: NewDString("70000"),
+			v1: NewDString("70000", 10),
 			v2: &Duration{
 				duration: time.Duration(8*3600) * time.Second,
 				fsp:      0,
@@ -195,8 +195,8 @@ func TestNullsafeCompare(t *testing.T) {
 			res:     -1,
 		},
 		{
-			v1:      NewDString("1T08:00:00"),
-			v2:      NewDString("1 08:00:00"),
+			v1:      NewDString("1T08:00:00", 10),
+			v2:      NewDString("1 08:00:00", 10),
 			cmpFunc: CompareDuration,
 			res:     1,
 		},

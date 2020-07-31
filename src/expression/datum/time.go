@@ -16,6 +16,7 @@ import (
 	"unicode"
 
 	"github.com/pkg/errors"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
@@ -257,7 +258,7 @@ func StrToDatetime(str string, fsp int, status *TimeStatus) (*DTime, error) {
 	// Found date in internal format (only numbers like YYYYMMDD).
 	if pos == end || str[pos] == '.' {
 		// Length of year field.
-		fieldLen = TernaryOpt(digits == 4 || digits == 8 || digits >= 14, 4, 2).(int)
+		fieldLen = common.TernaryOpt(digits == 4 || digits == 8 || digits >= 14, 4, 2).(int)
 		isInternalFormat = true
 	} else {
 		fieldLen = 4
@@ -349,7 +350,7 @@ func StrToDatetime(str string, fsp int, status *TimeStatus) (*DTime, error) {
 	}
 
 	if dateLen[0] == 2 && notZeroDate != 0 {
-		date[0] += TernaryOpt(date[0] < PartYear, 2000, 1900).(int)
+		date[0] += common.TernaryOpt(date[0] < PartYear, 2000, 1900).(int)
 	}
 
 	if idx != end && unicode.IsNumber(rune(str[idx])) {
@@ -381,22 +382,12 @@ func StrToDatetime(str string, fsp int, status *TimeStatus) (*DTime, error) {
 	}
 	date[6] = int(microsec * math.Pow10(6-dateLen[6]))
 
-	typ := TernaryOpt(numOfFields <= 3, sqltypes.Date, sqltypes.Datetime).(querypb.Type)
+	typ := common.TernaryOpt(numOfFields <= 3, sqltypes.Date, sqltypes.Datetime).(querypb.Type)
 	if idx != end {
 		status.Truncated = true
 	}
 
-	return &DTime{
-		typ:         typ,
-		fsp:         fsp,
-		year:        uint16(date[0]),
-		month:       uint8(date[1]),
-		day:         uint8(date[2]),
-		hour:        int16(date[3]),
-		minute:      uint8(date[4]),
-		second:      uint8(date[5]),
-		microsecond: uint32(date[6]),
-	}, nil
+	return NewDTime(typ, fsp, date[0], date[1], date[2], date[3], date[4], date[5], date[6]), nil
 }
 
 // checkDateTimeRange used to check heck whether the  time values are legal.
@@ -559,7 +550,7 @@ func StrToYear(str string) (uint16, error) {
 	if len(str) == 4 {
 		//block.
 	} else if len(str) == 2 || len(str) == 1 {
-		v += uint64(TernaryOpt(v < PartYear, 2000, 1900).(int))
+		v += uint64(common.TernaryOpt(v < PartYear, 2000, 1900).(int))
 	} else {
 		return 0, errors.Errorf("invalid.year.value:'%s'", str)
 	}
@@ -605,17 +596,7 @@ func castToDTime(t time.Time, fsp int) *DTime {
 	year, month, day := t.Date()
 	hour, minute, second := t.Clock()
 	microsecond := t.Nanosecond() / 1000
-	return &DTime{
-		typ:         sqltypes.Datetime,
-		fsp:         fsp,
-		year:        uint16(year),
-		month:       uint8(month),
-		day:         uint8(day),
-		hour:        int16(hour),
-		minute:      uint8(minute),
-		second:      uint8(second),
-		microsecond: uint32(microsecond),
-	}
+	return NewDTime(sqltypes.Datetime, fsp, year, int(month), day, hour, minute, second, microsecond)
 }
 
 func getFsp(v Datum) int {
