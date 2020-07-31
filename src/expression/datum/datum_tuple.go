@@ -24,6 +24,11 @@ func NewDTuple(v ...Datum) *DTuple {
 	return &DTuple{args: v}
 }
 
+// Args return the args.
+func (d *DTuple) Args() []Datum {
+	return d.args
+}
+
 // Type return datum type.
 func (d *DTuple) Type() Type {
 	return TypeTuple

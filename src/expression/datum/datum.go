@@ -16,6 +16,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
+	"github.com/xelabs/go-mysqlstack/sqlparser"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
@@ -99,7 +100,7 @@ func ValToDatum(v sqltypes.Value) (Datum, error) {
 	case v.IsNull():
 		return NewDNull(true), nil
 	}
-	return NewDString(str), nil
+	return NewDString(str, 10), nil
 }
 
 // timeToNumeric used to cast time type to numeric.
@@ -200,4 +201,47 @@ func timeToDatum(val []byte, typ querypb.Type) (Datum, error) {
 		return &Duration{d, fsp}, nil
 	}
 	return nil, errors.Errorf("can.not.cast.'%+v'.to.time.type", typ)
+}
+
+// SQLValToDatum used to get the datun and ifield base on the SQLVal.
+func SQLValToDatum(v *sqlparser.SQLVal) (Datum, *IField, error) {
+	val := v.Val
+	switch v.Type {
+	case sqlparser.StrVal:
+		return NewDString(string(val), 10), &IField{StringResult, 0, false, true}, nil
+	case sqlparser.IntVal:
+		field := &IField{IntResult, 0, false, true}
+		n, err := strconv.ParseInt(string(val), 16, 64)
+		if err != nil {
+			return nil, field, err
+		}
+		return NewDInt(n, false), field, nil
+	case sqlparser.FloatVal:
+		n, err := decimal.NewFromString(string(val))
+		if err != nil {
+			return nil, &IField{DecimalResult, DecimalMaxScale, false, true}, err
+		}
+
+		dec := len(strings.Split(string(val), ".")[1])
+		if dec > DecimalMaxScale {
+			dec = DecimalMaxScale
+		}
+		return NewDDecimal(n), &IField{DecimalResult, uint32(dec), false, true}, nil
+	case sqlparser.HexNum:
+		field := &IField{StringResult, 0, true, true}
+		v.Val = val[2:]
+		n, err := v.HexDecode()
+		if err != nil {
+			return nil, field, err
+		}
+		return NewDString(string(n), 16), field, nil
+	case sqlparser.HexVal:
+		field := &IField{StringResult, 0, true, true}
+		n, err := v.HexDecode()
+		if err != nil {
+			return nil, field, err
+		}
+		return NewDString(string(n), 16), field, nil
+	}
+	return nil, nil, errors.Errorf("unsupport.val.type")
 }

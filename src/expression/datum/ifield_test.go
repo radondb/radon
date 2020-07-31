@@ -18,20 +18,20 @@ func TestIField(t *testing.T) {
 	tcases := []struct {
 		field  *IField
 		resTyp ResultType
-		dec    int32
+		dec    uint32
 	}{
 		{
-			field:  &IField{StringResult, 0, false},
+			field:  &IField{StringResult, 0, false, false},
 			resTyp: RealResult,
 			dec:    31,
 		},
 		{
-			field:  &IField{TimeResult, 2, false},
+			field:  &IField{TimeResult, 2, false, false},
 			resTyp: DecimalResult,
 			dec:    2,
 		},
 		{
-			field:  &IField{DurationResult, 0, false},
+			field:  &IField{DurationResult, 0, false, false},
 			resTyp: IntResult,
 			dec:    0,
 		},

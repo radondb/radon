@@ -9,18 +9,25 @@
 package datum
 
 import (
+	"math"
 	"strconv"
 
 	"github.com/shopspring/decimal"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
 // DString ...
-type DString string
+type DString struct {
+	value string
+	base  int
+}
 
 // NewDString new DString.
-func NewDString(v string) *DString {
-	r := DString(v)
-	return &r
+func NewDString(v string, base int) *DString {
+	return &DString{
+		value: v,
+		base:  base,
+	}
 }
 
 // Type return datum type.
@@ -30,9 +37,32 @@ func (d *DString) Type() Type {
 
 // toNumeric cast the DString to a numeric datum(DInt, DFloat, DDcimal).
 func (d *DString) toNumeric() Datum {
-	var fval float64
-	if val, err := strconv.ParseFloat(string(*d), 64); err == nil {
-		fval = val
+	str := common.GetFloatPrefix(d.value)
+
+	if d.base == 16 {
+		hex := common.StrToHex(str)
+		val, err1 := strconv.ParseUint(hex, 16, 64)
+		if err1 != nil {
+			if err2, ok := err1.(*strconv.NumError); ok {
+				if err2.Err == strconv.ErrRange {
+					val = math.MaxUint64
+				}
+			}
+		}
+		return NewDInt(int64(val), true)
+	}
+
+	fval, err1 := strconv.ParseFloat(str, 64)
+	if err1 != nil {
+		if err2, ok := err1.(*strconv.NumError); ok {
+			if err2.Err == strconv.ErrRange {
+				if math.IsInf(fval, 1) {
+					fval = math.MaxFloat64
+				} else if math.IsInf(fval, -1) {
+					fval = -math.MaxFloat64
+				}
+			}
+		}
 	}
 	return NewDFloat(fval)
 }
@@ -54,5 +84,5 @@ func (d *DString) ValDecimal() decimal.Decimal {
 
 // ValStr used to return string.
 func (d *DString) ValStr() string {
-	return string(*d)
+	return string(d.value)
 }

@@ -8,6 +8,11 @@
 
 package datum
 
+import (
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
+)
+
 // ResultType is type of the expression return.
 type ResultType int
 
@@ -33,9 +38,33 @@ type IField struct {
 	// ResTyp result type.
 	ResTyp ResultType
 	// Decimal is the fraction digits.
-	Decimal int32
+	Decimal uint32
 	// Flag, unsigned: true, signed: false.
-	Flag bool
+	Flag     bool
+	Constant bool
+}
+
+// NewIField new IField.
+func NewIField(field *querypb.Field) *IField {
+	var resTyp ResultType
+	typ := field.Type
+	switch {
+	case sqltypes.IsIntegral(typ):
+		resTyp = IntResult
+	case sqltypes.IsFloat(typ):
+		resTyp = RealResult
+	case typ == sqltypes.Decimal:
+		resTyp = DecimalResult
+	case sqltypes.IsTemporal(typ):
+		if typ == sqltypes.Time {
+			resTyp = DurationResult
+		} else {
+			resTyp = TimeResult
+		}
+	default:
+		resTyp = StringResult
+	}
+	return &IField{resTyp, field.Decimals, (field.Flags & 32) > 0, false}
 }
 
 // ToNumeric cast the resulttype to a numeric type.
@@ -51,4 +80,9 @@ func (f *IField) ToNumeric() {
 			f.ResTyp = DecimalResult
 		}
 	}
+}
+
+// IsStringType return true for StringResult, TimeResult or DurationResult.
+func IsStringType(typ ResultType) bool {
+	return typ == StringResult || typ == TimeResult || typ == DurationResult
 }

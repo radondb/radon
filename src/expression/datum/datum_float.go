@@ -31,6 +31,12 @@ func (d *DFloat) Type() Type {
 
 // ValInt used to return int64. true: unsigned, false: signed.
 func (d *DFloat) ValInt() (int64, bool) {
+	if *d > math.MaxInt64 {
+		return math.MaxInt64, false
+	}
+	if *d < math.MinInt64 {
+		return math.MinInt64, false
+	}
 	return int64(math.Floor(float64(*d) + 0.5)), false
 }
 
