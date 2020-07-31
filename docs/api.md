@@ -68,6 +68,12 @@ Request: {
          }
          
 ```
+`allowip:`
+The specified ip and regexp ip are both supported. We use the regexp to define specified LAN IP segment(10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
+    case 1: wildcard "*", means all ip are allowed to connect to radon
+    case 2: we want to specify LAN IP segment(e.g. 10.0.0.0/8) start with `10.12`, the regexp ip will be `10.12.*` or `10.12.[0-9]+.[0-9]+`
+    case 3: we want to specify LAN IP segment(e.g. 192.168.0.0/16) like  `192.168.%.3`, the regexp ip will be `192.168.[0-9]+.3`
+    case 4: also you can just list the ip you want, like: "192.168.1.1", "192.168.1.2", "192.168.1.3" ... 
 `Status:`
 ```
 	200: StatusOK
@@ -76,7 +82,7 @@ Request: {
 ```
 `Example: `
 ```
-$ curl -i -H 'Content-Type: application/json' -X PUT -d '{"max-connections":1024, "max-result-size":1073741824, "max-join-rows":32768, "ddl-timeout":3600, "query-timeout":600, "twopc-enable":true, "load-balance" 1, "allowip": ["127.0.0.1", "127.0.0.2", "172.10.[0-9]+.[0-9]+"]}' http://127.0.0.1:8080/v1/radon/config
+$ curl -i -H 'Content-Type: application/json' -X PUT -d '{"max-connections":1024, "max-result-size":1073741824, "max-join-rows":32768, "ddl-timeout":3600, "query-timeout":600, "twopc-enable":true, "load-balance" 1, "allowip": ["192.168.1.1", "192.168.1.2", "172.10.[0-9]+.[0-9]+"]}' http://127.0.0.1:8080/v1/radon/config
 
 ---Response---
 HTTP/1.1 200 OK
