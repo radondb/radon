@@ -576,6 +576,7 @@ func forceEOF(yylex interface{}) {
 	RESHARD
 	CLEANUP
 	RECOVER
+	REBALANCE
 
 %type	<statement>
 	command
@@ -2879,6 +2880,10 @@ radon_statement:
 	{
 		$$ = &Radon{Action: CleanupStr}
 	}
+|	RADON REBALANCE force_eof
+	{
+		$$ = &Radon{Action: RebalanceStr}
+	}
 |	RADON XA RECOVER force_eof
         {
 		$$ = &Radon{Action: XARecoverStr}
@@ -4704,6 +4709,7 @@ non_reserved_keyword:
 |	ATTACHLIST
 |	RESHARD
 |	RECOVER
+|	REBALANCE
 
 openb:
 	'('

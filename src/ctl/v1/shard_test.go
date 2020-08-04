@@ -1311,24 +1311,6 @@ func TestCtlV1Globals(t *testing.T) {
 	}
 }
 
-func TestSubTableToTable(t *testing.T) {
-	testCases := []struct {
-		in, out string
-	}{
-		{"t", ""},
-		{"t1_0001", "t1"},
-		{"t2_000", ""},
-		{"t3_0000_0001", "t3_0000"},
-	}
-
-	for _, test := range testCases {
-		isSub, table := SubTableToTable(test.in)
-		if isSub || test.out != "" {
-			assert.Equal(t, test.out, table)
-		}
-	}
-}
-
 var (
 	showBinlogFormat = &sqltypes.Result{
 		RowsAffected: 1,

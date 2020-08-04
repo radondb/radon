@@ -390,7 +390,8 @@ func (spanner *Spanner) IsDDL(node sqlparser.Statement) bool {
 func (spanner *Spanner) IsAdminCmd(node sqlparser.Statement) bool {
 	if node, ok := node.(*sqlparser.Radon); ok {
 		switch node.Action {
-		case sqlparser.AttachStr, sqlparser.DetachStr, sqlparser.ReshardStr, sqlparser.CleanupStr:
+		case sqlparser.AttachStr, sqlparser.DetachStr, sqlparser.ReshardStr, sqlparser.CleanupStr,
+			sqlparser.XACommitStr, sqlparser.XARollbackStr, sqlparser.RebalanceStr:
 			return true
 		}
 	}

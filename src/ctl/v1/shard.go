@@ -11,8 +11,6 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"plugins/shiftmanager"
@@ -22,26 +20,6 @@ import (
 	shiftlog "github.com/radondb/shift/xlog"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
-
-var (
-	subtable = regexp.MustCompile("_[0-9]{4}$")
-)
-
-// SubTableToTable used to determine from is subtable or not; if it is, get the table from the subtable.
-func SubTableToTable(from string) (isSub bool, to string) {
-	isSub = false
-	to = ""
-
-	Suffix := subtable.FindAllStringSubmatch(from, -1)
-	lenSuffix := len(Suffix)
-	if lenSuffix == 0 {
-		return
-	}
-
-	isSub = true
-	to = strings.TrimSuffix(from, Suffix[0][lenSuffix-1])
-	return
-}
 
 // ShardzHandler impl.
 func ShardzHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFunc {
@@ -77,120 +55,18 @@ func ShardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy) rest.HandlerFu
 //
 // Returns:
 // 1. Status:200, Body:null
-// 2. Status:503
+// 2. Status:500
 // 3. Status:200, Body:JSON
-func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r *rest.Request) {
-	scatter := proxy.Scatter()
-	spanner := proxy.Spanner()
-	backends := scatter.Backends()
+func shardBalanceAdviceHandler(log *xlog.Log, p *proxy.Proxy, w rest.ResponseWriter, r *rest.Request) {
+	max := &proxy.BackendSize{}
+	min := &proxy.BackendSize{}
+	var database, table string
+	var tableSize float64
 
-	type backendSize struct {
-		name    string
-		address string
-		size    float64
-		user    string
-		passwd  string
-	}
-
-	// 1. Find the max and min backend.
-	var max, min backendSize
-	for _, backend := range backends {
-		query := "select round((sum(data_length) + sum(index_length)) / 1024/ 1024, 0)  as SizeInMB from information_schema.tables"
-		qr, err := spanner.ExecuteOnThisBackend(backend, query)
-		if err != nil {
-			log.Error("api.v1.balance.advice.backend[%s].error:%+v", backend, err)
-			rest.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if len(qr.Rows) > 0 {
-			valStr := string(qr.Rows[0][0].Raw())
-			datasize, err := strconv.ParseFloat(valStr, 64)
-			if err != nil {
-				log.Error("api.v1.balance.advice.parse.value[%s].error:%+v", valStr, err)
-				rest.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			if datasize > max.size {
-				max.name = backend
-				max.size = datasize
-			}
-
-			if min.size == 0 {
-				min.name = backend
-				min.size = datasize
-			}
-			if datasize < min.size {
-				min.name = backend
-				min.size = datasize
-			}
-		}
-	}
-	log.Warning("api.v1.balance.advice.max:[%+v], min:[%+v]", max, min)
-
-	// The differ must big than 256MB.
-	delta := float64(256)
-	differ := (max.size - min.size)
-	if differ < delta {
-		log.Warning("api.v1.balance.advice.return.nil.since.differ[%+vMB].less.than.%vMB", differ, delta)
-		w.WriteJson(nil)
-		return
-	}
-
-	backendConfs := scatter.BackendConfigsClone()
-	for _, bconf := range backendConfs {
-		if bconf.Name == max.name {
-			max.address = bconf.Address
-			max.user = bconf.User
-			max.passwd = bconf.Password
-		} else if bconf.Name == min.name {
-			min.address = bconf.Address
-			min.user = bconf.User
-			min.passwd = bconf.Password
-		}
-	}
-
-	// 2. Find the best table.
-	query := "SELECT table_schema, table_name, ROUND((SUM(data_length+index_length)) / 1024/ 1024, 0) AS sizeMB FROM information_schema.TABLES GROUP BY table_name HAVING SUM(data_length + index_length)>10485760 ORDER BY (data_length + index_length) DESC"
-	qr, err := spanner.ExecuteOnThisBackend(max.name, query)
-	if err != nil {
-		log.Error("api.v1.balance.advice.get.max[%+v].tables.error:%+v", max, err)
+	if err := proxy.ShardBalanceAdvice(log, p.Spanner(), p.Scatter(), p.Router(), max, min, &database, &table, &tableSize); err != nil {
+		log.Error("api.v1.balance.advice.return.error:%+v", err)
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	var tableSize float64
-	var database, table string
-	route := proxy.Router()
-	for _, row := range qr.Rows {
-		db := string(row[0].Raw())
-		tbl := string(row[1].Raw())
-		valStr := string(row[2].Raw())
-		tblSize, err := strconv.ParseFloat(valStr, 64)
-		if err != nil {
-			log.Error("api.v1.balance.advice.get.tables.parse.value[%s].error:%+v", valStr, err)
-			rest.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Make sure the table is small enough.
-		if (min.size + tblSize) < (max.size - tblSize) {
-			isSub, t := SubTableToTable(tbl)
-			if isSub {
-				partitionType, err := route.PartitionType(db, t)
-				// The advice table just hash, Filter the global/single/list table.
-				if err == nil && route.IsPartitionHash(partitionType) {
-					//Find the advice table.
-					database = db
-					table = tbl
-					tableSize = tblSize
-					break
-				}
-			}
-
-			log.Warning("api.v1.balance.advice.skip.table[%v]", tbl)
-		}
 	}
 
 	// No best.
@@ -215,14 +91,14 @@ func shardBalanceAdviceHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.Respons
 	}
 
 	advice := balanceAdvice{
-		From:         max.address,
-		FromDataSize: max.size,
-		FromUser:     max.user,
-		FromPasswd:   max.passwd,
-		To:           min.address,
-		ToDataSize:   min.size,
-		ToUser:       min.user,
-		ToPasswd:     min.passwd,
+		From:         max.Address,
+		FromDataSize: max.Size,
+		FromUser:     max.User,
+		FromPasswd:   max.Passwd,
+		To:           min.Address,
+		ToDataSize:   min.Size,
+		ToUser:       min.User,
+		ToPasswd:     min.Passwd,
 		Database:     database,
 		Table:        table,
 		TableSize:    tableSize,

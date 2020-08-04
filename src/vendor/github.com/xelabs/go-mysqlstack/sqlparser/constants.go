@@ -174,6 +174,7 @@ const (
 	AttachListStr = "attachlist"
 	ReshardStr    = "reshard"
 	CleanupStr    = "cleanup"
+	RebalanceStr  = "rebalance"
 	XARecoverStr  = "xa recover"
 	XACommitStr   = "xa commit"
 	XARollbackStr = "xa rollback"

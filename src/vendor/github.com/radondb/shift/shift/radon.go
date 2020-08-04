@@ -29,7 +29,7 @@ func (shift *Shift) setRadonReadOnly(v bool) error {
 	req := &request{
 		Readonly: v,
 	}
-	log.Info("shift.set.radon[%s].readonlly.req[%+v]", path, req)
+	log.Info("shift.set.radon[%s].readonly.req[%+v]", path, req)
 
 	resp, cleanup, err := xbase.HTTPPut(path, req)
 	defer cleanup()
