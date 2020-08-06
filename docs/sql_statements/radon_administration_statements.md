@@ -7,6 +7,7 @@ Table of Contents
       * [RADON DETACH](#radon-detach)
       * [RADON RESHARD](#radon-reshard)
       * [RADON CLEANUP](#radon-cleanup)
+      * [RADON REBALANCE](#radon-rebalance)
 
 # Radon
 ## RADON ATTACH
@@ -132,3 +133,53 @@ RADON CLEANUP
 mysql> radon cleanup;
 Query OK, 0 rows affected (0.13 sec)
 ```
+
+## RADON REBALANCE
+
+`Syntax`
+```
+RADON REBALANCE
+```
+
+`Instructions`
+* If the radon running for a long time, the user find the data are imbalance among the backends
+* This admin command aims for re-balance the data(partition tables) among the backends, migrate only one partition table per operation.
+The internal operation is mainly divided into two steps:
+    1. get the advice about the rebalance on the shards.
+    2. migrate data on the partition table from source backend to target backend
+     according to the above advice.
+```
+mysql> radon rebalance;
+Query OK, 0 rows affected (39.09 sec)
+```
+* Shown below is the  Data rebalance before and after `RADON REBALANCE`
+```
+mysql> show status;
+...
+| radon_backend     | {
+	"Backends": [
+		"{'name': 'node1', 'tables': '1045', 'datasize':'169MB'}",
+		"{'name': 'node2', 'tables': '1047', 'datasize':'28MB'}"
+	]
+}
+```
+```
+mysql> radon rebalance;
+Query OK, 0 rows affected (39.09 sec)
+```
+```
+mysql> show status;
+...
+| radon_backend     | {
+	"Backends": [
+		"{'name': 'node1', 'tables': '1044', 'datasize':'135MB'}",
+		"{'name': 'node2', 'tables': '1048', 'datasize':'62MB'}"
+	]
+}
+```
+
+* NOTICE: If execute the cmd: RADON REBALANCE, the client interface will always stop there. During the period, if the user execute `ctrl+c` or exit the client, the rebalance will keep going on, the user has to find the status in the log file, it is successful that the following line exists in the file, if not find the line, need find the cause based on the error log.
+```
+  [WARNING]      rebalance.migrate.done...
+```
+
