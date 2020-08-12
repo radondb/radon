@@ -9,6 +9,8 @@
 package datum
 
 import (
+	"strings"
+
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
@@ -85,4 +87,20 @@ func (f *IField) ToNumeric() {
 // IsStringType return true for StringResult, TimeResult or DurationResult.
 func IsStringType(typ ResultType) bool {
 	return typ == StringResult || typ == TimeResult || typ == DurationResult
+}
+
+func ConstantField(d Datum) *IField {
+	switch d := d.(type) {
+	case *DInt:
+		return &IField{IntResult, 0, false, true}
+	case *DDecimal:
+		dec := len(strings.Split(d.ValStr(), ".")[1])
+		if dec > DecimalMaxScale {
+			dec = DecimalMaxScale
+		}
+		return &IField{DecimalResult, uint32(dec), false, true}
+	case *DString:
+		return &IField{StringResult, 0, d.base == 16, true}
+	}
+	return &IField{RealResult, NotFixedDec, false, true}
 }

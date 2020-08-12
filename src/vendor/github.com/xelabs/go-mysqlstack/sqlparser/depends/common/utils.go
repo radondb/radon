@@ -35,6 +35,27 @@ func StrToHex(s string) string {
 	return ss
 }
 
+// Float64ToInt64 convert float64 to int64.
+func Float64ToInt64(f float64) int64 {
+	if math.Abs(f) < 0.5 {
+		return 0
+	}
+	if f < 0 {
+		f -= 0.5
+	} else {
+		f += 0.5
+	}
+
+	res := math.Trunc(f)
+	if res > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	if res < math.MinInt64 {
+		return math.MinInt64
+	}
+	return int64(res)
+}
+
 // IsDecimalInf used to check whether decimal overflow.
 func IsDecimalInf(d decimal.Decimal) bool {
 	v, _ := d.Float64()

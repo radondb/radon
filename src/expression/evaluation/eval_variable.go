@@ -12,7 +12,7 @@ type VariableEval struct {
 	saved datum.Datum
 }
 
-func NewVariableEval(v string) *VariableEval {
+func VAR(v string) Evaluation {
 	return &VariableEval{
 		value: v,
 	}
