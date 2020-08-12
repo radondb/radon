@@ -9,8 +9,6 @@
 package datum
 
 import (
-	"strconv"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -46,5 +44,5 @@ func (d *DNull) ValDecimal() decimal.Decimal {
 
 // ValStr used to return string.
 func (d *DNull) ValStr() string {
-	return strconv.FormatInt(0, 10)
+	return "NULL"
 }

@@ -24,6 +24,10 @@ func NewDTuple(v ...Datum) *DTuple {
 	return &DTuple{args: v}
 }
 
+func ZeroTuple() *DTuple {
+	return &DTuple{args: nil}
+}
+
 // Args return the args.
 func (d *DTuple) Args() []Datum {
 	return d.args

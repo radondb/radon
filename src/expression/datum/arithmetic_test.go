@@ -30,7 +30,7 @@ func TestAdd(t *testing.T) {
 			v2:     NewDInt(1, false),
 			field:  &IField{IntResult, 0, false, false},
 			resTyp: TypeNull,
-			resStr: "0",
+			resStr: "",
 		},
 		{
 			v1:     NewDInt(1, false),
@@ -130,7 +130,7 @@ func TestSub(t *testing.T) {
 			v2:     NewDInt(1, false),
 			field:  &IField{IntResult, 0, false, false},
 			resTyp: TypeNull,
-			resStr: "0",
+			resStr: "",
 		},
 		{
 			v1:     NewDInt(2, false),
@@ -231,7 +231,7 @@ func TestMul(t *testing.T) {
 			v2:     NewDInt(1, false),
 			field:  &IField{IntResult, 0, false, false},
 			resTyp: TypeNull,
-			resStr: "0",
+			resStr: "",
 		},
 		{
 			v1:     NewDInt(2, false),
@@ -321,7 +321,7 @@ func TestDiv(t *testing.T) {
 			v2:     NewDInt(1, false),
 			field:  &IField{IntResult, 0, false, false},
 			resTyp: TypeNull,
-			resStr: "0",
+			resStr: "",
 		},
 		{
 			v1:     NewDInt(2, false),
@@ -335,14 +335,14 @@ func TestDiv(t *testing.T) {
 			v2:     NewDInt(0, false),
 			field:  &IField{DecimalResult, 0, true, false},
 			resTyp: TypeNull,
-			resStr: "0",
+			resStr: "",
 		},
 		{
 			v1:     NewDFloat(1),
 			v2:     NewDInt(0, false),
 			field:  &IField{RealResult, NotFixedDec, false, false},
 			resTyp: TypeNull,
-			resStr: "0",
+			resStr: "",
 		},
 		{
 			v1:     NewDFloat(1),

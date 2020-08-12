@@ -6,8 +6,8 @@ import (
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
 
-type binaryUpdateFunc func(left, right datum.Datum, field *datum.IField) (datum.Datum, error)
 type binaryFixFieldFunc func(left, right *datum.IField) *datum.IField
+type binaryUpdateFunc func(field *datum.IField, left, right datum.Datum) (datum.Datum, error)
 
 type BinaryEval struct {
 	name       string
@@ -17,7 +17,7 @@ type BinaryEval struct {
 	field      *datum.IField
 	fixFieldFn binaryFixFieldFunc
 	updateFn   binaryUpdateFunc
-	//validate IValidator
+	validate   Validator
 }
 
 func (e *BinaryEval) FixField(fields map[string]*querypb.Field) (*datum.IField, error) {
@@ -25,12 +25,15 @@ func (e *BinaryEval) FixField(fields map[string]*querypb.Field) (*datum.IField, 
 	if err != nil {
 		return nil, err
 	}
-	left.ToNumeric()
 	right, err := e.right.FixField(fields)
 	if err != nil {
 		return nil, err
 	}
-	right.ToNumeric()
+	if e.validate != nil {
+		if err := e.validate.Validate(left, right); err != nil {
+			return nil, err
+		}
+	}
 	e.field = e.fixFieldFn(left, right)
 	return e.field, nil
 }
@@ -45,12 +48,7 @@ func (e *BinaryEval) Update(values map[string]datum.Datum) (datum.Datum, error) 
 	if right, err = e.right.Update(values); err != nil {
 		return nil, err
 	}
-	/*	if e.validate != nil {
-		if err := e.validate.Validate(left, right); err != nil {
-			return nil, err
-		}
-	}*/
-	if e.saved, err = e.updateFn(left, right, e.field); err != nil {
+	if e.saved, err = e.updateFn(e.field, left, right); err != nil {
 		return nil, err
 	}
 	return e.saved, nil

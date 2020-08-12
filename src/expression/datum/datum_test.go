@@ -27,7 +27,7 @@ func TestValToDatum(t *testing.T) {
 		{
 			val:    sqltypes.NULL,
 			resTyp: TypeNull,
-			resStr: "0",
+			resStr: "",
 		},
 		{
 			val:    sqltypes.NewInt32(1),
@@ -107,7 +107,7 @@ func TestDatumFunction(t *testing.T) {
 			integral: 0,
 			real:     0,
 			dec:      decimal.NewFromFloat(0),
-			str:      "0",
+			str:      "",
 		},
 		{
 			val:      NewDInt(1, true),
@@ -128,13 +128,13 @@ func TestDatumFunction(t *testing.T) {
 			str:      "1",
 		},
 		{
-			val:      NewDDecimal(decimal.NewFromFloat(1.22)),
+			val:      NewDDecimal(decimal.NewFromFloat(-1.5)),
 			typ:      TypeDecimal,
 			flag:     false,
-			integral: 1,
-			real:     1.22,
-			dec:      decimal.NewFromFloat(1.22),
-			str:      "1.22",
+			integral: -2,
+			real:     -1.5,
+			dec:      decimal.NewFromFloat(-1.5),
+			str:      "-1.5",
 		},
 		{
 			val:      NewDFloat(1.22),

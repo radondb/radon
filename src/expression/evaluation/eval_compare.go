@@ -15,7 +15,7 @@ type CompareEval struct {
 	saved    datum.Datum
 	cmpFunc  datum.CompareFunc
 	updateFn compareUpdateFunc
-	//validate IValidator
+	validate Validator
 }
 
 func (e *CompareEval) FixField(fields map[string]*querypb.Field) (*datum.IField, error) {
@@ -23,10 +23,18 @@ func (e *CompareEval) FixField(fields map[string]*querypb.Field) (*datum.IField,
 	if err != nil {
 		return nil, err
 	}
+
 	right, err := e.right.FixField(fields)
 	if err != nil {
 		return nil, err
 	}
+
+	if e.validate != nil {
+		if err := e.validate.Validate(left, right); err != nil {
+			return nil, err
+		}
+	}
+
 	e.cmpFunc = datum.GetCmpFunc(left, right)
 	return &datum.IField{
 		ResTyp:   datum.IntResult,

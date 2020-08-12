@@ -69,6 +69,13 @@ func CheckNull(args ...Datum) bool {
 	return false
 }
 
+func ignoreCase(d Datum) bool {
+	if s, ok := d.(*DString); ok {
+		return s.ignoreCase
+	}
+	return true
+}
+
 // ValToDatum cast Value to Datum.
 func ValToDatum(v sqltypes.Value) (Datum, error) {
 	str := v.String()
@@ -203,45 +210,37 @@ func timeToDatum(val []byte, typ querypb.Type) (Datum, error) {
 	return nil, errors.Errorf("can.not.cast.'%+v'.to.time.type", typ)
 }
 
-// SQLValToDatum used to get the datun and ifield base on the SQLVal.
-func SQLValToDatum(v *sqlparser.SQLVal) (Datum, *IField, error) {
+// SQLValToDatum used to get the datun base on the SQLVal.
+func SQLValToDatum(v *sqlparser.SQLVal) (Datum, error) {
 	val := v.Val
 	switch v.Type {
 	case sqlparser.StrVal:
-		return NewDString(string(val), 10), &IField{StringResult, 0, false, true}, nil
+		return NewDString(string(val), 10), nil
 	case sqlparser.IntVal:
-		field := &IField{IntResult, 0, false, true}
 		n, err := strconv.ParseInt(string(val), 16, 64)
 		if err != nil {
-			return nil, field, err
+			return nil, err
 		}
-		return NewDInt(n, false), field, nil
+		return NewDInt(n, false), nil
 	case sqlparser.FloatVal:
 		n, err := decimal.NewFromString(string(val))
 		if err != nil {
-			return nil, &IField{DecimalResult, DecimalMaxScale, false, true}, err
+			return nil, err
 		}
-
-		dec := len(strings.Split(string(val), ".")[1])
-		if dec > DecimalMaxScale {
-			dec = DecimalMaxScale
-		}
-		return NewDDecimal(n), &IField{DecimalResult, uint32(dec), false, true}, nil
+		return NewDDecimal(n), nil
 	case sqlparser.HexNum:
-		field := &IField{StringResult, 0, true, true}
 		v.Val = val[2:]
 		n, err := v.HexDecode()
 		if err != nil {
-			return nil, field, err
+			return nil, err
 		}
-		return NewDString(string(n), 16), field, nil
+		return NewDString(string(n), 16), nil
 	case sqlparser.HexVal:
-		field := &IField{StringResult, 0, true, true}
 		n, err := v.HexDecode()
 		if err != nil {
-			return nil, field, err
+			return nil, err
 		}
-		return NewDString(string(n), 16), field, nil
+		return NewDString(string(n), 16), nil
 	}
-	return nil, nil, errors.Errorf("unsupport.val.type")
+	return nil, errors.Errorf("unsupport.val.type")
 }

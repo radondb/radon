@@ -18,21 +18,27 @@ import (
 
 // DString ...
 type DString struct {
-	value string
-	base  int
+	value      string
+	base       int
+	ignoreCase bool
 }
 
 // NewDString new DString.
 func NewDString(v string, base int) *DString {
 	return &DString{
-		value: v,
-		base:  base,
+		value:      v,
+		base:       base,
+		ignoreCase: true,
 	}
 }
 
 // Type return datum type.
 func (d *DString) Type() Type {
 	return TypeString
+}
+
+func (d *DString) setIgnoreCase(ignoreCase bool) {
+	d.ignoreCase = ignoreCase
 }
 
 // toNumeric cast the DString to a numeric datum(DInt, DFloat, DDcimal).

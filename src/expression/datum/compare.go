@@ -121,7 +121,11 @@ func CompareDecimal(x, y Datum) int64 {
 
 // CompareString returns an integer comparing the string x to y.
 func CompareString(x, y Datum) int64 {
-	return int64(strings.Compare(x.ValStr(), y.ValStr()))
+	str1, str2 := x.ValStr(), y.ValStr()
+	if ignoreCase(x) && ignoreCase(y) {
+		str1, str2 = strings.ToLower(str1), strings.ToLower(str2)
+	}
+	return int64(strings.Compare(str1, str2))
 }
 
 // CompareDatetime returns an integer comparing the DTime x to y.
@@ -173,4 +177,38 @@ func CompareDuration(x, y Datum) int64 {
 		}
 	}
 	return CompareString(x, y)
+}
+
+func AreEqual(d1, d2 Datum) bool {
+	if CheckNull(d1) {
+		if CheckNull(d2) {
+			return true
+		}
+		return false
+	}
+
+	if CheckNull(d2) {
+		return false
+	}
+
+	if d1.Type() != d2.Type() {
+		return false
+	}
+
+	var res int64
+	switch d1.Type() {
+	case TypeInt:
+		res = CompareInt(d1, d2)
+	case TypeFloat:
+		res = CompareFloat64(d1, d2)
+	case TypeDecimal:
+		res = CompareDecimal(d1, d2)
+	case TypeDuration:
+		res = CompareDuration(d1, d2)
+	case TypeTime:
+		res = CompareDatetime(d1, d2)
+	default:
+		res = CompareString(d1, d2)
+	}
+	return res == 0
 }

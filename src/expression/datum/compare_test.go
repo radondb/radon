@@ -105,6 +105,12 @@ func TestNullsafeCompare(t *testing.T) {
 			res:     1,
 		},
 		{
+			v1:      NewDString("ABCD", 10),
+			v2:      NewDString("abcd", 10),
+			cmpFunc: CompareString,
+			res:     0,
+		},
+		{
 			v1:      NewDFloat(2.33),
 			v2:      NewDInt(2, false),
 			cmpFunc: CompareFloat64,

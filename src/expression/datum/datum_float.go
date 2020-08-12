@@ -9,10 +9,10 @@
 package datum
 
 import (
-	"math"
 	"strconv"
 
 	"github.com/shopspring/decimal"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
 // DFloat ...
@@ -31,13 +31,8 @@ func (d *DFloat) Type() Type {
 
 // ValInt used to return int64. true: unsigned, false: signed.
 func (d *DFloat) ValInt() (int64, bool) {
-	if *d > math.MaxInt64 {
-		return math.MaxInt64, false
-	}
-	if *d < math.MinInt64 {
-		return math.MinInt64, false
-	}
-	return int64(math.Floor(float64(*d) + 0.5)), false
+	fval := float64(*d)
+	return common.Float64ToInt64(fval), false
 }
 
 // ValReal used to return float64.

@@ -3,7 +3,6 @@ package evaluation
 import (
 	"expression/datum"
 
-	"github.com/xelabs/go-mysqlstack/sqlparser"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
 
@@ -12,18 +11,14 @@ type ConstantEval struct {
 	field *datum.IField
 }
 
-func NewConstantEval(val *sqlparser.SQLVal) (*ConstantEval, error) {
-	value, field, err := datum.SQLValToDatum(val)
-	if err != nil {
-		return nil, nil
-	}
+func CONST(val datum.Datum) Evaluation {
 	return &ConstantEval{
-		value: value,
-		field: field,
-	}, nil
+		value: val,
+	}
 }
 
 func (e *ConstantEval) FixField(fields map[string]*querypb.Field) (*datum.IField, error) {
+	e.field = datum.ConstantField(e.value)
 	return e.field, nil
 }
 
