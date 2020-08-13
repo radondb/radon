@@ -6,6 +6,7 @@ import (
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
 
+// InEval represents a in evaluation.
 type InEval struct {
 	// true: not in.
 	// false: in.
@@ -17,6 +18,7 @@ type InEval struct {
 	validate Validator
 }
 
+// FixField use to fix the IField by the fieldmap.
 func (e *InEval) FixField(fields map[string]*querypb.Field) (*datum.IField, error) {
 	left, err := e.left.FixField(fields)
 	if err != nil {
@@ -47,6 +49,7 @@ func (e *InEval) FixField(fields map[string]*querypb.Field) (*datum.IField, erro
 	}, nil
 }
 
+// Update used to update the result by the valuemap.
 func (e *InEval) Update(values map[string]datum.Datum) (datum.Datum, error) {
 	left, err := e.left.Update(values)
 	if err != nil {
@@ -96,6 +99,7 @@ func (e *InEval) Update(values map[string]datum.Datum) (datum.Datum, error) {
 	return e.saved, nil
 }
 
+// Result used to get the result.
 func (e *InEval) Result() datum.Datum {
 	return e.saved
 }

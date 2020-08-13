@@ -9,6 +9,8 @@
 package datum
 
 import (
+	"reflect"
+	"runtime"
 	"testing"
 	"time"
 
@@ -25,12 +27,14 @@ func TestNullsafeCompare(t *testing.T) {
 		v2      Datum
 		cmpFunc CompareFunc
 		res     int64
+		equal   bool
 	}{
 		{
 			v1:      NewDNull(true),
 			v2:      NewDNull(true),
 			cmpFunc: CompareInt,
 			res:     0,
+			equal:   true,
 		},
 		{
 			v1:      NewDNull(true),
@@ -55,6 +59,7 @@ func TestNullsafeCompare(t *testing.T) {
 			v2:      NewDInt(1, false),
 			cmpFunc: CompareInt,
 			res:     0,
+			equal:   true,
 		},
 		{
 			v1:      NewDInt(1, false),
@@ -73,6 +78,7 @@ func TestNullsafeCompare(t *testing.T) {
 			v2:      NewDInt(1, true),
 			cmpFunc: CompareInt,
 			res:     0,
+			equal:   true,
 		},
 		{
 			v1:      NewDInt(1, true),
@@ -109,6 +115,7 @@ func TestNullsafeCompare(t *testing.T) {
 			v2:      NewDString("abcd", 10),
 			cmpFunc: CompareString,
 			res:     0,
+			equal:   true,
 		},
 		{
 			v1:      NewDFloat(2.33),
@@ -125,6 +132,12 @@ func TestNullsafeCompare(t *testing.T) {
 		{
 			v1:      NewDFloat(2.33),
 			v2:      NewDDecimal(decimal.NewFromFloat(3.23)),
+			cmpFunc: CompareFloat64,
+			res:     -1,
+		},
+		{
+			v1:      NewDFloat(2.33),
+			v2:      NewDFloat(2.333),
 			cmpFunc: CompareFloat64,
 			res:     -1,
 		},
@@ -147,6 +160,13 @@ func TestNullsafeCompare(t *testing.T) {
 			res:     1,
 		},
 		{
+			v1:      NewDTime(sqltypes.Datetime, 4, 1453, 5, 29, 8, 0, 0, 223300),
+			v2:      NewDTime(sqltypes.Datetime, 4, 1453, 5, 29, 8, 0, 0, 223300),
+			cmpFunc: CompareDatetime,
+			res:     0,
+			equal:   true,
+		},
+		{
 			v1:      NewDInt(14530529080000, true),
 			v2:      NewDTime(sqltypes.Datetime, 4, 1453, 5, 29, 8, 0, 0, 233300),
 			cmpFunc: CompareDatetime,
@@ -157,6 +177,7 @@ func TestNullsafeCompare(t *testing.T) {
 			v2:      NewDDecimal(dec),
 			cmpFunc: CompareDatetime,
 			res:     0,
+			equal:   true,
 		},
 		{
 			v1:      NewDTime(sqltypes.Datetime, 4, 1453, 5, 29, 8, 0, 0, 233300),
@@ -201,6 +222,19 @@ func TestNullsafeCompare(t *testing.T) {
 			res:     -1,
 		},
 		{
+			v1: &Duration{
+				duration: time.Duration(8*3600) * time.Second,
+				fsp:      0,
+			},
+			v2: &Duration{
+				duration: time.Duration(8*3600) * time.Second,
+				fsp:      0,
+			},
+			cmpFunc: CompareDuration,
+			res:     0,
+			equal:   true,
+		},
+		{
 			v1:      NewDString("1T08:00:00", 10),
 			v2:      NewDString("1 08:00:00", 10),
 			cmpFunc: CompareDuration,
@@ -210,5 +244,80 @@ func TestNullsafeCompare(t *testing.T) {
 	for _, tcase := range tcases {
 		res := NullsafeCompare(tcase.v1, tcase.v2, tcase.cmpFunc)
 		assert.Equal(t, tcase.res, res)
+
+		equal := AreEqual(tcase.v1, tcase.v2)
+		assert.Equal(t, tcase.equal, equal)
 	}
+}
+
+func TestGetCmpFunc(t *testing.T) {
+	tcases := []struct {
+		left  *IField
+		right *IField
+		res   string
+	}{
+		{
+			left:  &IField{IntResult, 0, false, false},
+			right: &IField{IntResult, 0, false, false},
+			res:   "expression/datum.CompareInt",
+		},
+		{
+			left:  &IField{DurationResult, 0, false, false},
+			right: &IField{DurationResult, 0, false, false},
+			res:   "expression/datum.CompareDuration",
+		},
+		{
+			left:  &IField{DecimalResult, 0, false, false},
+			right: &IField{IntResult, 0, false, false},
+			res:   "expression/datum.CompareDecimal",
+		},
+		{
+			left:  &IField{IntResult, 0, false, false},
+			right: &IField{DecimalResult, 0, false, false},
+			res:   "expression/datum.CompareDecimal",
+		},
+		{
+			left:  &IField{DecimalResult, 0, false, false},
+			right: &IField{StringResult, 0, false, true},
+			res:   "expression/datum.CompareDecimal",
+		},
+		{
+			left:  &IField{TimeResult, 0, false, true},
+			right: &IField{DecimalResult, 0, false, false},
+			res:   "expression/datum.CompareDecimal",
+		},
+		{
+			left:  &IField{TimeResult, 0, false, false},
+			right: &IField{IntResult, 0, false, true},
+			res:   "expression/datum.CompareDatetime",
+		},
+		{
+			left:  &IField{StringResult, 0, false, true},
+			right: &IField{DurationResult, 0, false, false},
+			res:   "expression/datum.CompareDuration",
+		},
+		{
+			left:  &IField{StringResult, 0, false, false},
+			right: &IField{StringResult, 0, false, false},
+			res:   "expression/datum.CompareString",
+		},
+		{
+			left:  &IField{StringResult, 0, false, false},
+			right: &IField{TimeResult, 0, false, false},
+			res:   "expression/datum.CompareDatetime",
+		},
+		{
+			left:  &IField{RealResult, 0, false, false},
+			right: &IField{StringResult, 0, false, false},
+			res:   "expression/datum.CompareFloat64",
+		},
+	}
+	for _, tcase := range tcases {
+		res := GetCmpFunc(tcase.left, tcase.right)
+		assert.Equal(t, tcase.res, getFunctionName(res))
+	}
+}
+
+func getFunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }

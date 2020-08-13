@@ -23,12 +23,14 @@ var (
 	likeCache = cache.NewLRUCache(1024)
 )
 
+// pattern type.
 const (
-	patternMatch = iota
-	patternOne
-	patternAny
+	patMatch = iota
+	patOne
+	patAny
 )
 
+// compare type.
 type cmpType int
 
 const (
@@ -37,6 +39,7 @@ const (
 	like
 )
 
+// CmpLike ...
 type CmpLike struct {
 	patChars   []byte
 	patTyps    []byte
@@ -44,6 +47,7 @@ type CmpLike struct {
 	cmpTyp     cmpType
 }
 
+// NewCmpLike new a CmpLike object.
 func NewCmpLike(pattern string, escape byte, ignoreCase bool) *CmpLike {
 	if strings.Compare("%", pattern) == 0 {
 		return &CmpLike{ignoreCase: ignoreCase, cmpTyp: any}
@@ -68,46 +72,44 @@ func NewCmpLike(pattern string, escape byte, ignoreCase bool) *CmpLike {
 		switch b {
 		case escape:
 			lastAny = false
-			typ = patternMatch
+			typ = patMatch
 			if i < length-1 {
 				i++
 				b = pattern[i]
-				if !(b == escape || b == '_' || b == '%') {
-					// Invalid escape, fall back to escape byte.
-					i--
-					b = escape
-				}
 			}
 		case '_':
 			isFullMatch = false
 			if lastAny {
 				patChars[patLen-1], patChars[patLen] = b, patChars[patLen-1]
-				patTyps[patLen-1], patTyps[patLen] = patternOne, patternAny
+				patTyps[patLen-1], patTyps[patLen] = patOne, patAny
 				patLen++
 				continue
 			}
-			typ = patternOne
+			typ = patOne
 		case '%':
 			if lastAny {
 				continue
 			}
 			isFullMatch = false
-			typ = patternAny
+			typ = patAny
 			lastAny = true
 		default:
-			typ = patternMatch
+			typ = patMatch
 			lastAny = false
 		}
 		patChars[patLen] = b
 		patTyps[patLen] = typ
 		patLen++
 	}
+
+	patChars, patTyps = patChars[:patLen], patTyps[:patLen]
 	if isFullMatch {
 		return &CmpLike{patChars, patTyps, ignoreCase, match}
 	}
 	return &CmpLike{patChars, patTyps, ignoreCase, like}
 }
 
+// Compare use to check left whether match the pattern.
 func (c *CmpLike) Compare(left Datum) bool {
 	val := []byte(left.ValStr())
 	switch c.cmpTyp {
@@ -118,12 +120,12 @@ func (c *CmpLike) Compare(left Datum) bool {
 			return bytes.EqualFold(c.patChars, val)
 		}
 		return bytes.Compare(c.patChars, val) == 0
-	case like:
+	default:
 		return isMatch(val, c.patChars, c.patTyps, c.ignoreCase)
 	}
-	panic("unknow.cmp.type")
 }
 
+// Size implement the interface Value.Size() in LRUCache.
 func (c *CmpLike) Size() int {
 	return len(c.patChars) + len(c.patTyps)
 }
@@ -132,17 +134,17 @@ func isMatch(val, patChars, patTyps []byte, ignoreCase bool) bool {
 	idx := 0
 	for i := 0; i < len(patChars); i++ {
 		switch patTyps[i] {
-		case patternMatch:
+		case patMatch:
 			if idx >= len(val) || !compareByte(val[idx], patChars[i], ignoreCase) {
 				return false
 			}
 			idx++
-		case patternOne:
+		case patOne:
 			idx++
 			if idx > len(val) {
 				return false
 			}
-		case patternAny:
+		case patAny:
 			i++
 			if i == len(patChars) {
 				return true
@@ -166,6 +168,8 @@ func compareByte(a, b byte, ignoreCase bool) bool {
 	return unicode.ToUpper(rune(a)) == unicode.ToUpper(rune(b))
 }
 
+// Like use to check left whether match right with escape.
+// not means 'not like'.
 func Like(left, right, escape Datum, not bool) (Datum, error) {
 	if CheckNull(left, right) {
 		return NewDNull(true), nil
@@ -181,9 +185,9 @@ func Like(left, right, escape Datum, not bool) (Datum, error) {
 	}
 
 	pattern := right.ValStr()
-	key := fmt.Sprintf("%s|%s", pattern, string(esc))
-
 	ignoreCase := ignoreCase(left) && ignoreCase(right)
+	key := fmt.Sprintf("%s|%s|%d", pattern, string(esc), common.TernaryOpt(ignoreCase, 1, 0).(int))
+
 	var cmp *CmpLike
 	if val, ok := likeCache.Get(key); ok {
 		cmp = val.(*CmpLike)
@@ -196,6 +200,10 @@ func Like(left, right, escape Datum, not bool) (Datum, error) {
 	if not {
 		match = !match
 	}
-	res := common.TernaryOpt(match, 1, 0).(int64)
+
+	var res int64
+	if match {
+		res = 1
+	}
 	return NewDInt(res, false), nil
 }

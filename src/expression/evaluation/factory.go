@@ -45,7 +45,8 @@ var (
 	}
 )
 
-func EvaluationFactory(name string, args ...Evaluation) (Evaluation, error) {
+// EvalFactory used to build the evaluation by the given name and args.
+func EvalFactory(name string, args ...Evaluation) (Evaluation, error) {
 	name = strings.ToLower(name)
 	switch len(args) {
 	case 1:

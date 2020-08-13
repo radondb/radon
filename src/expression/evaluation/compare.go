@@ -4,12 +4,13 @@ import (
 	"expression/datum"
 )
 
+// GT process greater than.
 func GT(left, right Evaluation) Evaluation {
 	return &CompareEval{
 		name:     ">",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		updateFn: func(left, right datum.Datum, cmpFunc datum.CompareFunc) datum.Datum {
 			if datum.CheckNull(left, right) {
 				return datum.NewDNull(true)
@@ -23,12 +24,13 @@ func GT(left, right Evaluation) Evaluation {
 	}
 }
 
+// GE process greater than or equal to.
 func GE(left, right Evaluation) Evaluation {
 	return &CompareEval{
 		name:     ">=",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		updateFn: func(left, right datum.Datum, cmpFunc datum.CompareFunc) datum.Datum {
 			if datum.CheckNull(left, right) {
 				return datum.NewDNull(true)
@@ -42,12 +44,13 @@ func GE(left, right Evaluation) Evaluation {
 	}
 }
 
+// EQ process equal.
 func EQ(left, right Evaluation) Evaluation {
 	return &CompareEval{
 		name:     "=",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		updateFn: func(left, right datum.Datum, cmpFunc datum.CompareFunc) datum.Datum {
 			if datum.CheckNull(left, right) {
 				return datum.NewDNull(true)
@@ -63,12 +66,13 @@ func EQ(left, right Evaluation) Evaluation {
 	}
 }
 
+// LT process less than.
 func LT(left, right Evaluation) Evaluation {
 	return &CompareEval{
 		name:     "<",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		updateFn: func(left, right datum.Datum, cmpFunc datum.CompareFunc) datum.Datum {
 			if datum.CheckNull(left, right) {
 				return datum.NewDNull(true)
@@ -84,12 +88,13 @@ func LT(left, right Evaluation) Evaluation {
 	}
 }
 
+// LE process less than or equal to.
 func LE(left, right Evaluation) Evaluation {
 	return &CompareEval{
 		name:     "<=",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		updateFn: func(left, right datum.Datum, cmpFunc datum.CompareFunc) datum.Datum {
 			if datum.CheckNull(left, right) {
 				return datum.NewDNull(true)
@@ -105,12 +110,13 @@ func LE(left, right Evaluation) Evaluation {
 	}
 }
 
+// NE process not equal.
 func NE(left, right Evaluation) Evaluation {
 	return &CompareEval{
 		name:     "!=",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		updateFn: func(left, right datum.Datum, cmpFunc datum.CompareFunc) datum.Datum {
 			if datum.CheckNull(left, right) {
 				return datum.NewDNull(true)
@@ -126,12 +132,13 @@ func NE(left, right Evaluation) Evaluation {
 	}
 }
 
+// SE process null safe equal.
 func SE(left, right Evaluation) Evaluation {
 	return &CompareEval{
 		name:     "<=>",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		updateFn: func(left, right datum.Datum, cmpFunc datum.CompareFunc) datum.Datum {
 			res := datum.NullsafeCompare(left, right, cmpFunc)
 			if res == 0 {
@@ -144,36 +151,39 @@ func SE(left, right Evaluation) Evaluation {
 	}
 }
 
+// IN process in operator.
 func IN(left, right Evaluation) Evaluation {
 	return &InEval{
 		left:  left,
 		right: right,
 		validate: All(
-			Arg(1, ResTyp(false, datum.RowResult)),
-			Arg(2, ResTyp(true, datum.RowResult)),
+			Arg(1, TypeOf(false, datum.RowResult)),
+			Arg(2, TypeOf(true, datum.RowResult)),
 		),
 	}
 }
 
+// NOTIN process not in operator.
 func NOTIN(left, right Evaluation) Evaluation {
 	return &InEval{
 		not:   true,
 		left:  left,
 		right: right,
 		validate: All(
-			Arg(1, ResTyp(false, datum.RowResult)),
-			Arg(2, ResTyp(true, datum.RowResult)),
+			Arg(1, TypeOf(false, datum.RowResult)),
+			Arg(2, TypeOf(true, datum.RowResult)),
 		),
 	}
 }
 
+// LIKE process like operator.
 func LIKE(args ...Evaluation) Evaluation {
 	return &FunctionEval{
 		name: "like",
 		args: args,
 		validate: All(
 			ExactlyNArgs(3),
-			AllArgs(ResTyp(false, datum.RowResult)),
+			AllArgs(TypeOf(false, datum.RowResult)),
 		),
 		fixFieldFn: func(args ...*datum.IField) *datum.IField {
 			return &datum.IField{
@@ -189,13 +199,14 @@ func LIKE(args ...Evaluation) Evaluation {
 	}
 }
 
+// NOTLIKE process not like operator.
 func NOTLIKE(args ...Evaluation) Evaluation {
 	return &FunctionEval{
 		name: "not like",
 		args: args,
 		validate: All(
 			ExactlyNArgs(3),
-			AllArgs(ResTyp(false, datum.RowResult)),
+			AllArgs(TypeOf(false, datum.RowResult)),
 		),
 		fixFieldFn: func(args ...*datum.IField) *datum.IField {
 			return &datum.IField{
@@ -211,12 +222,13 @@ func NOTLIKE(args ...Evaluation) Evaluation {
 	}
 }
 
+// REGEXP process regexp operator.
 func REGEXP(left, right Evaluation) Evaluation {
 	return &BinaryEval{
 		name:     "regexp",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			return &datum.IField{
 				ResTyp:   datum.IntResult,
@@ -226,17 +238,18 @@ func REGEXP(left, right Evaluation) Evaluation {
 			}
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
-			return datum.Regexp(left, right, false)
+			return datum.Regexp(left, right, false), nil
 		},
 	}
 }
 
+// NOTREGEXP process not regexp operator.
 func NOTREGEXP(left, right Evaluation) Evaluation {
 	return &BinaryEval{
 		name:     "not regexp",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			return &datum.IField{
 				ResTyp:   datum.IntResult,
@@ -246,7 +259,7 @@ func NOTREGEXP(left, right Evaluation) Evaluation {
 			}
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
-			return datum.Regexp(left, right, true)
+			return datum.Regexp(left, right, true), nil
 		},
 	}
 }

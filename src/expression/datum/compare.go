@@ -179,6 +179,8 @@ func CompareDuration(x, y Datum) int64 {
 	return CompareString(x, y)
 }
 
+// AreEqual checks the equality of the given values,
+// returning false if the types don't match.
 func AreEqual(d1, d2 Datum) bool {
 	if CheckNull(d1) {
 		if CheckNull(d2) {

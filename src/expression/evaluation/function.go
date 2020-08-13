@@ -6,13 +6,14 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
+// IF (<cond>, <expr1>, <expr2>). Evaluates <cond>, then evaluates <expr1> if the condition is true, or <expr2> otherwise.
 func IF(args ...Evaluation) Evaluation {
 	return &FunctionEval{
 		name: "if",
 		args: args,
 		validate: All(
 			ExactlyNArgs(3),
-			AllArgs(ResTyp(false, datum.RowResult)),
+			AllArgs(TypeOf(false, datum.RowResult)),
 		),
 		fixFieldFn: func(args ...*datum.IField) *datum.IField {
 			var field *datum.IField

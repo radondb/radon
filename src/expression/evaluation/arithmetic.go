@@ -8,12 +8,13 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
+// ADD returns the sum of the two arguments.
 func ADD(left, right Evaluation) Evaluation {
 	return &BinaryEval{
 		name:     "+",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			left.ToNumeric()
 			right.ToNumeric()
@@ -36,12 +37,13 @@ func ADD(left, right Evaluation) Evaluation {
 	}
 }
 
+// SUB returns the difference between the two arguments.
 func SUB(left, right Evaluation) Evaluation {
 	return &BinaryEval{
 		name:     "-",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			left.ToNumeric()
 			right.ToNumeric()
@@ -64,12 +66,13 @@ func SUB(left, right Evaluation) Evaluation {
 	}
 }
 
+// MUL returns the dot product of the two arguments.
 func MUL(left, right Evaluation) Evaluation {
 	return &BinaryEval{
 		name:     "*",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			left.ToNumeric()
 			right.ToNumeric()
@@ -93,12 +96,13 @@ func MUL(left, right Evaluation) Evaluation {
 	}
 }
 
+// DIV returns the division of the two arguments.
 func DIV(left, right Evaluation) Evaluation {
 	return &BinaryEval{
 		name:     "/",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			left.ToNumeric()
 			right.ToNumeric()
@@ -119,12 +123,13 @@ func DIV(left, right Evaluation) Evaluation {
 	}
 }
 
+// INTDIV returns the int division of the two arguments.
 func INTDIV(left, right Evaluation) Evaluation {
 	return &BinaryEval{
 		name:     "div",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			left.ToNumeric()
 			right.ToNumeric()

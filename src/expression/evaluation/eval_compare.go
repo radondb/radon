@@ -8,6 +8,7 @@ import (
 
 type compareUpdateFunc func(left, right datum.Datum, cmpFunc datum.CompareFunc) datum.Datum
 
+// CompareEval represents a comparison evaluation.
 type CompareEval struct {
 	name     string
 	left     Evaluation
@@ -18,6 +19,7 @@ type CompareEval struct {
 	validate Validator
 }
 
+// FixField use to fix the IField by the fieldmap.
 func (e *CompareEval) FixField(fields map[string]*querypb.Field) (*datum.IField, error) {
 	left, err := e.left.FixField(fields)
 	if err != nil {
@@ -44,6 +46,7 @@ func (e *CompareEval) FixField(fields map[string]*querypb.Field) (*datum.IField,
 	}, nil
 }
 
+// Update used to update the result by the valuemap.
 func (e *CompareEval) Update(values map[string]datum.Datum) (datum.Datum, error) {
 	var err error
 	var left, right datum.Datum
@@ -58,6 +61,7 @@ func (e *CompareEval) Update(values map[string]datum.Datum) (datum.Datum, error)
 	return e.saved, nil
 }
 
+// Result used to get the result.
 func (e *CompareEval) Result() datum.Datum {
 	return e.saved
 }

@@ -1,13 +1,19 @@
 package planner
 
-import "fmt"
+import (
+	"fmt"
 
+	"expression/evaluation"
+)
+
+// VariablePlan ..
 type VariablePlan struct {
 	column   string
 	table    string
 	database string
 }
 
+// NewVariablePlan new a VariablePlan.
 func NewVariablePlan(column, table, database string) *VariablePlan {
 	return &VariablePlan{
 		column:   column,
@@ -16,11 +22,17 @@ func NewVariablePlan(column, table, database string) *VariablePlan {
 	}
 }
 
+// Materialize returns Evaluation by Plan.
+func (p *VariablePlan) Materialize() (evaluation.Evaluation, error) {
+	return evaluation.VAR(p.String()), nil
+}
+
+// Walk calls visit on the plan.
 func (p *VariablePlan) Walk(visit Visit) error {
 	return nil
 }
 
-// `db`.`tb`.`col`
+// String return the plan info.
 func (p *VariablePlan) String() string {
 	str := fmt.Sprintf("`%s`", p.column)
 	if p.table != "" {

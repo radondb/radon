@@ -72,13 +72,12 @@ func CastToDatetime(d Datum, fsp int) (*DTime, error) {
 	case *DInt:
 		v, _ := d.ValInt()
 		return NumToDatetime(v)
-	case *DString, *DDecimal, *DFloat:
-		v := d.ValStr()
-		return StrToDatetime(v, fsp, &TimeStatus{})
 	case *Duration:
 		return d.toTime(), nil
+	default:
+		v := d.ValStr()
+		return StrToDatetime(v, fsp, &TimeStatus{})
 	}
-	return nil, errors.Errorf("incorrect.datetime.value.'%s'", d.ValStr())
 }
 
 // CastToDuration cast the datum to Duration.
@@ -89,13 +88,12 @@ func CastToDuration(d Datum, fsp int) (*Duration, error) {
 	case *DInt:
 		v, _ := d.ValInt()
 		return NumToDuration(v)
-	case *DString, *DDecimal, *DFloat:
-		v := d.ValStr()
-		return StrToDuration(v, fsp)
 	case *Duration:
 		return d, nil
+	default:
+		v := d.ValStr()
+		return StrToDuration(v, fsp)
 	}
-	return nil, errors.Errorf("incorrect.time.value.'%s'", d.ValStr())
 }
 
 // NumToDuration used to convert a number to a datum.Duration.

@@ -18,8 +18,10 @@ import (
 
 // DString ...
 type DString struct {
-	value      string
-	base       int
+	value string
+	// default: 10.
+	base int
+	// defalut: true. When use keyword 'binary', it will be false.
 	ignoreCase bool
 }
 

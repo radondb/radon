@@ -10,6 +10,7 @@ type functionFixFieldFunc func(args ...*datum.IField) *datum.IField
 
 type functionUpdateFunc func(field *datum.IField, args ...datum.Datum) (datum.Datum, error)
 
+// FunctionEval represents a function evaluation.
 type FunctionEval struct {
 	name       string
 	args       []Evaluation
@@ -20,6 +21,7 @@ type FunctionEval struct {
 	validate   Validator
 }
 
+// FixField use to fix the IField by the fieldmap.
 func (e *FunctionEval) FixField(fields map[string]*querypb.Field) (*datum.IField, error) {
 	argFields := make([]*datum.IField, len(e.args))
 	for _, arg := range e.args {
@@ -39,6 +41,7 @@ func (e *FunctionEval) FixField(fields map[string]*querypb.Field) (*datum.IField
 	return e.field, nil
 }
 
+// Update used to update the result by the valuemap.
 func (e *FunctionEval) Update(values map[string]datum.Datum) (datum.Datum, error) {
 	var err error
 	argValues := make([]datum.Datum, len(e.args))
@@ -56,6 +59,7 @@ func (e *FunctionEval) Update(values map[string]datum.Datum) (datum.Datum, error
 	return e.saved, nil
 }
 
+// Result used to get the result.
 func (e *FunctionEval) Result() datum.Datum {
 	return e.saved
 }
