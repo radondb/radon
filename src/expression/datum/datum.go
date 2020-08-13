@@ -10,6 +10,7 @@ package datum
 
 import (
 	"math"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -67,13 +68,6 @@ func CheckNull(args ...Datum) bool {
 		}
 	}
 	return false
-}
-
-func ignoreCase(d Datum) bool {
-	if s, ok := d.(*DString); ok {
-		return s.ignoreCase
-	}
-	return true
 }
 
 // ValToDatum cast Value to Datum.
@@ -206,8 +200,9 @@ func timeToDatum(val []byte, typ querypb.Type) (Datum, error) {
 			d = -d
 		}
 		return &Duration{d, fsp}, nil
+	default:
+		return nil, errors.Errorf("can.not.cast.'%+v'.to.time.type", typ)
 	}
-	return nil, errors.Errorf("can.not.cast.'%+v'.to.time.type", typ)
 }
 
 // SQLValToDatum used to get the datun base on the SQLVal.
@@ -217,7 +212,7 @@ func SQLValToDatum(v *sqlparser.SQLVal) (Datum, error) {
 	case sqlparser.StrVal:
 		return NewDString(string(val), 10), nil
 	case sqlparser.IntVal:
-		n, err := strconv.ParseInt(string(val), 16, 64)
+		n, err := strconv.ParseInt(string(val), 10, 64)
 		if err != nil {
 			return nil, err
 		}
@@ -241,6 +236,14 @@ func SQLValToDatum(v *sqlparser.SQLVal) (Datum, error) {
 			return nil, err
 		}
 		return NewDString(string(n), 16), nil
+	default:
+		return nil, errors.Errorf("unsupport.val.type[%+v]", reflect.TypeOf(v))
 	}
-	return nil, errors.Errorf("unsupport.val.type")
+}
+
+func ignoreCase(d Datum) bool {
+	if s, ok := d.(*DString); ok {
+		return s.ignoreCase
+	}
+	return true
 }

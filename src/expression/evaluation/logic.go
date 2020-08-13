@@ -4,12 +4,13 @@ import (
 	"expression/datum"
 )
 
+// AND process logic and.
 func AND(left, right Evaluation) Evaluation {
 	return &BinaryEval{
 		name:     "and",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			return &datum.IField{
 				ResTyp:   datum.IntResult,
@@ -36,12 +37,13 @@ func AND(left, right Evaluation) Evaluation {
 	}
 }
 
+// OR process logic or.
 func OR(left, right Evaluation) Evaluation {
 	return &BinaryEval{
 		name:     "or",
 		left:     left,
 		right:    right,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			return &datum.IField{
 				ResTyp:   datum.IntResult,
@@ -72,11 +74,12 @@ func OR(left, right Evaluation) Evaluation {
 	}
 }
 
+// NOT process logic NOT.
 func NOT(arg Evaluation) Evaluation {
 	return &UnaryEval{
 		name:     "not",
 		arg:      arg,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(arg *datum.IField) *datum.IField {
 			return &datum.IField{
 				ResTyp:   datum.IntResult,

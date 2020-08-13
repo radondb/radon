@@ -6,6 +6,7 @@ import (
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
 
+// TupleEval represents a tuple evaluation.
 type TupleEval struct {
 	args     []Evaluation
 	saved    *datum.DTuple
@@ -13,13 +14,15 @@ type TupleEval struct {
 	validate Validator
 }
 
+// TUPLE new a TupleEval.
 func TUPLE(args []Evaluation) Evaluation {
 	return &TupleEval{
 		args:     args,
-		validate: AllArgs(ResTyp(false, datum.RowResult)),
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
 	}
 }
 
+// FixField use to fix the IField by the fieldmap.
 func (e *TupleEval) FixField(fields map[string]*querypb.Field) (*datum.IField, error) {
 	for _, arg := range e.args {
 		field, err := arg.FixField(fields)
@@ -37,6 +40,7 @@ func (e *TupleEval) FixField(fields map[string]*querypb.Field) (*datum.IField, e
 	return &datum.IField{ResTyp: datum.RowResult}, nil
 }
 
+// Update used to update the result by the valuemap.
 func (e *TupleEval) Update(values map[string]datum.Datum) (datum.Datum, error) {
 	var vals []datum.Datum
 	for _, arg := range e.args {
@@ -50,6 +54,7 @@ func (e *TupleEval) Update(values map[string]datum.Datum) (datum.Datum, error) {
 	return e.saved, nil
 }
 
+// Result used to get the result.
 func (e *TupleEval) Result() datum.Datum {
 	return e.saved
 }

@@ -89,6 +89,7 @@ func IsStringType(typ ResultType) bool {
 	return typ == StringResult || typ == TimeResult || typ == DurationResult
 }
 
+// ConstantField get IField by the given constant datum.
 func ConstantField(d Datum) *IField {
 	switch d := d.(type) {
 	case *DInt:
@@ -99,8 +100,13 @@ func ConstantField(d Datum) *IField {
 			dec = DecimalMaxScale
 		}
 		return &IField{DecimalResult, uint32(dec), false, true}
+	case *DFloat:
+		return &IField{RealResult, NotFixedDec, false, true}
+	case *DNull:
+		return &IField{StringResult, 0, false, true}
 	case *DString:
-		return &IField{StringResult, 0, d.base == 16, true}
+		return &IField{StringResult, NotFixedDec, d.base == 16, true}
+	default:
+		return &IField{StringResult, NotFixedDec, false, true}
 	}
-	return &IField{RealResult, NotFixedDec, false, true}
 }

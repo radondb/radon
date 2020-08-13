@@ -10,6 +10,7 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 )
 
+// ParseExpression used to parse the expr to Plan.
 func ParseExpression(expr sqlparser.Expr) (Plan, error) {
 	switch expr := expr.(type) {
 	case *sqlparser.ColName:

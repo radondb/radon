@@ -6,23 +6,28 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Validator interface.
 type Validator interface {
 	Validate(args ...*datum.IField) error
 }
 
+// SingleArgValidator interface.
 type SingleArgValidator interface {
 	Validate(arg *datum.IField) error
 }
 
-type all struct {
+// AllVAL requires all validators to be met.
+type AllVAL struct {
 	validators []Validator
 }
 
-func All(validators ...Validator) *all {
-	return &all{validators: validators}
+// All new a AllVal.
+func All(validators ...Validator) *AllVAL {
+	return &AllVAL{validators: validators}
 }
 
-func (v *all) Validate(args ...*datum.IField) error {
+// Validate is used to verify that the condition is met.
+func (v *AllVAL) Validate(args ...*datum.IField) error {
 	for _, validator := range v.validators {
 		err := validator.Validate(args...)
 		if err != nil {
@@ -32,15 +37,18 @@ func (v *all) Validate(args ...*datum.IField) error {
 	return nil
 }
 
-type oneOf struct {
+// OneOfVAL requires one of the validators to be met.
+type OneOfVAL struct {
 	validators []Validator
 }
 
-func OneOf(validators ...Validator) *oneOf {
-	return &oneOf{validators: validators}
+// OneOf new a OneOfVAL.
+func OneOf(validators ...Validator) *OneOfVAL {
+	return &OneOfVAL{validators: validators}
 }
 
-func (v *oneOf) Validate(args ...*datum.IField) error {
+// Validate is used to verify that the condition is met.
+func (v *OneOfVAL) Validate(args ...*datum.IField) error {
 	errs := make([]error, len(v.validators))
 	for i, validator := range v.validators {
 		errs[i] = validator.Validate(args...)
@@ -51,97 +59,73 @@ func (v *oneOf) Validate(args ...*datum.IField) error {
 	return errors.Errorf("none.of.the.conditions.have.been.met: %+v", errs)
 }
 
-type singleOneOf struct {
-	validators []SingleArgValidator
-}
-
-func SingleOneOf(validators ...SingleArgValidator) *singleOneOf {
-	return &singleOneOf{validators: validators}
-}
-
-func (v *singleOneOf) Validate(arg *datum.IField) error {
-	errs := make([]error, len(v.validators))
-	for i, validator := range v.validators {
-		errs[i] = validator.Validate(arg)
-		if errs[i] == nil {
-			return nil
-		}
-	}
-
-	return errors.Errorf("none.of.the.conditions.have.been.met: %+v", errs)
-}
-
-type ifArgPresent struct {
-	i         int
-	validator Validator
-}
-
-func IfArgPresent(i int, validator Validator) *ifArgPresent {
-	return &ifArgPresent{i: i, validator: validator}
-}
-
-func (v *ifArgPresent) Validate(args ...*datum.IField) error {
-	if len(args) < v.i+1 {
-		return nil
-	}
-	return v.validator.Validate(args...)
-}
-
-type atLeastNArgs struct {
+// AtLeastNArgsVAL requires at least n args.
+type AtLeastNArgsVAL struct {
 	n int
 }
 
-func AtLeastNArgs(n int) *atLeastNArgs {
-	return &atLeastNArgs{n: n}
+// AtLeastNArgs new a AtLeastNArgsVAL.
+func AtLeastNArgs(n int) *AtLeastNArgsVAL {
+	return &AtLeastNArgsVAL{n: n}
 }
 
-func (v *atLeastNArgs) Validate(args ...*datum.IField) error {
+// Validate is used to verify that the condition is met.
+func (v *AtLeastNArgsVAL) Validate(args ...*datum.IField) error {
 	if len(args) < v.n {
 		return errors.Errorf("expected.at.least.%d.argument(s),but.got.%v", v.n, len(args))
 	}
 	return nil
 }
 
-type atMostNArgs struct {
+// AtMostNArgsVAL requires at most n args.
+type AtMostNArgsVAL struct {
 	n int
 }
 
-func AtMostNArgs(n int) *atMostNArgs {
-	return &atMostNArgs{n: n}
+// AtMostNArgs new a AtMostNArgsVAL.
+func AtMostNArgs(n int) *AtMostNArgsVAL {
+	return &AtMostNArgsVAL{n: n}
 }
 
-func (v *atMostNArgs) Validate(args ...*datum.IField) error {
+// Validate is used to verify that the condition is met.
+func (v *AtMostNArgsVAL) Validate(args ...*datum.IField) error {
 	if len(args) > v.n {
 		return errors.Errorf("expected.at.most.%d.argument(s),but.got.%v", v.n, len(args))
 	}
 	return nil
 }
 
-type exactlyNArgs struct {
+// ExactlyNArgsVAL requires n args.
+type ExactlyNArgsVAL struct {
 	n int
 }
 
-func ExactlyNArgs(n int) *exactlyNArgs {
-	return &exactlyNArgs{n: n}
+// ExactlyNArgs new a ExactlyNArgsVAL.
+func ExactlyNArgs(n int) *ExactlyNArgsVAL {
+	return &ExactlyNArgsVAL{n: n}
 }
 
-func (v *exactlyNArgs) Validate(args ...*datum.IField) error {
+// Validate is used to verify that the condition is met.
+func (v *ExactlyNArgsVAL) Validate(args ...*datum.IField) error {
 	if len(args) != v.n {
 		return errors.Errorf("expected.exactly.%d.argument(s),but.got.%v", v.n, len(args))
 	}
 	return nil
 }
 
-type resTyp struct {
+// TypeOfVAL requires the arg type must be the given type.
+type TypeOfVAL struct {
 	wanted bool
 	typ    datum.ResultType
 }
 
-func ResTyp(wanted bool, typ datum.ResultType) *resTyp {
-	return &resTyp{wanted: wanted, typ: typ}
+// TypeOf new a TypeOfVAL.
+func TypeOf(wanted bool, typ datum.ResultType) *TypeOfVAL {
+	return &TypeOfVAL{wanted: wanted, typ: typ}
 }
 
-func (v *resTyp) Validate(arg *datum.IField) error {
+// Validate is used to verify that the condition is met.
+func (v *TypeOfVAL) Validate(arg *datum.IField) error {
 	if v.typ == arg.ResTyp {
 		if !v.wanted {
 			return errors.Errorf("unexpected.result.type[%v].in.the.argument", v.typ)
@@ -154,31 +138,37 @@ func (v *resTyp) Validate(arg *datum.IField) error {
 	return nil
 }
 
-type arg struct {
+// ArgVAL requires the target arg  must meet the condition.
+type ArgVAL struct {
 	i         int
 	validator SingleArgValidator
 }
 
-func Arg(i int, validator SingleArgValidator) *arg {
-	return &arg{i: i, validator: validator}
+// Arg new a ArgVAL.
+func Arg(i int, validator SingleArgValidator) *ArgVAL {
+	return &ArgVAL{i: i, validator: validator}
 }
 
-func (v *arg) Validate(args ...*datum.IField) error {
+// Validate is used to verify that the condition is met.
+func (v *ArgVAL) Validate(args ...*datum.IField) error {
 	if err := v.validator.Validate(args[v.i]); err != nil {
 		return errors.Errorf("bad.argument.at.index %v: %v", v.i, err)
 	}
 	return nil
 }
 
-type allArgs struct {
+// AllArgsVAL requires all args must meet the condition.
+type AllArgsVAL struct {
 	validator SingleArgValidator
 }
 
-func AllArgs(validator SingleArgValidator) *allArgs {
-	return &allArgs{validator: validator}
+// AllArgs new a AllArgsVAL.
+func AllArgs(validator SingleArgValidator) *AllArgsVAL {
+	return &AllArgsVAL{validator: validator}
 }
 
-func (v *allArgs) Validate(args ...*datum.IField) error {
+// Validate is used to verify that the condition is met.
+func (v *AllArgsVAL) Validate(args ...*datum.IField) error {
 	for i := range args {
 		if err := v.validator.Validate(args[i]); err != nil {
 			return errors.Errorf("bad.argument.at.index %v: %v", i, err)

@@ -9,6 +9,7 @@ import (
 type binaryFixFieldFunc func(left, right *datum.IField) *datum.IField
 type binaryUpdateFunc func(field *datum.IField, left, right datum.Datum) (datum.Datum, error)
 
+// BinaryEval represents a binary evaluation.
 type BinaryEval struct {
 	name       string
 	left       Evaluation
@@ -20,6 +21,7 @@ type BinaryEval struct {
 	validate   Validator
 }
 
+// FixField use to fix the IField by the fieldmap.
 func (e *BinaryEval) FixField(fields map[string]*querypb.Field) (*datum.IField, error) {
 	left, err := e.left.FixField(fields)
 	if err != nil {
@@ -38,6 +40,7 @@ func (e *BinaryEval) FixField(fields map[string]*querypb.Field) (*datum.IField, 
 	return e.field, nil
 }
 
+// Update used to update the result by the valuemap.
 func (e *BinaryEval) Update(values map[string]datum.Datum) (datum.Datum, error) {
 	var err error
 	var left, right datum.Datum
@@ -54,6 +57,7 @@ func (e *BinaryEval) Update(values map[string]datum.Datum) (datum.Datum, error) 
 	return e.saved, nil
 }
 
+// Result used to get the result.
 func (e *BinaryEval) Result() datum.Datum {
 	return e.saved
 }

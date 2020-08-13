@@ -14,6 +14,7 @@ import (
 
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
@@ -27,7 +28,7 @@ func TestValToDatum(t *testing.T) {
 		{
 			val:    sqltypes.NULL,
 			resTyp: TypeNull,
-			resStr: "",
+			resStr: "NULL",
 		},
 		{
 			val:    sqltypes.NewInt32(1),
@@ -107,7 +108,7 @@ func TestDatumFunction(t *testing.T) {
 			integral: 0,
 			real:     0,
 			dec:      decimal.NewFromFloat(0),
-			str:      "",
+			str:      "NULL",
 		},
 		{
 			val:      NewDInt(1, true),
@@ -154,6 +155,15 @@ func TestDatumFunction(t *testing.T) {
 			dec:      decimal.NewFromFloat(1220),
 			str:      "1.22e3",
 		},
+		{
+			val:      NewDString("12", 16),
+			typ:      TypeString,
+			flag:     true,
+			integral: 12594,
+			real:     12594,
+			dec:      decimal.NewFromFloat(12594),
+			str:      "12",
+		},
 		// truncate.
 		{
 			val:      NewDString("1.22e", 10),
@@ -181,6 +191,36 @@ func TestDatumFunction(t *testing.T) {
 			real:     1.22,
 			dec:      decimal.NewFromFloat(1.22),
 			str:      "1.22",
+		},
+		// over range.
+		{
+			val:      NewDString("123456789", 16),
+			typ:      TypeString,
+			flag:     true,
+			integral: -1,
+			real:     18446744073709551615,
+			dec:      decimal.NewFromFloat(18446744073709551615),
+			str:      "123456789",
+		},
+		// over range.
+		{
+			val:      NewDString("2e+308", 10),
+			typ:      TypeString,
+			flag:     false,
+			integral: 9223372036854775807,
+			real:     1.7976931348623157e+308,
+			dec:      decimal.NewFromFloat(1.7976931348623157e+308),
+			str:      "2e+308",
+		},
+		// over range.
+		{
+			val:      NewDString("-2e+308", 10),
+			typ:      TypeString,
+			flag:     false,
+			integral: -9223372036854775808,
+			real:     -1.7976931348623157e+308,
+			dec:      decimal.NewFromFloat(-1.7976931348623157e+308),
+			str:      "-2e+308",
 		},
 		{
 			val:      NewDTime(sqltypes.Datetime, 2, 1453, 5, 29, 8, 0, 0, 230000),
@@ -251,4 +291,57 @@ func TestDatumFunction(t *testing.T) {
 		}
 		assert.Equal(t, tcase.str, d.ValStr())
 	}
+}
+
+func TestSQLValToDatum(t *testing.T) {
+	tcases := []struct {
+		val *sqlparser.SQLVal
+		res Datum
+		err string
+	}{
+		{
+			val: sqlparser.NewIntVal([]byte("123")),
+			res: NewDInt(123, false),
+		},
+		{
+			val: sqlparser.NewFloatVal([]byte("22.1")),
+			res: NewDDecimal(decimal.NewFromFloat(22.1)),
+		},
+		{
+			val: sqlparser.NewStrVal([]byte("byz")),
+			res: NewDString("byz", 10),
+		},
+		{
+			val: sqlparser.NewHexNum([]byte("0x3132")),
+			res: NewDString("12", 16),
+		},
+		{
+			val: sqlparser.NewHexVal([]byte("3132")),
+			res: NewDString("12", 16),
+		},
+		{
+			val: sqlparser.NewValArg([]byte("::arg")),
+			err: "unsupport.val.type[*sqlparser.SQLVal]",
+		},
+	}
+	for _, tcase := range tcases {
+		res, err := SQLValToDatum(tcase.val)
+		if err != nil {
+			assert.Equal(t, tcase.err, err.Error())
+		} else {
+			assert.Equal(t, tcase.res, res)
+		}
+	}
+}
+
+func TestSetIgnoreCase(t *testing.T) {
+	d := NewDString("12", 10)
+	assert.Equal(t, d.ignoreCase, true)
+	d.setIgnoreCase(false)
+	assert.Equal(t, d.ignoreCase, false)
+}
+
+func TestDTupleArgs(t *testing.T) {
+	d := NewDTuple(NewDInt(1, false), NewDString("1.22", 10))
+	assert.Equal(t, 2, len(d.Args()))
 }

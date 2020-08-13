@@ -1,12 +1,18 @@
 package planner
 
-import "fmt"
+import (
+	"fmt"
 
+	"expression/evaluation"
+)
+
+// UnaryPlan ...
 type UnaryPlan struct {
 	name string
 	arg  Plan
 }
 
+// NewUnaryPlan new a UnaryPlan.
 func NewUnaryPlan(name string, arg Plan) *UnaryPlan {
 	return &UnaryPlan{
 		name: name,
@@ -14,10 +20,21 @@ func NewUnaryPlan(name string, arg Plan) *UnaryPlan {
 	}
 }
 
+// Materialize returns Evaluation by Plan.
+func (p *UnaryPlan) Materialize() (evaluation.Evaluation, error) {
+	eval, err := p.arg.Materialize()
+	if err != nil {
+		return nil, err
+	}
+	return evaluation.EvalFactory(p.name, eval)
+}
+
+// Walk calls visit on the plan.
 func (p *UnaryPlan) Walk(visit Visit) error {
 	return Walk(visit, p.arg)
 }
 
+// String return the plan info.
 func (p *UnaryPlan) String() string {
 	return fmt.Sprintf("%s(%s)", p.name, p.arg.String())
 }

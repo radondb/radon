@@ -5,7 +5,6 @@ import (
 	"regexp"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/cache"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
 var (
@@ -16,13 +15,16 @@ type regexpVal struct {
 	re *regexp.Regexp
 }
 
+// Size implement the interface Value.Size() in LRUCache.
 func (val *regexpVal) Size() int {
 	return len(val.re.String())
 }
 
-func Regexp(left, right Datum, not bool) (Datum, error) {
+// Regexp used to check left whether match the regexp 'right'.
+// not means 'not regexp'.
+func Regexp(left, right Datum, not bool) Datum {
 	if CheckNull(left, right) {
-		return NewDNull(true), nil
+		return NewDNull(true)
 	}
 
 	regexpStr := right.ValStr()
@@ -42,6 +44,10 @@ func Regexp(left, right Datum, not bool) (Datum, error) {
 	if not {
 		match = !match
 	}
-	res := common.TernaryOpt(match, 1, 0).(int64)
-	return NewDInt(res, false), nil
+
+	var res int64
+	if match {
+		res = 1
+	}
+	return NewDInt(res, false)
 }
