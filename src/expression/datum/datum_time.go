@@ -76,8 +76,6 @@ func (*DTime) Type() Type {
 // toNumeric cast the DString to a numeric datum(DInt, DFloat, DDcimal).
 func (d *DTime) toNumeric() Datum {
 	switch d.typ {
-	case querypb.Type_DATE:
-		return NewDInt(dateToInt64(d), false)
 	case querypb.Type_TIMESTAMP, querypb.Type_DATETIME:
 		val := datetimeToInt64(d)
 		if d.fsp == 0 {
@@ -90,8 +88,9 @@ func (d *DTime) toNumeric() Datum {
 			return NewDInt(0, false)
 		}
 		return NewDDecimal(dval)
+	default:
+		return NewDInt(dateToInt64(d), false)
 	}
-	return NewDInt(0, false)
 }
 
 // ValInt used to return int64. true: unsigned, false: signed.

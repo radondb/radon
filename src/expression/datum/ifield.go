@@ -40,7 +40,7 @@ type IField struct {
 	// ResTyp result type.
 	ResTyp ResultType
 	// Decimal is the fraction digits.
-	Decimal uint32
+	Decimal int
 	// Flag, unsigned: true, signed: false.
 	Flag     bool
 	Constant bool
@@ -66,7 +66,7 @@ func NewIField(field *querypb.Field) *IField {
 	default:
 		resTyp = StringResult
 	}
-	return &IField{resTyp, field.Decimals, (field.Flags & 32) > 0, false}
+	return &IField{resTyp, int(field.Decimals), (field.Flags & 32) > 0, false}
 }
 
 // ToNumeric cast the resulttype to a numeric type.
@@ -99,7 +99,7 @@ func ConstantField(d Datum) *IField {
 		if dec > DecimalMaxScale {
 			dec = DecimalMaxScale
 		}
-		return &IField{DecimalResult, uint32(dec), false, true}
+		return &IField{DecimalResult, dec, false, true}
 	case *DFloat:
 		return &IField{RealResult, NotFixedDec, false, true}
 	case *DNull:

@@ -16,8 +16,10 @@ func GT(left, right Evaluation) Evaluation {
 				return datum.NewDNull(true)
 			}
 			res := cmpFunc(left, right)
-			if res == 0 {
-				res = -1
+			if res > 0 {
+				res = 1
+			} else {
+				res = 0
 			}
 			return datum.NewDInt(res, false)
 		},
@@ -36,8 +38,10 @@ func GE(left, right Evaluation) Evaluation {
 				return datum.NewDNull(true)
 			}
 			res := cmpFunc(left, right)
-			if res == 0 {
+			if res >= 0 {
 				res = 1
+			} else {
+				res = 0
 			}
 			return datum.NewDInt(res, false)
 		},
@@ -59,7 +63,7 @@ func EQ(left, right Evaluation) Evaluation {
 			if res == 0 {
 				res = 1
 			} else {
-				res = -1
+				res = 0
 			}
 			return datum.NewDInt(res, false)
 		},
@@ -81,7 +85,7 @@ func LT(left, right Evaluation) Evaluation {
 			if res < 0 {
 				res = 1
 			} else {
-				res = -1
+				res = 0
 			}
 			return datum.NewDInt(res, false)
 		},
@@ -101,7 +105,7 @@ func LE(left, right Evaluation) Evaluation {
 			}
 			res := cmpFunc(left, right)
 			if res > 0 {
-				res = -1
+				res = 0
 			} else {
 				res = 1
 			}
@@ -123,7 +127,7 @@ func NE(left, right Evaluation) Evaluation {
 			}
 			res := cmpFunc(left, right)
 			if res == 0 {
-				res = -1
+				res = 0
 			} else {
 				res = 1
 			}
@@ -144,7 +148,7 @@ func SE(left, right Evaluation) Evaluation {
 			if res == 0 {
 				res = 1
 			} else {
-				res = -1
+				res = 0
 			}
 			return datum.NewDInt(res, false)
 		},

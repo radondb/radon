@@ -76,8 +76,19 @@ func TestValToDatum(t *testing.T) {
 			resStr: "-12:12:12.2333",
 		},
 		{
-			val: sqltypes.MakeTrusted(sqltypes.Time, []byte("-12:12:12:2333")),
-			err: "incorrect.time.value.'-12:12:12:2333'",
+			val:    sqltypes.MakeTrusted(sqltypes.Int64, []byte("1.222")),
+			resTyp: TypeInt,
+			err:    "strconv.ParseInt: parsing \"1.222\": invalid syntax",
+		},
+		{
+			val:    sqltypes.MakeTrusted(sqltypes.Float64, []byte("1qa")),
+			resTyp: TypeFloat,
+			err:    "strconv.ParseFloat: parsing \"1qa\": invalid syntax",
+		},
+		{
+			val:    sqltypes.MakeTrusted(sqltypes.Decimal, []byte("1qa")),
+			resTyp: TypeDecimal,
+			err:    "can't convert 1qa to decimal",
 		},
 	}
 	for _, tcase := range tcases {
@@ -303,6 +314,7 @@ func TestSQLValToDatum(t *testing.T) {
 			val: sqlparser.NewIntVal([]byte("123")),
 			res: NewDInt(123, false),
 		},
+
 		{
 			val: sqlparser.NewFloatVal([]byte("22.1")),
 			res: NewDDecimal(decimal.NewFromFloat(22.1)),
@@ -318,6 +330,22 @@ func TestSQLValToDatum(t *testing.T) {
 		{
 			val: sqlparser.NewHexVal([]byte("3132")),
 			res: NewDString("12", 16),
+		},
+		{
+			val: sqlparser.NewFloatVal([]byte("22a1")),
+			err: "can't convert 22a1 to decimal",
+		},
+		{
+			val: sqlparser.NewIntVal([]byte("1a3")),
+			err: "strconv.ParseInt: parsing \"1a3\": invalid syntax",
+		},
+		{
+			val: sqlparser.NewHexNum([]byte("0x313")),
+			err: "encoding/hex: odd length hex string",
+		},
+		{
+			val: sqlparser.NewHexVal([]byte("313")),
+			err: "encoding/hex: odd length hex string",
 		},
 		{
 			val: sqlparser.NewValArg([]byte("::arg")),
@@ -344,4 +372,80 @@ func TestSetIgnoreCase(t *testing.T) {
 func TestDTupleArgs(t *testing.T) {
 	d := NewDTuple(NewDInt(1, false), NewDString("1.22", 10))
 	assert.Equal(t, 2, len(d.Args()))
+}
+
+func TestTimeToDatumErr(t *testing.T) {
+	tcases := []struct {
+		v   sqltypes.Value
+		err string
+	}{
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Timestamp, []byte("2i20-08-15 12:12:12.2333")),
+			err: "strconv.Atoi: parsing \"2i20\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Timestamp, []byte("2020-i8-15 12:12:12.2333")),
+			err: "strconv.Atoi: parsing \"i8\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Timestamp, []byte("2020-08-i5 12:12:12.2333")),
+			err: "strconv.Atoi: parsing \"i5\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Datetime, []byte("2020-08-15 i2:12:12.2333")),
+			err: "strconv.Atoi: parsing \"i2\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Datetime, []byte("2020-08-15 12:i2:12.2333")),
+			err: "strconv.Atoi: parsing \"i2\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Datetime, []byte("2020-08-15 12:12:i2.2333")),
+			err: "strconv.Atoi: parsing \"i2\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Datetime, []byte("2020-08-15 12:12:12.i333")),
+			err: "strconv.Atoi: parsing \"i333\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Date, []byte("2i20-08-15")),
+			err: "strconv.Atoi: parsing \"2i20\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Date, []byte("2020-i8-15")),
+			err: "strconv.Atoi: parsing \"i8\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Date, []byte("2020-08-i5")),
+			err: "strconv.Atoi: parsing \"i5\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Time, []byte("-12:12:12:2333")),
+			err: "incorrect.time.value.'-12:12:12:2333'",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Time, []byte("i2:12:12.2333")),
+			err: "strconv.Atoi: parsing \"i2\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Time, []byte("12:i2:12.2333")),
+			err: "strconv.Atoi: parsing \"i2\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Time, []byte("12:12:i2.2333")),
+			err: "strconv.Atoi: parsing \"i2\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Time, []byte("12:12:12.i333")),
+			err: "strconv.Atoi: parsing \"i333\": invalid syntax",
+		},
+		{
+			v:   sqltypes.MakeTrusted(sqltypes.Year, []byte("2003")),
+			err: "can.not.cast.'YEAR'.to.time.type",
+		},
+	}
+	for _, tcase := range tcases {
+		_, err := timeToDatum(tcase.v)
+		assert.Equal(t, tcase.err, err.Error())
+	}
 }

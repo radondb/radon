@@ -83,7 +83,21 @@ testshift:
 	cd src/vendor/github.com/radondb/shift&&make test
 
 # code coverage
-allpkgs =	expression/...
+allpkgs =	xbase\
+			ctl/v1/\
+			xcontext\
+			config\
+			router\
+			optimizer\
+			planner/...\
+			executor/...\
+			backend\
+			proxy\
+			audit\
+			syncer\
+			monitor\
+			plugins/...\
+			expression/...
 coverage:
 	go build -v -o bin/gotestcover \
 	src/vendor/github.com/pierrre/gotestcover/*.go;
