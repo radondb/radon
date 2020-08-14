@@ -39,7 +39,7 @@ func (e *VariableEval) Update(values map[string]datum.Datum) (datum.Datum, error
 		e.saved = v
 		return v, nil
 	}
-	return nil, nil
+	return nil, errors.Errorf("can.not.get.the.datum.value:%v", e.value)
 }
 
 // Result used to get the result.

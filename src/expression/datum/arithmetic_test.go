@@ -278,7 +278,7 @@ func TestMul(t *testing.T) {
 			// int64(math.UInt64).
 			v1:    NewDInt(2, true),
 			v2:    NewDDecimal(decimal.NewFromFloat(math.MaxFloat64)),
-			field: &IField{DecimalResult, 0, true, false},
+			field: &IField{DecimalResult, 0, false, false},
 			err:   "DOUBLE.value.is.out.of.range.in: '2' * '179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'",
 		},
 		{
@@ -354,7 +354,7 @@ func TestDiv(t *testing.T) {
 		{
 			v1:    NewDDecimal(decimal.NewFromFloat(math.MaxFloat64)),
 			v2:    NewDDecimal(decimal.NewFromFloat(0.5)),
-			field: &IField{DecimalResult, 0, true, false},
+			field: &IField{DecimalResult, 0, false, false},
 			err:   "DOUBLE.value.is.out.of.range.in: '179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000' / '0.5'",
 		},
 		{
@@ -367,6 +367,68 @@ func TestDiv(t *testing.T) {
 
 	for _, tcase := range tcases {
 		res, err := Div(tcase.v1, tcase.v2, tcase.field)
+		if err != nil {
+			assert.Equal(t, tcase.err, err.Error())
+		} else {
+			assert.Equal(t, tcase.resTyp, res.Type())
+			assert.Equal(t, tcase.resStr, res.ValStr())
+		}
+	}
+}
+
+func TestIntDiv(t *testing.T) {
+	tcases := []struct {
+		v1     Datum
+		v2     Datum
+		field  *IField
+		resTyp Type
+		resStr string
+		err    string
+	}{
+		{
+			v1:     NewDNull(true),
+			v2:     NewDInt(1, false),
+			field:  &IField{IntResult, 0, false, false},
+			resTyp: TypeNull,
+			resStr: "NULL",
+		},
+		{
+			v1:     NewDInt(-1, true),
+			v2:     NewDInt(1, false),
+			field:  &IField{IntResult, 4, true, false},
+			resTyp: TypeInt,
+			resStr: "9223372036854775808",
+		},
+		{
+			v1:     NewDInt(2, true),
+			v2:     NewDInt(0, false),
+			field:  &IField{IntResult, 0, true, false},
+			resTyp: TypeNull,
+			resStr: "NULL",
+		},
+		{
+			v1:     NewDFloat(1),
+			v2:     NewDInt(2, false),
+			field:  &IField{IntResult, NotFixedDec, false, false},
+			resTyp: TypeInt,
+			resStr: "0",
+		},
+		{
+			v1:    NewDDecimal(decimal.NewFromFloat(math.MaxFloat64)),
+			v2:    NewDDecimal(decimal.NewFromFloat(0.5)),
+			field: &IField{IntResult, 0, false, false},
+			err:   "BIGINT.value.is.out.of.range.in: '1.7976931348623157e+308' div '0.5'",
+		},
+		{
+			v1:    NewDFloat(math.MaxFloat64),
+			v2:    NewDString("0.5", 10),
+			field: &IField{IntResult, 0, true, false},
+			err:   "BIGINT.UNSIGNED.value.is.out.of.range.in: '1.7976931348623157e+308' div '0.5'",
+		},
+	}
+
+	for _, tcase := range tcases {
+		res, err := IntDiv(tcase.v1, tcase.v2, tcase.field)
 		if err != nil {
 			assert.Equal(t, tcase.err, err.Error())
 		} else {

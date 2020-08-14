@@ -47,10 +47,10 @@ func Float64ToInt64(f float64) int64 {
 	}
 
 	res := math.Trunc(f)
-	if res > math.MaxInt64 {
+	if res >= float64(math.MaxInt64) {
 		return math.MaxInt64
 	}
-	if res < math.MinInt64 {
+	if res < float64(math.MinInt64) {
 		return math.MinInt64
 	}
 	return int64(res)

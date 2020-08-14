@@ -21,7 +21,7 @@ func TestToNumeric(t *testing.T) {
 	tcases := []struct {
 		field  *IField
 		resTyp ResultType
-		dec    uint32
+		dec    int
 	}{
 		{
 			field:  &IField{StringResult, 0, false, false},

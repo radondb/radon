@@ -18,7 +18,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
-	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
@@ -97,7 +96,7 @@ func ValToDatum(v sqltypes.Value) (Datum, error) {
 		}
 		return NewDDecimal(dval), nil
 	case v.IsTemporal():
-		return timeToDatum(v.Raw(), v.Type())
+		return timeToDatum(v)
 	case v.IsNull():
 		return NewDNull(true), nil
 	}
@@ -105,7 +104,8 @@ func ValToDatum(v sqltypes.Value) (Datum, error) {
 }
 
 // timeToNumeric used to cast time type to numeric.
-func timeToDatum(val []byte, typ querypb.Type) (Datum, error) {
+func timeToDatum(v sqltypes.Value) (Datum, error) {
+	val, typ := v.Raw(), v.Type()
 	switch typ {
 	case sqltypes.Timestamp, sqltypes.Datetime:
 		year, err := strconv.Atoi(string(val[0:4]))

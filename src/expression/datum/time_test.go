@@ -421,3 +421,10 @@ func TestStrToYear(t *testing.T) {
 		}
 	}
 }
+
+func TestCalcDaysInYear(t *testing.T) {
+	assert.Equal(t, 365, calcDaysInYear(2019))
+	assert.Equal(t, 366, calcDaysInYear(2020))
+	assert.Equal(t, 366, calcDaysInYear(2000))
+	assert.Equal(t, 365, calcDaysInYear(1900))
+}

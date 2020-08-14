@@ -209,6 +209,7 @@ func NumToDatetime(num int64) (*DTime, error) {
 	if num <= 991231235959 {
 		num = num + 19000000000000
 	}
+
 ok:
 	part1 := num / 1000000
 	part2 := num - part1*1000000

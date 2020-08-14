@@ -15,7 +15,7 @@ type TupleEval struct {
 }
 
 // TUPLE new a TupleEval.
-func TUPLE(args []Evaluation) Evaluation {
+func TUPLE(args ...Evaluation) Evaluation {
 	return &TupleEval{
 		args:     args,
 		validate: AllArgs(TypeOf(false, datum.RowResult)),

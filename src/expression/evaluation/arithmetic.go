@@ -1,8 +1,6 @@
 package evaluation
 
 import (
-	"math"
-
 	"expression/datum"
 
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
@@ -25,9 +23,9 @@ func ADD(left, right Evaluation) Evaluation {
 				field.ResTyp = datum.DecimalResult
 			} else {
 				field.ResTyp = datum.IntResult
+				field.Flag = left.Flag || right.Flag
 			}
-			field.Decimal = common.TernaryOpt(left.Decimal > right.Decimal, left.Decimal, right.Decimal).(uint32)
-			field.Flag = left.Flag || right.Flag
+			field.Decimal = common.TernaryOpt(left.Decimal > right.Decimal, left.Decimal, right.Decimal).(int)
 			field.Constant = left.Constant && right.Constant
 			return field
 		},
@@ -47,16 +45,16 @@ func SUB(left, right Evaluation) Evaluation {
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			left.ToNumeric()
 			right.ToNumeric()
-			var field *datum.IField
+			field := &datum.IField{}
 			if left.ResTyp == datum.RealResult || right.ResTyp == datum.RealResult {
 				field.ResTyp = datum.RealResult
 			} else if left.ResTyp == datum.DecimalResult || right.ResTyp == datum.DecimalResult {
 				field.ResTyp = datum.DecimalResult
 			} else {
 				field.ResTyp = datum.IntResult
+				field.Flag = left.Flag || right.Flag
 			}
-			field.Decimal = common.TernaryOpt(left.Decimal > right.Decimal, left.Decimal, right.Decimal).(uint32)
-			field.Flag = left.Flag || right.Flag
+			field.Decimal = common.TernaryOpt(left.Decimal > right.Decimal, left.Decimal, right.Decimal).(int)
 			field.Constant = left.Constant && right.Constant
 			return field
 		},
@@ -76,13 +74,13 @@ func MUL(left, right Evaluation) Evaluation {
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			left.ToNumeric()
 			right.ToNumeric()
-			var field *datum.IField
+			field := &datum.IField{}
 			if left.ResTyp == datum.RealResult || right.ResTyp == datum.RealResult {
 				field.ResTyp = datum.RealResult
-				field.Decimal = common.TernaryOpt(left.Decimal+right.Decimal > datum.NotFixedDec, datum.NotFixedDec, left.Decimal+right.Decimal).(uint32)
+				field.Decimal = common.TernaryOpt(left.Decimal+right.Decimal > datum.NotFixedDec, datum.NotFixedDec, left.Decimal+right.Decimal).(int)
 			} else if left.ResTyp == datum.DecimalResult || right.ResTyp == datum.DecimalResult {
 				field.ResTyp = datum.DecimalResult
-				field.Decimal = common.TernaryOpt(left.Decimal+right.Decimal > datum.DecimalMaxScale, datum.DecimalMaxScale, left.Decimal+right.Decimal).(uint32)
+				field.Decimal = common.TernaryOpt(left.Decimal+right.Decimal > datum.DecimalMaxScale, datum.DecimalMaxScale, left.Decimal+right.Decimal).(int)
 			} else {
 				field.ResTyp = datum.IntResult
 				field.Flag = left.Flag || right.Flag
@@ -106,13 +104,13 @@ func DIV(left, right Evaluation) Evaluation {
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			left.ToNumeric()
 			right.ToNumeric()
-			var field *datum.IField
+			field := &datum.IField{}
 			if left.ResTyp == datum.RealResult || right.ResTyp == datum.RealResult {
 				field.ResTyp = datum.RealResult
-				field.Decimal = common.TernaryOpt(left.Decimal+4 > datum.NotFixedDec, datum.NotFixedDec, left.Decimal+4).(uint32)
+				field.Decimal = common.TernaryOpt(left.Decimal+4 > datum.NotFixedDec, datum.NotFixedDec, left.Decimal+4).(int)
 			} else {
 				field.ResTyp = datum.DecimalResult
-				field.Decimal = common.TernaryOpt(left.Decimal+4 > datum.DecimalMaxScale, datum.DecimalMaxScale, left.Decimal+4).(uint32)
+				field.Decimal = common.TernaryOpt(left.Decimal+4 > datum.DecimalMaxScale, datum.DecimalMaxScale, left.Decimal+4).(int)
 			}
 			field.Constant = left.Constant && right.Constant
 			return field
@@ -131,28 +129,15 @@ func INTDIV(left, right Evaluation) Evaluation {
 		right:    right,
 		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
-			left.ToNumeric()
-			right.ToNumeric()
-			var field *datum.IField
-			if left.ResTyp == datum.RealResult || right.ResTyp == datum.RealResult {
-				field.ResTyp = datum.RealResult
-				field.Decimal = common.TernaryOpt(left.Decimal+4 > datum.NotFixedDec, datum.NotFixedDec, left.Decimal+4).(uint32)
-			} else {
-				field.ResTyp = datum.DecimalResult
-				field.Decimal = common.TernaryOpt(left.Decimal+4 > datum.DecimalMaxScale, datum.DecimalMaxScale, left.Decimal+4).(uint32)
+			return &datum.IField{
+				ResTyp:   datum.IntResult,
+				Decimal:  0,
+				Flag:     left.Flag || right.Flag,
+				Constant: left.Constant && right.Constant,
 			}
-			field.Constant = left.Constant && right.Constant
-			return field
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
-			res, err := datum.Div(left, right, field)
-			if err != nil {
-				return nil, err
-			}
-			if datum.CheckNull(res) {
-				return res, nil
-			}
-			return datum.NewDInt(int64(math.Trunc(res.ValReal())), false), nil
+			return datum.IntDiv(left, right, field)
 		},
 	}
 }

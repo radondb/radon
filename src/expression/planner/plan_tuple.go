@@ -29,7 +29,7 @@ func (p *TuplePlan) Materialize() (evaluation.Evaluation, error) {
 		}
 		evals[i] = eval
 	}
-	return evaluation.TUPLE(evals), nil
+	return evaluation.TUPLE(evals...), nil
 }
 
 // Walk calls visit on the plan.
