@@ -12,7 +12,6 @@ import (
 	"strconv"
 
 	"github.com/shopspring/decimal"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
 // DFloat ...
@@ -32,7 +31,7 @@ func (d *DFloat) Type() Type {
 // ValInt used to return int64. true: unsigned, false: signed.
 func (d *DFloat) ValInt() (int64, bool) {
 	fval := float64(*d)
-	return common.Float64ToInt64(fval), false
+	return Float64ToInt64(fval), false
 }
 
 // ValReal used to return float64.
@@ -42,7 +41,7 @@ func (d *DFloat) ValReal() float64 {
 
 // ValDecimal used to return decimal.
 func (d *DFloat) ValDecimal() decimal.Decimal {
-	return decimal.NewFromFloat(d.ValReal())
+	return decimal.NewFromFloat(float64(*d))
 }
 
 // ValStr used to return string.

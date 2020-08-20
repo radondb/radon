@@ -1,4 +1,4 @@
-package common
+package datum
 
 import (
 	"testing"
@@ -49,6 +49,26 @@ func TestFloat64ToInt64(t *testing.T) {
 	}
 }
 
+func TestFloat64ToUint64(t *testing.T) {
+	tcases := []struct {
+		f float64
+		i uint64
+	}{
+		{
+			f: -0.55,
+			i: 0,
+		},
+		{
+			f: 2e20,
+			i: 18446744073709551615,
+		},
+	}
+	for _, tcase := range tcases {
+		res := Float64ToUint64(tcase.f)
+		assert.Equal(t, tcase.i, res)
+	}
+}
+
 func TestIsDecimalInf(t *testing.T) {
 	dec, _ := decimal.NewFromString("1.79769e+309")
 	res := IsDecimalInf(dec)
@@ -87,6 +107,58 @@ func TestGetFloatPrefix(t *testing.T) {
 	}
 	for _, tcase := range tcases {
 		res := GetFloatPrefix(tcase.in)
+		assert.Equal(t, tcase.out, res)
+	}
+}
+
+func TestStrToInt(t *testing.T) {
+	tcases := []struct {
+		in  string
+		out int64
+	}{
+		{
+			in:  "2e20s",
+			out: 9223372036854775807,
+		},
+		{
+			in:  " ",
+			out: 0,
+		},
+		{
+			in:  "-18446744073709551613s",
+			out: -9223372036854775808,
+		},
+	}
+	for _, tcase := range tcases {
+		res, _ := StrToInt(tcase.in, false)
+		assert.Equal(t, tcase.out, res)
+	}
+}
+
+func TestStrToUint(t *testing.T) {
+	tcases := []struct {
+		in  string
+		out uint64
+	}{
+		{
+			in:  "-.e222",
+			out: 0,
+		},
+		{
+			in:  "2e20s",
+			out: 2,
+		},
+		{
+			in:  " ",
+			out: 0,
+		},
+		{
+			in:  "-1",
+			out: 0,
+		},
+	}
+	for _, tcase := range tcases {
+		res, _ := StrToUint(tcase.in, true)
 		assert.Equal(t, tcase.out, res)
 	}
 }

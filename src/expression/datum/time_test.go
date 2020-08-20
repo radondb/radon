@@ -96,7 +96,7 @@ func TestNumToDatetime(t *testing.T) {
 		},
 	}
 	for _, tcase := range tcases {
-		res, err := NumToDatetime(tcase.in)
+		res, err := NumToDatetime(tcase.in, 0)
 		assert.Equal(t, tcase.typ, res.typ)
 		got := res.ValStr()
 		assert.Equal(t, tcase.out, got)
@@ -138,7 +138,7 @@ func TestNumToDuration(t *testing.T) {
 		},
 	}
 	for _, tcase := range tcases {
-		res, err := NumToDuration(tcase.in)
+		res, err := NumToDuration(tcase.in, 0)
 		got := res.ValStr()
 		assert.Equal(t, tcase.out, got)
 		if err != nil {
@@ -234,21 +234,21 @@ func TestStrToDatetime(t *testing.T) {
 			fsp:       2,
 			typ:       sqltypes.Datetime,
 			truncated: true,
-			out:       "0000-00-00 00:00:00",
+			out:       "0000-00-00 00:00:00.00",
 			err:       "truncated.incorrect.datetime.value: '2020 01 01'",
 		},
 		{
 			in:  "0000-00s",
 			fsp: 2,
 			typ: sqltypes.Datetime,
-			out: "0000-00-00 00:00:00",
+			out: "0000-00-00 00:00:00.00",
 			err: "incorrect.datetime.value: '0000-00s'",
 		},
 		{
 			in:  "0000-00",
 			fsp: 2,
 			typ: sqltypes.Datetime,
-			out: "0000-00-00 00:00:00",
+			out: "0000-00-00 00:00:00.00",
 		},
 		{
 			in:        "time",
@@ -309,7 +309,7 @@ func TestStrToDuration(t *testing.T) {
 		{
 			in:  "0000-00-00 00:00:00",
 			fsp: 3,
-			out: "00:00:00",
+			out: "00:00:00.000",
 		},
 		{
 			in:  "38:59:59.233",
@@ -334,24 +334,24 @@ func TestStrToDuration(t *testing.T) {
 		{
 			in:  "-  ",
 			fsp: 3,
-			out: "00:00:00",
+			out: "00:00:00.000",
 		},
 		{
 			in:  "1000000-12-21 12:23:32",
 			fsp: 3,
-			out: "00:00:00",
+			out: "00:00:00.000",
 			err: "truncated.incorrect.datetime.value: '1000000-12-21 12:23:32'",
 		},
 		{
 			in:  "200101235959.0000009s",
 			fsp: 6,
-			out: "00:00:00",
+			out: "00:00:00.000000",
 			err: "incorrect.time.value: '200101235959.0000009s'",
 		},
 		{
 			in:  "233961",
 			fsp: 4,
-			out: "00:00:00",
+			out: "00:00:00.0000",
 			err: "time.value'233961'.is.out.of.range",
 		},
 		{

@@ -155,14 +155,56 @@ func SE(left, right Evaluation) Evaluation {
 	}
 }
 
+// REGEXP process regexp operator.
+func REGEXP(left, right Evaluation) Evaluation {
+	return &BinaryEval{
+		name:     "regexp",
+		left:     left,
+		right:    right,
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
+		fixFieldFn: func(left, right *datum.IField) *datum.IField {
+			return &datum.IField{
+				ResTyp:   datum.IntResult,
+				Scale:    0,
+				Flag:     false,
+				Constant: false,
+			}
+		},
+		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
+			return datum.Regexp(left, right, false), nil
+		},
+	}
+}
+
+// NOTREGEXP process not regexp operator.
+func NOTREGEXP(left, right Evaluation) Evaluation {
+	return &BinaryEval{
+		name:     "not regexp",
+		left:     left,
+		right:    right,
+		validate: AllArgs(TypeOf(false, datum.RowResult)),
+		fixFieldFn: func(left, right *datum.IField) *datum.IField {
+			return &datum.IField{
+				ResTyp:   datum.IntResult,
+				Scale:    0,
+				Flag:     false,
+				Constant: false,
+			}
+		},
+		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
+			return datum.Regexp(left, right, true), nil
+		},
+	}
+}
+
 // IN process in operator.
 func IN(left, right Evaluation) Evaluation {
 	return &InEval{
 		left:  left,
 		right: right,
 		validate: All(
-			Arg(1, TypeOf(false, datum.RowResult)),
-			Arg(2, TypeOf(true, datum.RowResult)),
+			Arg(0, TypeOf(false, datum.RowResult)),
+			Arg(1, TypeOf(true, datum.RowResult)),
 		),
 	}
 }
@@ -174,8 +216,8 @@ func NOTIN(left, right Evaluation) Evaluation {
 		left:  left,
 		right: right,
 		validate: All(
-			Arg(1, TypeOf(false, datum.RowResult)),
-			Arg(2, TypeOf(true, datum.RowResult)),
+			Arg(0, TypeOf(false, datum.RowResult)),
+			Arg(1, TypeOf(true, datum.RowResult)),
 		),
 	}
 }
@@ -192,7 +234,7 @@ func LIKE(args ...Evaluation) Evaluation {
 		fixFieldFn: func(args ...*datum.IField) *datum.IField {
 			return &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     false,
 				Constant: false,
 			}
@@ -215,55 +257,13 @@ func NOTLIKE(args ...Evaluation) Evaluation {
 		fixFieldFn: func(args ...*datum.IField) *datum.IField {
 			return &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     false,
 				Constant: false,
 			}
 		},
 		updateFn: func(field *datum.IField, args ...datum.Datum) (datum.Datum, error) {
 			return datum.Like(args[0], args[1], args[2], true)
-		},
-	}
-}
-
-// REGEXP process regexp operator.
-func REGEXP(left, right Evaluation) Evaluation {
-	return &BinaryEval{
-		name:     "regexp",
-		left:     left,
-		right:    right,
-		validate: AllArgs(TypeOf(false, datum.RowResult)),
-		fixFieldFn: func(left, right *datum.IField) *datum.IField {
-			return &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			}
-		},
-		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
-			return datum.Regexp(left, right, false), nil
-		},
-	}
-}
-
-// NOTREGEXP process not regexp operator.
-func NOTREGEXP(left, right Evaluation) Evaluation {
-	return &BinaryEval{
-		name:     "not regexp",
-		left:     left,
-		right:    right,
-		validate: AllArgs(TypeOf(false, datum.RowResult)),
-		fixFieldFn: func(left, right *datum.IField) *datum.IField {
-			return &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			}
-		},
-		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
-			return datum.Regexp(left, right, true), nil
 		},
 	}
 }

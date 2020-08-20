@@ -13,24 +13,22 @@ import (
 	"strconv"
 
 	"github.com/shopspring/decimal"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
 // DString ...
 type DString struct {
 	value string
 	// default: 10.
-	base int
-	// defalut: true. When use keyword 'binary', it will be false.
-	ignoreCase bool
+	base    int
+	charset int
 }
 
 // NewDString new DString.
-func NewDString(v string, base int) *DString {
+func NewDString(v string, base, charset int) *DString {
 	return &DString{
-		value:      v,
-		base:       base,
-		ignoreCase: true,
+		value:   v,
+		base:    base,
+		charset: charset,
 	}
 }
 
@@ -39,27 +37,15 @@ func (d *DString) Type() Type {
 	return TypeString
 }
 
-func (d *DString) setIgnoreCase(ignoreCase bool) {
-	d.ignoreCase = ignoreCase
-}
-
 // toNumeric cast the DString to a numeric datum(DInt, DFloat, DDcimal).
 func (d *DString) toNumeric() Datum {
-	str := common.GetFloatPrefix(d.value)
-
 	if d.base == 16 {
-		hex := common.StrToHex(str)
-		val, err1 := strconv.ParseUint(hex, 16, 64)
-		if err1 != nil {
-			if err2, ok := err1.(*strconv.NumError); ok {
-				if err2.Err == strconv.ErrRange {
-					val = math.MaxUint64
-				}
-			}
-		}
+		hex := StrToHex(d.value)
+		val, _ := strconv.ParseUint(hex, 16, 64)
 		return NewDInt(int64(val), true)
 	}
 
+	str := GetFloatPrefix(d.value)
 	fval, err1 := strconv.ParseFloat(str, 64)
 	if err1 != nil {
 		if err2, ok := err1.(*strconv.NumError); ok {

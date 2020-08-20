@@ -49,7 +49,8 @@ func (d *DInt) ValReal() float64 {
 
 // ValDecimal used to return decimal.
 func (d *DInt) ValDecimal() decimal.Decimal {
-	return decimal.NewFromFloat(d.ValReal())
+	dec, _ := decimal.NewFromString(d.ValStr())
+	return dec
 }
 
 // ValStr used to return string.

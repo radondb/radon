@@ -20,8 +20,6 @@ import (
 )
 
 func TestNullsafeCompare(t *testing.T) {
-	dec, _ := decimal.NewFromString("14530529080000.2333")
-
 	tcases := []struct {
 		v1      Datum
 		v2      Datum
@@ -38,12 +36,12 @@ func TestNullsafeCompare(t *testing.T) {
 		},
 		{
 			v1:      NewDNull(true),
-			v2:      NewDString("2", 10),
+			v2:      NewDString("2", 10, 33),
 			cmpFunc: CompareInt,
 			res:     -1,
 		},
 		{
-			v1:      NewDString("2", 10),
+			v1:      NewDString("2", 10, 33),
 			v2:      NewDNull(true),
 			cmpFunc: CompareInt,
 			res:     1,
@@ -99,20 +97,20 @@ func TestNullsafeCompare(t *testing.T) {
 			res:     1,
 		},
 		{
-			v1:      NewDString("luoyang", 10),
-			v2:      NewDString("luohe", 10),
+			v1:      NewDString("luoyang", 10, 33),
+			v2:      NewDString("luohe", 10, 33),
 			cmpFunc: CompareString,
 			res:     1,
 		},
 		{
-			v1:      NewDString("luoyang", 10),
-			v2:      NewDString("luohe", 10),
+			v1:      NewDString("luoyang", 10, 33),
+			v2:      NewDString("luohe", 10, 33),
 			cmpFunc: CompareString,
 			res:     1,
 		},
 		{
-			v1:      NewDString("ABCD", 10),
-			v2:      NewDString("abcd", 10),
+			v1:      NewDString("ABCD", 10, 33),
+			v2:      NewDString("abcd", 10, 33),
 			cmpFunc: CompareString,
 			res:     0,
 			equal:   true,
@@ -125,7 +123,7 @@ func TestNullsafeCompare(t *testing.T) {
 		},
 		{
 			v1:      NewDFloat(2.33),
-			v2:      NewDString("2.33", 10),
+			v2:      NewDString("2.33", 10, 33),
 			cmpFunc: CompareFloat64,
 			res:     0,
 		},
@@ -148,13 +146,13 @@ func TestNullsafeCompare(t *testing.T) {
 			res:     -1,
 		},
 		{
-			v1:      NewDDecimal(dec),
+			v1:      NewDDecimal(decimal.NewFromFloatWithExponent(14530529080000.2333, -4)),
 			v2:      NewDTime(sqltypes.Datetime, 4, 1453, 5, 29, 9, 0, 0, 233300),
 			cmpFunc: CompareDatetime,
 			res:     -1,
 		},
 		{
-			v1:      NewDDecimal(dec),
+			v1:      NewDDecimal(decimal.NewFromFloatWithExponent(14530529080000.2333, -4)),
 			v2:      NewDTime(sqltypes.Datetime, 4, 1453, 5, 29, 8, 0, 0, 223300),
 			cmpFunc: CompareDatetime,
 			res:     1,
@@ -173,8 +171,8 @@ func TestNullsafeCompare(t *testing.T) {
 			res:     -1,
 		},
 		{
-			v1:      NewDDecimal(dec),
-			v2:      NewDDecimal(dec),
+			v1:      NewDDecimal(decimal.NewFromFloatWithExponent(14530529080000.2333, -4)),
+			v2:      NewDDecimal(decimal.NewFromFloatWithExponent(14530529080000.2333, -4)),
 			cmpFunc: CompareDatetime,
 			res:     0,
 			equal:   true,
@@ -213,7 +211,7 @@ func TestNullsafeCompare(t *testing.T) {
 			res:     0,
 		},
 		{
-			v1: NewDString("70000", 10),
+			v1: NewDString("70000", 10, 33),
 			v2: &Duration{
 				duration: time.Duration(8*3600) * time.Second,
 				fsp:      0,
@@ -235,8 +233,8 @@ func TestNullsafeCompare(t *testing.T) {
 			equal:   true,
 		},
 		{
-			v1:      NewDString("1T08:00:00", 10),
-			v2:      NewDString("1 08:00:00", 10),
+			v1:      NewDString("1T08:00:00", 10, 33),
+			v2:      NewDString("1 08:00:00", 10, 33),
 			cmpFunc: CompareDuration,
 			res:     1,
 		},
@@ -257,58 +255,58 @@ func TestGetCmpFunc(t *testing.T) {
 		res   string
 	}{
 		{
-			left:  &IField{IntResult, 0, false, false},
-			right: &IField{IntResult, 0, false, false},
+			left:  &IField{IntResult, 0, 0, false, false, 63},
+			right: &IField{IntResult, 0, 0, false, false, 63},
 			res:   "expression/datum.CompareInt",
 		},
 		{
-			left:  &IField{DurationResult, 0, false, false},
-			right: &IField{DurationResult, 0, false, false},
+			left:  &IField{DurationResult, 0, 0, false, false, 63},
+			right: &IField{DurationResult, 0, 0, false, false, 63},
 			res:   "expression/datum.CompareDuration",
 		},
 		{
-			left:  &IField{DecimalResult, 0, false, false},
-			right: &IField{IntResult, 0, false, false},
+			left:  &IField{DecimalResult, 0, 0, false, false, 63},
+			right: &IField{IntResult, 0, 0, false, false, 63},
 			res:   "expression/datum.CompareDecimal",
 		},
 		{
-			left:  &IField{IntResult, 0, false, false},
-			right: &IField{DecimalResult, 0, false, false},
+			left:  &IField{IntResult, 0, 0, false, false, 63},
+			right: &IField{DecimalResult, 0, 0, false, false, 63},
 			res:   "expression/datum.CompareDecimal",
 		},
 		{
-			left:  &IField{DecimalResult, 0, false, false},
-			right: &IField{StringResult, 0, false, true},
+			left:  &IField{DecimalResult, 0, 0, false, false, 63},
+			right: &IField{StringResult, 0, 0, false, true, 33},
 			res:   "expression/datum.CompareDecimal",
 		},
 		{
-			left:  &IField{TimeResult, 0, false, true},
-			right: &IField{DecimalResult, 0, false, false},
+			left:  &IField{TimeResult, 0, 0, false, true, 63},
+			right: &IField{DecimalResult, 0, 0, false, false, 63},
 			res:   "expression/datum.CompareDecimal",
 		},
 		{
-			left:  &IField{TimeResult, 0, false, false},
-			right: &IField{IntResult, 0, false, true},
+			left:  &IField{TimeResult, 0, 0, false, false, 63},
+			right: &IField{IntResult, 0, 0, false, true, 63},
 			res:   "expression/datum.CompareDatetime",
 		},
 		{
-			left:  &IField{StringResult, 0, false, true},
-			right: &IField{DurationResult, 0, false, false},
+			left:  &IField{StringResult, 0, 0, false, true, 33},
+			right: &IField{DurationResult, 0, 0, false, false, 63},
 			res:   "expression/datum.CompareDuration",
 		},
 		{
-			left:  &IField{StringResult, 0, false, false},
-			right: &IField{StringResult, 0, false, false},
+			left:  &IField{StringResult, 0, 0, false, false, 33},
+			right: &IField{StringResult, 0, 0, false, false, 33},
 			res:   "expression/datum.CompareString",
 		},
 		{
-			left:  &IField{StringResult, 0, false, false},
-			right: &IField{TimeResult, 0, false, false},
+			left:  &IField{StringResult, 0, 0, false, false, 33},
+			right: &IField{TimeResult, 0, 0, false, false, 63},
 			res:   "expression/datum.CompareDatetime",
 		},
 		{
-			left:  &IField{RealResult, 0, false, false},
-			right: &IField{StringResult, 0, false, false},
+			left:  &IField{RealResult, 0, 0, false, false, 63},
+			right: &IField{StringResult, 0, 0, false, false, 33},
 			res:   "expression/datum.CompareFloat64",
 		},
 	}

@@ -7,61 +7,6 @@ import (
 
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
-	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
-)
-
-var (
-	con1   = CONST(datum.NewDInt(3, false))
-	con2   = TUPLE(CONST(datum.NewDInt(3, false)), CONST(datum.NewDInt(1, true)))
-	con3   = CONST(datum.NewDInt(-1, true))
-	con4   = CONST(datum.NewDString("abc@de.fg", 10))
-	con5   = CONST(datum.NewDString("^[A-Z0-9._%-]+@[A-Z0-9.-]+.[A-Z]{2,4}$", 10))
-	fields = map[string]*querypb.Field{
-		"a": {
-			Name:     "a",
-			Type:     querypb.Type_INT32,
-			Decimals: 0,
-			Flags:    128,
-		},
-		"b": {
-			Name:     "b",
-			Type:     querypb.Type_UINT64,
-			Decimals: 0,
-			Flags:    32,
-		},
-		"c": {
-			Name:     "c",
-			Type:     querypb.Type_CHAR,
-			Decimals: 31,
-			Flags:    128,
-		},
-		"d": {
-			Name:     "d",
-			Type:     querypb.Type_FLOAT64,
-			Decimals: 31,
-			Flags:    128,
-		},
-		"e": {
-			Name:     "e",
-			Type:     querypb.Type_DECIMAL,
-			Decimals: 2,
-			Flags:    128,
-		},
-		"f": {
-			Name:     "e",
-			Type:     querypb.Type_NULL_TYPE,
-			Decimals: 2,
-			Flags:    128,
-		},
-	}
-	values = map[string]datum.Datum{
-		"a": datum.NewDInt(1, false),
-		"b": datum.NewDInt(2, true),
-		"c": datum.NewDString("c", 10),
-		"d": datum.NewDFloat(3.20),
-		"e": datum.NewDDecimal(decimal.NewFromFloat(4.30)),
-		"f": datum.NewDNull(true),
-	}
 )
 
 func TestArithmetic(t *testing.T) {
@@ -81,7 +26,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("f"),
 			field: &datum.IField{
 				ResTyp:   datum.RealResult,
-				Decimal:  31,
+				Scale:    31,
 				Flag:     false,
 				Constant: false,
 			},
@@ -94,7 +39,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("b"),
 			field: &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     true,
 				Constant: false,
 			},
@@ -107,7 +52,7 @@ func TestArithmetic(t *testing.T) {
 			right:    con1,
 			field: &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     false,
 				Constant: false,
 			},
@@ -120,7 +65,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("e"),
 			field: &datum.IField{
 				ResTyp:   datum.DecimalResult,
-				Decimal:  2,
+				Scale:    2,
 				Flag:     false,
 				Constant: false,
 			},
@@ -133,7 +78,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("d"),
 			field: &datum.IField{
 				ResTyp:   datum.RealResult,
-				Decimal:  31,
+				Scale:    31,
 				Flag:     false,
 				Constant: false,
 			},
@@ -147,7 +92,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("f"),
 			field: &datum.IField{
 				ResTyp:   datum.RealResult,
-				Decimal:  31,
+				Scale:    31,
 				Flag:     false,
 				Constant: false,
 			},
@@ -160,7 +105,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("a"),
 			field: &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     true,
 				Constant: false,
 			},
@@ -173,7 +118,7 @@ func TestArithmetic(t *testing.T) {
 			right:    con1,
 			field: &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     false,
 				Constant: false,
 			},
@@ -186,7 +131,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("e"),
 			field: &datum.IField{
 				ResTyp:   datum.DecimalResult,
-				Decimal:  2,
+				Scale:    2,
 				Flag:     false,
 				Constant: false,
 			},
@@ -199,7 +144,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("d"),
 			field: &datum.IField{
 				ResTyp:   datum.RealResult,
-				Decimal:  31,
+				Scale:    31,
 				Flag:     false,
 				Constant: false,
 			},
@@ -213,7 +158,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("f"),
 			field: &datum.IField{
 				ResTyp:   datum.RealResult,
-				Decimal:  31,
+				Scale:    31,
 				Flag:     false,
 				Constant: false,
 			},
@@ -226,7 +171,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("b"),
 			field: &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     true,
 				Constant: false,
 			},
@@ -239,7 +184,7 @@ func TestArithmetic(t *testing.T) {
 			right:    con1,
 			field: &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     false,
 				Constant: false,
 			},
@@ -252,7 +197,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("e"),
 			field: &datum.IField{
 				ResTyp:   datum.DecimalResult,
-				Decimal:  2,
+				Scale:    2,
 				Flag:     false,
 				Constant: false,
 			},
@@ -265,7 +210,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("d"),
 			field: &datum.IField{
 				ResTyp:   datum.RealResult,
-				Decimal:  31,
+				Scale:    31,
 				Flag:     false,
 				Constant: false,
 			},
@@ -279,7 +224,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("f"),
 			field: &datum.IField{
 				ResTyp:   datum.RealResult,
-				Decimal:  4,
+				Scale:    4,
 				Flag:     false,
 				Constant: false,
 			},
@@ -292,7 +237,7 @@ func TestArithmetic(t *testing.T) {
 			right:    con1,
 			field: &datum.IField{
 				ResTyp:   datum.DecimalResult,
-				Decimal:  4,
+				Scale:    4,
 				Flag:     false,
 				Constant: false,
 			},
@@ -305,7 +250,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("e"),
 			field: &datum.IField{
 				ResTyp:   datum.DecimalResult,
-				Decimal:  4,
+				Scale:    4,
 				Flag:     false,
 				Constant: false,
 			},
@@ -318,7 +263,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("d"),
 			field: &datum.IField{
 				ResTyp:   datum.RealResult,
-				Decimal:  31,
+				Scale:    31,
 				Flag:     false,
 				Constant: false,
 			},
@@ -332,7 +277,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("f"),
 			field: &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     false,
 				Constant: false,
 			},
@@ -345,7 +290,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("b"),
 			field: &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     true,
 				Constant: false,
 			},
@@ -358,7 +303,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("e"),
 			field: &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     true,
 				Constant: false,
 			},
@@ -371,7 +316,7 @@ func TestArithmetic(t *testing.T) {
 			right:    VAR("c"),
 			field: &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     false,
 				Constant: false,
 			},
@@ -421,10 +366,10 @@ func TestBinaryErr(t *testing.T) {
 			err:      "can.not.get.the.field.value:h",
 		},
 		{
-			name:     "a+con2",
+			name:     "a+tuple",
 			funcName: "+",
 			left:     VAR("a"),
-			right:    con2,
+			right:    tuple,
 			err:      "bad.argument.at.index 1: unexpected.result.type[4].in.the.argument",
 		},
 		{
