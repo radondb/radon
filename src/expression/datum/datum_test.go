@@ -46,12 +46,17 @@ func TestValToDatum(t *testing.T) {
 			resStr: "1.2200000286102295",
 		},
 		{
-			val:    sqltypes.MakeTrusted(sqltypes.Decimal, []byte("1.222")),
+			val:    sqltypes.MakeTrusted(sqltypes.Decimal, []byte("1222e-3")),
 			resTyp: TypeDecimal,
 			resStr: "1.222",
 		},
 		{
 			val:    sqltypes.NewVarChar("byz"),
+			resTyp: TypeString,
+			resStr: "byz",
+		},
+		{
+			val:    sqltypes.NewVarBinary("byz"),
 			resTyp: TypeString,
 			resStr: "byz",
 		},
@@ -109,7 +114,7 @@ func TestDatumFunction(t *testing.T) {
 		integral int64
 		flag     bool
 		real     float64
-		dec      decimal.Decimal
+		dec      string
 		str      string
 	}{
 		{
@@ -118,7 +123,7 @@ func TestDatumFunction(t *testing.T) {
 			flag:     false,
 			integral: 0,
 			real:     0,
-			dec:      decimal.NewFromFloat(0),
+			dec:      "0",
 			str:      "NULL",
 		},
 		{
@@ -127,7 +132,7 @@ func TestDatumFunction(t *testing.T) {
 			flag:     true,
 			integral: 1,
 			real:     1,
-			dec:      decimal.NewFromFloat(1),
+			dec:      "1",
 			str:      "1",
 		},
 		{
@@ -136,7 +141,7 @@ func TestDatumFunction(t *testing.T) {
 			flag:     false,
 			integral: 1,
 			real:     1,
-			dec:      decimal.NewFromFloat(1),
+			dec:      "1",
 			str:      "1",
 		},
 		{
@@ -145,7 +150,7 @@ func TestDatumFunction(t *testing.T) {
 			flag:     false,
 			integral: -2,
 			real:     -1.5,
-			dec:      decimal.NewFromFloat(-1.5),
+			dec:      "-1.5",
 			str:      "-1.5",
 		},
 		{
@@ -154,83 +159,83 @@ func TestDatumFunction(t *testing.T) {
 			flag:     false,
 			integral: 1,
 			real:     1.22,
-			dec:      decimal.NewFromFloat(1.22),
+			dec:      "1.22",
 			str:      "1.22",
 		},
 		{
-			val:      NewDString("1.22e3", 10),
+			val:      NewDString("1.22e3", 10, 33),
 			typ:      TypeString,
 			flag:     false,
 			integral: 1220,
 			real:     1220,
-			dec:      decimal.NewFromFloat(1220),
+			dec:      "1220",
 			str:      "1.22e3",
 		},
 		{
-			val:      NewDString("12", 16),
+			val:      NewDString("12", 16, 63),
 			typ:      TypeString,
 			flag:     true,
 			integral: 12594,
 			real:     12594,
-			dec:      decimal.NewFromFloat(12594),
+			dec:      "12594",
 			str:      "12",
 		},
 		// truncate.
 		{
-			val:      NewDString("1.22e", 10),
+			val:      NewDString("1.22e", 10, 33),
 			typ:      TypeString,
 			flag:     false,
 			integral: 1,
 			real:     1.22,
-			dec:      decimal.NewFromFloat(1.22),
+			dec:      "1.22",
 			str:      "1.22e",
 		},
 		{
-			val:      NewDString("15", 16),
+			val:      NewDString("15", 16, 63),
 			typ:      TypeString,
 			flag:     true,
 			integral: 12597,
 			real:     12597,
-			dec:      decimal.NewFromFloat(12597),
+			dec:      "12597",
 			str:      "15",
 		},
 		{
-			val:      NewDString("1.22", 10),
+			val:      NewDString("1.22", 10, 33),
 			typ:      TypeString,
 			flag:     false,
 			integral: 1,
 			real:     1.22,
-			dec:      decimal.NewFromFloat(1.22),
+			dec:      "1.22",
 			str:      "1.22",
 		},
 		// over range.
 		{
-			val:      NewDString("123456789", 16),
+			val:      NewDString("123456789", 16, 63),
 			typ:      TypeString,
 			flag:     true,
 			integral: -1,
 			real:     18446744073709551615,
-			dec:      decimal.NewFromFloat(18446744073709551615),
+			dec:      "18446744073709551615",
 			str:      "123456789",
 		},
 		// over range.
 		{
-			val:      NewDString("2e+308", 10),
+			val:      NewDString("2e+308", 10, 33),
 			typ:      TypeString,
 			flag:     false,
 			integral: 9223372036854775807,
 			real:     1.7976931348623157e+308,
-			dec:      decimal.NewFromFloat(1.7976931348623157e+308),
+			dec:      "179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 			str:      "2e+308",
 		},
 		// over range.
 		{
-			val:      NewDString("-2e+308", 10),
+			val:      NewDString("-2e+308", 10, 33),
 			typ:      TypeString,
 			flag:     false,
 			integral: -9223372036854775808,
 			real:     -1.7976931348623157e+308,
-			dec:      decimal.NewFromFloat(-1.7976931348623157e+308),
+			dec:      "-179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 			str:      "-2e+308",
 		},
 		{
@@ -239,7 +244,7 @@ func TestDatumFunction(t *testing.T) {
 			flag:     false,
 			integral: 14530529080000,
 			real:     1.453052908000023e+13,
-			dec:      decimal.NewFromFloat(14530529080000.23),
+			dec:      "14530529080000.23",
 			str:      "1453-05-29 08:00:00.23",
 		},
 		{
@@ -248,7 +253,7 @@ func TestDatumFunction(t *testing.T) {
 			flag:     false,
 			integral: 20200529080000,
 			real:     2.020052908e+13,
-			dec:      decimal.NewFromFloat(20200529080000),
+			dec:      "20200529080000",
 			str:      "2020-05-29 08:00:00",
 		},
 		{
@@ -257,7 +262,7 @@ func TestDatumFunction(t *testing.T) {
 			flag:     false,
 			integral: 20200529,
 			real:     2.0200529e+07,
-			dec:      decimal.NewFromFloat(20200529),
+			dec:      "20200529",
 			str:      "2020-05-29",
 		},
 		{
@@ -269,7 +274,7 @@ func TestDatumFunction(t *testing.T) {
 			flag:     false,
 			integral: 80000,
 			real:     80000,
-			dec:      decimal.NewFromFloat(80000),
+			dec:      "80000",
 			str:      "08:00:00",
 		},
 		{
@@ -281,11 +286,11 @@ func TestDatumFunction(t *testing.T) {
 			flag:     false,
 			integral: -80000,
 			real:     -80000.23,
-			dec:      decimal.NewFromFloat(-80000.23),
+			dec:      "-80000.23",
 			str:      "-08:00:00.2300",
 		},
 		{
-			val: NewDTuple(NewDInt(1, false), NewDString("1.22", 10)),
+			val: NewDTuple(NewDInt(1, false), NewDString("1.22", 10, 33)),
 			typ: TypeTuple,
 			str: "11.22",
 		},
@@ -298,7 +303,7 @@ func TestDatumFunction(t *testing.T) {
 			assert.Equal(t, tcase.integral, integral)
 			assert.Equal(t, tcase.flag, flag)
 			assert.Equal(t, tcase.real, d.ValReal())
-			assert.Equal(t, tcase.dec, d.ValDecimal())
+			assert.Equal(t, tcase.dec, d.ValDecimal().String())
 		}
 		assert.Equal(t, tcase.str, d.ValStr())
 	}
@@ -321,15 +326,15 @@ func TestSQLValToDatum(t *testing.T) {
 		},
 		{
 			val: sqlparser.NewStrVal([]byte("byz")),
-			res: NewDString("byz", 10),
+			res: NewDString("byz", 10, 33),
 		},
 		{
 			val: sqlparser.NewHexNum([]byte("0x3132")),
-			res: NewDString("12", 16),
+			res: NewDString("12", 16, 63),
 		},
 		{
 			val: sqlparser.NewHexVal([]byte("3132")),
-			res: NewDString("12", 16),
+			res: NewDString("12", 16, 63),
 		},
 		{
 			val: sqlparser.NewFloatVal([]byte("22a1")),
@@ -362,15 +367,8 @@ func TestSQLValToDatum(t *testing.T) {
 	}
 }
 
-func TestSetIgnoreCase(t *testing.T) {
-	d := NewDString("12", 10)
-	assert.Equal(t, d.ignoreCase, true)
-	d.setIgnoreCase(false)
-	assert.Equal(t, d.ignoreCase, false)
-}
-
 func TestDTupleArgs(t *testing.T) {
-	d := NewDTuple(NewDInt(1, false), NewDString("1.22", 10))
+	d := NewDTuple(NewDInt(1, false), NewDString("1.22", 10, 33))
 	assert.Equal(t, 2, len(d.Args()))
 }
 

@@ -10,7 +10,6 @@ package datum
 
 import (
 	"github.com/shopspring/decimal"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
 // DDecimal ...
@@ -32,8 +31,7 @@ func (d *DDecimal) Type() Type {
 
 // ValInt used to return int64. true: unsigned, false: signed.
 func (d *DDecimal) ValInt() (int64, bool) {
-	fval, _ := d.value.Float64()
-	return common.Float64ToInt64(fval), false
+	return CastDecimalToInt(d.value, false), false
 }
 
 // ValReal used to return float64.

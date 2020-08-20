@@ -40,7 +40,7 @@ func (e *CompareEval) FixField(fields map[string]*querypb.Field) (*datum.IField,
 	e.cmpFunc = datum.GetCmpFunc(left, right)
 	return &datum.IField{
 		ResTyp:   datum.IntResult,
-		Decimal:  0,
+		Scale:    0,
 		Flag:     false,
 		Constant: false,
 	}, nil

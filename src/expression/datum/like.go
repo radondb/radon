@@ -16,7 +16,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/cache"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
 var (
@@ -186,7 +185,7 @@ func Like(left, right, escape Datum, not bool) (Datum, error) {
 
 	pattern := right.ValStr()
 	ignoreCase := ignoreCase(left) && ignoreCase(right)
-	key := fmt.Sprintf("%s|%s|%d", pattern, string(esc), common.TernaryOpt(ignoreCase, 1, 0).(int))
+	key := fmt.Sprintf("%s|%s|%d", pattern, string(esc), TernaryOpt(ignoreCase, 1, 0).(int))
 
 	var cmp *CmpLike
 	if val, ok := likeCache.Get(key); ok {

@@ -10,7 +10,6 @@ package datum
 
 import (
 	"testing"
-	"time"
 
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
@@ -24,17 +23,22 @@ func TestToNumeric(t *testing.T) {
 		dec    int
 	}{
 		{
-			field:  &IField{StringResult, 0, false, false},
+			field:  &IField{StringResult, 0, 0, false, false, 33},
 			resTyp: RealResult,
 			dec:    31,
 		},
 		{
-			field:  &IField{TimeResult, 2, false, false},
+			field:  &IField{StringResult, 5, 0, true, false, 63},
+			resTyp: IntResult,
+			dec:    0,
+		},
+		{
+			field:  &IField{TimeResult, 0, 2, false, false, 63},
 			resTyp: DecimalResult,
 			dec:    2,
 		},
 		{
-			field:  &IField{DurationResult, 0, false, false},
+			field:  &IField{DurationResult, 0, 0, false, false, 63},
 			resTyp: IntResult,
 			dec:    0,
 		},
@@ -43,7 +47,7 @@ func TestToNumeric(t *testing.T) {
 		field := tcase.field
 		field.ToNumeric()
 		assert.Equal(t, tcase.resTyp, field.ResTyp)
-		assert.Equal(t, tcase.dec, field.Decimal)
+		assert.Equal(t, tcase.dec, field.Scale)
 	}
 }
 
@@ -59,7 +63,7 @@ func TestNewIField(t *testing.T) {
 				Decimals: 0,
 				Flags:    32,
 			},
-			res: &IField{IntResult, 0, true, false},
+			res: &IField{IntResult, 0, 0, true, false, 63},
 		},
 		{
 			field: &querypb.Field{
@@ -68,16 +72,17 @@ func TestNewIField(t *testing.T) {
 				Decimals: 4,
 				Flags:    129,
 			},
-			res: &IField{RealResult, 4, false, false},
+			res: &IField{RealResult, 0, 4, false, false, 63},
 		},
 		{
 			field: &querypb.Field{
-				Name:     "id",
-				Type:     querypb.Type_DECIMAL,
-				Decimals: 4,
-				Flags:    129,
+				Name:         "id",
+				Type:         querypb.Type_DECIMAL,
+				ColumnLength: 12,
+				Decimals:     4,
+				Flags:        129,
 			},
-			res: &IField{DecimalResult, 4, false, false},
+			res: &IField{DecimalResult, 12, 4, false, false, 63},
 		},
 		{
 			field: &querypb.Field{
@@ -86,7 +91,7 @@ func TestNewIField(t *testing.T) {
 				Decimals: 4,
 				Flags:    129,
 			},
-			res: &IField{TimeResult, 4, false, false},
+			res: &IField{TimeResult, 0, 4, false, false, 63},
 		},
 		{
 			field: &querypb.Field{
@@ -95,16 +100,27 @@ func TestNewIField(t *testing.T) {
 				Decimals: 4,
 				Flags:    129,
 			},
-			res: &IField{DurationResult, 4, false, false},
+			res: &IField{DurationResult, 0, 4, false, false, 63},
 		},
 		{
 			field: &querypb.Field{
-				Name:     "id",
-				Type:     querypb.Type_CHAR,
-				Decimals: 0,
-				Flags:    129,
+				Name:         "id",
+				Type:         querypb.Type_CHAR,
+				ColumnLength: 15,
+				Decimals:     31,
+				Flags:        129,
 			},
-			res: &IField{StringResult, 0, false, false},
+			res: &IField{StringResult, 5, 31, false, false, 33},
+		},
+		{
+			field: &querypb.Field{
+				Name:         "id",
+				Type:         querypb.Type_BINARY,
+				ColumnLength: 15,
+				Decimals:     31,
+				Flags:        129,
+			},
+			res: &IField{StringResult, 15, 31, false, false, 63},
 		},
 	}
 	for _, tcase := range tcases {
@@ -113,38 +129,30 @@ func TestNewIField(t *testing.T) {
 	}
 }
 
-func TestConstantField(t *testing.T) {
-	dec, _ := decimal.NewFromString("1.2222222222222222222222222222222222")
+func TestField(t *testing.T) {
 	tcases := []struct {
 		val Datum
 		res *IField
 	}{
 		{
 			val: NewDInt(1, false),
-			res: &IField{IntResult, 0, false, true},
+			res: &IField{IntResult, 0, 0, false, true, 63},
 		},
 		{
-			val: NewDDecimal(dec),
-			res: &IField{DecimalResult, 30, false, true},
+			val: NewDDecimal(decimal.NewFromFloatWithExponent(1.2222222222222222222222222222222222, -31)),
+			res: &IField{DecimalResult, 0, 30, false, true, 63},
 		},
 		{
-			val: NewDString("1", 16),
-			res: &IField{StringResult, 31, true, true},
+			val: NewDString("1", 10, 63),
+			res: &IField{StringResult, 0, 31, false, true, 33},
 		},
 		{
-			val: NewDFloat(1.2),
-			res: &IField{RealResult, 31, false, true},
+			val: NewDString("1", 16, 63),
+			res: &IField{StringResult, 0, 0, true, true, 63},
 		},
 		{
 			val: NewDNull(true),
-			res: &IField{StringResult, 0, false, true},
-		},
-		{
-			val: &Duration{
-				duration: time.Duration(8*3600) * time.Second,
-				fsp:      0,
-			},
-			res: &IField{StringResult, 31, false, true},
+			res: &IField{IntResult, 0, 0, true, true, 63},
 		},
 	}
 	for _, tcase := range tcases {

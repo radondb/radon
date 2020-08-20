@@ -7,6 +7,7 @@ import (
 	"expression/datum"
 
 	"github.com/pkg/errors"
+	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 )
 
@@ -102,7 +103,7 @@ func ParseExpression(expr sqlparser.Expr) (Plan, error) {
 		}
 
 		unit := strings.ToLower(expr.Unit)
-		return NewBinaryPlan("interval", subExpr, NewConstantPlan(datum.NewDString(unit, 10))), nil
+		return NewBinaryPlan("interval", subExpr, NewConstantPlan(datum.NewDString(unit, 10, sqldb.CharacterSetUtf8))), nil
 	case *sqlparser.RangeCond:
 		return parseRangeCond(expr)
 	case *sqlparser.IsExpr:
@@ -120,7 +121,7 @@ func ParseExpression(expr sqlparser.Expr) (Plan, error) {
 	case *sqlparser.GroupConcatExpr:
 		// TODO: order by.
 		args := make([]Plan, len(expr.Exprs)+1)
-		args[0] = NewConstantPlan(datum.NewDString(expr.Separator, 10))
+		args[0] = NewConstantPlan(datum.NewDString(expr.Separator, 10, sqldb.CharacterSetBinary))
 		for i, expr := range expr.Exprs {
 			aliased, ok := expr.(*sqlparser.AliasedExpr)
 			if !ok {
@@ -342,7 +343,7 @@ func parseLikeExpr(op string, left, right Plan, escape sqlparser.Expr) (Plan, er
 			return nil, err
 		}
 	} else {
-		esc = NewConstantPlan(datum.NewDString("\\", 10))
+		esc = NewConstantPlan(datum.NewDString("\\", 10, sqldb.CharacterSetBinary))
 	}
 	return NewFunctionPlan(op, left, right, esc), nil
 }

@@ -11,17 +11,10 @@ package datum
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/shopspring/decimal"
-)
-
-var (
-	// ZeroDuration is the zero value for Duration type.
-	ZeroDuration = &Duration{
-		duration: time.Duration(0),
-		fsp:      0,
-	}
 )
 
 // Duration is the type for MySQL TIME type.
@@ -30,6 +23,14 @@ type Duration struct {
 	// fsp is short for Fractional Seconds Precision.
 	// See http://dev.mysql.com/doc/refman/5.7/en/fractional-seconds.html
 	fsp int
+}
+
+// ZeroDuration is the zero value for Duration type.
+func ZeroDuration(fsp int) *Duration {
+	return &Duration{
+		duration: 0,
+		fsp:      fsp,
+	}
 }
 
 // Type return datum type.
@@ -82,6 +83,17 @@ func (d *Duration) ValStr() string {
 		buf.WriteString(fracStr[0:d.fsp])
 	}
 	return buf.String()
+}
+
+// RoundFsp round the microsecond with fsp.
+// Such as: 23:59:59.999 fsp:2 -> 24:00:00.00
+func (d *Duration) RoundFsp(fsp int) *Duration {
+	if fsp < d.fsp {
+		n := time.Date(0, 0, 0, 0, 0, 0, 0, time.Local)
+		d.duration = n.Add(d.duration).Round(time.Duration(math.Pow10(9-fsp)) * time.Nanosecond).Sub(n)
+	}
+	d.fsp = fsp
+	return d
 }
 
 // toTime cast Duration to DTime.

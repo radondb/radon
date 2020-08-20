@@ -11,23 +11,11 @@ package datum
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/shopspring/decimal"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
-)
-
-var (
-	// ZeroDate is the zero value for Date type.
-	ZeroDate = &DTime{
-		typ: querypb.Type_DATE,
-		fsp: 0,
-	}
-	// ZeroDateTime is the zero value for DateTime type.
-	ZeroDateTime = &DTime{
-		typ: querypb.Type_DATETIME,
-		fsp: 0,
-	}
 )
 
 // DTime is the internal struct type for Time.
@@ -65,6 +53,14 @@ func NewDTime(typ querypb.Type, fsp, year, month, day, hour, minute, second, mic
 		minute:      uint8(minute),
 		second:      uint8(second),
 		microsecond: uint32(microsec),
+	}
+}
+
+// ZeroDTime is the zero value for DTime.
+func ZeroDTime(typ querypb.Type, fsp int) *DTime {
+	return &DTime{
+		typ: typ,
+		fsp: fsp,
 	}
 }
 
@@ -125,13 +121,30 @@ func (d *DTime) ValStr() string {
 	return buf.String()
 }
 
+func (d *DTime) RoundFsp(fsp int) *DTime {
+	round := false
+	if fsp < d.fsp {
+		microsec := float64(d.microsecond)
+		microsec = (microsec/math.Pow10(d.fsp-fsp-1) + 5) / 10
+		if microsec >= math.Pow10(fsp) {
+			round = true
+		}
+		d.microsecond = uint32(microsec) * uint32(math.Pow10(6-fsp))
+	}
+	if round {
+		tmp := time.Date(int(d.year), time.Month(d.month), int(d.day), int(d.hour), int(d.minute), int(d.second), 0, time.Local)
+		return castToDTime(tmp.Add(time.Second), fsp)
+	}
+	return d
+}
+
 // toDuration converts mysql datetime, timestamp and date to mysql time type.
 // e.g,
 // 2012-12-12T10:10:10 -> 10:10:10
 // 2012-12-12 -> 0
 func (d *DTime) toDuration() *Duration {
-	if CompareDatetime(d, ZeroDate) == 0 {
-		return ZeroDuration
+	if CompareDatetime(d, ZeroDTime(querypb.Type_DATE, 0)) == 0 {
+		return ZeroDuration(d.fsp)
 	}
 
 	dur := time.Duration(int64(d.hour)*3600+int64(d.minute)*60+int64(d.second))*time.Second + time.Duration(int64(d.microsecond)*1000)

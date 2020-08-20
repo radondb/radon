@@ -2,8 +2,6 @@ package evaluation
 
 import (
 	"expression/datum"
-
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
 // ADD returns the sum of the two arguments.
@@ -16,7 +14,11 @@ func ADD(left, right Evaluation) Evaluation {
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			left.ToNumeric()
 			right.ToNumeric()
-			field := &datum.IField{}
+
+			field := &datum.IField{
+				Scale:    datum.TernaryOpt(left.Scale > right.Scale, left.Scale, right.Scale).(int),
+				Constant: left.Constant && right.Constant,
+			}
 			if left.ResTyp == datum.RealResult || right.ResTyp == datum.RealResult {
 				field.ResTyp = datum.RealResult
 			} else if left.ResTyp == datum.DecimalResult || right.ResTyp == datum.DecimalResult {
@@ -25,8 +27,6 @@ func ADD(left, right Evaluation) Evaluation {
 				field.ResTyp = datum.IntResult
 				field.Flag = left.Flag || right.Flag
 			}
-			field.Decimal = common.TernaryOpt(left.Decimal > right.Decimal, left.Decimal, right.Decimal).(int)
-			field.Constant = left.Constant && right.Constant
 			return field
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
@@ -45,7 +45,11 @@ func SUB(left, right Evaluation) Evaluation {
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			left.ToNumeric()
 			right.ToNumeric()
-			field := &datum.IField{}
+			field := &datum.IField{
+				Scale:    datum.TernaryOpt(left.Scale > right.Scale, left.Scale, right.Scale).(int),
+				Constant: left.Constant && right.Constant,
+			}
+
 			if left.ResTyp == datum.RealResult || right.ResTyp == datum.RealResult {
 				field.ResTyp = datum.RealResult
 			} else if left.ResTyp == datum.DecimalResult || right.ResTyp == datum.DecimalResult {
@@ -54,8 +58,6 @@ func SUB(left, right Evaluation) Evaluation {
 				field.ResTyp = datum.IntResult
 				field.Flag = left.Flag || right.Flag
 			}
-			field.Decimal = common.TernaryOpt(left.Decimal > right.Decimal, left.Decimal, right.Decimal).(int)
-			field.Constant = left.Constant && right.Constant
 			return field
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
@@ -74,18 +76,19 @@ func MUL(left, right Evaluation) Evaluation {
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			left.ToNumeric()
 			right.ToNumeric()
-			field := &datum.IField{}
+			field := &datum.IField{
+				Constant: left.Constant && right.Constant,
+			}
 			if left.ResTyp == datum.RealResult || right.ResTyp == datum.RealResult {
 				field.ResTyp = datum.RealResult
-				field.Decimal = common.TernaryOpt(left.Decimal+right.Decimal > datum.NotFixedDec, datum.NotFixedDec, left.Decimal+right.Decimal).(int)
+				field.Scale = datum.TernaryOpt(left.Scale+right.Scale > datum.NotFixedDec, datum.NotFixedDec, left.Scale+right.Scale).(int)
 			} else if left.ResTyp == datum.DecimalResult || right.ResTyp == datum.DecimalResult {
 				field.ResTyp = datum.DecimalResult
-				field.Decimal = common.TernaryOpt(left.Decimal+right.Decimal > datum.DecimalMaxScale, datum.DecimalMaxScale, left.Decimal+right.Decimal).(int)
+				field.Scale = datum.TernaryOpt(left.Scale+right.Scale > datum.DecimalMaxScale, datum.DecimalMaxScale, left.Scale+right.Scale).(int)
 			} else {
 				field.ResTyp = datum.IntResult
 				field.Flag = left.Flag || right.Flag
 			}
-			field.Constant = left.Constant && right.Constant
 			return field
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
@@ -104,15 +107,16 @@ func DIV(left, right Evaluation) Evaluation {
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			left.ToNumeric()
 			right.ToNumeric()
-			field := &datum.IField{}
+			field := &datum.IField{
+				Constant: left.Constant && right.Constant,
+			}
 			if left.ResTyp == datum.RealResult || right.ResTyp == datum.RealResult {
 				field.ResTyp = datum.RealResult
-				field.Decimal = common.TernaryOpt(left.Decimal+4 > datum.NotFixedDec, datum.NotFixedDec, left.Decimal+4).(int)
+				field.Scale = datum.TernaryOpt(left.Scale+4 > datum.NotFixedDec, datum.NotFixedDec, left.Scale+4).(int)
 			} else {
 				field.ResTyp = datum.DecimalResult
-				field.Decimal = common.TernaryOpt(left.Decimal+4 > datum.DecimalMaxScale, datum.DecimalMaxScale, left.Decimal+4).(int)
+				field.Scale = datum.TernaryOpt(left.Scale+4 > datum.DecimalMaxScale, datum.DecimalMaxScale, left.Scale+4).(int)
 			}
-			field.Constant = left.Constant && right.Constant
 			return field
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
@@ -131,7 +135,7 @@ func INTDIV(left, right Evaluation) Evaluation {
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			return &datum.IField{
 				ResTyp:   datum.IntResult,
-				Decimal:  0,
+				Scale:    0,
 				Flag:     left.Flag || right.Flag,
 				Constant: left.Constant && right.Constant,
 			}

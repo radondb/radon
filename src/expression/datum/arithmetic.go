@@ -12,7 +12,6 @@ import (
 	"math"
 
 	"github.com/pkg/errors"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
 // Add operator.
@@ -52,7 +51,7 @@ func Add(v1, v2 Datum, field *IField) (Datum, error) {
 	case DecimalResult:
 		val1, val2 := v1.ValDecimal(), v2.ValDecimal()
 		res := val1.Add(val2)
-		if common.IsDecimalInf(res) {
+		if IsDecimalInf(res) {
 			return nil, errors.Errorf("DOUBLE.value.is.out.of.range.in: '%v' + '%v'", val1, val2)
 		}
 		return NewDDecimal(res), nil
@@ -100,7 +99,7 @@ func Sub(v1, v2 Datum, field *IField) (Datum, error) {
 	case DecimalResult:
 		val1, val2 := v1.ValDecimal(), v2.ValDecimal()
 		res := val1.Sub(val2)
-		if common.IsDecimalInf(res) {
+		if IsDecimalInf(res) {
 			return nil, errors.Errorf("DOUBLE.value.is.out.of.range.in: '%v' - '%v'", val1, val2)
 		}
 		return NewDDecimal(res), nil
@@ -140,7 +139,7 @@ func Mul(v1, v2 Datum, field *IField) (Datum, error) {
 	case DecimalResult:
 		val1, val2 := v1.ValDecimal(), v2.ValDecimal()
 		res := val1.Mul(val2)
-		if common.IsDecimalInf(res) {
+		if IsDecimalInf(res) {
 			return nil, errors.Errorf("DOUBLE.value.is.out.of.range.in: '%v' * '%v'", val1, val2)
 		}
 		return NewDDecimal(res), nil
@@ -165,8 +164,8 @@ func Div(v1, v2 Datum, field *IField) (Datum, error) {
 		if val2.IsZero() {
 			return NewDNull(true), nil
 		}
-		res := val1.DivRound(val2, int32(field.Decimal))
-		if common.IsDecimalInf(res) {
+		res := val1.DivRound(val2, int32(field.Scale))
+		if IsDecimalInf(res) {
 			return nil, errors.Errorf("DOUBLE.value.is.out.of.range.in: '%v' / '%v'", val1, val2)
 		}
 		return NewDDecimal(res), nil

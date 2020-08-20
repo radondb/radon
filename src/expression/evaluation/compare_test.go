@@ -1,8 +1,9 @@
 package evaluation
 
 import (
-	"expression/datum"
 	"testing"
+
+	"expression/datum"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -13,7 +14,6 @@ func TestCompare(t *testing.T) {
 		funcName string
 		left     Evaluation
 		right    Evaluation
-		field    *datum.IField
 		saved    datum.Datum
 	}{
 		// GT.
@@ -22,39 +22,21 @@ func TestCompare(t *testing.T) {
 			funcName: ">",
 			left:     VAR("a"),
 			right:    VAR("f"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDNull(true),
+			saved:    datum.NewDNull(true),
 		},
 		{
 			name:     "a>b",
 			funcName: ">",
 			left:     VAR("a"),
 			right:    VAR("b"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(0, false),
+			saved:    datum.NewDInt(0, false),
 		},
 		{
 			name:     "e>d",
 			funcName: ">",
 			left:     VAR("e"),
 			right:    VAR("d"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(1, false),
+			saved:    datum.NewDInt(1, false),
 		},
 		// GE.
 		{
@@ -62,39 +44,21 @@ func TestCompare(t *testing.T) {
 			funcName: ">=",
 			left:     VAR("a"),
 			right:    VAR("f"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDNull(true),
+			saved:    datum.NewDNull(true),
 		},
 		{
 			name:     "a>=b",
 			funcName: ">=",
 			left:     VAR("a"),
 			right:    VAR("b"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(0, false),
+			saved:    datum.NewDInt(0, false),
 		},
 		{
 			name:     "e>=d",
 			funcName: ">=",
 			left:     VAR("e"),
 			right:    VAR("d"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(1, false),
+			saved:    datum.NewDInt(1, false),
 		},
 		// EQ.
 		{
@@ -102,39 +66,21 @@ func TestCompare(t *testing.T) {
 			funcName: "=",
 			left:     VAR("a"),
 			right:    VAR("f"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDNull(true),
+			saved:    datum.NewDNull(true),
 		},
 		{
 			name:     "a=b",
 			funcName: "=",
 			left:     VAR("a"),
 			right:    VAR("b"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(0, false),
+			saved:    datum.NewDInt(0, false),
 		},
 		{
 			name:     "e=e",
 			funcName: "=",
 			left:     VAR("e"),
 			right:    VAR("e"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(1, false),
+			saved:    datum.NewDInt(1, false),
 		},
 		// LT.
 		{
@@ -142,39 +88,21 @@ func TestCompare(t *testing.T) {
 			funcName: "<",
 			left:     VAR("a"),
 			right:    VAR("f"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDNull(true),
+			saved:    datum.NewDNull(true),
 		},
 		{
 			name:     "a<b",
 			funcName: "<",
 			left:     VAR("a"),
 			right:    VAR("b"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(1, false),
+			saved:    datum.NewDInt(1, false),
 		},
 		{
 			name:     "e<d",
 			funcName: "<",
 			left:     VAR("e"),
 			right:    VAR("d"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(0, false),
+			saved:    datum.NewDInt(0, false),
 		},
 		// LE.
 		{
@@ -182,39 +110,21 @@ func TestCompare(t *testing.T) {
 			funcName: "<=",
 			left:     VAR("a"),
 			right:    VAR("f"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDNull(true),
+			saved:    datum.NewDNull(true),
 		},
 		{
 			name:     "a<=b",
 			funcName: "<=",
 			left:     VAR("a"),
 			right:    VAR("b"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(1, false),
+			saved:    datum.NewDInt(1, false),
 		},
 		{
 			name:     "e<=d",
 			funcName: "<=",
 			left:     VAR("e"),
 			right:    VAR("d"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(0, false),
+			saved:    datum.NewDInt(0, false),
 		},
 		// NE.
 		{
@@ -222,39 +132,21 @@ func TestCompare(t *testing.T) {
 			funcName: "!=",
 			left:     VAR("a"),
 			right:    VAR("f"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDNull(true),
+			saved:    datum.NewDNull(true),
 		},
 		{
 			name:     "a!=b",
 			funcName: "!=",
 			left:     VAR("a"),
 			right:    VAR("b"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(1, false),
+			saved:    datum.NewDInt(1, false),
 		},
 		{
 			name:     "e!=e",
 			funcName: "!=",
 			left:     VAR("e"),
 			right:    VAR("e"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(0, false),
+			saved:    datum.NewDInt(0, false),
 		},
 		// SE.
 		{
@@ -262,54 +154,60 @@ func TestCompare(t *testing.T) {
 			funcName: "<=>",
 			left:     VAR("a"),
 			right:    VAR("f"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(0, false),
+			saved:    datum.NewDInt(0, false),
 		},
 		{
 			name:     "e<=>e",
 			funcName: "<=>",
 			left:     VAR("e"),
 			right:    VAR("e"),
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(1, false),
+			saved:    datum.NewDInt(1, false),
 		},
 		// REGEXP.
 		{
-			name:     "con4 regexp con5",
+			name:     "con4 regexp con2",
 			funcName: "regexp",
 			left:     con4,
-			right:    con5,
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(1, false),
+			right:    con2,
+			saved:    datum.NewDInt(1, false),
 		},
 		// NOT REGEXP.
 		{
-			name:     "c not regexp con5",
+			name:     "c not regexp con2",
 			funcName: "not regexp",
 			left:     VAR("c"),
-			right:    con5,
-			field: &datum.IField{
-				ResTyp:   datum.IntResult,
-				Decimal:  0,
-				Flag:     false,
-				Constant: false,
-			},
-			saved: datum.NewDInt(1, false),
+			right:    con2,
+			saved:    datum.NewDInt(1, false),
+		},
+		// IN.
+		{
+			name:     "a in tuple",
+			funcName: "in",
+			left:     VAR("a"),
+			right:    tuple,
+			saved:    datum.NewDInt(1, false),
+		},
+		{
+			name:     "b in tuple",
+			funcName: "in",
+			left:     VAR("b"),
+			right:    tuple,
+			saved:    datum.NewDNull(true),
+		},
+		{
+			name:     "f in tuple",
+			funcName: "in",
+			left:     VAR("f"),
+			right:    tuple,
+			saved:    datum.NewDNull(true),
+		},
+		// NOT IN.
+		{
+			name:     "a not in tuple",
+			funcName: "not in",
+			left:     VAR("b"),
+			right:    tuple,
+			saved:    datum.NewDInt(1, false),
 		},
 	}
 
@@ -321,7 +219,12 @@ func TestCompare(t *testing.T) {
 			field, err := eval.FixField(fields)
 			assert.Nil(t, err)
 
-			assert.Equal(t, test.field, field)
+			assert.Equal(t, &datum.IField{
+				ResTyp:   datum.IntResult,
+				Scale:    0,
+				Flag:     false,
+				Constant: false,
+			}, field)
 
 			_, err = eval.Update(values)
 			assert.Nil(t, err)
@@ -330,14 +233,6 @@ func TestCompare(t *testing.T) {
 			assert.Equal(t, test.saved, saved)
 		})
 	}
-}
-
-func TestIN(t *testing.T) {
-
-}
-
-func TestLike(t *testing.T) {
-
 }
 
 func TestCompareErr(t *testing.T) {
@@ -363,10 +258,10 @@ func TestCompareErr(t *testing.T) {
 			err:      "can.not.get.the.field.value:h",
 		},
 		{
-			name:     "a>=con2",
+			name:     "a>=tuple",
 			funcName: ">=",
 			left:     VAR("a"),
-			right:    con2,
+			right:    tuple,
 			err:      "bad.argument.at.index 1: unexpected.result.type[4].in.the.argument",
 		},
 		{
@@ -382,6 +277,41 @@ func TestCompareErr(t *testing.T) {
 			left:     con1,
 			right:    VAR("a"),
 			err:      "can.not.get.the.datum.value:a",
+		},
+		{
+			name:     "h in tuple",
+			funcName: "in",
+			left:     VAR("h"),
+			right:    tuple,
+			err:      "can.not.get.the.field.value:h",
+		},
+		{
+			name:     "a in h",
+			funcName: "in",
+			left:     VAR("a"),
+			right:    VAR("h"),
+			err:      "can.not.get.the.field.value:h",
+		},
+		{
+			name:     "a in b",
+			funcName: "in",
+			left:     VAR("a"),
+			right:    VAR("b"),
+			err:      "bad.argument.at.index 1: expected.result.type[4].but.got.type[1]",
+		},
+		{
+			name:     "a in tuple",
+			funcName: "in",
+			left:     VAR("a"),
+			right:    tuple,
+			err:      "can.not.get.the.datum.value:a",
+		},
+		{
+			name:     "3 in tuple",
+			funcName: "in",
+			left:     con1,
+			right:    tuple,
+			err:      "can.not.get.the.datum.value:f",
 		},
 	}
 
@@ -399,5 +329,63 @@ func TestCompareErr(t *testing.T) {
 		if err != nil {
 			assert.Equal(t, test.err, err.Error())
 		}
+	}
+}
+
+func TestLike(t *testing.T) {
+	tests := []struct {
+		name     string
+		funcName string
+		left     Evaluation
+		right    Evaluation
+		escape   Evaluation
+		saved    datum.Datum
+	}{
+		{
+			name:     "c like con5 escape '\\'",
+			funcName: "like",
+			left:     VAR("c"),
+			right:    con5,
+			escape:   CONST(datum.NewDString("\\", 10, 33)),
+			saved:    datum.NewDInt(1, false),
+		},
+		{
+			name:     "f like con5 escape '\\'",
+			funcName: "like",
+			left:     VAR("f"),
+			right:    con5,
+			escape:   CONST(datum.NewDString("\\", 10, 33)),
+			saved:    datum.NewDNull(true),
+		},
+		{
+			name:     "c not like con5 escape '\\'",
+			funcName: "not like",
+			left:     VAR("c"),
+			right:    con5,
+			escape:   CONST(datum.NewDString("\\", 10, 33)),
+			saved:    datum.NewDInt(0, false),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			eval, err := EvalFactory(test.funcName, test.left, test.right, test.escape)
+			assert.Nil(t, err)
+
+			field, err := eval.FixField(fields)
+			assert.Nil(t, err)
+
+			assert.Equal(t, &datum.IField{
+				ResTyp:   datum.IntResult,
+				Scale:    0,
+				Flag:     false,
+				Constant: false,
+			}, field)
+
+			_, err = eval.Update(values)
+			assert.Nil(t, err)
+
+			saved := eval.Result()
+			assert.Equal(t, test.saved, saved)
+		})
 	}
 }

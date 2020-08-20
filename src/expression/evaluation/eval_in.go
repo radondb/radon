@@ -37,13 +37,14 @@ func (e *InEval) FixField(fields map[string]*querypb.Field) (*datum.IField, erro
 	}
 
 	rights := e.right.(*TupleEval).fields
-	for _, right := range rights {
-		e.cmpFuncs = append(e.cmpFuncs, datum.GetCmpFunc(left, right))
+	e.cmpFuncs = make([]datum.CompareFunc, len(rights))
+	for i, right := range rights {
+		e.cmpFuncs[i] = datum.GetCmpFunc(left, right)
 	}
 
 	return &datum.IField{
 		ResTyp:   datum.IntResult,
-		Decimal:  0,
+		Scale:    0,
 		Flag:     false,
 		Constant: false,
 	}, nil
@@ -51,12 +52,20 @@ func (e *InEval) FixField(fields map[string]*querypb.Field) (*datum.IField, erro
 
 // Update used to update the result by the valuemap.
 func (e *InEval) Update(values map[string]datum.Datum) (datum.Datum, error) {
+	var (
+		res     datum.Datum
+		hasNull bool
+		match   bool
+		val     = int64(-1)
+	)
+
 	left, err := e.left.Update(values)
 	if err != nil {
 		return nil, err
 	}
 	if datum.CheckNull(left) {
-		return datum.NewDNull(true), nil
+		res = datum.NewDNull(true)
+		goto end
 	}
 
 	_, err = e.right.Update(values)
@@ -64,25 +73,19 @@ func (e *InEval) Update(values map[string]datum.Datum) (datum.Datum, error) {
 		return nil, err
 	}
 
-	var (
-		hasNull = false
-		match   = false
-		val     = int64(-1)
-	)
-
 	for i, right := range e.right.(*TupleEval).saved.Args() {
 		if datum.CheckNull(right) {
 			hasNull = true
 			continue
 		}
-		res := e.cmpFuncs[i](left, right)
+		cmp := e.cmpFuncs[i](left, right)
 		if e.not {
-			if res != 0 {
+			if cmp != 0 {
 				match = true
 				break
 			}
 		} else {
-			if res == 0 {
+			if cmp == 0 {
 				match = true
 				break
 			}
@@ -90,12 +93,16 @@ func (e *InEval) Update(values map[string]datum.Datum) (datum.Datum, error) {
 	}
 
 	if !match && hasNull {
-		return datum.NewDNull(true), nil
+		res = datum.NewDNull(true)
+		goto end
 	}
 	if match {
 		val = 1
 	}
-	e.saved = datum.NewDInt(val, false)
+	res = datum.NewDInt(val, false)
+
+end:
+	e.saved = res
 	return e.saved, nil
 }
 

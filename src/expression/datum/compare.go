@@ -11,8 +11,6 @@ package datum
 import (
 	"math"
 	"strings"
-
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 )
 
 // NullsafeCompare returns 0 if v1==v2, -1 if v1<v2, and 1 if v1>v2.
@@ -131,7 +129,7 @@ func CompareString(x, y Datum) int64 {
 // CompareDatetime returns an integer comparing the DTime x to y.
 func CompareDatetime(x, y Datum) int64 {
 	f1, f2 := getFsp(x), getFsp(y)
-	fsp := common.TernaryOpt(f1 > f2, f1, f2).(int)
+	fsp := TernaryOpt(f1 > f2, f1, f2).(int)
 	if fsp < 0 {
 		fsp = 6
 	}
@@ -161,7 +159,7 @@ func CompareDatetime(x, y Datum) int64 {
 // CompareDuration returns an integer comparing the Duration x to y.
 func CompareDuration(x, y Datum) int64 {
 	f1, f2 := getFsp(x), getFsp(y)
-	fsp := common.TernaryOpt(f1 > f2, f1, f2).(int)
+	fsp := TernaryOpt(f1 > f2, f1, f2).(int)
 	if fsp < 0 {
 		fsp = 6
 	}

@@ -24,12 +24,12 @@ type FunctionEval struct {
 // FixField use to fix the IField by the fieldmap.
 func (e *FunctionEval) FixField(fields map[string]*querypb.Field) (*datum.IField, error) {
 	argFields := make([]*datum.IField, len(e.args))
-	for _, arg := range e.args {
+	for i, arg := range e.args {
 		argField, err := arg.FixField(fields)
 		if err != nil {
 			return nil, err
 		}
-		argFields = append(argFields, argField)
+		argFields[i] = argField
 	}
 
 	if e.validate != nil {
@@ -45,12 +45,12 @@ func (e *FunctionEval) FixField(fields map[string]*querypb.Field) (*datum.IField
 func (e *FunctionEval) Update(values map[string]datum.Datum) (datum.Datum, error) {
 	var err error
 	argValues := make([]datum.Datum, len(e.args))
-	for _, arg := range e.args {
+	for i, arg := range e.args {
 		argValue, err := arg.Update(values)
 		if err != nil {
 			return nil, err
 		}
-		argValues = append(argValues, argValue)
+		argValues[i] = argValue
 	}
 
 	if e.saved, err = e.updateFn(e.field, argValues...); err != nil {

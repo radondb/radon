@@ -16,7 +16,6 @@ import (
 	"unicode"
 
 	"github.com/pkg/errors"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
@@ -68,12 +67,12 @@ var (
 func CastToDatetime(d Datum, fsp int) (*DTime, error) {
 	switch d := d.(type) {
 	case *DTime:
-		return d, nil
+		return d.RoundFsp(fsp), nil
 	case *DInt:
 		v, _ := d.ValInt()
-		return NumToDatetime(v)
+		return NumToDatetime(v, fsp)
 	case *Duration:
-		return d.toTime(), nil
+		return d.toTime().RoundFsp(fsp), nil
 	default:
 		v := d.ValStr()
 		return StrToDatetime(v, fsp, &TimeStatus{})
@@ -84,12 +83,12 @@ func CastToDatetime(d Datum, fsp int) (*DTime, error) {
 func CastToDuration(d Datum, fsp int) (*Duration, error) {
 	switch d := d.(type) {
 	case *DTime:
-		return d.toDuration(), nil
+		return d.toDuration().RoundFsp(fsp), nil
 	case *DInt:
 		v, _ := d.ValInt()
-		return NumToDuration(v)
+		return NumToDuration(v, fsp)
 	case *Duration:
-		return d, nil
+		return d.RoundFsp(fsp), nil
 	default:
 		v := d.ValStr()
 		return StrToDuration(v, fsp)
@@ -97,18 +96,24 @@ func CastToDuration(d Datum, fsp int) (*Duration, error) {
 }
 
 // NumToDuration used to convert a number to a datum.Duration.
-func NumToDuration(num int64) (*Duration, error) {
+func NumToDuration(num int64, fsp int) (*Duration, error) {
 	if num > TimeMaxValue {
 		// For huge numbers try full DATETIME, like strToTime does.
 		if num >= 10000000000 /* '0001-00-00 00:00:00' */ {
-			if t, err := NumToDatetime(num); err == nil {
-				return t.toDuration(), nil
+			if t, err := NumToDatetime(num, fsp); err == nil {
+				return t.toDuration().RoundFsp(fsp), nil
 			}
 		}
-		return &Duration{duration: time.Duration(TimeMaxValueSeconds * time.Second)}, errors.Errorf("time.value'%d'.is.out.of.range", num)
+		return &Duration{
+			duration: time.Duration(TimeMaxValueSeconds * time.Second),
+			fsp:      fsp,
+		}, errors.Errorf("time.value'%d'.is.out.of.range", num)
 	}
 	if num < -TimeMaxValue {
-		return &Duration{duration: time.Duration(-TimeMaxValueSeconds * time.Second)}, errors.Errorf("time.value'%d'.is.out.of.range", num)
+		return &Duration{
+			duration: time.Duration(-TimeMaxValueSeconds * time.Second),
+			fsp:      fsp,
+		}, errors.Errorf("time.value'%d'.is.out.of.range", num)
 	}
 
 	neg := num < 0
@@ -121,25 +126,25 @@ func NumToDuration(num int64) (*Duration, error) {
 	second := num % 100
 	// Check minute and second.
 	if second > TimeMaxSecond || minute > TimeMaxMinute {
-		return ZeroDuration, errors.Errorf("incorrect.time.value'%d'", num)
+		return ZeroDuration(fsp), errors.Errorf("incorrect.time.value'%d'", num)
 	}
 
 	dur := time.Duration(hour*3600+minute*60+second) * time.Second
 	if neg {
 		dur = -dur
 	}
-	return &Duration{duration: dur}, nil
+	return &Duration{duration: dur, fsp: fsp}, nil
 }
 
 // NumToDatetime used to convert a number to a datum.DTime.
-func NumToDatetime(num int64) (*DTime, error) {
+func NumToDatetime(num int64, fsp int) (*DTime, error) {
 	d := &DTime{
 		typ: sqltypes.Date,
-		fsp: 0,
+		fsp: fsp,
 	}
 	// Check zero.
 	if num == 0 {
-		return ZeroDateTime, nil
+		return ZeroDTime(querypb.Type_DATETIME, fsp), nil
 	}
 
 	// Check MMDD.
@@ -149,7 +154,7 @@ func NumToDatetime(num int64) (*DTime, error) {
 
 	// Out of range.
 	if num > 99999999999999 {
-		return ZeroDateTime, errors.Errorf("time.value'%v'.is.out.of.range", num)
+		return ZeroDTime(querypb.Type_DATETIME, fsp), errors.Errorf("time.value'%v'.is.out.of.range", num)
 	}
 
 	// Check datetime type.
@@ -188,7 +193,7 @@ func NumToDatetime(num int64) (*DTime, error) {
 
 	// Check MMDDHHMMSS.
 	if num < 101000000 {
-		return ZeroDateTime, errors.Errorf("invalid.time.format: '%v'", num)
+		return ZeroDTime(querypb.Type_DATETIME, fsp), errors.Errorf("invalid.time.format: '%v'", num)
 	}
 
 	// Set DATETIME type.
@@ -241,7 +246,7 @@ func StrToDatetime(str string, fsp int, status *TimeStatus) (*DTime, error) {
 
 	if end == 0 || !unicode.IsNumber(rune(str[0])) {
 		status.Truncated = true
-		return ZeroDateTime, errors.Errorf("truncated.incorrect.datetime.value: '%-.128s'", str)
+		return ZeroDTime(querypb.Type_DATETIME, fsp), errors.Errorf("truncated.incorrect.datetime.value: '%-.128s'", str)
 	}
 
 	/*
@@ -257,7 +262,7 @@ func StrToDatetime(str string, fsp int, status *TimeStatus) (*DTime, error) {
 	// Found date in internal format (only numbers like YYYYMMDD).
 	if pos == end || str[pos] == '.' {
 		// Length of year field.
-		fieldLen = common.TernaryOpt(digits == 4 || digits == 8 || digits >= 14, 4, 2).(int)
+		fieldLen = TernaryOpt(digits == 4 || digits == 8 || digits >= 14, 4, 2).(int)
 		isInternalFormat = true
 	} else {
 		fieldLen = 4
@@ -292,7 +297,7 @@ func StrToDatetime(str string, fsp int, status *TimeStatus) (*DTime, error) {
 		//Impossible date part.
 		if tmpVal > 999999 {
 			status.Truncated = true
-			return ZeroDateTime, errors.Errorf("truncated.incorrect.datetime.value: '%-.128s'", str)
+			return ZeroDTime(querypb.Type_DATETIME, fsp), errors.Errorf("truncated.incorrect.datetime.value: '%-.128s'", str)
 		}
 		date[i] = tmpVal
 		notZeroDate |= tmpVal
@@ -325,7 +330,7 @@ func StrToDatetime(str string, fsp int, status *TimeStatus) (*DTime, error) {
 			if unicode.IsSpace(rune(str[idx])) {
 				if i != 2 {
 					status.Truncated = true
-					return ZeroDateTime, errors.Errorf("truncated.incorrect.datetime.value: '%-.128s'", str)
+					return ZeroDTime(querypb.Type_DATETIME, fsp), errors.Errorf("truncated.incorrect.datetime.value: '%-.128s'", str)
 				}
 			}
 			idx++
@@ -343,13 +348,13 @@ func StrToDatetime(str string, fsp int, status *TimeStatus) (*DTime, error) {
 
 	if numOfFields < 3 || checkDateTimeRange(date[0], date[1], date[2], date[3], date[4], date[5], date[6]) {
 		if notZeroDate == 0 && idx == end {
-			return ZeroDateTime, nil
+			return ZeroDTime(querypb.Type_DATETIME, fsp), nil
 		}
-		return ZeroDateTime, errors.Errorf("incorrect.datetime.value: '%-.128s'", str)
+		return ZeroDTime(querypb.Type_DATETIME, fsp), errors.Errorf("incorrect.datetime.value: '%-.128s'", str)
 	}
 
 	if dateLen[0] == 2 && notZeroDate != 0 {
-		date[0] += common.TernaryOpt(date[0] < PartYear, 2000, 1900).(int)
+		date[0] += TernaryOpt(date[0] < PartYear, 2000, 1900).(int)
 	}
 
 	if idx != end && unicode.IsNumber(rune(str[idx])) {
@@ -379,9 +384,9 @@ func StrToDatetime(str string, fsp int, status *TimeStatus) (*DTime, error) {
 		tmp := time.Date(date[0], time.Month(date[1]), date[2], date[3], date[4], date[5], 0, time.Local)
 		return castToDTime(tmp.Add(time.Second), fsp), nil
 	}
-	date[6] = int(microsec * math.Pow10(6-dateLen[6]))
+	date[6] = int(microsec) * int(math.Pow10(6-dateLen[6]))
 
-	typ := common.TernaryOpt(numOfFields <= 3, sqltypes.Date, sqltypes.Datetime).(querypb.Type)
+	typ := TernaryOpt(numOfFields <= 3, sqltypes.Date, sqltypes.Datetime).(querypb.Type)
 	if idx != end {
 		status.Truncated = true
 	}
@@ -417,7 +422,7 @@ func StrToDuration(str string, fsp int) (*Duration, error) {
 	}
 
 	if pos == end {
-		return ZeroDuration, nil
+		return ZeroDuration(fsp), nil
 	}
 
 	idx := 0
@@ -428,13 +433,13 @@ func StrToDuration(str string, fsp int) (*Duration, error) {
 			status := &TimeStatus{}
 			t, err := StrToDatetime(str[pos:], fsp, status)
 			if err == nil && !status.Truncated {
-				d := t.toDuration()
+				d := t.toDuration().RoundFsp(fsp)
 				if d.duration == 0 && status.Round {
 					d.duration = time.Duration(24 * 3600 * time.Second)
 				}
 				return d, nil
 			}
-			return ZeroDuration, err
+			return ZeroDuration(fsp), err
 		}
 		// Try to get this as a DAYS_TO_SECOND string.
 		date[0] = day
@@ -518,12 +523,12 @@ func StrToDuration(str string, fsp int) (*Duration, error) {
 	}
 
 	if pos != end {
-		return ZeroDuration, errors.Errorf("incorrect.time.value: '%-.128s'", str)
+		return ZeroDuration(fsp), errors.Errorf("incorrect.time.value: '%-.128s'", str)
 	}
 
 	// Check minute and second.
 	if date[2] > TimeMaxMinute || date[3] > TimeMaxSecond {
-		return ZeroDuration, errors.Errorf("time.value'%-.128s'.is.out.of.range", str)
+		return ZeroDuration(fsp), errors.Errorf("time.value'%-.128s'.is.out.of.range", str)
 	}
 
 	d := time.Duration(date[0]*24*3600+date[1]*3600+date[2]*60+date[3])*time.Second + time.Duration(date[4])*time.Microsecond
@@ -549,7 +554,7 @@ func StrToYear(str string) (uint16, error) {
 	if len(str) == 4 {
 		//block.
 	} else if len(str) == 2 || len(str) == 1 {
-		v += uint64(common.TernaryOpt(v < PartYear, 2000, 1900).(int))
+		v += uint64(TernaryOpt(v < PartYear, 2000, 1900).(int))
 	} else {
 		return 0, errors.Errorf("invalid.year.value:'%s'", str)
 	}
