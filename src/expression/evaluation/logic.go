@@ -14,8 +14,6 @@ func AND(left, right Evaluation) Evaluation {
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			return &datum.IField{
 				ResTyp:   datum.IntResult,
-				Scale:    0,
-				Flag:     false,
 				Constant: left.Constant && right.Constant,
 			}
 		},
@@ -47,8 +45,6 @@ func OR(left, right Evaluation) Evaluation {
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			return &datum.IField{
 				ResTyp:   datum.IntResult,
-				Scale:    0,
-				Flag:     false,
 				Constant: left.Constant && right.Constant,
 			}
 		},
@@ -83,8 +79,6 @@ func NOT(arg Evaluation) Evaluation {
 		fixFieldFn: func(arg *datum.IField) *datum.IField {
 			return &datum.IField{
 				ResTyp:   datum.IntResult,
-				Scale:    0,
-				Flag:     false,
 				Constant: arg.Constant,
 			}
 		},

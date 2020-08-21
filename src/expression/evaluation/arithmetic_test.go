@@ -343,7 +343,7 @@ func TestArithmetic(t *testing.T) {
 	}
 }
 
-func TestBinaryErr(t *testing.T) {
+func TestArithmeticErr(t *testing.T) {
 	tests := []struct {
 		name     string
 		funcName string

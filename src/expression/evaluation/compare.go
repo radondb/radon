@@ -233,10 +233,7 @@ func LIKE(args ...Evaluation) Evaluation {
 		),
 		fixFieldFn: func(args ...*datum.IField) *datum.IField {
 			return &datum.IField{
-				ResTyp:   datum.IntResult,
-				Scale:    0,
-				Flag:     false,
-				Constant: false,
+				ResTyp: datum.IntResult,
 			}
 		},
 		updateFn: func(field *datum.IField, args ...datum.Datum) (datum.Datum, error) {
@@ -256,10 +253,7 @@ func NOTLIKE(args ...Evaluation) Evaluation {
 		),
 		fixFieldFn: func(args ...*datum.IField) *datum.IField {
 			return &datum.IField{
-				ResTyp:   datum.IntResult,
-				Scale:    0,
-				Flag:     false,
-				Constant: false,
+				ResTyp: datum.IntResult,
 			}
 		},
 		updateFn: func(field *datum.IField, args ...datum.Datum) (datum.Datum, error) {

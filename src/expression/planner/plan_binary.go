@@ -34,11 +34,6 @@ func (p *BinaryPlan) Materialize() (evaluation.Evaluation, error) {
 	return evaluation.EvalFactory(p.name, left, right)
 }
 
-// Walk calls visit on the plan.
-func (p *BinaryPlan) Walk(visit Visit) error {
-	return Walk(visit, p.left, p.right)
-}
-
 // String return the plan info.
 func (p *BinaryPlan) String() string {
 	return fmt.Sprintf("%s(%s, %s)", p.name, p.left.String(), p.right.String())

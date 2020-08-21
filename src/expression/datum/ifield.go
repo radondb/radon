@@ -11,7 +11,9 @@ package datum
 import (
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqldb"
+	"github.com/xelabs/go-mysqlstack/sqlparser"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
@@ -112,6 +114,11 @@ func IsStringType(typ ResultType) bool {
 	return typ == StringResult || typ == TimeResult || typ == DurationResult
 }
 
+// IsTemporal return true for  TimeResult or DurationResult.
+func IsTemporal(typ ResultType) bool {
+	return typ == TimeResult || typ == DurationResult
+}
+
 // ConstantField get IField by the given constant datum.
 func ConstantField(d Datum) *IField {
 	res := &IField{
@@ -145,4 +152,68 @@ func ConstantField(d Datum) *IField {
 		res.Flag = true
 	}
 	return res
+}
+
+func ConvertField(cvt *sqlparser.ConvertType) (*IField, error) {
+	field := &IField{
+		Charset: sqldb.CharacterSetBinary,
+	}
+	typ := strings.ToLower(cvt.Type)
+
+	if cvt.Length != nil {
+		len, err := SQLValToDatum(cvt.Length)
+		if err != nil {
+			return nil, err
+		}
+		field.Length = int(len.(*DInt).value)
+	}
+	if cvt.Scale != nil {
+		scale, err := SQLValToDatum(cvt.Scale)
+		if err != nil {
+			return nil, err
+		}
+		field.Scale = int(scale.(*DInt).value)
+	}
+
+	if cvt.Charset != "" {
+		charset, ok := sqldb.CharacterSetMap[cvt.Charset]
+		if !ok {
+			return nil, errors.Errorf("unknown.character.set: '%s'", cvt.Charset)
+		}
+		field.Charset = int(charset)
+	}
+
+	switch typ {
+	case "binary":
+		field.ResTyp = StringResult
+	case "char":
+		field.ResTyp = StringResult
+		if cvt.Charset == "" {
+			field.Charset = sqldb.CharacterSetUtf8
+		}
+	case "date":
+		field.ResTyp = TimeResult
+		field.Length = 10
+	case "datetime":
+		field.ResTyp = TimeResult
+		field.Length = 19
+		if field.Scale > 0 {
+			field.Length += field.Scale + 1
+		}
+	case "decimal":
+		field.ResTyp = DecimalResult
+		if field.Scale > 0 {
+			field.Length += 2
+		}
+	case "signed":
+		field.ResTyp = IntResult
+	case "unsigned":
+		field.ResTyp = IntResult
+		field.Flag = true
+	case "time":
+		field.ResTyp = DurationResult
+	default:
+		return nil, errors.Errorf("unsupport.convert.type: '%s'", typ)
+	}
+	return field, nil
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+	"github.com/xelabs/go-mysqlstack/sqlparser"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
 )
 
@@ -131,8 +132,9 @@ func TestNewIField(t *testing.T) {
 
 func TestField(t *testing.T) {
 	tcases := []struct {
-		val Datum
-		res *IField
+		val    Datum
+		res    *IField
+		isTemp bool
 	}{
 		{
 			val: NewDInt(1, false),
@@ -158,5 +160,151 @@ func TestField(t *testing.T) {
 	for _, tcase := range tcases {
 		res := ConstantField(tcase.val)
 		assert.Equal(t, tcase.res, res)
+		assert.Equal(t, tcase.isTemp, IsTemporal(tcase.res.ResTyp))
+	}
+}
+
+func TestConvertField(t *testing.T) {
+	tcases := []struct {
+		cvt   *sqlparser.ConvertType
+		field *IField
+		err   string
+	}{
+		{
+			cvt: &sqlparser.ConvertType{
+				Type: "unsigned",
+			},
+			field: &IField{
+				ResTyp:  IntResult,
+				Flag:    true,
+				Charset: 63,
+			},
+		},
+		{
+			cvt: &sqlparser.ConvertType{
+				Type: "signed",
+			},
+			field: &IField{
+				ResTyp:  IntResult,
+				Charset: 63,
+			},
+		},
+		{
+			cvt: &sqlparser.ConvertType{
+				Type:   "decimal",
+				Length: sqlparser.NewIntVal([]byte("6")),
+				Scale:  sqlparser.NewIntVal([]byte("2")),
+			},
+			field: &IField{
+				ResTyp:  DecimalResult,
+				Length:  8,
+				Scale:   2,
+				Charset: 63,
+			},
+		},
+		{
+			cvt: &sqlparser.ConvertType{
+				Type:   "binary",
+				Length: sqlparser.NewIntVal([]byte("6")),
+			},
+			field: &IField{
+				ResTyp:  StringResult,
+				Length:  6,
+				Charset: 63,
+			},
+		},
+		{
+			cvt: &sqlparser.ConvertType{
+				Type: "char",
+			},
+			field: &IField{
+				ResTyp:  StringResult,
+				Charset: 33,
+			},
+		},
+		{
+			cvt: &sqlparser.ConvertType{
+				Type:     "char",
+				Length:   sqlparser.NewIntVal([]byte("6")),
+				Operator: sqlparser.CharacterSetStr,
+				Charset:  "utf8mb4",
+			},
+			field: &IField{
+				ResTyp:  StringResult,
+				Length:  6,
+				Charset: 45,
+			},
+		},
+		{
+			cvt: &sqlparser.ConvertType{
+				Type: "date",
+			},
+			field: &IField{
+				ResTyp:  TimeResult,
+				Length:  10,
+				Charset: 63,
+			},
+		},
+		{
+			cvt: &sqlparser.ConvertType{
+				Type:  "datetime",
+				Scale: sqlparser.NewIntVal([]byte("2")),
+			},
+			field: &IField{
+				ResTyp:  TimeResult,
+				Length:  22,
+				Scale:   2,
+				Charset: 63,
+			},
+		},
+		{
+			cvt: &sqlparser.ConvertType{
+				Type:  "time",
+				Scale: sqlparser.NewIntVal([]byte("2")),
+			},
+			field: &IField{
+				ResTyp:  DurationResult,
+				Scale:   2,
+				Charset: 63,
+			},
+		},
+		{
+			cvt: &sqlparser.ConvertType{
+				Type:   "char",
+				Length: sqlparser.NewValArg([]byte("::arg")),
+			},
+			err: "unsupport.val.type[*sqlparser.SQLVal]",
+		},
+		{
+			cvt: &sqlparser.ConvertType{
+				Type:   "decimal",
+				Length: sqlparser.NewIntVal([]byte("6")),
+				Scale:  sqlparser.NewValArg([]byte("::arg")),
+			},
+			err: "unsupport.val.type[*sqlparser.SQLVal]",
+		},
+		{
+			cvt: &sqlparser.ConvertType{
+				Type:    "char",
+				Length:  sqlparser.NewIntVal([]byte("6")),
+				Charset: "tttt",
+			},
+			err: "unknown.character.set: 'tttt'",
+		},
+		{
+			cvt: &sqlparser.ConvertType{
+				Type: "nchar",
+			},
+			err: "unsupport.convert.type: 'nchar'",
+		},
+	}
+
+	for _, tcase := range tcases {
+		res, err := ConvertField(tcase.cvt)
+		if err != nil {
+			assert.Equal(t, tcase.err, err.Error())
+		} else {
+			assert.Equal(t, tcase.field, res)
+		}
 	}
 }

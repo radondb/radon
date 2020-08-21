@@ -14,7 +14,8 @@ type (
 
 var (
 	unaryEvalTable = map[string]unaryEvalCreator{
-		"not": NOT,
+		"not":  NOT,
+		"cast": CAST,
 	}
 
 	binaryEvalTable = map[string]binaryEvalCreator{
