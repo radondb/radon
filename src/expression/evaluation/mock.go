@@ -2,6 +2,7 @@ package evaluation
 
 import (
 	"expression/datum"
+	"time"
 
 	"github.com/shopspring/decimal"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
@@ -32,6 +33,7 @@ var (
 		"c": {
 			Name:     "c",
 			Type:     querypb.Type_CHAR,
+			Charset:  33,
 			Decimals: 31,
 			Flags:    128,
 		},
@@ -48,9 +50,27 @@ var (
 			Flags:    128,
 		},
 		"f": {
-			Name:     "e",
+			Name:     "f",
 			Type:     querypb.Type_NULL_TYPE,
 			Decimals: 2,
+			Flags:    128,
+		},
+		"t": {
+			Name:     "t",
+			Type:     querypb.Type_DATETIME,
+			Decimals: 3,
+			Flags:    128,
+		},
+		"s": {
+			Name:     "s",
+			Type:     querypb.Type_TIME,
+			Decimals: 2,
+			Flags:    128,
+		},
+		"z": {
+			Name:     "z",
+			Type:     querypb.Type_TIME,
+			Decimals: 4,
 			Flags:    128,
 		},
 	}
@@ -61,5 +81,8 @@ var (
 		"d": datum.NewDFloat(3.20),
 		"e": datum.NewDDecimal(decimal.NewFromFloat(4.30)),
 		"f": datum.NewDNull(true),
+		"t": datum.NewDTime(querypb.Type_DATETIME, 3, 2020, 8, 21, 14, 58, 36, 666000),
+		"s": datum.NewDuration(time.Duration(8*3600)*time.Second+time.Duration(int64(230000)*1000), 2),
+		"z": datum.NewDuration(time.Duration(9*3600)*time.Second+time.Duration(int64(586600)*1000), 4),
 	}
 )

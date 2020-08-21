@@ -43,10 +43,7 @@ func (e *InEval) FixField(fields map[string]*querypb.Field) (*datum.IField, erro
 	}
 
 	return &datum.IField{
-		ResTyp:   datum.IntResult,
-		Scale:    0,
-		Flag:     false,
-		Constant: false,
+		ResTyp: datum.IntResult,
 	}, nil
 }
 

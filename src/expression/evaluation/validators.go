@@ -37,28 +37,6 @@ func (v *AllVAL) Validate(args ...*datum.IField) error {
 	return nil
 }
 
-// OneOfVAL requires one of the validators to be met.
-type OneOfVAL struct {
-	validators []Validator
-}
-
-// OneOf new a OneOfVAL.
-func OneOf(validators ...Validator) *OneOfVAL {
-	return &OneOfVAL{validators: validators}
-}
-
-// Validate is used to verify that the condition is met.
-func (v *OneOfVAL) Validate(args ...*datum.IField) error {
-	errs := make([]error, len(v.validators))
-	for i, validator := range v.validators {
-		errs[i] = validator.Validate(args...)
-		if errs[i] == nil {
-			return nil
-		}
-	}
-	return errors.Errorf("none.of.the.conditions.have.been.met: %+v", errs)
-}
-
 // AtLeastNArgsVAL requires at least n args.
 type AtLeastNArgsVAL struct {
 	n int

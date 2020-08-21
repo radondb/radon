@@ -112,10 +112,15 @@ func ParseExpression(expr sqlparser.Expr) (Plan, error) {
 			return nil, err
 		}
 		return NewUnaryPlan(expr.Operator, arg), nil
+	case *sqlparser.ConvertExpr:
+		arg, err := ParseExpression(expr.Expr)
+		if err != nil {
+			return nil, err
+		}
+		return NewCastPlan(arg, expr.Type), nil
 	// TODO:
 	// case *sqlparser.Subquery:
 	// case *sqlparser.ExistsExpr:
-	// case *sqlparser.ConvertExpr:
 	// case *sqlparser.CollateExpr:
 	// case *sqlparser.ConvertUsingExpr:
 	case *sqlparser.GroupConcatExpr:
@@ -137,7 +142,7 @@ func ParseExpression(expr sqlparser.Expr) (Plan, error) {
 	case *sqlparser.CaseExpr:
 		return parseCaseExpr(expr)
 	}
-	return nil, nil
+	return nil, errors.Errorf("unsupported.of.type.'%v'", reflect.TypeOf(expr))
 }
 
 func parseRangeCond(expr *sqlparser.RangeCond) (Plan, error) {

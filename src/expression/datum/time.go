@@ -126,7 +126,7 @@ func NumToDuration(num int64, fsp int) (*Duration, error) {
 	second := num % 100
 	// Check minute and second.
 	if second > TimeMaxSecond || minute > TimeMaxMinute {
-		return ZeroDuration(fsp), errors.Errorf("incorrect.time.value'%d'", num)
+		return NewDuration(0, fsp), errors.Errorf("incorrect.time.value'%d'", num)
 	}
 
 	dur := time.Duration(hour*3600+minute*60+second) * time.Second
@@ -422,7 +422,7 @@ func StrToDuration(str string, fsp int) (*Duration, error) {
 	}
 
 	if pos == end {
-		return ZeroDuration(fsp), nil
+		return NewDuration(0, fsp), nil
 	}
 
 	idx := 0
@@ -439,7 +439,7 @@ func StrToDuration(str string, fsp int) (*Duration, error) {
 				}
 				return d, nil
 			}
-			return ZeroDuration(fsp), err
+			return NewDuration(0, fsp), err
 		}
 		// Try to get this as a DAYS_TO_SECOND string.
 		date[0] = day
@@ -523,12 +523,12 @@ func StrToDuration(str string, fsp int) (*Duration, error) {
 	}
 
 	if pos != end {
-		return ZeroDuration(fsp), errors.Errorf("incorrect.time.value: '%-.128s'", str)
+		return NewDuration(0, fsp), errors.Errorf("incorrect.time.value: '%-.128s'", str)
 	}
 
 	// Check minute and second.
 	if date[2] > TimeMaxMinute || date[3] > TimeMaxSecond {
-		return ZeroDuration(fsp), errors.Errorf("time.value'%-.128s'.is.out.of.range", str)
+		return NewDuration(0, fsp), errors.Errorf("time.value'%-.128s'.is.out.of.range", str)
 	}
 
 	d := time.Duration(date[0]*24*3600+date[1]*3600+date[2]*60+date[3])*time.Second + time.Duration(date[4])*time.Microsecond

@@ -135,6 +135,7 @@ func (d *DTime) RoundFsp(fsp int) *DTime {
 		tmp := time.Date(int(d.year), time.Month(d.month), int(d.day), int(d.hour), int(d.minute), int(d.second), 0, time.Local)
 		return castToDTime(tmp.Add(time.Second), fsp)
 	}
+	d.fsp = fsp
 	return d
 }
 
@@ -144,7 +145,7 @@ func (d *DTime) RoundFsp(fsp int) *DTime {
 // 2012-12-12 -> 0
 func (d *DTime) toDuration() *Duration {
 	if CompareDatetime(d, ZeroDTime(querypb.Type_DATE, 0)) == 0 {
-		return ZeroDuration(d.fsp)
+		return NewDuration(0, d.fsp)
 	}
 
 	dur := time.Duration(int64(d.hour)*3600+int64(d.minute)*60+int64(d.second))*time.Second + time.Duration(int64(d.microsecond)*1000)

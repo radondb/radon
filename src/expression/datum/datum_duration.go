@@ -25,10 +25,10 @@ type Duration struct {
 	fsp int
 }
 
-// ZeroDuration is the zero value for Duration type.
-func ZeroDuration(fsp int) *Duration {
+// NewDuration new a Duration.
+func NewDuration(dur time.Duration, fsp int) *Duration {
 	return &Duration{
-		duration: 0,
+		duration: dur,
 		fsp:      fsp,
 	}
 }

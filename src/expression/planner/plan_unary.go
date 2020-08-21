@@ -29,11 +29,6 @@ func (p *UnaryPlan) Materialize() (evaluation.Evaluation, error) {
 	return evaluation.EvalFactory(p.name, eval)
 }
 
-// Walk calls visit on the plan.
-func (p *UnaryPlan) Walk(visit Visit) error {
-	return Walk(visit, p.arg)
-}
-
 // String return the plan info.
 func (p *UnaryPlan) String() string {
 	return fmt.Sprintf("%s(%s)", p.name, p.arg.String())
