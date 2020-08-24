@@ -113,6 +113,11 @@ func (ipt *IPTable) Check(address string) bool {
 	ipt.mu.Lock()
 	defer ipt.mu.Unlock()
 
+	// Pass if no iptable setting.
+	if len(ipt.iptable) == 0 {
+		return true
+	}
+
 	// if address is in iptable[address], just return
 	_, ok := ipt.iptable[address]
 	if ok {
