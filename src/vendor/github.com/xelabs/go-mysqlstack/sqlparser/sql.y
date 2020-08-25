@@ -2405,9 +2405,9 @@ column_default_opt:
 	{
 		$$ = NewValArg($2)
 	}
-|	DEFAULT CURRENT_TIMESTAMP
+|	DEFAULT now_sym_with_frac_opt
 	{
-		$$ = NewValArg($2)
+		$$ = NewStrValWithoutQuote([]byte($2))
 	}
 |	DEFAULT boolean_value
 	{

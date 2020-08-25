@@ -192,4 +192,7 @@ create /*test default true or false*/ table integrate_test.t (b bool not null de
 drop table if exists integrate_test.t;
 create /*test set type*/ table integrate_test.t (a tinyint, b smallint, c mediumint, d int key, e bigint, f float(3,2), g double(4,3), h decimal(5,4), i year, j date, k timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, l datetime, m enum('a','b'), n set('a','b'), o char(10));
 
+drop table if exists integrate_test.t;
+create /*test default current_timestamp*/ table integrate_test.t (a tinyint, b smallint, c mediumint, d int key, e bigint, f float(3,2), g double(4,3), h decimal(5,4), i year, j date, k timestamp(2) NOT NULL DEFAULT CURRENT_TIMESTAMP(2) ON UPDATE CURRENT_TIMESTAMP(2), l datetime, m enum('a','b'), n set('a','b'), o char(10));
+
 drop database integrate_test;
