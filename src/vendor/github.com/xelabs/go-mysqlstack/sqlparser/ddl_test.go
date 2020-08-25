@@ -486,15 +486,15 @@ func TestDDL1(t *testing.T) {
 				"	`id` int primary key,\n" +
 				"	`t1` timestamp default current_timestamp,\n" +
 				"	`t2`  timestamp ON UPDATE CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'currenttimestamp' ON UPDATE CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
-				"	`t3` timestamp on Update current_timestamp(),\n" +
-				"	`t4` timestamp(5) on Update current_timestamp(5)\n" +
+				"	`t3` timestamp default LOCALTIMESTAMP() on Update current_timestamp(),\n" +
+				"	`t4` timestamp(5) default current_timestamp(5) on Update current_timestamp(5)\n" +
 				") partition by hash(id)",
 			output: "create table t (\n" +
 				"	`id` int primary key,\n" +
 				"	`t1` timestamp default current_timestamp,\n" +
 				"	`t2` timestamp not null default current_timestamp on update current_timestamp comment 'currenttimestamp',\n" +
-				"	`t3` timestamp on update current_timestamp(),\n" +
-				"	`t4` timestamp(5) on update current_timestamp(5)\n" +
+				"	`t3` timestamp default localtimestamp() on update current_timestamp(),\n" +
+				"	`t4` timestamp(5) default current_timestamp(5) on update current_timestamp(5)\n" +
 				")",
 		},
 
