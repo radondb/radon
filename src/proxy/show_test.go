@@ -944,6 +944,182 @@ func TestProxyShowColumns(t *testing.T) {
 	}
 }
 
+func TestProxyShowIndex(t *testing.T) {
+	r := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "Table",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Non_unique",
+				Type: querypb.Type_INT64,
+			},
+			{
+				Name: "Key_name",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Seq_in_index",
+				Type: querypb.Type_INT64,
+			},
+			{
+				Name: "Column_name",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Collation",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Cardinality",
+				Type: querypb.Type_INT64,
+			},
+			{
+				Name: "Sub_part",
+				Type: querypb.Type_INT64,
+			},
+			{
+				Name: "Packed",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Null",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Index_type",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Comment",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Index_comment",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1_0000")),
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("PRIMARY")),
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("1")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("a")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("A")),
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("0")),
+				sqltypes.MakeTrusted(querypb.Type_NULL_TYPE, nil),
+				sqltypes.MakeTrusted(querypb.Type_NULL_TYPE, nil),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("BTREE")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("")),
+			},
+		},
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("show index .*", r)
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "create table t1(id int primary key, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		client.Quit()
+	}
+
+	// show index from table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show index from t1"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[t1 0 PRIMARY 1 a A 0    BTREE  ]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// show indexes from table from database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show indexes from t1 from test"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[t1 0 PRIMARY 1 a A 0    BTREE  ]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// show keys from table where.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show keys from test.t1 where Key_name = 'PRIMARY'"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "[t1 0 PRIMARY 1 a A 0    BTREE  ]"
+		got := fmt.Sprintf("%+v", qr.Rows[0])
+		assert.Equal(t, want, got)
+	}
+
+	// show index from table err(database is empty).
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show index from t1"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// show index from table err(sys database:MYSQL).
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show index from user from mysql"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// show index from table err(database not exist).
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show index from t1 from xxx"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+}
+
 func TestProxyShowProcesslist(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, scleanup := MockProxy(log)

@@ -363,6 +363,45 @@ func (spanner *Spanner) handleShowColumns(session *driver.Session, query string,
 	return qr, nil
 }
 
+// handleShowIndex used to handle the 'SHOW INDEX' command.
+func (spanner *Spanner) handleShowIndex(session *driver.Session, query string, node *sqlparser.Show) (*sqltypes.Result, error) {
+	router := spanner.router
+	ast := node
+
+	table := ast.Table.Name.String()
+	if ast.Table.Qualifier.IsEmpty() {
+		ast.Table.Qualifier = sqlparser.NewTableIdent(session.Schema())
+	}
+	database := ast.Table.Qualifier.String()
+	if database == "" {
+		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)
+	}
+	// Check the database ACL.
+	if err := router.DatabaseACL(database); err != nil {
+		return nil, err
+	}
+
+	// Get one table from the router.
+	parts, err := router.Lookup(database, table, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	partTable := parts[0].Table
+	backend := parts[0].Backend
+	ast.Table.Name = sqlparser.NewTableIdent(partTable)
+	buf := sqlparser.NewTrackedBuffer(nil)
+	ast.Format(buf)
+
+	qr, err := spanner.ExecuteOnThisBackend(backend, buf.String())
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range qr.Rows {
+		row[0] = sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte(table))
+	}
+	return qr, nil
+}
+
 // handleShowProcesslist used to handle the query "SHOW PROCESSLIST".
 func (spanner *Spanner) handleShowProcesslist(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	sessions := spanner.sessions

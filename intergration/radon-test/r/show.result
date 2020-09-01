@@ -71,4 +71,67 @@ Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
 a	int(11)	NULL	NO	PRI	NULL		select,insert,update,references	
 
 
+show index from integrate_test.t;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+show index in integrate_test.t;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+show index from t from integrate_test;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+show index in t in integrate_test;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+show index from integrate_test.t where Key_name="PRIMARY";
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+
+show indexes from integrate_test.t;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+show indexes in integrate_test.t;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+show indexes from t from integrate_test;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+show indexes in t in integrate_test;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+show indexes from integrate_test.t where Key_name="PRIMARY";
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+
+show keys from integrate_test.t;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+show keys in integrate_test.t;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+show keys from t from integrate_test;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+show keys in t in integrate_test;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+show keys from integrate_test.t where Key_name="PRIMARY";
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment
+t	0	PRIMARY	1	a	A	0	NULL	NULL		BTREE		
+
+
 drop database integrate_test;

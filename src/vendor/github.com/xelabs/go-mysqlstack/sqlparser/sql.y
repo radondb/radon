@@ -153,7 +153,9 @@ func forceEOF(yylex interface{}) {
 	CONSTRAINT
 	FULLTEXT
 	HASH
+	INDEXES
 	KEY_BLOCK_SIZE
+	KEYS
 	PARSER
 	RTREE
 	SPATIAL
@@ -662,6 +664,7 @@ func forceEOF(yylex interface{}) {
 	database_from_opt
 	from_or_in
 	full_opt
+	index_symbols
 
 %type	<showFilter>
 	like_or_where_opt
@@ -2923,6 +2926,17 @@ show_statement:
 	{
 		$$ = &Show{Full: $2, Type: ShowTablesStr, Database: $4, Filter: $5}
 	}
+|	SHOW index_symbols from_or_in table_name database_from_opt where_expression_opt
+	{
+		if $5 != ""{
+			$4.Qualifier.v = $5
+		}
+		var filter *ShowFilter
+		if $6 != nil{
+			filter = &ShowFilter{Filter: $6}
+		}
+		$$ = &Show{Type: ShowIndexStr, Table: $4, Filter: filter}
+	}
 |	SHOW full_opt columns_or_fields from_or_in table_name database_from_opt like_or_where_opt
 	{
 		if $6 != ""{
@@ -2974,6 +2988,20 @@ binlog_from_opt:
 |	FROM GTID STRING
 	{
 		$$ = string($3)
+	}
+
+index_symbols:
+	INDEX
+	{
+		$$ = string($1)
+	}
+|	KEYS
+	{
+		$$ = string($1)
+	}
+|	INDEXES
+	{
+		$$ = string($1)
 	}
 
 database_from_opt:
@@ -4683,9 +4711,11 @@ non_reserved_keyword:
 |	GEOMETRY
 |	GEOMETRYCOLLECTION
 |	GLOBAL
+|	INDEXES
 |	INSERT_METHOD
 |	JSON
 |	KEY_BLOCK_SIZE
+|	KEYS
 |	LANGUAGE
 |	LAST_INSERT_ID
 |	LINESTRING
