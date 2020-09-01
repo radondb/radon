@@ -167,6 +167,11 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 				log.Error("proxy.show.colomns[%s].from.session[%v].error:%+v", query, session.ID(), err)
 				status = 1
 			}
+		case sqlparser.ShowIndexStr:
+			if qr, err = spanner.handleShowIndex(session, query, node); err != nil {
+				log.Error("proxy.show.index[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
+			}
 		case sqlparser.ShowProcesslistStr:
 			if qr, err = spanner.handleShowProcesslist(session, query, node); err != nil {
 				log.Error("proxy.show.processlist[%s].from.session[%v].error:%+v", query, session.ID(), err)

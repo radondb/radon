@@ -1138,7 +1138,7 @@ func (node *Show) Format(buf *TrackedBuffer) {
 			buf.Myprintf(" from gtid '%s'", node.From)
 		}
 		buf.Myprintf("%v", node.Limit)
-	case ShowColumnsStr:
+	case ShowColumnsStr, ShowIndexStr:
 		buf.Myprintf("show %s%s", node.Full, node.Type)
 		if node.Table.Name.String() != "" {
 			buf.Myprintf(" from %v", node.Table)

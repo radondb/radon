@@ -17,4 +17,22 @@ show full fields from integrate_test.t;
 show full fields from test.t from integrate_test;
 show full fields from t from integrate_test like 'a';
 
+show index from integrate_test.t;
+show index in integrate_test.t;
+show index from t from integrate_test;
+show index in t in integrate_test;
+show index from integrate_test.t where Key_name="PRIMARY";
+
+show indexes from integrate_test.t;
+show indexes in integrate_test.t;
+show indexes from t from integrate_test;
+show indexes in t in integrate_test;
+show indexes from integrate_test.t where Key_name="PRIMARY";
+
+show keys from integrate_test.t;
+show keys in integrate_test.t;
+show keys from t from integrate_test;
+show keys in t in integrate_test;
+show keys from integrate_test.t where Key_name="PRIMARY";
+
 drop database integrate_test;

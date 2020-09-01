@@ -123,6 +123,26 @@ func TestShow1(t *testing.T) {
 			output: "show binlog events from gtid '20171225083823' limit 1",
 		},
 		{
+			input:  "show index from t1",
+			output: "show index from t1",
+		},
+		{
+			input:  "show indexes from t1",
+			output: "show index from t1",
+		},
+		{
+			input:  "show keys from t1",
+			output: "show index from t1",
+		},
+		{
+			input:  "show index in t1 in sbtest",
+			output: "show index from sbtest.t1",
+		},
+		{
+			input:  "show index from t1 from sbtest where Key_name='PRIMARY'",
+			output: "show index from sbtest.t1 where Key_name = 'PRIMARY'",
+		},
+		{
 			input:  "show columns from t1",
 			output: "show columns from t1",
 		},

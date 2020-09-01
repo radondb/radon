@@ -77,6 +77,7 @@ const (
 	ShowTableStatusStr    = "table status"
 	ShowTablesStr         = "tables"
 	ShowColumnsStr        = "columns"
+	ShowIndexStr          = "index"
 	ShowCreateTableStr    = "create table"
 	ShowEnginesStr        = "engines"
 	ShowStatusStr         = "status"
