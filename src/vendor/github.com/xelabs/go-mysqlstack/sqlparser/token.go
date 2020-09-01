@@ -100,6 +100,7 @@ var keywords = map[string]int{
 	"checksum":            CHECKSUM,
 	"cleanup":             CLEANUP,
 	"collate":             COLLATE,
+	"collation":           COLLATION,
 	"column":              COLUMN,
 	"column_format":       COLUMN_FORMAT,
 	"columns":             COLUMNS,

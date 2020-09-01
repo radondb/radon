@@ -205,6 +205,18 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 				log.Error("proxy.JDBC.shows[%s].from.session[%v].error:%+v", query, session.ID(), err)
 				status = 1
 			}
+		case sqlparser.ShowCollationStr:
+			// Support for DBeaver.
+			if qr, err = spanner.handleShowCollation(session, query, node); err != nil {
+				log.Error("proxy.show.collation.status[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
+			}
+		case sqlparser.ShowCharsetStr:
+			// Support for DBeaver.
+			if qr, err = spanner.handleShowCharset(session, query, node); err != nil {
+				log.Error("proxy.show.charset.status[%s].from.session[%v].error:%+v", query, session.ID(), err)
+				status = 1
+			}
 		default:
 			log.Error("proxy.show.unsupported[%s].from.session[%v]", query, session.ID())
 			status = sqldb.ER_UNKNOWN_ERROR

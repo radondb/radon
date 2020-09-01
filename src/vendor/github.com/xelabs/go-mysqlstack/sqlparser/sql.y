@@ -460,6 +460,7 @@ func forceEOF(yylex interface{}) {
 
 // Supported SHOW tokens
 %token	<bytes>
+	COLLATION
 	DATABASES
 	TABLES
 	WARNINGS
@@ -2975,6 +2976,14 @@ show_statement:
 |	SHOW WARNINGS force_eof
 	{
 		$$ = &Show{Type: ShowWarningsStr}
+	}
+|	SHOW COLLATION force_eof
+	{
+		$$ = &Show{Type: ShowCollationStr}
+	}
+|	SHOW CHARSET force_eof
+	{
+		$$ = &Show{Type: ShowCharsetStr}
 	}
 |	SHOW ID force_eof
 	{

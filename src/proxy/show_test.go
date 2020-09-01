@@ -1374,13 +1374,13 @@ func TestProxyShowVersions(t *testing.T) {
 	}
 }
 
-func TestProxyShowWarnings(t *testing.T) {
+func TestProxyShowSupported(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
 	address := proxy.Address()
 
-	querys := []string{"show warnings", "show variables"}
+	querys := []string{"show warnings", "show variables", "show collation", "show charset"}
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
@@ -1399,6 +1399,29 @@ func TestProxyShowWarnings(t *testing.T) {
 
 			want := &sqltypes.Result{}
 			assert.Equal(t, want, qr)
+		}
+	}
+}
+
+func TestProxyShowSupportedError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxyPrivilegeN(log, MockDefaultConfig())
+	defer cleanup()
+	address := proxy.Address()
+
+	querys := []string{"show collation", "show charset"}
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+	}
+
+	// show ...
+	{
+		for _, query := range querys {
+			show, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+			assert.Nil(t, err)
+			_, err = show.FetchAll(query, -1)
+			assert.NotNil(t, err)
 		}
 	}
 }
