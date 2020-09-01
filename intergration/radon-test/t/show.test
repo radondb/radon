@@ -1,0 +1,20 @@
+create database integrate_test DEFAULT CHARSET=utf8;
+create table integrate_test.t(a int key, b int) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+show columns from integrate_test.t;
+show columns from t from integrate_test;
+show columns in t in integrate_test;
+show columns from integrate_test.t where `Key`="PRI";
+show full columns from integrate_test.t;
+show full columns from test.t from integrate_test;
+show full columns from t from integrate_test like 'a';
+
+show fields from integrate_test.t;
+show fields from t from integrate_test;
+show fields in t in integrate_test;
+show fields from integrate_test.t where `Key`="PRI";
+show full fields from integrate_test.t;
+show full fields from test.t from integrate_test;
+show full fields from t from integrate_test like 'a';
+
+drop database integrate_test;

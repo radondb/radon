@@ -153,7 +153,7 @@ type (
 		Type     string
 		Full     string
 		Table    TableName
-		Database TableName
+		Database string
 		From     string
 		Limit    *Limit
 		Filter   *ShowFilter
@@ -1116,18 +1116,18 @@ func (idx *IndexDefinition) Format(buf *TrackedBuffer) {
 func (node *Show) Format(buf *TrackedBuffer) {
 	switch node.Type {
 	case ShowCreateDatabaseStr:
-		buf.Myprintf("show %s %v", node.Type, node.Database)
+		buf.Myprintf("show %s %s", node.Type, node.Database)
 	case ShowTableStatusStr:
 		buf.Myprintf("show %s", node.Type)
-		if node.Database.Name.String() != "" {
-			buf.Myprintf(" from %s", node.Database.Name.String())
+		if node.Database != "" {
+			buf.Myprintf(" from %s", node.Database)
 		}
 	case ShowCreateTableStr:
 		buf.Myprintf("show %s %v", node.Type, node.Table)
 	case ShowTablesStr:
 		buf.Myprintf("show %s%s", node.Full, node.Type)
-		if node.Database.Name.String() != "" {
-			buf.Myprintf(" from %s", node.Database.Name.String())
+		if node.Database != "" {
+			buf.Myprintf(" from %s", node.Database)
 		}
 		if node.Filter != nil {
 			buf.Myprintf("%v", node.Filter)
