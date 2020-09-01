@@ -491,10 +491,6 @@ func (r *replaceSetExprsItems) inc() {
 	*r++
 }
 
-func replaceShowDatabase(newNode, parent SQLNode) {
-	parent.(*Show).Database = newNode.(TableName)
-}
-
 func replaceShowFilter(newNode, parent SQLNode) {
 	parent.(*Show).Filter = newNode.(*ShowFilter)
 }
@@ -972,7 +968,6 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 		}
 
 	case *Show:
-		a.apply(node, n.Database, replaceShowDatabase)
 		a.apply(node, n.Filter, replaceShowFilter)
 		a.apply(node, n.Limit, replaceShowLimit)
 		a.apply(node, n.Table, replaceShowTable)

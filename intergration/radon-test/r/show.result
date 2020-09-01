@@ -1,0 +1,74 @@
+create database integrate_test DEFAULT CHARSET=utf8;
+
+create table integrate_test.t(a int key, b int) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+show columns from integrate_test.t;
+Field	Type	Null	Key	Default	Extra
+a	int(11)	NO	PRI	NULL	
+b	int(11)	YES		NULL	
+
+show columns from t from integrate_test;
+Field	Type	Null	Key	Default	Extra
+a	int(11)	NO	PRI	NULL	
+b	int(11)	YES		NULL	
+
+show columns in t in integrate_test;
+Field	Type	Null	Key	Default	Extra
+a	int(11)	NO	PRI	NULL	
+b	int(11)	YES		NULL	
+
+show columns from integrate_test.t where `Key`="PRI";
+Field	Type	Null	Key	Default	Extra
+a	int(11)	NO	PRI	NULL	
+
+show full columns from integrate_test.t;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+a	int(11)	NULL	NO	PRI	NULL		select,insert,update,references	
+b	int(11)	NULL	YES		NULL		select,insert,update,references	
+
+show full columns from test.t from integrate_test;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+a	int(11)	NULL	NO	PRI	NULL		select,insert,update,references	
+b	int(11)	NULL	YES		NULL		select,insert,update,references	
+
+show full columns from t from integrate_test like 'a';
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+a	int(11)	NULL	NO	PRI	NULL		select,insert,update,references	
+
+
+show fields from integrate_test.t;
+Field	Type	Null	Key	Default	Extra
+a	int(11)	NO	PRI	NULL	
+b	int(11)	YES		NULL	
+
+show fields from t from integrate_test;
+Field	Type	Null	Key	Default	Extra
+a	int(11)	NO	PRI	NULL	
+b	int(11)	YES		NULL	
+
+show fields in t in integrate_test;
+Field	Type	Null	Key	Default	Extra
+a	int(11)	NO	PRI	NULL	
+b	int(11)	YES		NULL	
+
+show fields from integrate_test.t where `Key`="PRI";
+Field	Type	Null	Key	Default	Extra
+a	int(11)	NO	PRI	NULL	
+
+show full fields from integrate_test.t;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+a	int(11)	NULL	NO	PRI	NULL		select,insert,update,references	
+b	int(11)	NULL	YES		NULL		select,insert,update,references	
+
+show full fields from test.t from integrate_test;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+a	int(11)	NULL	NO	PRI	NULL		select,insert,update,references	
+b	int(11)	NULL	YES		NULL		select,insert,update,references	
+
+show full fields from t from integrate_test like 'a';
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+a	int(11)	NULL	NO	PRI	NULL		select,insert,update,references	
+
+
+drop database integrate_test;

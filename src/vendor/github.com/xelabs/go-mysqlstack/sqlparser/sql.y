@@ -656,11 +656,12 @@ func forceEOF(yylex interface{}) {
 %type	<tableName>
 	table_name
 	into_table_name
-	database_from_opt
 
 %type	<str>
-	full_opt
 	columns_or_fields
+	database_from_opt
+	from_or_in
+	full_opt
 
 %type	<showFilter>
 	like_or_where_opt
@@ -2906,9 +2907,9 @@ show_statement:
 	{
 		$$ = &Show{Type: ShowCreateTableStr, Table: $4}
 	}
-|	SHOW CREATE DATABASE table_name force_eof
+|	SHOW CREATE DATABASE table_id force_eof
 	{
-		$$ = &Show{Type: ShowCreateDatabaseStr, Database: $4}
+		$$ = &Show{Type: ShowCreateDatabaseStr, Database: $4.v}
 	}
 |	SHOW DATABASES force_eof
 	{
@@ -2922,9 +2923,12 @@ show_statement:
 	{
 		$$ = &Show{Full: $2, Type: ShowTablesStr, Database: $4, Filter: $5}
 	}
-|	SHOW full_opt columns_or_fields FROM table_name like_or_where_opt
+|	SHOW full_opt columns_or_fields from_or_in table_name database_from_opt like_or_where_opt
 	{
-		$$ = &Show{Full: $2, Type: ShowColumnsStr, Table: $5, Filter: $6}
+		if $6 != ""{
+			$5.Qualifier.v = $6
+		}
+		$$ = &Show{Full: $2, Type: ShowColumnsStr, Table: $5, Filter: $7}
 	}
 |	SHOW PROCESSLIST force_eof
 	{
@@ -2973,12 +2977,23 @@ binlog_from_opt:
 	}
 
 database_from_opt:
+	/* empty */
 	{
-		$$ = TableName{}
+		$$ = ""
 	}
-|	FROM table_name
+|	from_or_in table_id
 	{
-		$$ = $2
+		$$ = $2.v
+	}
+
+from_or_in:
+	FROM
+	{
+		$$ = string($1)
+	}
+|	IN
+	{
+		$$ = string($1)
 	}
 
 full_opt:

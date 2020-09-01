@@ -16,8 +16,10 @@ limitations under the License.
 
 package sqlparser
 
-import "strings"
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestShow1(t *testing.T) {
 	validSQL := []struct {
@@ -123,6 +125,14 @@ func TestShow1(t *testing.T) {
 		{
 			input:  "show columns from t1",
 			output: "show columns from t1",
+		},
+		{
+			input:  "show columns from t1 from sbtest",
+			output: "show columns from sbtest.t1",
+		},
+		{
+			input:  "show full columns in tt.t1 in sbtest",
+			output: "show full columns from sbtest.t1",
 		},
 		{
 			input:  "show columns from t1 like '%'",
