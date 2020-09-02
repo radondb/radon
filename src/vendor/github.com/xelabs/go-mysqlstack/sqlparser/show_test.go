@@ -198,6 +198,14 @@ func TestShow1(t *testing.T) {
 			input:  "show full fields from t1 where `Key` = 'PRI'",
 			output: "show full columns from t1 where `Key` = 'PRI'",
 		},
+		{
+			input:  "show collation",
+			output: "show collation",
+		},
+		{
+			input:  "show charset",
+			output: "show charset",
+		},
 	}
 
 	for _, show := range validSQL {

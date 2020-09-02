@@ -662,3 +662,11 @@ func (spanner *Spanner) handleShowVersions(session *driver.Session, query string
 func (spanner *Spanner) handleJDBCShows(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	return spanner.ExecuteSingle(query)
 }
+
+func (spanner *Spanner) handleShowCollation(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+	return spanner.ExecuteSingle(query)
+}
+
+func (spanner *Spanner) handleShowCharset(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+	return spanner.ExecuteSingle(query)
+}

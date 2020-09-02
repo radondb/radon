@@ -88,6 +88,8 @@ const (
 	ShowWarningsStr       = "warnings"
 	ShowVariablesStr      = "variables"
 	ShowBinlogEventsStr   = "binlog events"
+	ShowCharsetStr        = "charset"
+	ShowCollationStr      = "collation"
 	ShowUnsupportedStr    = "unsupported"
 
 	// JoinTableExpr.Join.
