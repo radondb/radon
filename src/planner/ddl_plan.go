@@ -77,11 +77,11 @@ func (p *DDLPlan) checkUnsupportedOperations(database, table string) error {
 	if shardKey != "" {
 		switch node.Action {
 		case sqlparser.AlterDropColumnStr:
-			if shardKey == node.DropColumnName {
+			if strings.EqualFold(shardKey, node.DropColumnName) {
 				return errors.New("unsupported: cannot.drop.the.column.on.shard.key")
 			}
 		case sqlparser.AlterModifyColumnStr:
-			if shardKey == node.ModifyColumnDef.Name.String() {
+			if node.ModifyColumnDef.Name.EqualString(shardKey) {
 				return errors.New("unsupported: cannot.modify.the.column.on.shard.key")
 			}
 			// constraint check in column definition

@@ -31,7 +31,7 @@ func hasSubquery(node sqlparser.SQLNode) bool {
 func isUpdateShardKey(exprs sqlparser.UpdateExprs, shardkey string) bool {
 	if shardkey != "" {
 		for _, assignment := range exprs {
-			if shardkey == assignment.Name.Name.String() {
+			if assignment.Name.Name.EqualString(shardkey) {
 				return true
 			}
 		}

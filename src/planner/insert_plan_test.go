@@ -62,11 +62,27 @@ func TestInsertPlan(t *testing.T) {
 		}
 	]
 }`,
+		`{
+	"RawQuery": "insert into sbtest.A(ID, B, C) values(1,2,3),(23,4,5), (65536,3,4)",
+	"Partitions": [
+		{
+			"Query": "insert into sbtest.A5(ID, B, C) values (65536, 3, 4)",
+			"Backend": "backend5",
+			"Range": "[256-512)"
+		},
+		{
+			"Query": "insert into sbtest.A6(ID, B, C) values (1, 2, 3), (23, 4, 5)",
+			"Backend": "backend6",
+			"Range": "[512-4096)"
+		}
+	]
+}`,
 	}
 	querys := []string{
 		"insert into A(id, b, c) values(1,2,3) on duplicate key update c=11",
 		"insert into A(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
 		"insert into sbtest.A(id, b, c) values(1,2,3),(23,4,5), (65536,3,4)",
+		"insert into sbtest.A(ID, B, C) values(1,2,3),(23,4,5), (65536,3,4)",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))

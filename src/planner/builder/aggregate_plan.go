@@ -123,7 +123,7 @@ func (p *AggregatePlan) analyze() error {
 		// check: groupby field in select list
 		idx := -1
 		for _, null := range nullAggrs {
-			if null.Field == by.field {
+			if strings.EqualFold(null.Field, by.field) {
 				idx = null.Index
 				break
 			}

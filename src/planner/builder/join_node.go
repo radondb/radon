@@ -9,6 +9,8 @@
 package builder
 
 import (
+	"strings"
+
 	"router"
 	"xcontext"
 
@@ -609,7 +611,7 @@ func (j *JoinNode) pushOtherFilter(node PlanNode, tuple selectTuple) (int, error
 		fields := node.getFields()
 		for i, field := range fields {
 			if field.isCol {
-				if table == field.info.referTables[0] && tuple.field == field.field {
+				if table == field.info.referTables[0] && strings.EqualFold(tuple.field, field.field) {
 					index = i
 					break
 				}
@@ -720,7 +722,7 @@ func (j *JoinNode) buildOrderBy(node PlanNode, tuple selectTuple) JoinKey {
 		fields := node.getFields()
 		for i, field := range fields {
 			if field.isCol {
-				if table == field.info.referTables[0] && tuple.field == field.field {
+				if table == field.info.referTables[0] && strings.EqualFold(tuple.field, field.field) {
 					index = i
 					break
 				}
@@ -866,7 +868,7 @@ func (j *JoinNode) procure(col *sqlparser.ColName) string {
 	index := -1
 	for i, tuple := range tuples {
 		if tuple.isCol {
-			if field == tuple.field && table == tuple.info.referTables[0] {
+			if strings.EqualFold(field, tuple.field) && table == tuple.info.referTables[0] {
 				index = i
 				break
 			}

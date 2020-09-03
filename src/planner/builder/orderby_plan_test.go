@@ -30,6 +30,7 @@ func TestOrderByPlan(t *testing.T) {
 		"select a from A order by A.a",
 		"select A.a from A order by a",
 		"select a as b from A order by a",
+		"select a as b from A order by B",
 		"select a as b from A order by A.a",
 		"select a,b from A order by c",
 	}

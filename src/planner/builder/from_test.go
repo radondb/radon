@@ -506,6 +506,26 @@ func TestScanTableExprsList(t *testing.T) {
 		assert.Equal(t, []int{2323}, m.indexes)
 		assert.NotNil(t, m.Sel.(*sqlparser.Select).Where)
 	}
+	// can merge shard tables, columns ignore case.
+	{
+		query := "select * from A join A as L on A.id=L.ID and A.ID=1"
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+
+		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		assert.Nil(t, err)
+
+		m, ok := planNode.(*MergeNode)
+		if !ok {
+			t.Errorf("scanTableExprs returned plannode error")
+		}
+		tbMaps := m.getReferTables()
+		assert.Equal(t, 2, len(tbMaps))
+		tbInfo := tbMaps["A"]
+		assert.Equal(t, m, tbInfo.parent)
+		assert.Equal(t, []int{2323}, m.indexes)
+		assert.NotNil(t, m.Sel.(*sqlparser.Select).Where)
+	}
 	// with parenthese query.
 	{
 		query := "select * from G,(A, L)"

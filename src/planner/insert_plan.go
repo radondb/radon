@@ -116,7 +116,7 @@ func (p *InsertPlan) Build() error {
 	// Find the shard key index.
 	idx := -1
 	for i, column := range node.Columns {
-		if column.String() == shardKey {
+		if column.EqualString(shardKey) {
 			idx = i
 			break
 		}
@@ -165,7 +165,7 @@ func (p *InsertPlan) Build() error {
 
 	// sorts SQL by rewrittenTable in increasing order to avoid deadlock #605.
 	ks := []string{}
-	for k, _ := range vals {
+	for k := range vals {
 		ks = append(ks, k)
 	}
 	sort.Strings(ks)

@@ -26,6 +26,7 @@ func TestGetDMLRouting(t *testing.T) {
 		"select * from B where B.id in (1,2,3)",
 		"select * from B where id = 1 or id =2 or id =3",
 		"select * from B where B.id in (1,2,c)",
+		"select * from B where ID = 10",
 	}
 
 	want := []int{
@@ -35,6 +36,7 @@ func TestGetDMLRouting(t *testing.T) {
 		1,
 		1,
 		2,
+		1,
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"

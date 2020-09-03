@@ -12,6 +12,8 @@ create table integrate_test.t(
         c char(10),
         primary key(a, b)) ENGINE=InnoDB DEFAULT CHARSET=utf8 PARTITION BY HASH(a);
 show create table integrate_test.t;
+alter table integrate_test.t drop column A;
+alter table integrate_test.t modify column A bigint;
 drop table integrate_test.t;
 
 create table integrate_test.t(
