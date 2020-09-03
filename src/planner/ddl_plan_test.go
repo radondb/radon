@@ -149,6 +149,8 @@ func TestDROPPlan(t *testing.T) {
 func TestDDLAlterError(t *testing.T) {
 	results := []string{
 		"unsupported: cannot.modify.the.column.on.shard.key",
+		"unsupported: cannot.modify.the.column.on.shard.key",
+		"unsupported: cannot.drop.the.column.on.shard.key",
 		"unsupported: cannot.drop.the.column.on.shard.key",
 		"The unique/primary constraint should be only defined on the sharding key column[id]",
 		"The unique/primary constraint should be only defined on the sharding key column[id]",
@@ -166,7 +168,9 @@ func TestDDLAlterError(t *testing.T) {
 	// "alter table A add column(c14 int, c15 varchar(100), unique(c12))",
 	querys := []string{
 		"alter table A modify column id int",
+		"alter table A modify column ID int",
 		"alter table A drop column id",
+		"alter table A drop column ID",
 		"alter table A modify column b varchar(1) key",
 		"alter table A modify column b varchar(1) primary key",
 		"alter table A modify column b varchar(1) unique",

@@ -10,6 +10,7 @@ package builder
 
 import (
 	"fmt"
+	"strings"
 
 	"router"
 
@@ -289,7 +290,7 @@ func getSelectExprs(node sqlparser.SelectStatement) sqlparser.SelectExprs {
 
 func checkInTuple(field, table string, tuples []selectTuple) (bool, *selectTuple) {
 	for _, tuple := range tuples {
-		if table == "" && (tuple.field == "*" || field == tuple.alias) {
+		if table == "" && (tuple.field == "*" || strings.EqualFold(field, tuple.alias)) {
 			return true, &tuple
 		}
 
@@ -298,7 +299,7 @@ func checkInTuple(field, table string, tuples []selectTuple) (bool, *selectTuple
 		}
 
 		if tuple.isCol {
-			if field == tuple.field && (table == "" || table == tuple.info.referTables[0]) {
+			if strings.EqualFold(field, tuple.field) && (table == "" || table == tuple.info.referTables[0]) {
 				return true, &tuple
 			}
 		}
@@ -339,11 +340,11 @@ func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.
 
 		for _, tuple := range fields {
 			find := false
-			if table == "" && field == tuple.alias {
+			if table == "" && strings.EqualFold(field, tuple.alias) {
 				find = true
 			} else {
 				if tuple.isCol {
-					if field == tuple.field && (table == "" || table == tuple.info.referTables[0]) {
+					if strings.EqualFold(field, tuple.field) && (table == "" || table == tuple.info.referTables[0]) {
 						find = true
 					}
 				}

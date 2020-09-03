@@ -44,33 +44,33 @@ func tryGetShardKey(ddl *sqlparser.DDL) (string, error) {
 		return "", fmt.Errorf("spanner.ddl.check.create.table[%s].error:not support", table)
 	}
 
+	var shardKey string
 	switch partOpt := ddl.PartitionOption.(type) {
 	case *sqlparser.PartOptHash:
-		shardKey := partOpt.Name
-		return shardKey, checkShardKey(ddl, shardKey)
+		shardKey = strings.ToLower(partOpt.Name)
 	case *sqlparser.PartOptList:
-		shardKey := partOpt.Name
-		return shardKey, checkShardKey(ddl, shardKey)
+		shardKey = strings.ToLower(partOpt.Name)
 	case *sqlparser.PartOptNormal:
 		for _, col := range ddl.TableSpec.Columns {
-			colName := col.Name.String()
 			if col.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
 				col.Type.UniqueKeyOpt == sqlparser.ColKeyUniqueKey {
-				return colName, nil
+				shardKey = col.Name.Lowered()
+				goto end
 			}
 		}
 		// constraint check in index definition.
 		for _, index := range ddl.TableSpec.Indexes {
 			if index.Unique || index.Primary {
-				if len(index.Opts.Columns) == 1 {
-					return index.Opts.Columns[0].Column.String(), nil
-				}
+				shardKey = index.Opts.Columns[0].Column.Lowered()
+				goto end
 			}
 		}
+		return "", fmt.Errorf("The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication")
 	case *sqlparser.PartOptGlobal, *sqlparser.PartOptSingle:
 		return "", nil
 	}
-	return "", fmt.Errorf("The unique/primary constraint shoule be defined or add 'PARTITION BY HASH' to mandatory indication")
+end:
+	return shardKey, checkShardKey(ddl, shardKey)
 }
 
 func checkShardKey(ddl *sqlparser.DDL, shardKey string) error {
@@ -78,8 +78,7 @@ func checkShardKey(ddl *sqlparser.DDL, shardKey string) error {
 	constraintCheckOK := true
 	// shardKey check and constraint check in column definition
 	for _, col := range ddl.TableSpec.Columns {
-		colName := col.Name.String()
-		if colName == shardKey {
+		if col.Name.EqualString(shardKey) {
 			shardKeyOK = true
 		} else {
 			if col.Type.PrimaryKeyOpt == sqlparser.ColKeyPrimary ||
@@ -101,8 +100,7 @@ func checkShardKey(ddl *sqlparser.DDL, shardKey string) error {
 		constraintCheckOK = false
 		if index.Unique || index.Primary {
 			for _, colIdx := range index.Opts.Columns {
-				colName := colIdx.Column.String()
-				if colName == shardKey {
+				if colIdx.Column.EqualString(shardKey) {
 					constraintCheckOK = true
 					break
 				}

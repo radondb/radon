@@ -169,7 +169,7 @@ func GetDMLRouting(database, table, shardkey string, where *sqlparser.Where, rou
 
 func nameMatch(node sqlparser.Expr, table, shardkey string) bool {
 	colname, ok := node.(*sqlparser.ColName)
-	return ok && (colname.Qualifier.Name.String() == "" || colname.Qualifier.Name.String() == table) && (colname.Name.String() == shardkey)
+	return ok && (colname.Qualifier.Name.String() == "" || colname.Qualifier.Name.String() == table) && (colname.Name.EqualString(shardkey))
 }
 
 // splitAndExpression breaks up the Expr into AND-separated conditions

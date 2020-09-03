@@ -22,6 +22,12 @@ show create table integrate_test.t;
 Table	Create Table
 t	CREATE TABLE `t` (\n  `a` int(11) NOT NULL,\n  `b` int(11) NOT NULL,\n  `c` char(10) DEFAULT NULL,\n  PRIMARY KEY (`a`,`b`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8\n/*!50100 PARTITION BY HASH(a) */
 
+alter table integrate_test.t drop column A;
+ERROR 1105 (HY000): unsupported: cannot.drop.the.column.on.shard.key
+
+alter table integrate_test.t modify column A bigint;
+ERROR 1105 (HY000): unsupported: cannot.modify.the.column.on.shard.key
+
 drop table integrate_test.t;
 
 

@@ -73,6 +73,7 @@ func TestCheckGroupBy(t *testing.T) {
 		"select A.id as a from A group by a",
 		"select A.id+G.id as id from A,G group by id",
 		"select A.id from A group by id",
+		"select A.id as tmp from A group by TMP",
 		"select id as a from A group by id",
 		"select id as a from A group by A.id",
 	}
@@ -82,6 +83,7 @@ func TestCheckGroupBy(t *testing.T) {
 		0,
 		0,
 		1,
+		0,
 		0,
 		0,
 		0,

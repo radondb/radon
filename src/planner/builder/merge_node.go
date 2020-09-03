@@ -11,6 +11,7 @@ package builder
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"router"
@@ -109,7 +110,7 @@ func (m *MergeNode) pushKeyFilter(filter exprInfo, table, field string) error {
 	m.addWhere(expr)
 
 	tbInfo := m.referTables[table]
-	if field == tbInfo.shardKey && len(filter.vals) > 0 {
+	if strings.EqualFold(tbInfo.shardKey, field) && len(filter.vals) > 0 {
 		for _, val := range filter.vals {
 			if err := fetchIndex(tbInfo, val, m.router); err != nil {
 				return err

@@ -675,7 +675,7 @@ func TestProxyDDLColumn(t *testing.T) {
 		"alter table t2 add column(status int, bool int, datetime datetime, enum char)",
 	}
 	queryerr := []string{
-		"alter table t1 drop column id",
+		"alter table t1 drop column ID",
 		"alter table t1 modify column id bigint",
 	}
 	wants := []string{
@@ -780,6 +780,7 @@ func TestProxyDDLCreateTable(t *testing.T) {
 		"create table t8(a int, b int) partition by hash(a)",
 		"create table t9(a int, b timestamp(5) on update current_timestamp(5) column_format fixed column_format default column_format dynamic) partition by hash(a)",
 		"create table t10(a int column_format fixed column_format default column_format dynamic) comment='comment option' engine=tokudb default charset='utf8' avg_row_length=123 checksum=1 collate='utf8_bin' compression='lz4' connection='id' data directory='/data' index directory='/index' delay_key_write=1 encryption='n' insert_method=First key_block_size=1 max_rows=3 min_rows=2 pack_keys=default password='pwd' row_format=dynamic stats_auto_recalc=1 stats_persistent=default stats_sample_pages=65535 tablespace=storage partition by hash(a)",
+		"create table t11(a int, b int) partition by hash(A)",
 	}
 
 	for _, query := range querys {
@@ -966,10 +967,12 @@ func TestProxyDDLConstraintError(t *testing.T) {
 		"create table t25(a int unique, b int key, index `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
 		"create table t26(a int unique, b int key, unique index `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
 		"create table t27(a int unique, b int key, unique key `name` (a))engine=tokudb default charset=utf8  PARTITION  BY hash(a)  ",
+		"create table t28(a int primary key, b int unique)",
 	}
 
 	results := []string{
 		"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use, syntax error at position 35 near 'index' (errno 1149) (sqlstate 42000)",
+		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
 		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
 		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",
 		"The unique/primary constraint should be only defined on the sharding key column[a] (errno 1105) (sqlstate HY000)",

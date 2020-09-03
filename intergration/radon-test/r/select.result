@@ -10,10 +10,35 @@ a	c
 2	3
 0	1
 
+select a, b c from integrate_test.t where a in (0,1,2) order by C desc;
+a	c
+2	3
+0	1
+
+select a, b from integrate_test.t where A>0;
+a	b
+2	3
+
+select sum(a), b from integrate_test.t where a>=0 group by B;
+sum(a)	b
+0	1
+2	3
+
 select c from integrate_test.t;
 ERROR 1054 (42S22): Unknown column 'c' in 'field list'
 
+
+create table integrate_test.s(a int key, b int) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+insert into integrate_test.s(a, b) values(0,1), (2,2);
+
+select t.a, s.b from integrate_test.t join integrate_test.s on t.A=s.a where t.a>0;
+a	b
+2	2
+
 drop table integrate_test.t;
+
+drop table integrate_test.s;
 
 
 drop database integrate_test;

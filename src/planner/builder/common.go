@@ -9,6 +9,8 @@
 package builder
 
 import (
+	"strings"
+
 	"router"
 
 	"github.com/pkg/errors"
@@ -71,7 +73,7 @@ func checkShard(table, col string, tbInfos map[string]*tableInfo, router *router
 		return false, errors.Errorf("unsupported: unknown.column.'%s.%s'.in.field.list", table, col)
 	}
 
-	if tbInfo.shardKey != "" && tbInfo.shardKey == col {
+	if tbInfo.shardKey != "" && strings.EqualFold(tbInfo.shardKey, col) {
 		return true, nil
 	}
 	return false, nil
