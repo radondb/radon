@@ -35,6 +35,10 @@ func (p *CastPlan) Materialize() (evaluation.Evaluation, error) {
 	return res, nil
 }
 
+func (p *CastPlan) walk(visit Visit) error {
+	return Walk(visit, p.arg)
+}
+
 // String return the plan info.
 func (p *CastPlan) String() string {
 	buf := sqlparser.NewTrackedBuffer(nil)

@@ -164,10 +164,8 @@ func REGEXP(left, right Evaluation) Evaluation {
 		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			return &datum.IField{
-				ResTyp:   datum.IntResult,
-				Scale:    0,
-				Flag:     false,
-				Constant: false,
+				Type:     datum.IntResult,
+				IsBinary: true,
 			}
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
@@ -185,10 +183,8 @@ func NOTREGEXP(left, right Evaluation) Evaluation {
 		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			return &datum.IField{
-				ResTyp:   datum.IntResult,
-				Scale:    0,
-				Flag:     false,
-				Constant: false,
+				Type:     datum.IntResult,
+				IsBinary: true,
 			}
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
@@ -233,7 +229,8 @@ func LIKE(args ...Evaluation) Evaluation {
 		),
 		fixFieldFn: func(args ...*datum.IField) *datum.IField {
 			return &datum.IField{
-				ResTyp: datum.IntResult,
+				Type:     datum.IntResult,
+				IsBinary: true,
 			}
 		},
 		updateFn: func(field *datum.IField, args ...datum.Datum) (datum.Datum, error) {
@@ -253,7 +250,8 @@ func NOTLIKE(args ...Evaluation) Evaluation {
 		),
 		fixFieldFn: func(args ...*datum.IField) *datum.IField {
 			return &datum.IField{
-				ResTyp: datum.IntResult,
+				Type:     datum.IntResult,
+				IsBinary: true,
 			}
 		},
 		updateFn: func(field *datum.IField, args ...datum.Datum) (datum.Datum, error) {

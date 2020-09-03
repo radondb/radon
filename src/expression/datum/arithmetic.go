@@ -19,7 +19,7 @@ func Add(v1, v2 Datum, field *IField) (Datum, error) {
 	if CheckNull(v1, v2) {
 		return NewDNull(true), nil
 	}
-	switch field.ResTyp {
+	switch field.Type {
 	case IntResult:
 		val1, flag1 := v1.ValInt()
 		val2, flag2 := v2.ValInt()
@@ -47,7 +47,7 @@ func Add(v1, v2 Datum, field *IField) (Datum, error) {
 				return nil, errors.Errorf("BIGINT.value.is.out.of.range.in: '%v' + '%v'", val1, val2)
 			}
 		}
-		return NewDInt(val1+val2, field.Flag), nil
+		return NewDInt(val1+val2, field.IsUnsigned), nil
 	case DecimalResult:
 		val1, val2 := v1.ValDecimal(), v2.ValDecimal()
 		res := val1.Add(val2)
@@ -70,7 +70,7 @@ func Sub(v1, v2 Datum, field *IField) (Datum, error) {
 	if CheckNull(v1, v2) {
 		return NewDNull(true), nil
 	}
-	switch field.ResTyp {
+	switch field.Type {
 	case IntResult:
 		val1, flag1 := v1.ValInt()
 		val2, flag2 := v2.ValInt()
@@ -95,7 +95,7 @@ func Sub(v1, v2 Datum, field *IField) (Datum, error) {
 				return nil, errors.Errorf("BIGINT.value.is.out.of.range.in: '%v' - '%v'", val1, val2)
 			}
 		}
-		return NewDInt(val1-val2, field.Flag), nil
+		return NewDInt(val1-val2, field.IsUnsigned), nil
 	case DecimalResult:
 		val1, val2 := v1.ValDecimal(), v2.ValDecimal()
 		res := val1.Sub(val2)
@@ -118,24 +118,24 @@ func Mul(v1, v2 Datum, field *IField) (Datum, error) {
 	if CheckNull(v1, v2) {
 		return NewDNull(true), nil
 	}
-	switch field.ResTyp {
+	switch field.Type {
 	case IntResult:
 		val1, _ := v1.ValInt()
 		val2, _ := v2.ValInt()
-		if field.Flag {
+		if field.IsUnsigned {
 			val1 := uint64(val1)
 			val2 := uint64(val2)
 			res := val1 * val2
 			if val1 != 0 && res/val1 != val2 {
 				return nil, errors.Errorf("BIGINT.UNSIGNED.value.is.out.of.range.in: '%v' * '%v'", val1, val2)
 			}
-			return NewDInt(int64(res), field.Flag), nil
+			return NewDInt(int64(res), field.IsUnsigned), nil
 		}
 		res := val1 * val2
 		if val1 != 0 && res/val1 != val2 {
 			return nil, errors.Errorf("BIGINT.value.is.out.of.range.in: '%v' * '%v'", val1, val2)
 		}
-		return NewDInt(res, field.Flag), nil
+		return NewDInt(res, field.IsUnsigned), nil
 	case DecimalResult:
 		val1, val2 := v1.ValDecimal(), v2.ValDecimal()
 		res := val1.Mul(val2)
@@ -158,7 +158,7 @@ func Div(v1, v2 Datum, field *IField) (Datum, error) {
 	if CheckNull(v1, v2) {
 		return NewDNull(true), nil
 	}
-	switch field.ResTyp {
+	switch field.Type {
 	case DecimalResult:
 		val1, val2 := v1.ValDecimal(), v2.ValDecimal()
 		if val2.IsZero() {
@@ -194,7 +194,7 @@ func IntDiv(v1, v2 Datum, field *IField) (Datum, error) {
 	}
 
 	res := val1 / val2
-	if field.Flag {
+	if field.IsUnsigned {
 		if res < 0 || res > math.MaxUint64 {
 			return nil, errors.Errorf("BIGINT.UNSIGNED.value.is.out.of.range.in: '%v' div '%v'", val1, val2)
 		}
@@ -203,5 +203,5 @@ func IntDiv(v1, v2 Datum, field *IField) (Datum, error) {
 			return nil, errors.Errorf("BIGINT.value.is.out.of.range.in: '%v' div '%v'", val1, val2)
 		}
 	}
-	return NewDInt(int64(math.Trunc(res)), field.Flag), nil
+	return NewDInt(int64(math.Trunc(res)), field.IsUnsigned), nil
 }

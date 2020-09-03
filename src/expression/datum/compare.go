@@ -30,8 +30,8 @@ func NullsafeCompare(x, y Datum, cmpFunc CompareFunc) int64 {
 
 // GetCmpFunc get the CompareFunc based on the left and right.
 func GetCmpFunc(left, right *IField) CompareFunc {
-	leftResTyp, rightResTyp := left.ResTyp, right.ResTyp
-	leftConst, rightConst := left.Constant, right.Constant
+	leftResTyp, rightResTyp := left.Type, right.Type
+	leftConst, rightConst := left.IsConstant, right.IsConstant
 
 	if leftResTyp == IntResult && rightResTyp == IntResult {
 		return CompareInt

@@ -63,10 +63,11 @@ func TestLogic(t *testing.T) {
 			assert.Nil(t, err)
 
 			assert.Equal(t, &datum.IField{
-				ResTyp:   datum.IntResult,
-				Scale:    0,
-				Flag:     false,
-				Constant: false,
+				Type:       datum.IntResult,
+				Scale:      0,
+				IsUnsigned: false,
+				IsBinary:   true,
+				IsConstant: false,
 			}, field)
 
 			_, err = eval.Update(values)

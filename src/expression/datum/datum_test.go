@@ -163,7 +163,7 @@ func TestDatumFunction(t *testing.T) {
 			str:      "1.22",
 		},
 		{
-			val:      NewDString("1.22e3", 10, 33),
+			val:      NewDString("1.22e3", 10, false),
 			typ:      TypeString,
 			flag:     false,
 			integral: 1220,
@@ -172,7 +172,7 @@ func TestDatumFunction(t *testing.T) {
 			str:      "1.22e3",
 		},
 		{
-			val:      NewDString("12", 16, 63),
+			val:      NewDString("12", 16, true),
 			typ:      TypeString,
 			flag:     true,
 			integral: 12594,
@@ -182,7 +182,7 @@ func TestDatumFunction(t *testing.T) {
 		},
 		// truncate.
 		{
-			val:      NewDString("1.22e", 10, 33),
+			val:      NewDString("1.22e", 10, false),
 			typ:      TypeString,
 			flag:     false,
 			integral: 1,
@@ -191,7 +191,7 @@ func TestDatumFunction(t *testing.T) {
 			str:      "1.22e",
 		},
 		{
-			val:      NewDString("15", 16, 63),
+			val:      NewDString("15", 16, true),
 			typ:      TypeString,
 			flag:     true,
 			integral: 12597,
@@ -200,7 +200,7 @@ func TestDatumFunction(t *testing.T) {
 			str:      "15",
 		},
 		{
-			val:      NewDString("1.22", 10, 33),
+			val:      NewDString("1.22", 10, false),
 			typ:      TypeString,
 			flag:     false,
 			integral: 1,
@@ -210,7 +210,7 @@ func TestDatumFunction(t *testing.T) {
 		},
 		// over range.
 		{
-			val:      NewDString("123456789", 16, 63),
+			val:      NewDString("123456789", 16, true),
 			typ:      TypeString,
 			flag:     true,
 			integral: -1,
@@ -220,7 +220,7 @@ func TestDatumFunction(t *testing.T) {
 		},
 		// over range.
 		{
-			val:      NewDString("2e+308", 10, 33),
+			val:      NewDString("2e+308", 10, false),
 			typ:      TypeString,
 			flag:     false,
 			integral: 9223372036854775807,
@@ -230,7 +230,7 @@ func TestDatumFunction(t *testing.T) {
 		},
 		// over range.
 		{
-			val:      NewDString("-2e+308", 10, 33),
+			val:      NewDString("-2e+308", 10, false),
 			typ:      TypeString,
 			flag:     false,
 			integral: -9223372036854775808,
@@ -290,7 +290,7 @@ func TestDatumFunction(t *testing.T) {
 			str:      "-08:00:00.2300",
 		},
 		{
-			val: NewDTuple(NewDInt(1, false), NewDString("1.22", 10, 33)),
+			val: NewDTuple(NewDInt(1, false), NewDString("1.22", 10, false)),
 			typ: TypeTuple,
 			str: "11.22",
 		},
@@ -326,15 +326,15 @@ func TestSQLValToDatum(t *testing.T) {
 		},
 		{
 			val: sqlparser.NewStrVal([]byte("byz")),
-			res: NewDString("byz", 10, 33),
+			res: NewDString("byz", 10, false),
 		},
 		{
 			val: sqlparser.NewHexNum([]byte("0x3132")),
-			res: NewDString("12", 16, 63),
+			res: NewDString("12", 16, true),
 		},
 		{
 			val: sqlparser.NewHexVal([]byte("3132")),
-			res: NewDString("12", 16, 63),
+			res: NewDString("12", 16, true),
 		},
 		{
 			val: sqlparser.NewFloatVal([]byte("22a1")),
@@ -368,7 +368,7 @@ func TestSQLValToDatum(t *testing.T) {
 }
 
 func TestDTupleArgs(t *testing.T) {
-	d := NewDTuple(NewDInt(1, false), NewDString("1.22", 10, 33))
+	d := NewDTuple(NewDInt(1, false), NewDString("1.22", 10, false))
 	assert.Equal(t, 2, len(d.Args()))
 }
 

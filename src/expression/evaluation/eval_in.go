@@ -43,7 +43,8 @@ func (e *InEval) FixField(fields map[string]*querypb.Field) (*datum.IField, erro
 	}
 
 	return &datum.IField{
-		ResTyp: datum.IntResult,
+		Type:     datum.IntResult,
+		IsBinary: true,
 	}, nil
 }
 

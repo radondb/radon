@@ -26,48 +26,48 @@ func TestCast(t *testing.T) {
 		{
 			in: NewDInt(-1, false),
 			field: &IField{
-				ResTyp: IntResult,
-				Flag:   true,
+				Type:       IntResult,
+				IsUnsigned: true,
 			},
 			out: NewDInt(0, true),
 		},
 		{
 			in: NewDInt(-1, true),
 			field: &IField{
-				ResTyp: IntResult,
-				Flag:   true,
+				Type:       IntResult,
+				IsUnsigned: true,
 			},
 			out: NewDInt(-1, true),
 		},
 		{
 			in: NewDDecimal(decimal.NewFromFloat(1.22)),
 			field: &IField{
-				ResTyp: IntResult,
-				Flag:   true,
+				Type:       IntResult,
+				IsUnsigned: true,
 			},
 			out: NewDInt(1, true),
 		},
 		{
 			in: NewDFloat(1.22),
 			field: &IField{
-				ResTyp: IntResult,
-				Flag:   true,
+				Type:       IntResult,
+				IsUnsigned: true,
 			},
 			out: NewDInt(1, true),
 		},
 		{
 			in: NewDFloat(1.22),
 			field: &IField{
-				ResTyp: IntResult,
-				Flag:   false,
+				Type:       IntResult,
+				IsUnsigned: false,
 			},
 			out: NewDInt(1, false),
 		},
 		{
-			in: NewDString("2e20", 10, 33),
+			in: NewDString("2e20", 10, false),
 			field: &IField{
-				ResTyp: IntResult,
-				Flag:   true,
+				Type:       IntResult,
+				IsUnsigned: true,
 			},
 			out: NewDInt(-1, true),
 		},
@@ -77,8 +77,8 @@ func TestCast(t *testing.T) {
 				fsp:      2,
 			},
 			field: &IField{
-				ResTyp: IntResult,
-				Flag:   true,
+				Type:       IntResult,
+				IsUnsigned: true,
 			},
 			out: NewDInt(0, true),
 		},
@@ -88,31 +88,31 @@ func TestCast(t *testing.T) {
 				fsp:      2,
 			},
 			field: &IField{
-				ResTyp: IntResult,
-				Flag:   false,
+				Type:       IntResult,
+				IsUnsigned: false,
 			},
 			out: NewDInt(255959, false),
 		},
 		{
 			in: NewDTime(sqltypes.Datetime, 2, 2008, 8, 8, 20, 0, 1, 0),
 			field: &IField{
-				ResTyp: IntResult,
-				Flag:   false,
+				Type:       IntResult,
+				IsUnsigned: false,
 			},
 			out: NewDInt(20080808200001, false),
 		},
 		{
 			in: NewDInt(255959, true),
 			field: &IField{
-				ResTyp:  StringResult,
+				Type:    StringResult,
 				Charset: 33,
 			},
-			out: NewDString("255959", 10, 33),
+			out: NewDString("255959", 10, false),
 		},
 		{
 			in: NewDInt(255959, true),
 			field: &IField{
-				ResTyp: DecimalResult,
+				Type:   DecimalResult,
 				Length: 5,
 				Scale:  2,
 			},
@@ -121,14 +121,14 @@ func TestCast(t *testing.T) {
 		{
 			in: NewDInt(255959, true),
 			field: &IField{
-				ResTyp: RealResult,
+				Type: RealResult,
 			},
 			out: NewDFloat(255959),
 		},
 		{
 			in: NewDFloat(math.NaN()),
 			field: &IField{
-				ResTyp: RealResult,
+				Type:   RealResult,
 				Length: 5,
 				Scale:  2,
 			},
@@ -137,8 +137,8 @@ func TestCast(t *testing.T) {
 		{
 			in: NewDInt(255959, true),
 			field: &IField{
-				ResTyp: DurationResult,
-				Scale:  2,
+				Type:  DurationResult,
+				Scale: 2,
 			},
 			out: &Duration{
 				duration: time.Duration(25*3600+59*60+59) * time.Second,
@@ -151,8 +151,8 @@ func TestCast(t *testing.T) {
 				fsp:      6,
 			},
 			field: &IField{
-				ResTyp: DurationResult,
-				Scale:  2,
+				Type:  DurationResult,
+				Scale: 2,
 			},
 			out: &Duration{
 				duration: time.Duration(26*3600) * time.Second,
@@ -160,25 +160,25 @@ func TestCast(t *testing.T) {
 			},
 		},
 		{
-			in: NewDString("08-08-08 20:00:00.9999", 10, 63),
+			in: NewDString("08-08-08 20:00:00.9999", 10, true),
 			field: &IField{
-				ResTyp: TimeResult,
-				Scale:  2,
+				Type:  TimeResult,
+				Scale: 2,
 			},
 			out: NewDTime(sqltypes.Datetime, 2, 2008, 8, 8, 20, 0, 1, 0),
 		},
 		{
 			in: NewDTime(sqltypes.Datetime, 4, 2008, 8, 8, 20, 0, 1, 999900),
 			field: &IField{
-				ResTyp: TimeResult,
-				Scale:  2,
+				Type:  TimeResult,
+				Scale: 2,
 			},
 			out: NewDTime(sqltypes.Datetime, 2, 2008, 8, 8, 20, 0, 2, 0),
 		},
 		{
-			in: NewDString("08-08-08 20:00:00.9999", 10, 63),
+			in: NewDString("08-08-08 20:00:00.9999", 10, true),
 			field: &IField{
-				ResTyp: RowResult,
+				Type: RowResult,
 			},
 			err: "unsupport.type",
 		},
@@ -295,8 +295,9 @@ func TestCastStrWithField(t *testing.T) {
 		{
 			in: "张三",
 			field: &IField{
-				Charset: 63,
-				Length:  3,
+				Charset:  63,
+				IsBinary: true,
+				Length:   3,
 			},
 			res: "张",
 		},

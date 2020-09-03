@@ -13,8 +13,8 @@ func AND(left, right Evaluation) Evaluation {
 		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			return &datum.IField{
-				ResTyp:   datum.IntResult,
-				Constant: left.Constant && right.Constant,
+				Type:     datum.IntResult,
+				IsBinary: true,
 			}
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
@@ -44,8 +44,8 @@ func OR(left, right Evaluation) Evaluation {
 		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			return &datum.IField{
-				ResTyp:   datum.IntResult,
-				Constant: left.Constant && right.Constant,
+				Type:     datum.IntResult,
+				IsBinary: true,
 			}
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
@@ -78,8 +78,8 @@ func NOT(arg Evaluation) Evaluation {
 		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(arg *datum.IField) *datum.IField {
 			return &datum.IField{
-				ResTyp:   datum.IntResult,
-				Constant: arg.Constant,
+				Type:     datum.IntResult,
+				IsBinary: true,
 			}
 		},
 		updateFn: func(arg datum.Datum, field *datum.IField) (datum.Datum, error) {

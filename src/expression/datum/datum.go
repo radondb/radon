@@ -17,7 +17,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
-	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
@@ -101,9 +100,9 @@ func ValToDatum(v sqltypes.Value) (Datum, error) {
 	case v.IsNull():
 		return NewDNull(true), nil
 	case v.IsBinary():
-		return NewDString(str, 10, sqldb.CharacterSetBinary), nil
+		return NewDString(str, 10, true), nil
 	}
-	return NewDString(str, 10, sqldb.CharacterSetUtf8), nil
+	return NewDString(str, 10, false), nil
 }
 
 // timeToNumeric used to cast time type to numeric.
@@ -213,7 +212,7 @@ func SQLValToDatum(v *sqlparser.SQLVal) (Datum, error) {
 	val := v.Val
 	switch v.Type {
 	case sqlparser.StrVal:
-		return NewDString(string(val), 10, sqldb.CharacterSetUtf8), nil
+		return NewDString(string(val), 10, false), nil
 	case sqlparser.IntVal:
 		n, err := strconv.ParseInt(string(val), 10, 64)
 		if err != nil {
@@ -232,13 +231,13 @@ func SQLValToDatum(v *sqlparser.SQLVal) (Datum, error) {
 		if err != nil {
 			return nil, err
 		}
-		return NewDString(string(n), 16, sqldb.CharacterSetBinary), nil
+		return NewDString(string(n), 16, true), nil
 	case sqlparser.HexVal:
 		n, err := v.HexDecode()
 		if err != nil {
 			return nil, err
 		}
-		return NewDString(string(n), 16, sqldb.CharacterSetBinary), nil
+		return NewDString(string(n), 16, true), nil
 	default:
 		return nil, errors.Errorf("unsupport.val.type[%+v]", reflect.TypeOf(v))
 	}
@@ -246,7 +245,7 @@ func SQLValToDatum(v *sqlparser.SQLVal) (Datum, error) {
 
 func ignoreCase(d Datum) bool {
 	if s, ok := d.(*DString); ok {
-		return s.charset != sqldb.CharacterSetBinary
+		return !s.isBinary
 	}
 	return true
 }

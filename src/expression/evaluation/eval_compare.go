@@ -39,7 +39,8 @@ func (e *CompareEval) FixField(fields map[string]*querypb.Field) (*datum.IField,
 
 	e.cmpFunc = datum.GetCmpFunc(left, right)
 	return &datum.IField{
-		ResTyp: datum.IntResult,
+		Type:     datum.IntResult,
+		IsBinary: true,
 	}, nil
 }
 

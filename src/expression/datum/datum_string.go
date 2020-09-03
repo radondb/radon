@@ -19,16 +19,16 @@ import (
 type DString struct {
 	value string
 	// default: 10.
-	base    int
-	charset int
+	base     int
+	isBinary bool
 }
 
 // NewDString new DString.
-func NewDString(v string, base, charset int) *DString {
+func NewDString(v string, base int, isBinary bool) *DString {
 	return &DString{
-		value:   v,
-		base:    base,
-		charset: charset,
+		value:    v,
+		base:     base,
+		isBinary: isBinary,
 	}
 }
 

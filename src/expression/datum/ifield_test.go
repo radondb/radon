@@ -24,22 +24,22 @@ func TestToNumeric(t *testing.T) {
 		dec    int
 	}{
 		{
-			field:  &IField{StringResult, 0, 0, false, false, 33},
+			field:  mockField(StringResult, 0, false, false, false),
 			resTyp: RealResult,
 			dec:    31,
 		},
 		{
-			field:  &IField{StringResult, 5, 0, true, false, 63},
+			field:  &IField{StringResult, 63, 5, 0, true, true, false},
 			resTyp: IntResult,
 			dec:    0,
 		},
 		{
-			field:  &IField{TimeResult, 0, 2, false, false, 63},
+			field:  mockField(TimeResult, 2, false, true, false),
 			resTyp: DecimalResult,
 			dec:    2,
 		},
 		{
-			field:  &IField{DurationResult, 0, 0, false, false, 63},
+			field:  mockField(DurationResult, 0, false, true, false),
 			resTyp: IntResult,
 			dec:    0,
 		},
@@ -47,7 +47,7 @@ func TestToNumeric(t *testing.T) {
 	for _, tcase := range tcases {
 		field := tcase.field
 		field.ToNumeric()
-		assert.Equal(t, tcase.resTyp, field.ResTyp)
+		assert.Equal(t, tcase.resTyp, field.Type)
 		assert.Equal(t, tcase.dec, field.Scale)
 	}
 }
@@ -64,16 +64,17 @@ func TestNewIField(t *testing.T) {
 				Decimals: 0,
 				Flags:    32,
 			},
-			res: &IField{IntResult, 0, 0, true, false, 63},
+			res: mockField(IntResult, 0, true, false, false),
 		},
 		{
 			field: &querypb.Field{
-				Name:     "id",
-				Type:     querypb.Type_FLOAT64,
-				Decimals: 4,
-				Flags:    129,
+				Name:         "id",
+				Type:         querypb.Type_FLOAT64,
+				ColumnLength: 22,
+				Decimals:     4,
+				Flags:        129,
 			},
-			res: &IField{RealResult, 0, 4, false, false, 63},
+			res: &IField{RealResult, 0, 22, 4, false, true, false},
 		},
 		{
 			field: &querypb.Field{
@@ -83,7 +84,7 @@ func TestNewIField(t *testing.T) {
 				Decimals:     4,
 				Flags:        129,
 			},
-			res: &IField{DecimalResult, 12, 4, false, false, 63},
+			res: &IField{DecimalResult, 0, 12, 4, false, true, false},
 		},
 		{
 			field: &querypb.Field{
@@ -92,7 +93,7 @@ func TestNewIField(t *testing.T) {
 				Decimals: 4,
 				Flags:    129,
 			},
-			res: &IField{TimeResult, 0, 4, false, false, 63},
+			res: mockField(TimeResult, 4, false, true, false),
 		},
 		{
 			field: &querypb.Field{
@@ -101,27 +102,29 @@ func TestNewIField(t *testing.T) {
 				Decimals: 4,
 				Flags:    129,
 			},
-			res: &IField{DurationResult, 0, 4, false, false, 63},
+			res: mockField(DurationResult, 4, false, true, false),
 		},
 		{
 			field: &querypb.Field{
 				Name:         "id",
 				Type:         querypb.Type_CHAR,
+				Charset:      33,
 				ColumnLength: 15,
 				Decimals:     31,
-				Flags:        129,
+				Flags:        1,
 			},
-			res: &IField{StringResult, 5, 31, false, false, 33},
+			res: &IField{StringResult, 33, 5, 31, false, false, false},
 		},
 		{
 			field: &querypb.Field{
 				Name:         "id",
 				Type:         querypb.Type_BINARY,
+				Charset:      63,
 				ColumnLength: 15,
 				Decimals:     31,
 				Flags:        129,
 			},
-			res: &IField{StringResult, 15, 31, false, false, 63},
+			res: &IField{StringResult, 63, 15, 31, false, true, false},
 		},
 	}
 	for _, tcase := range tcases {
@@ -138,29 +141,29 @@ func TestField(t *testing.T) {
 	}{
 		{
 			val: NewDInt(1, false),
-			res: &IField{IntResult, 0, 0, false, true, 63},
+			res: mockField(IntResult, 0, false, true, true),
 		},
 		{
 			val: NewDDecimal(decimal.NewFromFloatWithExponent(1.2222222222222222222222222222222222, -31)),
-			res: &IField{DecimalResult, 0, 30, false, true, 63},
+			res: mockField(DecimalResult, 30, false, true, true),
 		},
 		{
-			val: NewDString("1", 10, 63),
-			res: &IField{StringResult, 0, 31, false, true, 33},
+			val: NewDString("1", 10, true),
+			res: mockField(StringResult, 31, false, false, true),
 		},
 		{
-			val: NewDString("1", 16, 63),
-			res: &IField{StringResult, 0, 0, true, true, 63},
+			val: NewDString("1", 16, true),
+			res: mockField(StringResult, 0, true, true, true),
 		},
 		{
 			val: NewDNull(true),
-			res: &IField{IntResult, 0, 0, true, true, 63},
+			res: mockField(IntResult, 0, false, true, true),
 		},
 	}
 	for _, tcase := range tcases {
 		res := ConstantField(tcase.val)
 		assert.Equal(t, tcase.res, res)
-		assert.Equal(t, tcase.isTemp, IsTemporal(tcase.res.ResTyp))
+		assert.Equal(t, tcase.isTemp, IsTemporal(tcase.res.Type))
 	}
 }
 
@@ -175,9 +178,9 @@ func TestConvertField(t *testing.T) {
 				Type: "unsigned",
 			},
 			field: &IField{
-				ResTyp:  IntResult,
-				Flag:    true,
-				Charset: 63,
+				Type:       IntResult,
+				IsUnsigned: true,
+				IsBinary:   true,
 			},
 		},
 		{
@@ -185,8 +188,8 @@ func TestConvertField(t *testing.T) {
 				Type: "signed",
 			},
 			field: &IField{
-				ResTyp:  IntResult,
-				Charset: 63,
+				Type:     IntResult,
+				IsBinary: true,
 			},
 		},
 		{
@@ -196,10 +199,10 @@ func TestConvertField(t *testing.T) {
 				Scale:  sqlparser.NewIntVal([]byte("2")),
 			},
 			field: &IField{
-				ResTyp:  DecimalResult,
-				Length:  8,
-				Scale:   2,
-				Charset: 63,
+				Type:     DecimalResult,
+				Length:   8,
+				Scale:    2,
+				IsBinary: true,
 			},
 		},
 		{
@@ -208,9 +211,9 @@ func TestConvertField(t *testing.T) {
 				Length: sqlparser.NewIntVal([]byte("6")),
 			},
 			field: &IField{
-				ResTyp:  StringResult,
-				Length:  6,
-				Charset: 63,
+				Type:     StringResult,
+				Length:   6,
+				IsBinary: true,
 			},
 		},
 		{
@@ -218,8 +221,7 @@ func TestConvertField(t *testing.T) {
 				Type: "char",
 			},
 			field: &IField{
-				ResTyp:  StringResult,
-				Charset: 33,
+				Type: StringResult,
 			},
 		},
 		{
@@ -230,7 +232,7 @@ func TestConvertField(t *testing.T) {
 				Charset:  "utf8mb4",
 			},
 			field: &IField{
-				ResTyp:  StringResult,
+				Type:    StringResult,
 				Length:  6,
 				Charset: 45,
 			},
@@ -240,9 +242,9 @@ func TestConvertField(t *testing.T) {
 				Type: "date",
 			},
 			field: &IField{
-				ResTyp:  TimeResult,
-				Length:  10,
-				Charset: 63,
+				Type:     TimeResult,
+				Length:   10,
+				IsBinary: true,
 			},
 		},
 		{
@@ -251,10 +253,10 @@ func TestConvertField(t *testing.T) {
 				Scale: sqlparser.NewIntVal([]byte("2")),
 			},
 			field: &IField{
-				ResTyp:  TimeResult,
-				Length:  22,
-				Scale:   2,
-				Charset: 63,
+				Type:     TimeResult,
+				Length:   22,
+				Scale:    2,
+				IsBinary: true,
 			},
 		},
 		{
@@ -263,9 +265,9 @@ func TestConvertField(t *testing.T) {
 				Scale: sqlparser.NewIntVal([]byte("2")),
 			},
 			field: &IField{
-				ResTyp:  DurationResult,
-				Scale:   2,
-				Charset: 63,
+				Type:     DurationResult,
+				Scale:    2,
+				IsBinary: true,
 			},
 		},
 		{
