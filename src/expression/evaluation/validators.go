@@ -104,13 +104,13 @@ func TypeOf(wanted bool, typ datum.ResultType) *TypeOfVAL {
 
 // Validate is used to verify that the condition is met.
 func (v *TypeOfVAL) Validate(arg *datum.IField) error {
-	if v.typ == arg.ResTyp {
+	if v.typ == arg.Type {
 		if !v.wanted {
 			return errors.Errorf("unexpected.result.type[%v].in.the.argument", v.typ)
 		}
 	} else {
 		if v.wanted {
-			return errors.Errorf("expected.result.type[%v].but.got.type[%v]", v.typ, arg.ResTyp)
+			return errors.Errorf("expected.result.type[%v].but.got.type[%v]", v.typ, arg.Type)
 		}
 	}
 	return nil

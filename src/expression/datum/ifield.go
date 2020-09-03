@@ -40,51 +40,55 @@ const (
 
 // IField is the property of expression's result.
 type IField struct {
-	// ResTyp result type.
-	ResTyp ResultType
+	// Type result type.
+	Type ResultType
+	// TODO: Charset of the field.
+	Charset int
 	// Length of the field.
 	Length int
 	// Scale is the fraction digits.
 	Scale int
-	// Flag, unsigned: true, signed: false.
-	Flag bool
+	// IsUnsigned flag, unsigned: true, signed: false.
+	IsUnsigned bool
+	// IsBinary flag.
+	IsBinary bool
 	// Constant for constanteval.
-	Constant bool
-	// Charset of the field.
-	Charset int
+	IsConstant bool
 }
 
 // NewIField new IField.
 func NewIField(field *querypb.Field) *IField {
 	res := &IField{
-		Charset: sqldb.CharacterSetBinary,
-		Scale:   int(field.Decimals),
-		Flag:    (field.Flags & 32) > 0,
+		Charset:    int(field.Charset),
+		Length:     -1,
+		Scale:      int(field.Decimals),
+		IsUnsigned: (field.Flags & 32) > 0,
+		IsBinary:   (field.Flags & 128) > 0,
+		IsConstant: false,
 	}
 	typ := field.Type
 	switch {
 	case sqltypes.IsIntegral(field.Type):
-		res.ResTyp = IntResult
+		res.Type = IntResult
 	case sqltypes.IsFloat(field.Type):
-		res.ResTyp = RealResult
-		if field.Decimals != NotFixedDec {
+		res.Type = RealResult
+		if field.Decimals < NotFixedDec {
 			res.Length = int(field.ColumnLength)
 		}
 	case field.Type == sqltypes.Decimal:
-		res.ResTyp = DecimalResult
+		res.Type = DecimalResult
 		res.Length = int(field.ColumnLength)
 	case sqltypes.IsTemporal(field.Type):
 		if typ == sqltypes.Time {
-			res.ResTyp = DurationResult
+			res.Type = DurationResult
 		} else {
-			res.ResTyp = TimeResult
+			res.Type = TimeResult
 		}
 	case sqltypes.IsBinary(field.Type):
-		res.ResTyp = StringResult
+		res.Type = StringResult
 		res.Length = int(field.ColumnLength)
 	default:
-		res.ResTyp = StringResult
-		res.Charset = sqldb.CharacterSetUtf8
+		res.Type = StringResult
 		res.Length = int(field.ColumnLength / 3)
 	}
 	return res
@@ -92,19 +96,19 @@ func NewIField(field *querypb.Field) *IField {
 
 // ToNumeric cast the resulttype to a numeric type.
 func (f *IField) ToNumeric() {
-	switch f.ResTyp {
+	switch f.Type {
 	case StringResult:
-		if f.Flag {
-			f.ResTyp = IntResult
+		if f.IsUnsigned {
+			f.Type = IntResult
 		} else {
-			f.ResTyp = RealResult
+			f.Type = RealResult
 			f.Scale = NotFixedDec
 		}
 	case TimeResult, DurationResult:
 		if f.Scale == 0 {
-			f.ResTyp = IntResult
+			f.Type = IntResult
 		} else {
-			f.ResTyp = DecimalResult
+			f.Type = DecimalResult
 		}
 	}
 }
@@ -122,18 +126,18 @@ func IsTemporal(typ ResultType) bool {
 // ConstantField get IField by the given constant datum.
 func ConstantField(d Datum) *IField {
 	res := &IField{
-		ResTyp:   StringResult,
-		Charset:  sqldb.CharacterSetBinary,
-		Scale:    NotFixedDec,
-		Flag:     false,
-		Constant: true,
+		Type:       StringResult,
+		Length:     -1,
+		Scale:      NotFixedDec,
+		IsBinary:   true,
+		IsConstant: true,
 	}
 	switch d := d.(type) {
 	case *DInt:
-		res.ResTyp = IntResult
+		res.Type = IntResult
 		res.Scale = 0
 	case *DDecimal:
-		res.ResTyp = DecimalResult
+		res.Type = DecimalResult
 		dec := len(strings.Split(d.ValStr(), ".")[1])
 		if dec > DecimalMaxScale {
 			dec = DecimalMaxScale
@@ -141,22 +145,21 @@ func ConstantField(d Datum) *IField {
 		res.Scale = dec
 	case *DString:
 		if d.base == 16 {
-			res.Flag = true
+			res.IsUnsigned = true
 			res.Scale = 0
 		} else {
-			res.Charset = sqldb.CharacterSetUtf8
+			res.IsBinary = false
 		}
 	case *DNull:
-		res.ResTyp = IntResult
+		res.Type = IntResult
 		res.Scale = 0
-		res.Flag = true
 	}
 	return res
 }
 
 func ConvertField(cvt *sqlparser.ConvertType) (*IField, error) {
 	field := &IField{
-		Charset: sqldb.CharacterSetBinary,
+		IsBinary: true,
 	}
 	typ := strings.ToLower(cvt.Type)
 
@@ -185,33 +188,31 @@ func ConvertField(cvt *sqlparser.ConvertType) (*IField, error) {
 
 	switch typ {
 	case "binary":
-		field.ResTyp = StringResult
+		field.Type = StringResult
 	case "char":
-		field.ResTyp = StringResult
-		if cvt.Charset == "" {
-			field.Charset = sqldb.CharacterSetUtf8
-		}
+		field.Type = StringResult
+		field.IsBinary = false
 	case "date":
-		field.ResTyp = TimeResult
+		field.Type = TimeResult
 		field.Length = 10
 	case "datetime":
-		field.ResTyp = TimeResult
+		field.Type = TimeResult
 		field.Length = 19
 		if field.Scale > 0 {
 			field.Length += field.Scale + 1
 		}
 	case "decimal":
-		field.ResTyp = DecimalResult
+		field.Type = DecimalResult
 		if field.Scale > 0 {
 			field.Length += 2
 		}
 	case "signed":
-		field.ResTyp = IntResult
+		field.Type = IntResult
 	case "unsigned":
-		field.ResTyp = IntResult
-		field.Flag = true
+		field.Type = IntResult
+		field.IsUnsigned = true
 	case "time":
-		field.ResTyp = DurationResult
+		field.Type = DurationResult
 	default:
 		return nil, errors.Errorf("unsupport.convert.type: '%s'", typ)
 	}

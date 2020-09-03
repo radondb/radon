@@ -220,10 +220,11 @@ func TestCompare(t *testing.T) {
 			assert.Nil(t, err)
 
 			assert.Equal(t, &datum.IField{
-				ResTyp:   datum.IntResult,
-				Scale:    0,
-				Flag:     false,
-				Constant: false,
+				Type:       datum.IntResult,
+				Scale:      0,
+				IsUnsigned: false,
+				IsBinary:   true,
+				IsConstant: false,
 			}, field)
 
 			_, err = eval.Update(values)
@@ -346,7 +347,7 @@ func TestLike(t *testing.T) {
 			funcName: "like",
 			left:     VAR("c"),
 			right:    con5,
-			escape:   CONST(datum.NewDString("\\", 10, 33)),
+			escape:   CONST(datum.NewDString("\\", 10, false)),
 			saved:    datum.NewDInt(1, false),
 		},
 		{
@@ -354,7 +355,7 @@ func TestLike(t *testing.T) {
 			funcName: "like",
 			left:     VAR("f"),
 			right:    con5,
-			escape:   CONST(datum.NewDString("\\", 10, 33)),
+			escape:   CONST(datum.NewDString("\\", 10, false)),
 			saved:    datum.NewDNull(true),
 		},
 		{
@@ -362,7 +363,7 @@ func TestLike(t *testing.T) {
 			funcName: "not like",
 			left:     VAR("c"),
 			right:    con5,
-			escape:   CONST(datum.NewDString("\\", 10, 33)),
+			escape:   CONST(datum.NewDString("\\", 10, false)),
 			saved:    datum.NewDInt(0, false),
 		},
 	}
@@ -375,10 +376,11 @@ func TestLike(t *testing.T) {
 			assert.Nil(t, err)
 
 			assert.Equal(t, &datum.IField{
-				ResTyp:   datum.IntResult,
-				Scale:    0,
-				Flag:     false,
-				Constant: false,
+				Type:       datum.IntResult,
+				Scale:      0,
+				IsUnsigned: false,
+				IsBinary:   true,
+				IsConstant: false,
 			}, field)
 
 			_, err = eval.Update(values)

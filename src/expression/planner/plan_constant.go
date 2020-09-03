@@ -24,6 +24,10 @@ func (p *ConstantPlan) Materialize() (evaluation.Evaluation, error) {
 	return evaluation.CONST(p.value), nil
 }
 
+func (p *ConstantPlan) walk(visit Visit) error {
+	return nil
+}
+
 // String return the plan info.
 func (p *ConstantPlan) String() string {
 	return fmt.Sprintf("%v", p.value.ValStr())

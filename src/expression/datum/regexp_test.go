@@ -15,25 +15,25 @@ func TestRegexp(t *testing.T) {
 	}{
 		{
 			left:  NewDNull(true),
-			right: NewDString("^[A-Z0-9._%-]+@[A-Z0-9.-]+.[A-Z]{2,4}$", 10, 33),
+			right: NewDString("^[A-Z0-9._%-]+@[A-Z0-9.-]+.[A-Z]{2,4}$", 10, false),
 			not:   false,
 			res:   NewDNull(true),
 		},
 		{
-			left:  NewDString("abc@de", 10, 33),
-			right: NewDString("^[A-Z0-9._%-]+@[A-Z0-9.-]+.[A-Z]{2,4}$", 10, 33),
+			left:  NewDString("abc@de", 10, false),
+			right: NewDString("^[A-Z0-9._%-]+@[A-Z0-9.-]+.[A-Z]{2,4}$", 10, false),
 			not:   true,
 			res:   NewDInt(1, false),
 		},
 		{
-			left:  NewDString("abc@de.fg", 10, 33),
-			right: NewDString("^[A-Z0-9._%-]+@[A-Z0-9.-]+.[A-Z]{2,4}$", 10, 33),
+			left:  NewDString("abc@de.fg", 10, false),
+			right: NewDString("^[A-Z0-9._%-]+@[A-Z0-9.-]+.[A-Z]{2,4}$", 10, false),
 			not:   false,
 			res:   NewDInt(1, false),
 		},
 		{
-			left:  NewDString("abc@de.fg", 10, 63),
-			right: NewDString("^[A-Z0-9._%-]+@[A-Z0-9.-]+.[A-Z]{2,4}$", 10, 33),
+			left:  NewDString("abc@de.fg", 10, true),
+			right: NewDString("^[A-Z0-9._%-]+@[A-Z0-9.-]+.[A-Z]{2,4}$", 10, false),
 			not:   false,
 			res:   NewDInt(0, false),
 		},

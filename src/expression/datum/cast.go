@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
-	"github.com/xelabs/go-mysqlstack/sqldb"
 )
 
 // Cast used to cast the Datum by IField.
@@ -17,12 +16,12 @@ func Cast(d Datum, field *IField, isCastFunc bool) (Datum, error) {
 	if CheckNull(d) {
 		return d, nil
 	}
-	switch field.ResTyp {
+	switch field.Type {
 	case IntResult:
-		return CastToDInt(d, field.Flag, isCastFunc), nil
+		return CastToDInt(d, field.IsUnsigned, isCastFunc), nil
 	case StringResult:
 		val := d.ValStr()
-		return NewDString(CastStrWithField(val, field), 10, field.Charset), nil
+		return NewDString(CastStrWithField(val, field), 10, field.IsBinary), nil
 	case DurationResult:
 		return CastToDuration(d, field.Scale)
 	case TimeResult:
@@ -155,7 +154,7 @@ func CastStrWithField(s string, field *IField) string {
 
 	isTrunc := false
 	truncLen := field.Length
-	if field.Charset == sqldb.CharacterSetUtf8 {
+	if !field.IsBinary {
 		if utf8.RuneCountInString(s) > field.Length {
 			isTrunc = true
 			runeCnt := 0

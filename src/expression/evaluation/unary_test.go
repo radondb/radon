@@ -22,7 +22,8 @@ func TestUnary(t *testing.T) {
 			funcName: "not",
 			arg:      VAR("f"),
 			field: &datum.IField{
-				ResTyp: datum.IntResult,
+				Type:     datum.IntResult,
+				IsBinary: true,
 			},
 			saved: datum.NewDNull(true),
 		},
@@ -31,7 +32,8 @@ func TestUnary(t *testing.T) {
 			funcName: "not",
 			arg:      GT(VAR("a"), VAR("b")),
 			field: &datum.IField{
-				ResTyp: datum.IntResult,
+				Type:     datum.IntResult,
+				IsBinary: true,
 			},
 			saved: datum.NewDInt(1, false),
 		},
@@ -116,9 +118,9 @@ func TestCast(t *testing.T) {
 				Type: "unsigned",
 			},
 			field: &datum.IField{
-				ResTyp:  datum.IntResult,
-				Flag:    true,
-				Charset: 63,
+				Type:       datum.IntResult,
+				IsUnsigned: true,
+				IsBinary:   true,
 			},
 			saved: datum.NewDInt(1, true),
 		},

@@ -30,6 +30,10 @@ func (p *AggregatePlan) Materialize() (evaluation.Evaluation, error) {
 	return nil, errors.Errorf("temporarily.unsupport")
 }
 
+func (p *AggregatePlan) walk(visit Visit) error {
+	return Walk(visit, p.args...)
+}
+
 // String return the plan info.
 func (p *AggregatePlan) String() string {
 	dist := ""

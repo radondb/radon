@@ -27,6 +27,10 @@ func (p *VariablePlan) Materialize() (evaluation.Evaluation, error) {
 	return evaluation.VAR(p.String()), nil
 }
 
+func (p *VariablePlan) walk(visit Visit) error {
+	return nil
+}
+
 // String return the plan info.
 func (p *VariablePlan) String() string {
 	str := fmt.Sprintf("`%s`", p.column)

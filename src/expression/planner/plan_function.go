@@ -34,6 +34,10 @@ func (p *FunctionPlan) Materialize() (evaluation.Evaluation, error) {
 	return evaluation.EvalFactory(p.name, evals...)
 }
 
+func (p *FunctionPlan) walk(visit Visit) error {
+	return Walk(visit, p.args...)
+}
+
 // String return the plan info.
 func (p *FunctionPlan) String() string {
 	result := make([]string, len(p.args))

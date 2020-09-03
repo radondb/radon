@@ -4,6 +4,38 @@ import (
 	"expression/datum"
 )
 
+// setArithmeticIField for ADD|SUB|MUL.
+func setArithmeticIField(left, right *datum.IField, isMul bool) *datum.IField {
+	field := &datum.IField{
+		Length:   -1,
+		IsBinary: true,
+	}
+
+	left.ToNumeric()
+	right.ToNumeric()
+	isReal := false
+	if left.Type == datum.RealResult || right.Type == datum.RealResult {
+		field.Type = datum.RealResult
+		isReal = true
+	} else if left.Type == datum.DecimalResult || right.Type == datum.DecimalResult {
+		field.Type = datum.DecimalResult
+	} else {
+		field.Type = datum.IntResult
+		field.IsUnsigned = left.IsUnsigned || right.IsUnsigned
+	}
+
+	if !isMul {
+		field.Scale = datum.TernaryOpt(left.Scale > right.Scale, left.Scale, right.Scale).(int)
+	} else {
+		if isReal {
+			field.Scale = datum.TernaryOpt(left.Scale+right.Scale > datum.NotFixedDec, datum.NotFixedDec, left.Scale+right.Scale).(int)
+		} else {
+			field.Scale = datum.TernaryOpt(left.Scale+right.Scale > datum.DecimalMaxScale, datum.DecimalMaxScale, left.Scale+right.Scale).(int)
+		}
+	}
+	return field
+}
+
 // ADD returns the sum of the two arguments.
 func ADD(left, right Evaluation) Evaluation {
 	return &BinaryEval{
@@ -12,22 +44,7 @@ func ADD(left, right Evaluation) Evaluation {
 		right:    right,
 		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
-			left.ToNumeric()
-			right.ToNumeric()
-
-			field := &datum.IField{
-				Scale:    datum.TernaryOpt(left.Scale > right.Scale, left.Scale, right.Scale).(int),
-				Constant: left.Constant && right.Constant,
-			}
-			if left.ResTyp == datum.RealResult || right.ResTyp == datum.RealResult {
-				field.ResTyp = datum.RealResult
-			} else if left.ResTyp == datum.DecimalResult || right.ResTyp == datum.DecimalResult {
-				field.ResTyp = datum.DecimalResult
-			} else {
-				field.ResTyp = datum.IntResult
-				field.Flag = left.Flag || right.Flag
-			}
-			return field
+			return setArithmeticIField(left, right, false)
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
 			return datum.Add(left, right, field)
@@ -43,22 +60,7 @@ func SUB(left, right Evaluation) Evaluation {
 		right:    right,
 		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
-			left.ToNumeric()
-			right.ToNumeric()
-			field := &datum.IField{
-				Scale:    datum.TernaryOpt(left.Scale > right.Scale, left.Scale, right.Scale).(int),
-				Constant: left.Constant && right.Constant,
-			}
-
-			if left.ResTyp == datum.RealResult || right.ResTyp == datum.RealResult {
-				field.ResTyp = datum.RealResult
-			} else if left.ResTyp == datum.DecimalResult || right.ResTyp == datum.DecimalResult {
-				field.ResTyp = datum.DecimalResult
-			} else {
-				field.ResTyp = datum.IntResult
-				field.Flag = left.Flag || right.Flag
-			}
-			return field
+			return setArithmeticIField(left, right, false)
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
 			return datum.Sub(left, right, field)
@@ -74,22 +76,7 @@ func MUL(left, right Evaluation) Evaluation {
 		right:    right,
 		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
-			left.ToNumeric()
-			right.ToNumeric()
-			field := &datum.IField{
-				Constant: left.Constant && right.Constant,
-			}
-			if left.ResTyp == datum.RealResult || right.ResTyp == datum.RealResult {
-				field.ResTyp = datum.RealResult
-				field.Scale = datum.TernaryOpt(left.Scale+right.Scale > datum.NotFixedDec, datum.NotFixedDec, left.Scale+right.Scale).(int)
-			} else if left.ResTyp == datum.DecimalResult || right.ResTyp == datum.DecimalResult {
-				field.ResTyp = datum.DecimalResult
-				field.Scale = datum.TernaryOpt(left.Scale+right.Scale > datum.DecimalMaxScale, datum.DecimalMaxScale, left.Scale+right.Scale).(int)
-			} else {
-				field.ResTyp = datum.IntResult
-				field.Flag = left.Flag || right.Flag
-			}
-			return field
+			return setArithmeticIField(left, right, true)
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {
 			return datum.Mul(left, right, field)
@@ -108,13 +95,14 @@ func DIV(left, right Evaluation) Evaluation {
 			left.ToNumeric()
 			right.ToNumeric()
 			field := &datum.IField{
-				Constant: left.Constant && right.Constant,
+				Length:   -1,
+				IsBinary: true,
 			}
-			if left.ResTyp == datum.RealResult || right.ResTyp == datum.RealResult {
-				field.ResTyp = datum.RealResult
+			if left.Type == datum.RealResult || right.Type == datum.RealResult {
+				field.Type = datum.RealResult
 				field.Scale = datum.TernaryOpt(left.Scale+4 > datum.NotFixedDec, datum.NotFixedDec, left.Scale+4).(int)
 			} else {
-				field.ResTyp = datum.DecimalResult
+				field.Type = datum.DecimalResult
 				field.Scale = datum.TernaryOpt(left.Scale+4 > datum.DecimalMaxScale, datum.DecimalMaxScale, left.Scale+4).(int)
 			}
 			return field
@@ -134,10 +122,11 @@ func INTDIV(left, right Evaluation) Evaluation {
 		validate: AllArgs(TypeOf(false, datum.RowResult)),
 		fixFieldFn: func(left, right *datum.IField) *datum.IField {
 			return &datum.IField{
-				ResTyp:   datum.IntResult,
-				Scale:    0,
-				Flag:     left.Flag || right.Flag,
-				Constant: left.Constant && right.Constant,
+				Type:       datum.IntResult,
+				Length:     -1,
+				Scale:      0,
+				IsUnsigned: left.IsUnsigned || right.IsUnsigned,
+				IsBinary:   true,
 			}
 		},
 		updateFn: func(field *datum.IField, left, right datum.Datum) (datum.Datum, error) {

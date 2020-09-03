@@ -32,6 +32,10 @@ func (p *TuplePlan) Materialize() (evaluation.Evaluation, error) {
 	return evaluation.TUPLE(evals...), nil
 }
 
+func (p *TuplePlan) walk(visit Visit) error {
+	return Walk(visit, p.args...)
+}
+
 // String return the plan info.
 func (p *TuplePlan) String() string {
 	result := make([]string, len(p.args))

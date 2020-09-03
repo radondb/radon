@@ -37,7 +37,7 @@ func (e *TupleEval) FixField(fields map[string]*querypb.Field) (*datum.IField, e
 			return nil, err
 		}
 	}
-	return &datum.IField{ResTyp: datum.RowResult}, nil
+	return &datum.IField{Type: datum.RowResult}, nil
 }
 
 // Update used to update the result by the valuemap.
