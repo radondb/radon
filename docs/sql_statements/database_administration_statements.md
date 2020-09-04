@@ -6,12 +6,15 @@ Table of Contents
          * [CHECKSUM TABLE](#checksum-table)
       * [SET](#set)
       * [SHOW](#show)
+         * [SHOW CHARSET](#show-charset)
+         * [SHOW COLLATION](#show-collation)
          * [SHOW ENGINES](#show-engines)
          * [SHOW DATABASES](#show-databases)
          * [SHOW TABLES](#show-tables)
          * [SHOW TABLE STATUS](#show-table-status)
          * [SHOW COLUMNS](#show-columns)
          * [SHOW CREATE TABLE](#show-create-table)
+         * [SHOW INDEX](#show-index)
          * [SHOW PROCESSLIST](#show-processlist)
          * [SHOW VARIABLES](#show-variables)
       * [KILL](#kill)
@@ -51,7 +54,65 @@ mysql> checksum table test.t1;
 `Instructions`
 * For compatibility JDBC/mydumper
 * SET is an empty operation, *all operations will not take effect*, do not use it directly。
+
 ## SHOW
+
+### SHOW CHARSET
+
+`Syntax`
+```
+SHOW CHARSET
+```
+
+`Instructions`
+* This statement lists all available character sets.
+
+`Example: `
+```
+mysql> show charset;
++----------+---------------------------------+---------------------+--------+
+| Charset  | Description                     | Default collation   | Maxlen |
++----------+---------------------------------+---------------------+--------+
+| big5     | Big5 Traditional Chinese        | big5_chinese_ci     |      2 |
+| dec8     | DEC West European               | dec8_swedish_ci     |      1 |
+| cp850    | DOS West European               | cp850_general_ci    |      1 |
+| hp8      | HP West European                | hp8_english_ci      |      1 |
+| koi8r    | KOI8-R Relcom Russian           | koi8r_general_ci    |      1 |
+| latin1   | cp1252 West European            | latin1_swedish_ci   |      1 |
+| latin2   | ISO 8859-2 Central European     | latin2_general_ci   |      1 |
+| swe7     | 7bit Swedish                    | swe7_swedish_ci     |      1 |
+... ...
+41 rows in set (0.02 sec)
+```
+
+### SHOW COLLATION
+
+`Syntax`
+```
+SHOW COLLATION
+```
+
+`Instructions`
+* This statement lists collations supported by the server.
+
+`Example: `
+```
+mysql> SHOW COLLATION;
++--------------------------+----------+-----+---------+----------+---------+
+| Collation                | Charset  | Id  | Default | Compiled | Sortlen |
++--------------------------+----------+-----+---------+----------+---------+
+| big5_chinese_ci          | big5     |   1 | Yes     | Yes      |       1 |
+| big5_bin                 | big5     |  84 |         | Yes      |       1 |
+| dec8_swedish_ci          | dec8     |   3 | Yes     | Yes      |       1 |
+| dec8_bin                 | dec8     |  69 |         | Yes      |       1 |
+| cp850_general_ci         | cp850    |   4 | Yes     | Yes      |       1 |
+| cp850_bin                | cp850    |  80 |         | Yes      |       1 |
+| hp8_english_ci           | hp8      |   6 | Yes     | Yes      |       1 |
+| hp8_bin                  | hp8      |  72 |         | Yes      |       1 |
+| koi8r_general_ci         | koi8r    |   7 | Yes     | Yes      |       1 |
+... ...
+222 rows in set (0.05 sec)
+```
 
 ### SHOW ENGINES
 
@@ -162,9 +223,10 @@ mysql> show table status;
 `Syntax`
 
 ```
-SHOW [FULL] {COLUMNS | FIELDS} 
-FROM [db_name.]table_name
-[LIKE 'pattern' | WHERE expr]
+SHOW [FULL] {COLUMNS | FIELDS}
+    {FROM | IN} tbl_name
+    [{FROM | IN} db_name]
+    [LIKE 'pattern' | WHERE expr]
 ```
 
 `Instructions`
@@ -215,6 +277,42 @@ Create Table: CREATE TABLE `t1` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 /*!50100 PARTITION BY HASH (id) */
 1 row in set (0.094 sec)
+```
+
+### SHOW INDEX
+
+`Syntax`
+```
+SHOW {INDEX | INDEXES | KEYS}
+    {FROM | IN} tbl_name
+    [{FROM | IN} db_name]
+    [WHERE expr]
+```
+
+`Instructions`
+* Get the table index information.
+
+`Example: `
+```
+mysql> CREATE TABLE t1(A INT PRIMARY KEY, B VARCHAR(10)) PARTITION BY HASH(A);
+Query OK, 0 rows affected (2.20 sec)
+
+mysql> show index from t1\G
+*************************** 1. row ***************************
+        Table: t1
+   Non_unique: 0
+     Key_name: PRIMARY
+ Seq_in_index: 1
+  Column_name: A
+    Collation: A
+  Cardinality: 0
+     Sub_part: NULL
+       Packed: NULL
+         Null: 
+   Index_type: BTREE
+      Comment: 
+Index_comment: 
+1 row in set (0.05 sec)
 ```
 
 ### SHOW PROCESSLIST
