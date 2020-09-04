@@ -319,7 +319,7 @@ table_option: {
 }
 
 partition_options:
-    PARTITION BY HASH(shard-key)
+    PARTITION BY HASH(shard-key) [PARTITIONS num]
     | PARTITION BY LIST(shard-key)(PARTITION backend VALUES IN (value_list),...)
     | SINGLE
     | GLOBAL
@@ -338,7 +338,7 @@ With MySQL compatibility:
 * With `GLOBAL` will create a global table. The global table has full data at every backend. The global tables are generally used for tables with fewer changes and smaller capacity, requiring frequent association with other tables.
 * With `SINGLE` will create a single table. The single table only on the first backend.
 * With `DISTRIBUTED BY (backend-name)` will create a single table. The single table is distributed on the specified backend `backend-name`.
-* With `PARTITION BY HASH(shard-key)` will create a hash partition table. The partition mode is HASH, which is evenly distributed across the partitions according to the partition key `HASH value`
+* With `PARTITION BY HASH(shard-key)` will create a hash partition table. The partition mode is HASH, which is evenly distributed across the partitions according to the partition key `HASH value`, `PARTITIONS num` can specify the partition number.
 * Without `PARTITION BY HASH(shard-key)|LIST(shard-key)|SINGLE|GLOBAL` will create a hash partition table. The table's `PRIMARY|UNIQUE KEY` is the partition key, only support one primary|unique key.
 * With `PARTITION BY LIST(shard-key)` will create a list partition table. `PARTITION backend VALUES IN (value_list)` is one partition, The variable backend is one backend name, The variable value_list is values with `,`.
 	* all expected values for the partitioning expression should be covered in `PARTITION ... VALUES IN (...)` clauses. An INSERT statement containing an unmatched partitioning column value fails with an error, as shown in this example:
