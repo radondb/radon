@@ -12,16 +12,16 @@ Table of Contents
 # Radon
 ## RADON ATTACH
 
-`Syntax`
+`语法`
 ```
 RADON ATTACH($address,$user,$password)
 ```
 
-`Instructions`
-* Attach one mysql as Radon's backend. 
-* The type is 'attach' in `backend.json`.
+`说明`
+* 挂载一个MySQL作为Radon的后端。
+* 在`backend.json`中类型为`attach`
 
-`Example: `
+`示例: `
 
 ```
 mysql> radon attach('127.0.0.1:3306','root','123456');
@@ -30,10 +30,10 @@ Query OK, 0 rows affected (0.94 sec)
 
 ## RADON ATTACHLIST
 
-`Instructions`
-* List the backend of type `attach` in `backend.json`.
+`说明`
+* 列出`backend.json`中类型为`attach`的后端。
 
-`Example: `
+`示例: `
 ```
 mysql> radon attachlist;
 +----------------+----------------+------+
@@ -46,13 +46,13 @@ mysql> radon attachlist;
 
 ## RADON DETACH
 
-`Syntax`
+`语法`
 ```
 RADON DETACH($address)
 ```
 
-`Instructions`
-* Detach the backend of type `attach` in `backend.json`.
+`说明`
+* 移除`backend.json`中类型为`attach`的后端。
 
 ```
 mysql> radon detach('127.0.0.1:3306');
@@ -64,15 +64,15 @@ Empty set (0.00 sec)
 
 ## RADON RESHARD
 
-`Syntax`
+`语法`
 ```
 RADON RESHARD tbl_name TO new_tbl_name
 ```
 
-`Instructions`
-* RADON RESHARD can shift data from one SINGLE table to another PARTITION table. 
-* The cmd execute the shift cmd and will return immediately, the shift will run in background on other goroutine.
-* The SINGLE table with the primary key can be partitioned.
+`说明`
+* RADON RESHARD可以将一个SINGLE表迁移为另一张分区表。
+* 这条指令将会立即返回，迁移操作会在启动线程在后台执行。
+* 带主键的SINGLE表可以被分区。
 
 ```
 mysql> show tables;
@@ -121,13 +121,13 @@ mysql> select * from new_tb;
 
 ## RADON CLEANUP
 
-`Syntax`
+`语法`
 ```
 RADON CLEANUP
 ```
 
-`Instructions`
-* RADON CLEANUP can clean up the old data after shifted.
+`说明`
+* RADON CLEANUP指令将会清理迁移完之后的旧数据。
 
 ```
 mysql> radon cleanup;
@@ -136,18 +136,17 @@ Query OK, 0 rows affected (0.13 sec)
 
 ## RADON REBALANCE
 
-`Syntax`
+`语法`
 ```
 RADON REBALANCE
 ```
 
-`Instructions`
-* If the radon running for a long time, the user find the data are imbalance among the backends
-* This admin command aims for re-balance the data(partition tables) among the backends, migrate only one partition table per operation.
-The internal operation is mainly divided into two steps:
-    1. get the advice about the rebalance on the shards.
-    2. migrate data on the partition table from source backend to target backend
-     according to the above advice.
+`说明`
+* 如果radon运行了很长一段时间，用户会发现数据在后端节点之间分布不均衡。
+* 这条指令旨让节点之间的数据重新均衡分布，每次从一个后端节点只迁移一张分区表到另一个后端节点，
+内部机制主要分为两步：
+    1. 从分片中获取重分布建议。
+    2. 根据建议从源（后端）迁移分区表到目标（后端）。
 ```
 mysql> radon rebalance;
 Query OK, 0 rows affected (39.09 sec)
@@ -178,7 +177,7 @@ mysql> show status;
 }
 ```
 
-* NOTICE: If execute the cmd: RADON REBALANCE, the client interface will always stop there. During the period, if the user execute `ctrl+c` or exit the client, the rebalance will keep going on, the user has to find the status in the log file, it is successful that the following line exists in the file, if not find the line, need find the cause based on the error log.
+* 注意: 如果执行了这条指令： `RADON REBALANCE`，客户端将会阻塞。在这期间，如果用户执行`ctrl+c` 或者退出客户端，数据重分布操作将会在后台继续进行，用户得在radon log日志中找到迁移日志信息，查到是否迁移完成，如果迁移完成，会展示以下信息（如下图），否则会发现失败的log信息。
 ```
   [WARNING]      rebalance.migrate.done...
 ```

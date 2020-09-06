@@ -25,14 +25,14 @@ Contents
 This part is about how to deploy `radon cluster`. By default,  we suppose you are already familiar with the startup and deployment of radon by `standalone mode`. If you are not familiar with it, please refer to it first according to the doc [how_to_build_and_run_radon](how_to_build_and_run_radon.md)。
 
 ## Step1 Environment preparation
-Here we deploy radon cluster by two nodes (a master and a slave, of course you can add more slaves, we use only two nodes just to show how to deploy the cluster). And we need two backend nodes (mysql-server) to storage. The mysql-server requires five hosts (or virtual machines). The architecture of deployment and the IP address of each node are as follows:
+Here we deploy radon cluster by two nodes (a master and a slave, of course you can add more slaves, we use only two nodes just to show how to deploy the cluster). And we need two backend nodes (mysql-server) to storage. The mysql-server requires four hosts (or virtual machines). The architecture of deployment and the IP address of each node are as follows:
 
                        +----------------------------+     
                        |  SQL layer（radon cluster: | 
                        |  two nodes）               |  
                        +----------------------------+     
                        |  storage and compute layer:|
-                       |  tow backend nodes and 1   |
+                       |  two backend nodes         |
                        |----------------------------|  
 
 
@@ -45,7 +45,7 @@ Here we deploy radon cluster by two nodes (a master and a slave, of course you c
 
 `node of backend2` : 192.168.0.28
 
-By default, we suppose the mysql account and password of mysql-server are all the same between each machine(e.g. account: `mysql`, password: `123455`). Of course,  mysql-server is deployed on backend1、backend2. Confirm that each mysql-server has granted all privileges to login from another machine, if not, please login mysql-server and execute the following command on each machine: 
+By default, we suppose the mysql account and password of mysql-server are all the same between each machine(e.g. account: `mysql`, password: `123456`). Of course,  mysql-server is deployed on backend1、backend2. Confirm that each mysql-server has granted all privileges to login from another machine, if not, please login mysql-server and execute the following command on each machine: 
 
 ```
 mysql> GRANT ALL PRIVILEGES ON *.* TO mysql@"%" IDENTIFIED BY '123456'  WITH GRANT OPTION;
@@ -114,7 +114,7 @@ $ curl -i -H 'Content-Type: application/json' -X POST -d '{"address": "192.168.0
 
 ### 3.3 Check the meta data again in bin/radon-meta directory
 
-After `add peer` operation, execute command `ls` to see the json file in the bin/radaon-meta directory.  You will see three files: backend.json、peers.json、version.json. The information of storage nodes  and computation node are stored in peers.json. Version.json records the version information of this node, which is used to determine whether the nodes are needing to synchronize or not.
+After `add peer` operation, execute command `ls` to see the json file in the bin/radaon-meta directory.  You will see three files: backend.json、peers.json、version.json. The information of storage nodes  and computation node are stored in backend.json. Version.json records the version information of this node, which is used to determine whether the nodes are needing to synchronize or not.
 
 ```
 $ ls bin/radon-meta/
@@ -137,7 +137,7 @@ $ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend2", "
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend1", "address": "192.168.0.28:3306", "user":"mysql", "password": "123456", "max-connections":1024}' http://192.168.0.16:8080/v1/radon/backend
 ```
 
-From now on，radon cluster has being build. Use vim to view the backend.json file in the bin/radon-meta directory of the master node. You will see that the background node information has been added.
+Now, radon cluster has being deployed. Use vim to view the backend.json file in the `bin/radon-meta` directory of the master node. You will see that the backend nodes information has been added.
 
 ```
 $ vim bin/radon-meta/backend.json 
@@ -168,7 +168,7 @@ $ vim bin/radon-meta/backend.json
 }
 
 ```
-Switch to slave node and do the same action, you will see that although the slave node does not perform a backend or backup operation, the data is synchronized with the master node.
+Switch to slave node and do the same action, you will see that although the slave node does not perform a backend or backup operation, the meta data is synchronized with the master node.
 
 ```
 $ vim bin/radon-meta/backend.json 

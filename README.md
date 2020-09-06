@@ -25,7 +25,6 @@ RadonDB is a cloud-native database based on MySQL, and architected in fully dist
 ## Documentation
 For guidance on installation, deployment, and administration, see our [Documentation](docs).
 
-
 ## Architecture
 
 ## Overview
@@ -51,7 +50,7 @@ After your SQL node  receives a SQL request from a mysql client via proxy, Radon
                                 |      SQL Node      |  x
                                 |--------------------|  x
     +-------------+             |     sqlparser      |  x           +---------------+
-    |    query    |+----------->|                    |--x---------->|node2_Executor |
+    |    query    |+----------->|--------------------|  x---------->|node2_Executor |
     +-------------+             |  Distributed Plan  |  x           +---------------+
                                 |                    |  x
                                 +--------------------+  x

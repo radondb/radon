@@ -1,90 +1,89 @@
-Contents
+Table of Contents
 =================
 
-* [API](#api)
-   * [Background](#background)
-   * [radon](#radon)
-      * [config](#config)
-      * [readonly](#readonly)
-      * [throttle](#throttle)
-      * [status](#status)
-   * [shard](#shard)
-      * [shardz](#shardz)
-      * [globals](#globals)
-      * [balanceadvice](#balanceadvice)
-      * [shift](#shift)
-      * [reload](#reload)
-      * [migrate](#migrate)
-   * [backend](#backend)
-      * [health](#health)
-   * [backends](#backends)
-      * [add](#add)
-      * [remove](#remove)
-   * [meta](#meta)
-      * [versions](#versions)
-      * [versioncheck](#versioncheck)
-      * [metas](#metas)
-   * [debug](#debug)
-      * [processlist](#processlist)
-      * [txnz](#txnz)
-      * [queryz](#queryz)
-      * [configz](#configz)
-      * [backendz](#backendz)
-      * [schemaz](#schemaz)
-   * [peers](#peers)
-      * [add peer](#add-peer)
-      * [peerz](#peerz)
-      * [remove peer](#remove-peer)
-   * [users](#users)
-      * [create user](#create-user)
-      * [update user password](#update-user-password)
-      * [drop user](#drop-user)
-      * [get users](#get-users)
+   * [API](#api)
+      * [背景](#背景)
+      * [radon](#radon)
+         * [配置管理(config)](#配置管理config)
+         * [设置radon只读(readonly)](#设置radon只读readonly)
+         * [限流(throttle)](#限流throttle)
+         * [获取radon状态(status)](#获取radon状态status)
+      * [分片信息(shard)](#分片信息shard)
+         * [shardz](#shardz)
+         * [全局表(globals)](#全局表globals)
+         * [数据重分布指令(balanceadvice)](#数据重分布指令balanceadvice)
+         * [分区表迁移(shift)](#分区表迁移shift)
+         * [重新加载路由数据信息(reload)](#重新加载路由数据信息reload)
+         * [迁移(migrate)](#迁移migrate)
+      * [后端节点相关操作](#后端节点相关操作)
+         * [后端分区健康探测](#后端分区健康探测)
+         * [添加一个后端分区节点](#添加一个后端分区节点)
+         * [移除一个后端分区节点](#移除一个后端分区节点)
+      * [版本元数据](#版本元数据)
+         * [节点版本信息获取](#节点版本信息获取)
+         * [版本检查](#版本检查)
+         * [元数据](#元数据)
+      * [调试](#调试)
+         * [用户活跃连接情况(processlist)](#用户活跃连接情况processlist)
+         * [radon内部事务执行情况(txnz)](#radon内部事务执行情况txnz)
+         * [radon各分区执行情况(queryz)](#radon各分区执行情况queryz)
+         * [Radon配置文件信息(configz)](#radon配置文件信息configz)
+         * [显示所有后端节点(backendz)](#显示所有后端节点backendz)
+         * [显示当前RadonDB所有的用户库表分区信息(schemaz)](#显示当前radondb所有的用户库表分区信息schemaz)
+      * [radon集群节点操作(peers)](#radon集群节点操作peers)
+         * [添加一个节点(add peer)](#添加一个节点add-peer)
+         * [显示当前radon集群包含的节点(peerz)](#显示当前radon集群包含的节点peerz)
+         * [移除一个radon节点(remove peer)](#移除一个radon节点remove-peer)
+      * [用户账户(users)](#用户账户users)
+         * [创建账户(create user)](#创建账户create-user)
+         * [更新用户账户密码](#更新用户账户密码)
+         * [删除账户](#删除账户)
+         * [显示当前用户账户信息(get users)](#显示当前用户账户信息get-users)
 
 # API
 
-## Background
+## 背景
 
-This document describes the RadonDB REST API, which allows users to achieve most tasks on WebUI.
+RadonDB支持RESTFUL API管理, 大多数的操作任务都可以在WebUI完成.
 
 ## radon
 
-### config
+### 配置管理(config)
 
 ```
 Path:    /v1/radon/config
 Method:  PUT
 Request: {
-			"max-connections": The maximum permitted number of simultaneous client connections,
-			"max-result-size": The maximum result size(in bytes) of a query,
-			"max-join-rows":   The maximum number of rows that will be held in memory for join's intermediate results,
-			"ddl-timeout":     The execution timeout(in millisecond) for DDL statements,
-			"query-timeout":   The execution timeout(in millisecond) for DML statements,
-			"twopc-enable":    Enables(true or false) radon two phase commit, for distrubuted transaction,
+			"max-connections": 最大可允许的client连接数,
+			"max-result-size": 一条查询最大支持的结果集,
+			"max-join-rows":   内存中贮存join中间结果的的最大行数,
+			"ddl-timeout":     ddl语句执行超时时间(毫秒ms),
+			"query-timeout":   DML语句执行超时时间(毫秒ms),
+			"twopc-enable":    是否开启两阶段提交(true or false)在radon开启分布式事务时有效,
 			"allowip":         ["allow-ip-1", "allow-ip-2", "allow-ip-regexp"],
-			"audit-mode":      The audit log mode, "N": disabled, "R": read enabled, "W": write enabled, "A": read/write enabled,
+			"audit-mode":      审计日志模式, "N": 不开启, "R": 只读, "W": 只写, "A": 读写,
 			"blocks-readonly": The size of a block when create hash tables,
-			"load-balance":    Enables(0 or 1) load balance, for read-write separation.
+			"load-balance":    开启读写分离开关(0 or 1, 1是开启) 负载均衡,
          }
          
 ```
 
 `allowip:`
 ```
-The specified ip and regexp ip are both supported. We use the regexp to define specified LAN IP segment(10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
-case 1: wildcard "*", means all ip are allowed to connect to radon
-case 2: we want to specify LAN IP segment(e.g. 10.0.0.0/8) start with `10.12`, the regexp ip will be `10.12.*` or `10.12.[0-9]+.[0-9]+`
-case 3: we want to specify LAN IP segment(e.g. 192.168.0.0/16) like  `192.168.%.3`, the regexp ip will be `192.168.[0-9]+.3`
-case 4: also you can just list the ip you want, like: "192.168.1.1", "192.168.1.2", "192.168.1.3" ... 
+指定具体的ip或者正则表达式形式都是支持的, 我们使用正则表达式来定义指定本地局域网IP段(10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
+情形 1: 通配符 "*", 允许所有的ip连接到radon.
+情形 2: 我们想指定本地局域网IP段(例如 10.0.0.0/8) 以`10.12`开始, 正则表达式为`10.12.*` or `10.12.[0-9]+.[0-9]+`
+情形 3: 我们想指定本地局域网IP段(例如 192.168.0.0/16) 类似`192.168.%.3`, 正则表达式为`192.168.[0-9]+.3`
+情形 4: 或者列出所有指定的IP, 比如: "192.168.1.1", "192.168.1.2", "192.168.1.3" ... 
 ```
 
-`Status:`
+`返回状态:`
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
-`Example: `
+`示例: `
 ```
 $ curl -i -H 'Content-Type: application/json' -X PUT -d '{"max-connections":1024, "max-result-size":1073741824, "max-join-rows":32768, "ddl-timeout":3600, "query-timeout":600, "twopc-enable":true, "load-balance" 1, "allowip": ["192.168.1.1", "192.168.1.2", "172.10.[0-9]+.[0-9]+"]}' http://127.0.0.1:8080/v1/radon/config
 
@@ -95,17 +94,17 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-### readonly
+### 设置radon只读(readonly)
 
 ```
 Path:    /v1/radon/readonly
 Method:  PUT
 Request: {
-			"readonly": The value of the read-only(true) or not(false),	                                [required]
+			"readonly":  参数read-only值(true) 或者(false),	                                [required]
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -113,7 +112,7 @@ Request: {
 	500: StatusInternalServerError
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl -i -H 'Content-Type: application/json' -X PUT -d '{"readonly":true}' http://127.0.0.1:8080/v1/radon/readonly
@@ -125,17 +124,17 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-### throttle
+### 限流(throttle)
 
 ```
 Path:    /v1/radon/throttle
 Method:  PUT
 Request: {
-			"limits": The max number of requests in a second, defaults 0, means no limits,  [required]
+			"limits": 每秒最大的请求数，默认0(没有限制),  [required]
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -143,7 +142,7 @@ Request: {
 	500: StatusInternalServerError
 ```
 
-`Example:`
+`示例:`
 
 ```
 $ curl -i -H 'Content-Type: application/json' -X PUT -d '{"limits":4800}' http://127.0.0.1:8080/v1/radon/throttle
@@ -155,24 +154,24 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-### status
+### 获取radon状态(status)
 
 ```
 Path:    /v1/radon/status
 Method:  GET
 Response:{
-			readonly:true/false
+			readonly:true(只读)/false(可读可写)
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl http://127.0.0.1:8080/v1/radon/status
@@ -181,18 +180,18 @@ $ curl http://127.0.0.1:8080/v1/radon/status
 {"readonly":true}
 ```
 
-## shard
+## 分片信息(shard)
 
 ### shardz
 
-This api used to get all shard tables from router.
+这条命令用于获取路由信息中所有的分表信息
 
 ```
 Path:    /v1/shard/shardz
 Method:  GET
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -200,7 +199,7 @@ Method:  GET
 	503: StatusServiceUnavailable, backend(s) MySQL seems to be down.
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl http://127.0.0.1:8080/v1/shard/shardz
@@ -213,16 +212,16 @@ $ curl http://127.0.0.1:8080/v1/shard/shardz
 {"Start":3584,"End":3712}},{"Table":"t1_0029","Backend":"backend1","Range":{"Start":3712,"End":3840}},{"Table":"t1_0030","Backend":"backend1","Range":{"Start":3840,"End":3968}},{"Table":"t1_0031","Backend":"backend1","Range":{"Start":3968,"End":4096}}]}}]}]}
 ```
 
-### globals
+### 全局表(globals)
 
-This api used to get all global tables from router.
+这条指令用于获取路由信息中所有的全局表
 
 ```
 Path:    /v1/shard/globals
 Method:  GET
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -230,7 +229,7 @@ Method:  GET
 	503: StatusServiceUnavailable, backend(s) MySQL seems to be down.
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl http://127.0.0.1:8080/v1/shard/globals
@@ -239,42 +238,42 @@ $ curl http://127.0.0.1:8080/v1/shard/globals
 {"schemas":[{"database":"db1","tables":["tb2","tb5"]},{"database":"zzq","tables":["tb2"]}]}
 ```
 
-### balanceadvice
+### 数据重分布指令(balanceadvice)
 
-This api used to get the best table(only one) which should be transferred from the max-backend to min-backend.
+这条指令用于获取一张最合适的表从数据量最大的节点迁移到最小的节点
 
 ```
 Path:    /v1/shard/balanceadvice
 Method:  GET
 
 Response: [{
-			"from-address":     The from end address(host:port).
-			"from-datasize":    The from end data size in MB.
-			"from-user":        The from backend MySQL user.
-			"from-password":    The from backend MySQL password.
-			"to-address":       The to end address(host:port).
-			"to-datasize":      The to end data size in MB.
-			"from-user":        The to backend MySQL user.
-			"from-password":    The to backend MySQL password.
-			"database":         The transfered table database.
-			"table":            The transfered table name.
-			"tablesize":        The transfered table size.
+			"from-address":     源backend ip(host:port).
+			"from-datasize":    源backend数据大小(MB).
+			"from-user":        源backend MySQL用户.
+			"from-password":    源backend MySQL密码.
+			"to-address":       目标backend ip(host:port).
+			"to-datasize":      目标backend数据大小(MB).
+			"to-user":          目标backend MySQL用户.
+			"to-password":      目标backend MySQL密码.
+			"database":         所迁移表所在的database.
+			"table":            迁移表表名.
+			"tablesize":        迁移表的大小.
          }]
 
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	503: StatusServiceUnavailable, radon has no advice.
 
-Notes:
-If response is NULL, means there is no advice.
+注意:
+如果返回空，意味着不需要做数据重分布。
 ```
 
-`Example:`
+`示例:`
 
 ```
 $ curl http://127.0.0.1:8080/v1/shard/balanceadvice
@@ -283,10 +282,9 @@ $ curl http://127.0.0.1:8080/v1/shard/balanceadvice
 null
 ```
 
+### 分区表迁移(shift)
 
-### shift
-
-This api used to change the partition table from one backend to another.
+这条api用来从一个后端迁移一张分区表到另一个后端
 
 ```
 Path:    /v1/shard/shift
@@ -299,7 +297,7 @@ Request: {
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -307,16 +305,16 @@ Request: {
 	503: StatusServiceUnavailable, radon has no advice.
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"database": "db_test1", "table": "t1", "from-address": "127.0.0.1:3306", "to-address": "127.0.0.1:3306"} http://127.0.0.1:8080/v1/shard/shift
 ```
 
 
-### reload
+### 重新加载路由数据信息(reload)
 
-This api used to re-load the router info from metadir.
+该api用来从metadir重新加载路由信息.
 
 ```
 Path:    /v1/shard/reload
@@ -324,7 +322,7 @@ Method:  POST
 Request: NIL
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -332,7 +330,7 @@ Request: NIL
 	503: StatusServiceUnavailable, radon has no advice.
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST http://127.0.0.1:8080/v1/shard/reload
@@ -345,9 +343,9 @@ Content-Type: text/plain; charset=utf-8
 ```
 
 
-### migrate
+### 迁移(migrate)
 
-This api is used to migrate the data from one backend to another.
+该api用来迁移一个后端节点数据到另一个后端节点。
 
 ```
 Path:    /v1/shard/migrate
@@ -374,7 +372,7 @@ Request: {
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -382,7 +380,7 @@ Request: {
 	500: StatusInternalServerError
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"from": "127.0.0.1:3000","from-user":"usr","from-password":"123456","from-table":"t1","from-database":"test", "to":"127.0.0.1:4000","to-user":"usr","to-password":"123456","to-database":"test","to-table":"t1","cleanup":true}' http://127.0.0.1:8080/v1/shard/migrate
@@ -393,18 +391,18 @@ Date: Fri, 10 Jan 2020 10:56:31 GMT
 Content-Length: 0
 ```
 
-## backend
+## 后端节点相关操作
 
-### health
+### 后端分区健康探测
 
-This api can perform a backend health check by sending the PING(select 1) command to backends.
+该api可以通过发送PING(select 1) 命令来探测后端节点的健康状态.
 
 ```
 Path:    /v1/radon/ping
 Method:  GET
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -412,17 +410,15 @@ Method:  GET
 	503: StatusServiceUnavailable, backend(s) MySQL seems to be down.
 ```
 
-`Example:`
+`示例:`
 
 ```
 $ curl http://127.0.0.1:8080/v1/radon/ping
 ```
 
-## backends
+### 添加一个后端分区节点
 
-This api used to add/delete a backend config.
-
-### add
+该api用来添加一个后端配置信息.
 
 ```
 Path:    /v1/radon/backend
@@ -437,7 +433,7 @@ Request: {
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -445,7 +441,7 @@ Request: {
 	500: StatusInternalServerError
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"name": "backend1", "address": "127.0.0.1:3306", "replica-address": "127.0.0.1:3306", "user": "root", "password": "318831", "max-connections":1024}' http://127.0.0.1:8080/v1/radon/backend
@@ -457,28 +453,29 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-### remove
+### 移除一个后端分区节点
+该api用来移除一个后端分区节点
 
 ```
 Path:    /v1/radon/backend/{backend-name}
 Method:  DELETE
 ```
-`Status:`
+`返回状态:`
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 	500: StatusInternalServerError
 ```
-`Example: `
+`示例: `
 ```
 $ curl -X DELETE http://127.0.0.1:8080/v1/radon/backend/backend1
 ```
 
-## meta
+## 版本元数据
 
-The API used to do multi-proxy meta synchronization.
+该API用来显示当前节点radon主从同步版本信息。
 
-### versions
+### 节点版本信息获取
 
 ```
 Path:    /v1/meta/versions
@@ -488,14 +485,14 @@ Response:{
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl http://127.0.0.1:8080/v1/meta/versions
@@ -505,7 +502,7 @@ $ curl http://127.0.0.1:8080/v1/meta/versions
 ```
 
 
-### versioncheck
+### 版本检查
 
 ```
 Path:    /v1/meta/versioncheck
@@ -516,14 +513,14 @@ Response:{
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
 
-`Example:`
+`示例:`
 
 ```
 $ curl http://127.0.0.1:8080/v1/meta/versioncheck
@@ -532,7 +529,7 @@ $ curl http://127.0.0.1:8080/v1/meta/versioncheck
 {"latest":true,"peers":["127.0.0.1:8080"]}
 ```
 
-### metas
+### 元数据
 
 ```
 Path:    /v1/meta/metas
@@ -543,7 +540,7 @@ Response:{
 
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -551,7 +548,7 @@ Response:{
 	500: StatusInternalServerError
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl http://127.0.0.1:8080/v1/meta/metas
@@ -563,10 +560,10 @@ $ curl http://127.0.0.1:8080/v1/meta/metas
 t\t{\n\t\t\t\"table\": \"t2_0029\",\n\t\t\t\"segment\": \"3712-3840\",\n\t\t\t\"backend\": \"backend1\"\n\t\t},\n\t\t{\n\t\t\t\
 ```
 
-## debug
+## 调试
 
-### processlist
-This api shows which threads are running.
+### 用户活跃连接情况(processlist)
+该api显示当前活跃的用户连接.
 
 ```
 Path:    /v1/debug/processlist
@@ -583,14 +580,14 @@ Response: [{
          }]
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
 
-`Example:`
+`示例:`
 
 ```
 $ curl http://127.0.0.1:8080/v1/debug/processlist
@@ -598,8 +595,8 @@ $ curl http://127.0.0.1:8080/v1/debug/processlist
 [{"id":1,"user":"root","host":"127.0.0.1:40742","db":"","command":"Sleep","time":41263,"state":"","info":""}]
 ```
 
-### txnz
-This api shows which transactions are running.
+### radon内部事务执行情况(txnz)
+该api用来显示哪些事务正在运行.
 
 ```
 Path:    /v1/debug/txnz/:limit
@@ -614,7 +611,7 @@ Response: [{
          }]
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl http://127.0.0.1:8080/v1/debug/txnz/10
@@ -622,15 +619,15 @@ $ curl http://127.0.0.1:8080/v1/debug/txnz/10
 null
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
 
-### queryz
-This api shows which queries are running.
+### radon各分区执行情况(queryz)
+该api显示哪些查询正在运行.
 
 ```
 Path:    /v1/debug/queryz/:limit
@@ -644,7 +641,7 @@ Response: [{
          }]
 ```
 
-`Example:`
+`示例:`
 
 ``` 
 $ curl http://127.0.0.1:8080/v1/debug/queryz/10
@@ -652,22 +649,22 @@ $ curl http://127.0.0.1:8080/v1/debug/queryz/10
 null
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
 
-### configz
-This api shows the config of RadonDB.
+### Radon配置文件信息(configz)
+该api显示RadonDB的配置文件信息.
 
 ```
 Path:    /v1/debug/configz
 Method:  GET
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -675,7 +672,7 @@ Method:  GET
 	500: StatusInternalServerError
 ```
 
-`Example:`
+`示例:`
 
 ```
 $ curl http://127.0.0.1:8080/v1/debug/configz
@@ -684,15 +681,15 @@ $ curl http://127.0.0.1:8080/v1/debug/configz
 {"proxy":{"allowip":["127.0.0.1","127.0.0.2"],"meta-dir":"bin/radon-meta","endpoint":":3306","twopc-enable":true,"max-connections":1024,"max-result-size":1073741824,"ddl-timeout":3600,"query-timeout":600,"peer-address":"127.0.0.1:8080"},"audit":{"mode":"N","audit-dir":"bin/radon-audit","max-size":268435456,"expire-hours":1},"router":{"slots-readonly":4096,"blocks-readonly":128},"binlog":{"binlog-dir":"bin/radon-binlog","max-size":134217728},"log":{"level":"INFO"}}
 ```
 
-### backendz
-This api shows all the backends of RadonDB.
+### 显示所有后端节点(backendz)
+显示RadonDB所有后端节点.
 
 ```
 Path:    /v1/debug/backendz
 Method:  GET
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -700,7 +697,7 @@ Method:  GET
 	500: StatusInternalServerError
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl http://127.0.0.1:8080/v1/debug/backendz
@@ -709,15 +706,14 @@ $ curl http://127.0.0.1:8080/v1/debug/backendz
 []
 ```
 
-### schemaz
-This api shows all the schemas of RadonDB.
+### 显示当前RadonDB所有的用户库表分区信息(schemaz)
 
 ```
 Path:    /v1/debug/schemaz
 Method:  GET
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -725,7 +721,7 @@ Method:  GET
 	500: StatusInternalServerError
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl http://127.0.0.1:8080/v1/debug/schemaz
@@ -737,11 +733,9 @@ $ curl http://127.0.0.1:8080/v1/debug/schemaz
 :"backend1","Range":{"Start":3712,"End":3840}},{"Table":"t2_0030","Backend":"backend1","Range":{"Start":3840,"End":3968}},{"Table":"t2_0031","Backend":"backend1","Range":{"Start":3968,"End":4096}}]}}}}}
 ```
 
-## peers
+## radon集群节点操作(peers)
 
-### add peer
-
-This api used to add a peer.
+### 添加一个节点(add peer)
 
 ```
 Path:    /v1/peer/add
@@ -751,7 +745,7 @@ Request: {
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -759,7 +753,7 @@ Request: {
 	500: StatusInternalServerError
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"address": "127.0.0.1:8080"}' http://127.0.0.1:8080/v1/peer/add
@@ -772,22 +766,20 @@ Content-Type: text/plain; charset=utf-8
 ```
 
 
-### peerz
-
-This api used to show the peers of a group.
+### 显示当前radon集群包含的节点(peerz)
 
 ```
 Path:    /v1/peer/peerz
 Method:  GET
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
 	405: StatusMethodNotAllowed
 ```
-`Example:`
+`示例:`
 ```
 $ curl http://127.0.0.1:8080/v1/peer/peerz
 
@@ -795,9 +787,7 @@ $ curl http://127.0.0.1:8080/v1/peer/peerz
 ["127.0.0.1:8080"]
 ```
 
-### remove peer
-
-This api used to remove peer.
+### 移除一个radon节点(remove peer)
 
 ```
 Path:    /v1/peer/remove
@@ -807,7 +797,7 @@ Request: {
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -815,7 +805,7 @@ Request: {
 	500: StatusInternalServerError
 ```
 
-`Example: `
+`示例: `
 
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"address": "127.0.0.1:8080"}' http://127.0.0.1:8080/v1/peer/remove
@@ -827,11 +817,11 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-## users
+## 用户账户(users)
 
-The normal users that can connect to radon with password.
+可以连接到radon的账户密码.
 
-### create user
+### 创建账户(create user)
 
 ```
 Path:    /v1/user/add
@@ -844,7 +834,7 @@ Request: {
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -853,10 +843,10 @@ Request: {
 	503: StatusServiceUnavailable, backend(s) MySQL seems to be down
 ```
 
-`Example: `
+`示例: `
 
-"databases" is array about database, if it is empty, we will set it to * .
-"privilege" is composed of [select | insert | update | delete], separated by ",". If it is empty, we will set it to all priv.
+"databases" 是授权访问的数据库列表, 如果是空，默认授权所有的数据库都可以访问.
+"privilege" 由[select | insert | update | delete]组成, 通过","分隔. 如果为空，默认授权所有权限.
 
 ```
 ---backend should not be null---
@@ -885,7 +875,7 @@ Content-Length: 0
 ```
 
 
-### update user password
+### 更新用户账户密码
 
 ```
 Path:    /v1/user/update
@@ -896,7 +886,7 @@ Request: {
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -904,7 +894,7 @@ Request: {
 	500: StatusInternalServerError
 ```
 
-`Example:`
+`示例:`
 
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"user": "test", "password": "test"}' http://127.0.0.1:8080/v1/user/update
@@ -916,7 +906,7 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-### drop user
+### 删除账户
 
 ```
 Path:    /v1/user/remove
@@ -926,7 +916,7 @@ Request: {
          }
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -934,7 +924,7 @@ Request: {
 	500: StatusInternalServerError
 ```
 
-`Example:`
+`示例:`
 
 ```
 $ curl -i -H 'Content-Type: application/json' -X POST -d '{"user": "test"}' http://127.0.0.1:8080/v1/user/remove
@@ -945,13 +935,13 @@ Content-Length: 0
 Content-Type: text/plain; charset=utf-8
 ```
 
-### get users
+### 显示当前用户账户信息(get users)
 ```
 Path:    /v1/user/userz
 Method:  GET
 ```
 
-`Status:`
+`返回状态:`
 
 ```
 	200: StatusOK
@@ -959,7 +949,7 @@ Method:  GET
 	500: StatusInternalServerError
 ```
 
-`Example:`
+`示例:`
 
 ```
 $ curl http://127.0.0.1:8080/v1/user/userz
