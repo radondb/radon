@@ -284,13 +284,13 @@ func TestTxnExecuteReplicaError(t *testing.T) {
 func TestTxnExecuteStreamFetch(t *testing.T) {
 	defer leaktest.Check(t)()
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgr(log, 2)
+	fakedb, txnMgr, backends, addrs, cleanup := MockTxnMgrWithReplica(log, 2)
 	defer cleanup()
 
 	querys := []xcontext.QueryTuple{
-		xcontext.QueryTuple{Query: "select * from node1", Backend: addrs[0]},
-		xcontext.QueryTuple{Query: "select * from node2", Backend: addrs[1]},
-		xcontext.QueryTuple{Query: "select * from node3", Backend: addrs[1]},
+		{Query: "select * from node1", Backend: addrs[0]},
+		{Query: "select * from node2", Backend: addrs[1]},
+		{Query: "select * from node3", Backend: addrs[1]},
 	}
 
 	result11 := &sqltypes.Result{
@@ -343,6 +343,33 @@ func TestTxnExecuteStreamFetch(t *testing.T) {
 		txn, err := txnMgr.CreateTxn(backends)
 		assert.Nil(t, err)
 		defer txn.Finish()
+
+		rctx := &xcontext.RequestContext{
+			Querys: querys,
+		}
+
+		callbackQr := &sqltypes.Result{}
+		err = txn.ExecuteStreamFetch(rctx, func(qr *sqltypes.Result) error {
+			callbackQr.AppendResult(qr)
+			return nil
+		}, 1024*1024)
+		assert.Nil(t, err)
+
+		want := len(result11.Rows) + 2*len(result12.Rows)
+		got := len(callbackQr.Rows)
+		assert.Equal(t, want, got)
+	}
+
+	// loadbalance=1.
+	{
+		fakedb.AddQueryStream(querys[0].Query, result11)
+		fakedb.AddQueryStream(querys[1].Query, result12)
+		fakedb.AddQueryStream(querys[2].Query, result12)
+
+		txn, err := txnMgr.CreateTxn(backends)
+		assert.Nil(t, err)
+		defer txn.Finish()
+		txn.SetIsExecOnRep(true)
 
 		rctx := &xcontext.RequestContext{
 			Querys: querys,
