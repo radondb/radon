@@ -36,11 +36,14 @@ func TestProxyDDLDB(t *testing.T) {
 		"create database test5 collate latin1_swedish_ci",
 		"create database if not exists test6 collate utf8mb4_unicode_ci charset utf8mb4",
 		"create database if not exists test7 collate utf8mb4_unicode_ci charset utf8mb4 charset utf8mb4 collate utf8mb4_unicode_ci",
+		"create schema test8 charset default",
+		"create schema test9 default encryption = 'N'",
 	}
 
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern(".* database .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern(".* schema .*", &sqltypes.Result{})
 	}
 
 	// create database.
@@ -80,6 +83,15 @@ func TestProxyDDLDB(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
+	// drop schema.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "drop schema if exists test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
 	// ACL database.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
@@ -107,11 +119,13 @@ func TestProxyDDLDBError(t *testing.T) {
 		"create database test4 collate latin1", // latin1-->latin1_swedish_ci
 		// ERROR 1253 (42000): COLLATION 'latin1_swedish_ci' is not valid for CHARACTER SET 'utf8mb4'
 		"create database if not exists test5 character set utf8mb4 charset utf8mb4 collate utf8mb4_unicode_ci",
+		"create schema test6 default encryption = 'Y'",
 	}
 
 	// fakedbs.
 	{
 		fakedbs.AddQueryErrorPattern(".* database .*", errors.New("create database error"))
+		fakedbs.AddQueryErrorPattern(".* schema .*", errors.New("create database error"))
 	}
 
 	// create database and return error.

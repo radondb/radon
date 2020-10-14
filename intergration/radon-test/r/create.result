@@ -1,5 +1,14 @@
 drop database if exists integrate_test;
 
+create schema if not exists integrate_test;
+
+drop schema if exists integrate_test;
+
+create schema if not exists integrate_test encryption 'y';
+ERROR 1149 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use, The encryption option is parsed but ignored by all storage engines. at position 58 near 'y'
+
+drop schema if exists integrate_test;
+
 create database integrate_test DEFAULT CHARSET=utf8;
 
 

@@ -145,6 +145,7 @@ func forceEOF(yylex interface{}) {
 
 %type   <str>
 	index_name
+	DATABASE_SYM
 
 // INDEX.
 %token	<bytes>
@@ -476,8 +477,9 @@ func forceEOF(yylex interface{}) {
 // Functions
 %token	<bytes>
 	CURRENT_TIMESTAMP
-	DATABASE
 	CURRENT_DATE
+	DATABASE
+	SCHEMA
 
 %token	<bytes>
 	CURRENT_TIME
@@ -835,6 +837,7 @@ func forceEOF(yylex interface{}) {
 	reserved_table_id
 	table_alias
 	as_opt_id
+	db_name
 
 %type	<empty>
 	as_opt
@@ -1177,6 +1180,16 @@ parts_num_opt:
 		$$ = NewIntVal($2)
 	}
 
+DATABASE_SYM:
+	DATABASE
+	{
+		$$ = string($1)
+	}
+|	SCHEMA
+	{
+		$$ = string($1)
+	}
+
 create_statement:
 	create_table_prefix table_spec partition_option
 	{
@@ -1185,7 +1198,7 @@ create_statement:
 		$1.PartitionOption = $3
 		$$ = $1
 	}
-|	CREATE DATABASE not_exists_opt table_id database_option_list_opt
+|	CREATE DATABASE_SYM not_exists_opt db_name database_option_list_opt
 	{
 		var ifnotexists bool
 		if $3 != 0 {
@@ -1388,19 +1401,29 @@ database_option_list:
 		$$ = append($1, $2)
 	}
 
+// The ENCRYPTION option, introduced in MySQL 8.0.16, defines the default database encryption.
+// Inherited by tables created in the database
+// See: https://dev.mysql.com/doc/refman/8.0/en/create-database.html
 database_option:
 	opt_default COLLATE opt_equal id_or_default
 	{
 		$$ = &DatabaseOption{
-			CharsetOrCollate: string($2),
-			Value:            $4,
+			OptType: string($2),
+			Value:   NewStrValWithoutQuote([]byte($4)),
 		}
 	}
 |	opt_default opt_charset opt_equal charset_name_or_default
 	{
 		$$ = &DatabaseOption{
-			CharsetOrCollate: string($2),
-			Value:            $4,
+			OptType: string($2),
+			Value:   NewStrValWithoutQuote([]byte($4)),
+		}
+	}
+|	opt_default table_encryption_opt
+	{
+		$$ = &DatabaseOption{
+			OptType: "encryption",
+			Value:   $2,
 		}
 	}
 
@@ -1422,6 +1445,10 @@ opt_charset:
 |	CHARACTER SET
 	{
 		$$ = "character set"
+	}
+|	CHAR SET
+	{
+		$$ = "char set"
 	}
 
 charset_name_or_default:
@@ -2794,7 +2821,7 @@ drop_statement:
 		// Change this to an alter statement
 		$$ = &DDL{Action: DropIndexStr, IndexName: string($3), Table: $5, NewName: $5}
 	}
-|	DROP DATABASE exists_opt table_id
+|	DROP DATABASE_SYM exists_opt db_name
 	{
 		var exists bool
 		if $3 != 0 {
@@ -4553,6 +4580,16 @@ reserved_table_id:
 		$$ = NewTableIdent(string($1))
 	}
 
+db_name:
+	ID
+	{
+		$$ = NewTableIdent(string($1))
+	}
+|	non_reserved_keyword
+	{
+		$$ = NewTableIdent(string($1))
+	}
+
 /*
   These are not all necessarily reserved in MySQL, but some are.
 
@@ -4654,6 +4691,7 @@ reserved_keyword:
 |	RENAME
 |	REPLACE
 |	RIGHT
+|	SCHEMA
 |	SELECT
 |	SEPARATOR
 |	SET
