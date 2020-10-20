@@ -62,6 +62,10 @@ show create table integrate_test.t;
 Table	Create Table
 t	CREATE TABLE `t` (\n  `a` int(11) DEFAULT NULL,\n  `b` int(11) DEFAULT NULL,\n  `c` char(10) DEFAULT NULL,\n  UNIQUE KEY `a_idx` (`a`),\n  KEY `b_idx` (`b`) USING BTREE KEY_BLOCK_SIZE=10,\n  FULLTEXT KEY `c_idx` (`c`) COMMENT 'fulltext' /*!50100 WITH PARSER `ngram` */ \n) ENGINE=InnoDB DEFAULT CHARSET=utf8\n/*!50100 PARTITION BY HASH(a) */
 
+truncate table integrate_test.t;
+
+truncate integrate_test.t;
+
 drop table integrate_test.t;
 
 

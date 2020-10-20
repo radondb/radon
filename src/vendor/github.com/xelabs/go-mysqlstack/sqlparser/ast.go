@@ -882,6 +882,12 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 			exists = " if exists"
 		}
 		buf.Myprintf("%s%s %v", node.Action, exists, node.Tables)
+	case DropTempTableStr:
+		exists := ""
+		if node.IfExists {
+			exists = " if exists"
+		}
+		buf.Myprintf("%s%s %v", node.Action, exists, node.Tables)
 	case DropIndexStr:
 		buf.Myprintf("%s %s on %v", node.Action, node.IndexName, node.Table)
 	case RenameStr:

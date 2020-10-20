@@ -668,13 +668,38 @@ func TestDDL1(t *testing.T) {
 		},
 
 		{
+			input:  "truncate t1",
+			output: "truncate table t1",
+		},
+
+		{
 			input:  "drop table t1",
 			output: "drop table t1",
 		},
 
 		{
-			input:  "drop table t1, t2",
+			input:  "drop table t1, t2 RESTRICT",
 			output: "drop table t1, t2",
+		},
+
+		{
+			input:  "drop temporary table t1, t2 RESTRICT",
+			output: "drop temporary table t1, t2",
+		},
+
+		{
+			input:  "drop temporary table t1, t2 CASCADE",
+			output: "drop temporary table t1, t2",
+		},
+
+		{
+			input:  "drop temporary table t1, t2",
+			output: "drop temporary table t1, t2",
+		},
+
+		{
+			input:  "drop temporary table if exists t1, t2",
+			output: "drop temporary table if exists t1, t2",
 		},
 
 		{
@@ -974,7 +999,7 @@ func TestDDL1(t *testing.T) {
 
 		got := String(tree.(*DDL))
 		if ddl.output != got {
-			t.Errorf("want:\n%s\ngot:\n%s", ddl.output, got)
+			t.Errorf("\nwant:\n%s\ngot:\n%s", ddl.output, got)
 		}
 
 		// To improve the code coverage.

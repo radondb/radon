@@ -151,6 +151,7 @@ func forceEOF(yylex interface{}) {
 %token	<bytes>
 	ALGORITHM
 	BTREE
+	CASCADE
 	CONSTRAINT
 	FULLTEXT
 	HASH
@@ -158,10 +159,11 @@ func forceEOF(yylex interface{}) {
 	KEY_BLOCK_SIZE
 	KEYS
 	PARSER
+	RESTRICT
 	RTREE
 	SPATIAL
 	SYMBOL
-
+	TEMPORARY
 
 // Resolve shift/reduce conflict on 'UNIQUE KEY', if we don`t define the precedence, the code
 // doesn`t know which way to shift. Such as it can be parsed like 'UNIQUE' and 'KEY'(primary key),
@@ -814,12 +816,15 @@ func forceEOF(yylex interface{}) {
 %type	<byt>
 	exists_opt
 	not_exists_opt
+	temporary_opt
 
 %type	<empty>
 	non_rename_operation
-	to_opt
 	index_opt
 	kill_opt
+	restrict_or_cascade_opt
+	table_opt
+	to_opt
 
 %type	<bytes>
 	reserved_keyword
@@ -2807,14 +2812,34 @@ alter_statement:
 		$$ = &DDL{Action: AlterModifyColumnStr, Table: $4, NewName: $4, ModifyColumnDef: $7}
 	}
 
+temporary_opt:
+	{
+		$$ = 0 
+	}
+|	TEMPORARY
+	{
+		$$ = 1 
+	}
+
+restrict_or_cascade_opt:
+	{}
+|	RESTRICT
+	{}
+|	CASCADE
+	{}
+
 drop_statement:
-	DROP TABLE exists_opt table_name_list
+	DROP temporary_opt TABLE exists_opt table_name_list restrict_or_cascade_opt
 	{
 		var exists bool
-		if $3 != 0 {
+		if $4 != 0 {
 			exists = true
 		}
-		$$ = &DDL{Action: DropTableStr, Tables: $4, IfExists: exists}
+		if $2 != 0 {
+			$$ = &DDL{Action: DropTempTableStr, Tables: $5, IfExists: exists}
+		} else {
+			$$ = &DDL{Action: DropTableStr, Tables: $5, IfExists: exists}
+		}
 	}
 |	DROP INDEX ID ON table_name
 	{
@@ -2840,8 +2865,14 @@ table_name_list:
 		$$ = append($$, $3)
 	}
 
+table_opt:
+        /* empty */
+        {}
+|       TABLE
+        {}
+
 truncate_statement:
-	TRUNCATE TABLE table_name
+	TRUNCATE table_opt table_name
 	{
 		$$ = &DDL{Action: TruncateTableStr, Table: $3, NewName: $3}
 	}
@@ -4609,6 +4640,7 @@ reserved_keyword:
 |	BINARY
 |	BLOB
 |	BY
+|	CASCADE
 |	CASE
 |	CHAR
 |	CHARACTER
@@ -4690,6 +4722,7 @@ reserved_keyword:
 |	REGEXP
 |	RENAME
 |	REPLACE
+|	RESTRICT
 |	RIGHT
 |	SCHEMA
 |	SELECT
@@ -4700,6 +4733,7 @@ reserved_keyword:
 |	STRAIGHT_JOIN
 |	TABLE
 |	TABLES
+|	TEMPORARY
 |	TINYBLOB
 |	TINYINT
 |	TINYTEXT
