@@ -817,6 +817,7 @@ func forceEOF(yylex interface{}) {
 	non_rename_operation
 	to_opt
 	index_opt
+	kill_opt
 
 %type	<bytes>
 	reserved_keyword
@@ -2836,12 +2837,15 @@ explain_statement:
 		$$ = &Explain{}
 	}
 
+kill_opt:
+	{}
+|	QUERY
+	{}
+|	CONNECTION
+	{}
+
 kill_statement:
-	KILL INTEGRAL force_eof
-	{
-		$$ = &Kill{QueryID: &NumVal{raw: string($2)}}
-	}
-|	KILL QUERY INTEGRAL force_eof
+	KILL kill_opt INTEGRAL force_eof
 	{
 		$$ = &Kill{QueryID: &NumVal{raw: string($3)}}
 	}

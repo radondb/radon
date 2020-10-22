@@ -40,6 +40,16 @@ func TestKill(t *testing.T) {
 			input:  "kill query 1",
 			output: "kill 1",
 		},
+
+		{
+			input:  "kill CONNECTION 2",
+			output: "kill 2",
+		},
+
+		{
+			input:  "kill connection 3",
+			output: "kill 3",
+		},
 	}
 
 	for _, exp := range validSQL {

@@ -17,10 +17,10 @@ Table of Contents
          * [SHOW INDEX](#show-index)
          * [SHOW PROCESSLIST](#show-processlist)
          * [SHOW VARIABLES](#show-variables)
-      * [KILL](#kill)
-         * [KILL processlist_id](#kill-processlist_id)
       * [USE](#use)
          * [USE DATABASE](#use-database)
+      * [Other Administrative Statements](#other-administrative-statements)
+         * [KILL Statement](#kill-statement)
 
 # Database Administration Statements
 
@@ -348,13 +348,34 @@ SHOW VARIABLES
 * For compatibility JDBC/mydumper
 * The SHOW VARIABLES command is sent to the backend partition MySQL (random partition) to get and return
 
-## KILL
+## USE
 
-### KILL processlist_id
+### USE DATABASE
 
 `Syntax`
 ```
-KILL processlist_id
+USE db_name
+```
+
+`Instructions`
+* Switch the database of the current session
+
+`Example: `
+```
+mysql> use db_test1;
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+```
+
+## Other Administrative Statements
+
+### KILL Statement
+
+`Syntax`
+```
+KILL [CONNECTION | QUERY] processlist_id
 ```
 
 `Instructions`
@@ -387,25 +408,4 @@ Current database: db_test1
 +------+------+-----------------+----------+---------+------+-------+------+-----------+---------------+
 1 row in set (0.00 sec)
 
-```
-
-## USE
-
-### USE DATABASE
-
-`Syntax`
-```
-USE db_name
-```
-
-`Instructions`
-* Switch the database of the current session
-
-`Example: `
-```
-mysql> use db_test1;
-Reading table information for completion of table and column names
-You can turn off this feature to get a quicker startup with -A
-
-Database changed
 ```
