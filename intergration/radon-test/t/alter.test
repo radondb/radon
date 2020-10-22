@@ -1,0 +1,9 @@
+drop database if exists integrate_test;
+create /*test alter database start*/ database integrate_test DEFAULT CHARSET=utf8 collate utf8_unicode_ci;
+show create database integrate_test;
+alter /*no database selected*/ database default character set = utf8 collate = utf8_unicode_ci;
+alter database integrate_test default character set = utf8mb4 collate = utf8mb4_bin;
+show create database integrate_test;
+alter database integrate_test default character set = utf8 collate = utf8_unicode_ci;
+show create database integrate_test;
+drop /*test alter database end */ database integrate_test;

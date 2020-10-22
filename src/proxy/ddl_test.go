@@ -44,6 +44,8 @@ func TestProxyDDLDB(t *testing.T) {
 	{
 		fakedbs.AddQueryPattern(".* database .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern(".* schema .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("alter database .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
 	}
 
 	// create database.
@@ -63,6 +65,45 @@ func TestProxyDDLDB(t *testing.T) {
 		query := "create database if not exists test"
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
+	}
+
+	// alter database with db not exists.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "alter database dbNotExist collate = utf8mb4_0900_ai_ci read only = default character set = utf8"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+	// alter database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		// use database
+		query := "use test1"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+
+		// test alter with default session database test1
+		querys := []string{
+			"alter database test1 collate = utf8mb4_0900_ai_ci read only = default character set = utf8",
+			"alter database collate = utf8mb4_0900_ai_ci read only = default character set = utf8",
+		}
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
+	}
+
+	// alter database error.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		// test alter with no default session database
+		query := "alter database collate = utf8mb4_0900_ai_ci read only = default character set = utf8"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
 	}
 
 	// drop database.

@@ -350,6 +350,30 @@ func (spanner *Spanner) handleDDL(session *driver.Session, query string, node *s
 			log.Error("spanner.ddl[%v].error[%+v]", query, err)
 		}
 		return r, err
+	case sqlparser.AlterDatabase:
+		if ddl.Database.String() != "" {
+			// Check the alter database
+			if err := route.CheckDatabase(ddl.Database.String()); err != nil {
+				return nil, err
+			}
+		} else {
+			// Check the default session database
+			if err := route.CheckDatabase(database); err != nil {
+				return nil, err
+			}
+			// rewrite query, as "use db" operation will not send to backends in radondb, we should
+			// add default session db back into "alter database ..." stmt, otherwise the backends will return
+			// "ERROR 1046 (3D000): No database selected"
+			ddl.Database = sqlparser.NewTableIdent(database)
+			query = sqlparser.String(ddl)
+		}
+
+		// Execute.
+		r, err := spanner.ExecuteScatter(query)
+		if err != nil {
+			log.Error("spanner.ddl[%v].error[%+v]", query, err)
+		}
+		return r, err
 	case sqlparser.RenameStr:
 		// TODO: support a list of TableName.
 		// TODO: support databases are not equal.

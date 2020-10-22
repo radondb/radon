@@ -115,11 +115,13 @@ func (node *Select) AddHaving(expr Expr) {
 }
 
 // DatabaseOption represents database option.
-// See: https://dev.mysql.com/doc/refman/5.7/en/create-database.html
+// See: https://dev.mysql.com/doc/refman/8.0/en/create-database.html
 type DatabaseOption struct {
-	// type:charset, collate or encryption
 	OptType string
 	Value   *SQLVal
+	// "ReadOnlyValue" only used in alter database stmt, introduced in 8.0, for simplify code, we put it here.
+	// value: "default", "1", "0"
+	ReadOnlyValue string
 }
 
 // TableOptionType is the type for table_options
