@@ -89,7 +89,7 @@ func TestProxyKill(t *testing.T) {
 			wg.Add(1)
 			go func(c driver.Conn, id uint32) {
 				defer wg.Done()
-				query := fmt.Sprintf("kill %d", id)
+				query := fmt.Sprintf("kill connection %d", id)
 				_, err = kill.FetchAll(query, -1)
 				assert.Nil(t, err)
 			}(kill, clients[i].ConnectionID())
@@ -141,7 +141,7 @@ func TestProxyKillPrivilege(t *testing.T) {
 			wg.Add(1)
 			go func(c driver.Conn, id uint32) {
 				defer wg.Done()
-				query := fmt.Sprintf("kill %d", id)
+				query := fmt.Sprintf("kill query %d", id)
 				_, err = kill.FetchAll(query, -1)
 				assert.NotNil(t, err)
 			}(kill, clients[i].ConnectionID())
