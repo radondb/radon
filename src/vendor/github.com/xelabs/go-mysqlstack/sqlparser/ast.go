@@ -140,6 +140,9 @@ type (
 		IndexType string
 		IndexOpts *IndexOptions
 
+		// lock and algorithm option
+		indexLockAndAlgorithm *IndexLockAndAlgorithm
+
 		// Tables is set if Action is DropStr.
 		Tables TableNames
 
@@ -285,8 +288,6 @@ type IndexOptions struct {
 	Comment   string
 	BlockSize *SQLVal
 	Parser    string
-	Algorithm string
-	Lock      string
 }
 
 // IndexDefinition describes an index in a CREATE TABLE statement
@@ -297,6 +298,67 @@ type IndexDefinition struct {
 	Opts    *IndexOptions
 	Primary bool
 	Unique  bool
+}
+
+type IndexLockAndAlgorithm struct {
+	LockOption      LockOptionType
+	AlgorithmOption AlgorithmOptionType
+}
+
+// LockType is the type for create/drop/alter index TableSpec.
+// See https://dev.mysql.com/doc/refman/5.7/en/alter-table.html#alter-table-concurrency
+type LockOptionType byte
+
+// Lock options.
+const (
+	LockOptionEmpty LockOptionType = iota + 1
+	LockOptionNone
+	LockOptionDefault
+	LockOptionShared
+	LockOptionExclusive
+)
+
+func (n LockOptionType) String() string {
+	switch n {
+	case LockOptionNone:
+		return "none"
+	case LockOptionDefault:
+		return "default"
+	case LockOptionShared:
+		return "shared"
+	case LockOptionExclusive:
+		return "exclusive"
+	default:
+		return ""
+	}
+}
+
+// AlgorithmType is the algorithm for create/drop/alter index TableSpec.
+// See https://dev.mysql.com/doc/refman/8.0/en/alter-table.html#alter-table-performance.
+type AlgorithmOptionType byte
+
+// Algorithms options.
+const (
+	AlgorithmOptionEmpty AlgorithmOptionType = iota
+	AlgorithmOptionDefault
+	AlgorithmOptionCopy
+	AlgorithmOptionInplace
+	AlgorithmOptionInstant
+)
+
+func (a AlgorithmOptionType) String() string {
+	switch a {
+	case AlgorithmOptionDefault:
+		return "default"
+	case AlgorithmOptionCopy:
+		return "copy"
+	case AlgorithmOptionInplace:
+		return "inplace"
+	case AlgorithmOptionInstant:
+		return "instant"
+	default:
+		return ""
+	}
 }
 
 // TableSpec describes the structure of a table from a CREATE TABLE statement
@@ -875,7 +937,7 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 			buf.Myprintf("%s%s %v %v", node.Action, ifnotexists, node.NewName, node.TableSpec)
 		}
 	case CreateIndexStr:
-		buf.Myprintf("create %s%s on %v%v", node.IndexType, node.IndexName, node.NewName, node.IndexOpts)
+		buf.Myprintf("create %s%s on %v%v%v", node.IndexType, node.IndexName, node.NewName, node.IndexOpts, node.indexLockAndAlgorithm)
 	case DropTableStr:
 		exists := ""
 		if node.IfExists {
@@ -889,7 +951,7 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 		}
 		buf.Myprintf("%s%s %v", node.Action, exists, node.Tables)
 	case DropIndexStr:
-		buf.Myprintf("%s %s on %v", node.Action, node.IndexName, node.Table)
+		buf.Myprintf("%s %s on %v%v", node.Action, node.IndexName, node.Table, node.indexLockAndAlgorithm)
 	case RenameStr:
 		buf.Myprintf("%s %v to %v", node.Action, node.Table, node.NewName)
 	case AlterStr:
@@ -1015,12 +1077,6 @@ func (opts *IndexOptions) Format(buf *TrackedBuffer) {
 	if opts.Parser != "" {
 		buf.Myprintf(" WITH PARSER %s", opts.Parser)
 	}
-	if opts.Algorithm != "" {
-		buf.Myprintf(" algorithm = %s", opts.Algorithm)
-	}
-	if opts.Lock != "" {
-		buf.Myprintf(" lock = %s", opts.Lock)
-	}
 }
 
 // Format formats the node.
@@ -1116,6 +1172,16 @@ func (idx *IndexDefinition) Format(buf *TrackedBuffer) {
 		}
 	}
 	buf.Myprintf(" %v", idx.Opts)
+}
+
+// Format formats the node
+func (idxLA *IndexLockAndAlgorithm) Format(buf *TrackedBuffer) {
+	if idxLA.AlgorithmOption != AlgorithmOptionEmpty {
+		buf.Myprintf(" algorithm = %s", idxLA.AlgorithmOption.String())
+	}
+	if idxLA.LockOption != LockOptionEmpty {
+		buf.Myprintf(" lock = %s", idxLA.LockOption.String())
+	}
 }
 
 // Format formats the node.

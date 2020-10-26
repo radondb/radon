@@ -413,10 +413,6 @@ const (
 	IndexOptionBlockSize
 	// IndexOptionParser is 'with parser' enum.
 	IndexOptionParser
-	// IndexOptionAlgorithm is 'algorithm' enum.
-	IndexOptionAlgorithm
-	// IndexOptionLock is 'lock' enum.
-	IndexOptionLock
 )
 
 // IndexColumn describes a column in an index definition with optional length
@@ -440,33 +436,9 @@ func NewIndexOptions(columns []*IndexColumn, idxOptList []*IndexOption) *IndexOp
 			idxOpts.BlockSize = idxOpt.Val
 		case IndexOptionParser:
 			idxOpts.Parser = String(idxOpt.Val)
-		case IndexOptionAlgorithm:
-			idxOpts.Algorithm = String(idxOpt.Val)
-		case IndexOptionLock:
-			idxOpts.Lock = String(idxOpt.Val)
 		}
 	}
 	return idxOpts
-}
-
-// CheckIndexLock use to check if the string value matches a supported value.
-// Supported values: default, exclusive, none, shared.
-func CheckIndexLock(lock string) bool {
-	switch strings.ToLower(lock) {
-	case "default", "exclusive", "none", "shared":
-		return true
-	}
-	return false
-}
-
-// CheckIndexAlgorithm use to check if the string value matches a supported value.
-// Supported values: inplace, copy, default.
-func CheckIndexAlgorithm(algorithm string) bool {
-	switch strings.ToLower(algorithm) {
-	case "copy", "default", "inplace":
-		return true
-	}
-	return false
 }
 
 // AddColumn appends the given column to the list in the spec

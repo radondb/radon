@@ -104,6 +104,9 @@ func forceEOF(yylex interface{}) {
 	indexColumns          []*IndexColumn
 	indexOptionList       []*IndexOption
 	indexOption           *IndexOption
+	indexLockAndAlgorithm *IndexLockAndAlgorithm
+	lockOptionType	      LockOptionType
+	algorithmOptionType   AlgorithmOptionType
 	columnOptionListOpt   ColumnOptionListOpt
 	columnOptionList      []*ColumnOption
 	columnOption          *ColumnOption
@@ -767,7 +770,7 @@ func forceEOF(yylex interface{}) {
 	limit_opt
 
 %type	<str>
-	lock_opt
+	select_lock_opt
 
 %type	<columns>
 	ins_column_list
@@ -969,7 +972,6 @@ func forceEOF(yylex interface{}) {
 
 %type   <indexOptionList>
 	fulltext_key_opts
-	lock_algorithm_opts
 	normal_key_opts
 	spatial_key_opts
 	index_options
@@ -978,9 +980,19 @@ func forceEOF(yylex interface{}) {
 	all_key_opt
 	fulltext_key_opt
 	index_using_opt
-	lock_algorithm_opt
 	normal_key_opt
 	index_option
+
+%type   <indexLockAndAlgorithm>
+	index_lock_and_algorithm_opt
+
+%type   <lockOptionType>
+	// keep consistent with MySQL 8.0 sql.y, the variable name start with prefix "alter"
+	alter_lock_opt
+
+%type   <algorithmOptionType>
+	// keep consistent with MySQL 8.0 sql.y, the variable name start with prefix "alter"
+	alter_algorithm_opt
 
 %type   <str>
 	constraint_opt
@@ -1056,7 +1068,7 @@ command:
 |	other_statement
 
 select_statement:
-	base_select order_by_opt limit_opt lock_opt
+	base_select order_by_opt limit_opt select_lock_opt
 	{
 		sel := $1.(*Select)
 		sel.OrderBy = $2
@@ -1064,7 +1076,7 @@ select_statement:
 		sel.Lock = $4
 		$$ = sel
 	}
-|	union_lhs union_op union_rhs order_by_opt limit_opt lock_opt
+|	union_lhs union_op union_rhs order_by_opt limit_opt select_lock_opt
 	{
 		$$ = &Union{Type: $2, Left: $1, Right: $3, OrderBy: $4, Limit: $5, Lock: $6}
 	}
@@ -1211,17 +1223,17 @@ create_statement:
 		}
 		$$ = &DDL{Action: CreateDBStr, IfNotExists: ifnotexists, Database: $4, DatabaseOptions: $5}
 	}
-|	CREATE constraint_opt INDEX ID ON table_name openb index_column_list closeb normal_key_opts lock_algorithm_opts
+|	CREATE constraint_opt INDEX ID ON table_name openb index_column_list closeb normal_key_opts index_lock_and_algorithm_opt
 	{
-		$$ = &DDL{Action: CreateIndexStr, IndexType: $2, IndexName: string($4), Table: $6, NewName: $6, IndexOpts: NewIndexOptions($8, append($10, $11...))}
+		$$ = &DDL{Action: CreateIndexStr, IndexType: $2, IndexName: string($4), Table: $6, NewName: $6, IndexOpts: NewIndexOptions($8, $10), indexLockAndAlgorithm: $11}
 	}
-|	CREATE FULLTEXT INDEX ID ON table_name openb index_column_list closeb fulltext_key_opts lock_algorithm_opts
+|	CREATE FULLTEXT INDEX ID ON table_name openb index_column_list closeb fulltext_key_opts index_lock_and_algorithm_opt
 	{
-		$$ = &DDL{Action: CreateIndexStr, IndexType: FullTextStr, IndexName: string($4), Table: $6, NewName: $6, IndexOpts: NewIndexOptions($8, append($10, $11...))}
+		$$ = &DDL{Action: CreateIndexStr, IndexType: FullTextStr, IndexName: string($4), Table: $6, NewName: $6, IndexOpts: NewIndexOptions($8, $10), indexLockAndAlgorithm: $11}
 	}
-|	CREATE SPATIAL INDEX ID ON table_name openb index_column_list closeb spatial_key_opts lock_algorithm_opts
+|	CREATE SPATIAL INDEX ID ON table_name openb index_column_list closeb spatial_key_opts index_lock_and_algorithm_opt
 	{
-		$$ = &DDL{Action: CreateIndexStr, IndexType: SpatialStr, IndexName: string($4), Table: $6, NewName: $6, IndexOpts: NewIndexOptions($8, append($10, $11...))}
+		$$ = &DDL{Action: CreateIndexStr, IndexType: SpatialStr, IndexName: string($4), Table: $6, NewName: $6, IndexOpts: NewIndexOptions($8, $10), indexLockAndAlgorithm: $11}
 	}
 
 partition_option:
@@ -1341,7 +1353,7 @@ fulltext_key_opt:
 	{
 		$$ = &IndexOption{
 			Type: IndexOptionParser,
-			Val:  NewStrValWithoutQuote($3),
+			Val: NewStrValWithoutQuote($3),
 		}
 	}
 
@@ -1354,36 +1366,75 @@ spatial_key_opts:
 		$$ = append($1, $2)
 	}
 
-lock_algorithm_opts:
+index_lock_and_algorithm_opt:
 	{
-		$$ = []*IndexOption{}
+		$$ = &IndexLockAndAlgorithm{
+			LockOption: LockOptionEmpty,
+			AlgorithmOption: AlgorithmOptionEmpty,
+		}
 	}
-|	lock_algorithm_opts lock_algorithm_opt
+|	alter_lock_opt
 	{
-		$$ = append($1, $2)
+		$$ = &IndexLockAndAlgorithm{
+			LockOption: $1,
+			AlgorithmOption: AlgorithmOptionEmpty,
+		}
+	}
+|	alter_algorithm_opt
+	{
+		$$ = &IndexLockAndAlgorithm{
+			LockOption: LockOptionEmpty,
+			AlgorithmOption: $1,
+		}
+	}
+|	alter_lock_opt alter_algorithm_opt
+	{
+		$$ = &IndexLockAndAlgorithm{
+			LockOption: $1,
+			AlgorithmOption: $2,
+		}
+	}
+|	alter_algorithm_opt alter_lock_opt
+	{
+		$$ = &IndexLockAndAlgorithm{
+			LockOption: $2,
+			AlgorithmOption: $1,
+		}
 	}
 
-lock_algorithm_opt:
+alter_lock_opt:
 	LOCK opt_equal id_or_default
 	{
-		if !CheckIndexLock($3) {
-			yylex.Error("unknown lock type")
+		switch StrToLower($3)  {
+		case "none":
+                        $$ = LockOptionNone
+		case "default":
+                        $$ = LockOptionDefault
+		case "shared":
+                        $$ = LockOptionShared
+		case "exclusive":
+                        $$ = LockOptionExclusive
+		default:
+			yylex.Error("unknown lock type, the option should be NONE, DEFAULT, SHARED or EXCLUSIVE")
 			return 1
-		}
-		$$ = &IndexOption{
-			Type: IndexOptionLock,
-			Val:  NewStrValWithoutQuote([]byte($3)),
 		}
 	}
-|	ALGORITHM opt_equal id_or_default
+
+alter_algorithm_opt:
+	ALGORITHM opt_equal id_or_default
 	{
-		if !CheckIndexAlgorithm($3) {
-			yylex.Error("unknown algorithm type")
+		switch StrToLower($3)  {
+		case "default":
+                        $$ = AlgorithmOptionDefault
+		case "copy":
+                        $$ = AlgorithmOptionCopy
+		case "inplace":
+                        $$ = AlgorithmOptionInplace
+		case "instant":
+                        $$ = AlgorithmOptionInstant
+		default:
+			yylex.Error("unknown algorithm type, the option should be DEFAULT, COPY, INPLACE or INSTANT")
 			return 1
-		}
-		$$ = &IndexOption{
-			Type: IndexOptionAlgorithm,
-			Val:  NewStrValWithoutQuote([]byte($3)),
 		}
 	}
 
@@ -2841,10 +2892,9 @@ drop_statement:
 			$$ = &DDL{Action: DropTableStr, Tables: $5, IfExists: exists}
 		}
 	}
-|	DROP INDEX ID ON table_name
+|	DROP INDEX ID ON table_name index_lock_and_algorithm_opt
 	{
-		// Change this to an alter statement
-		$$ = &DDL{Action: DropIndexStr, IndexName: string($3), Table: $5, NewName: $5}
+		$$ = &DDL{Action: DropIndexStr, IndexName: string($3), Table: $5, NewName: $5, indexLockAndAlgorithm: $6}
 	}
 |	DROP DATABASE_SYM exists_opt db_name
 	{
@@ -4193,7 +4243,7 @@ limit_opt:
 		$$ = &Limit{Offset: $4, Rowcount: $2}
 	}
 
-lock_opt:
+select_lock_opt:
 	{
 		$$ = ""
 	}

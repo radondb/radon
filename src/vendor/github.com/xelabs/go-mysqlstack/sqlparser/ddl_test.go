@@ -820,11 +820,39 @@ func TestDDL1(t *testing.T) {
 		// Index.
 		{
 			input:  "create index idx on test(a,b) using hash comment 'c' lock=EXCLUSIVE",
-			output: "create index idx on test(`a`, `b`) using hash comment 'c' lock = EXCLUSIVE",
+			output: "create index idx on test(`a`, `b`) using hash comment 'c' lock = exclusive",
+		},
+		{
+			input:  "create index idx on test(a,b) using hash comment 'c' algOrithm=defauLt",
+			output: "create index idx on test(`a`, `b`) using hash comment 'c' algorithm = default",
+		},
+		{
+			input:  "create index idx on test(a,b) using hash comment 'c' lock=Default algorithm=Copy",
+			output: "create index idx on test(`a`, `b`) using hash comment 'c' algorithm = copy lock = default",
+		},
+		{
+			input:  "create index idx on test(a,b) using hash comment 'c' algorithm=Copy lock=Default",
+			output: "create index idx on test(`a`, `b`) using hash comment 'c' algorithm = copy lock = default",
 		},
 		{
 			input:  "drop index idx on test",
 			output: "drop index idx on test",
+		},
+		{
+			input:  "drop index idx on test lock=EXCLUSIVE",
+			output: "drop index idx on test lock = exclusive",
+		},
+		{
+			input:  "drop index idx on test Algorithm=Inplace",
+			output: "drop index idx on test algorithm = inplace",
+		},
+		{
+			input:  "drop index idx on test lock=EXCLUSIVE algorithm=Default",
+			output: "drop index idx on test algorithm = default lock = exclusive",
+		},
+		{
+			input:  "drop index idx on test algorithm=Copy lock = None",
+			output: "drop index idx on test algorithm = copy lock = none",
 		},
 		{
 			input:  "create unique index a on b(foo) using btree key_block_size=10 algorithm=copy",
@@ -1320,11 +1348,27 @@ func TestDDL1ParseError(t *testing.T) {
 		},
 		{ // create index lock type error.
 			input:  "create index idx on t(a,b) lock=d",
-			output: "unknown lock type at position 34 near 'd'",
+			output: "unknown lock type, the option should be NONE, DEFAULT, SHARED or EXCLUSIVE at position 34 near 'd'",
+		},
+		{ // create index lock type error, lock option should be appear once.
+			input:  "create index idx on t(a,b) lock=default lock=default",
+			output: "syntax error at position 45 near 'lock'",
+		},
+		{ // create index lock type error, lock option should be appear once.
+			input:  "create index idx on t(a,b) lock=default algorithm=default lock=default",
+			output: "syntax error at position 63 near 'lock'",
 		},
 		{ // create index algorithm type error.
 			input:  "create index idx on t(a,b) algorithm=d",
-			output: "unknown algorithm type at position 39 near 'd'",
+			output: "unknown algorithm type, the option should be DEFAULT, COPY, INPLACE or INSTANT at position 39 near 'd'",
+		},
+		{ // create index algorithm type error, algorithm option should be appear once.
+			input:  "create index idx on t(a,b) algorithm=copy algorithm=default",
+			output: "syntax error at position 52 near 'algorithm'",
+		},
+		{ // create index algorithm type error, algorithm option should be appear once.
+			input:  "create index idx on t(a,b) lock=default algorithm=copy algorithm=default",
+			output: "syntax error at position 65 near 'algorithm'",
 		},
 		{ // create index in the wrong order.
 			input:  "create index idx on t(a,b) algorithm=default using btree",

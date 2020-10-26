@@ -1,3 +1,4 @@
+drop database if exists integrate_test;
 create database integrate_test DEFAULT CHARSET=utf8;
 
 create table integrate_test.t(a int key, b int) ENGINE=InnoDB DEFAULT CHARSET=utf8;

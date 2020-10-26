@@ -1,0 +1,37 @@
+drop database if exists integrate_test;
+create database integrate_test DEFAULT CHARSET=utf8;
+create table integrate_test.t1 (
+    c1 int,
+    c2 char(12),
+    c3 varchar(123),
+    c4 timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    index (c1),
+    index i1 (c1),
+    index i2 (c2),
+    index i3 (c3),
+    index i5 (c1, c2, c3, c4),
+    primary key (c2, c3), 
+    index (c2, c4)); 
+drop /*normal drop*/ index i1 on integrate_test.t1;
+drop /*test algorithm option*/ index i2 on integrate_test.t1 ALGORITHM = default;
+drop /*test lock option*/ index i3 on integrate_test.t1 lock = EXCLUSIVE;
+drop /*test algorithm lock option*/ index i5 on integrate_test.t1 algorithM = INPLACE lock = EXCLUSIVE;
+drop table integrate_test.t1;
+
+create table integrate_test.t1 (
+    c1 int,
+    c2 char(12),
+    c3 varchar(123),
+    c4 timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    index (c1),
+    index i1 (c1),
+    index i2 (c2),
+    index i3 (c3),
+    index i5 (c1, c2, c3, c4),
+    primary key (c2, c3), 
+    index (c2, c4)); 
+drop /*test lock algorithm option*/ index i1 on integrate_test.t1 lock = shared ALGORITHM = default;
+drop /*test lock option duplicate error*/ index i2 on integrate_test.t1 lock = EXCLUSIVE lock = default;
+drop /*test lock option duplicate error*/ index i3 on integrate_test.t1 algorithm = default lock = EXCLUSIVE lock = default;
+drop /*test algorithm duplicate*/ index i5 on integrate_test.t1 algorithM = INPLACE algorithm = inplace;
+drop table integrate_test.t1;
