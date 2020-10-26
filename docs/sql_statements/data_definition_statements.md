@@ -185,18 +185,20 @@ ERROR 1105 (HY000): unsupported: cannot.modify.the.column.on.shard.key
 
 `Syntax`
 ```
-CREATE DATABASE [IF NOT EXISTS] db_name
+CREATE {DATABASE | SCHEMA} [IF NOT EXISTS] db_name
     [create_option] ...
 
-create_option: {
-    [DEFAULT] CHARACTER SET [=] charset_name
-  | [DEFAULT] COLLATE [=] collation_name
+create_option: [DEFAULT] {
+    CHARACTER SET [=] charset_name
+  | COLLATE [=] collation_name
+  | ENCRYPTION [=] {'Y' | 'N'}
 }
 ```
 `Instructions`
 
 * RadonDB will sends this statement directly to all backends to execute and return results.
 * *Cross-partition non-atomic operations*
+* The `ENCRYPTION` option, introduced in MySQL 8.0.16, defines the default database encryption. Inherited by tables created in the database.
 
 `Example:`
 ```
@@ -436,7 +438,7 @@ Create Table: CREATE TABLE `t4` (
 
 `Syntax`
 ```
- DROP DATABASE [IF EXISTS] db_name
+ DROP {DATABASE | SCHEMA} [IF EXISTS] db_name
 ```
 
 `Instructions`

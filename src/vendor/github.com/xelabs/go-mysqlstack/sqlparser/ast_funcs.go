@@ -117,8 +117,9 @@ func (node *Select) AddHaving(expr Expr) {
 // DatabaseOption represents database option.
 // See: https://dev.mysql.com/doc/refman/5.7/en/create-database.html
 type DatabaseOption struct {
-	Value            string
-	CharsetOrCollate string
+	// type:charset, collate or encryption
+	OptType string
+	Value   *SQLVal
 }
 
 // TableOptionType is the type for table_options

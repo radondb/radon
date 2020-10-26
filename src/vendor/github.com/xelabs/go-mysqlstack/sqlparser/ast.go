@@ -906,7 +906,7 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 // Format formats the node
 func (optList DatabaseOptionListOpt) Format(buf *TrackedBuffer) {
 	for _, dbOpt := range optList.DBOptList {
-		buf.Myprintf(" %s %s", dbOpt.CharsetOrCollate, dbOpt.Value)
+		buf.Myprintf(" %s %v", dbOpt.OptType, dbOpt.Value)
 	}
 }
 

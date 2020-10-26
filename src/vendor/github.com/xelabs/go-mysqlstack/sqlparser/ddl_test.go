@@ -682,17 +682,23 @@ func TestDDL1(t *testing.T) {
 			output: "drop table if exists t1",
 		},
 
-		// Database.
+		// Database or Schema.
 		{
 			input:  "drop database test",
 			output: "drop database test",
 		},
-
+		{
+			input:  "drop schema test",
+			output: "drop database test",
+		},
 		{
 			input:  "create database test",
 			output: "create database test",
 		},
-
+		{
+			input:  "create schema test",
+			output: "create database test",
+		},
 		{
 			input:  "drop database if exists test",
 			output: "drop database if exists test",
@@ -701,8 +707,16 @@ func TestDDL1(t *testing.T) {
 			input:  "create database if not exists test",
 			output: "create database if not exists test",
 		},
+		{
+			input:  "create schema if not exists test",
+			output: "create database if not exists test",
+		},
 
 		// Create database with option issue #478
+		{
+			input:  "create database test1 char set default",
+			output: "create database test1 char set default",
+		},
 		{
 			input:  "create database test charset utf8mxx",
 			output: "create database test charset utf8mxx",
@@ -754,6 +768,12 @@ func TestDDL1(t *testing.T) {
 		{
 			input:  "create database if not exists test collate utf8mb4_unicode_ci charset utf8mb4 charset utf8mb4",
 			output: "create database if not exists test collate utf8mb4_unicode_ci charset utf8mb4 charset utf8mb4",
+		},
+
+		// issue #689
+		{
+			input:  "create database test encryption 'n'",
+			output: "create database test encryption 'n'",
 		},
 
 		// Alter engine.
@@ -970,10 +990,6 @@ func TestDDL1ParseError(t *testing.T) {
 		output string
 	}{
 		{
-			input:  "create database test1 char set default", // char-->charset
-			output: "syntax error at position 27 near 'char'",
-		},
-		{
 			input:  "create database test2 character default", // character-->character set
 			output: "syntax error at position 40 near 'default'",
 		},
@@ -984,6 +1000,10 @@ func TestDDL1ParseError(t *testing.T) {
 		{
 			input:  "create database test4 charset ", // charset_name should not be empty
 			output: "syntax error at position 31",
+		},
+		{
+			input:  "create database test5 encryption = 'y'", // charset_name should not be empty
+			output: "The encryption option is parsed but ignored by all storage engines. at position 39 near 'y'",
 		},
 		// test some non_reserved_keyword moved to reserved_keyword, issue:https://github.com/radondb/radon/pull/496
 		// e.g.: bigint,blob,char,decimal,integer...

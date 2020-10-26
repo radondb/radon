@@ -1,4 +1,8 @@
 drop database if exists integrate_test;
+create schema if not exists integrate_test;
+drop schema if exists integrate_test;
+create schema if not exists integrate_test encryption 'y';
+drop schema if exists integrate_test;
 create database integrate_test DEFAULT CHARSET=utf8;
 
 create table integrate_test.t1 (b char(0)) DEFAULT CHARSET=utf8 partition by hash(b);
