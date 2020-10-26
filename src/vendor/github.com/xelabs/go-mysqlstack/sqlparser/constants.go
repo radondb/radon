@@ -50,6 +50,7 @@ const (
 	CreateIndexStr          = "create index"
 	DropDBStr               = "drop database"
 	DropTableStr            = "drop table"
+	DropTempTableStr        = "drop temporary table"
 	DropIndexStr            = "drop index"
 	AlterStr                = "alter"
 	AlterEngineStr          = "alter table"

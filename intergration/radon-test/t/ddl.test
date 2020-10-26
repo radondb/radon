@@ -35,6 +35,8 @@ create unique index a_idx on integrate_test.t(a);
 create index b_idx on integrate_test.t(b) using btree KEY_BLOCK_SIZE=10 LOCK=DEFAULT ALGORITHM=COPY;
 create FULLTEXT index c_idx on integrate_test.t(c) WITH PARSER ngram comment 'fulltext' ALGORITHM=DEFAULT LOCK=SHARED;
 show create table integrate_test.t;
+truncate table integrate_test.t;
+truncate integrate_test.t;
 drop table integrate_test.t;
 
 create table integrate_test.t(

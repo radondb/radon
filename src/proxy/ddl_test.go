@@ -153,6 +153,7 @@ func TestProxyDDLTable(t *testing.T) {
 		fakedbs.AddQueryPattern("alter table .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("drop table .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("truncate table .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("truncate .*", &sqltypes.Result{})
 	}
 
 	// create table without db.
@@ -380,6 +381,15 @@ func TestProxyDDLTable(t *testing.T) {
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
 		query := "truncate table t1"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// truncate without table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "truncate t1"
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
 	}
