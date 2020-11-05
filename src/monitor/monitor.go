@@ -128,6 +128,11 @@ func QueryTotalCounterInc(command string, result string) {
 	queryTotalCounter.WithLabelValues(command, result).Inc()
 }
 
+// BackendSet set backend num.
+func BackendSet(btype string, v float64) {
+	backendNum.WithLabelValues(btype).Set(v)
+}
+
 // BackendInc add 1
 func BackendInc(btype string) {
 	backendNum.WithLabelValues(btype).Inc()

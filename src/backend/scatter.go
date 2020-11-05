@@ -174,6 +174,7 @@ func (scatter *Scatter) LoadConfig() error {
 		log.Error("scatter.parse.json.file[%v].error:%v", file, err)
 		return err
 	}
+	monitor.BackendSet("backend", 0)
 	for _, backend := range conf.Backends {
 		if err := scatter.add(backend); err != nil {
 			log.Error("scatter.add.backend[%+v].error:%v", backend.Name, err)
