@@ -97,25 +97,21 @@ func TestBackendIncDec(t *testing.T) {
 	}
 
 	backend := "backend"
-	backup := "backup"
-
 	BackendInc(backend)
-	BackendInc(backup)
-
 	v1 := getBackendNum(backend)
-	v2 := getBackendNum(backup)
-
 	assert.EqualValues(t, 1, v1)
-	assert.EqualValues(t, 1, v2)
+
+	BackendSet(backend, 2)
+	v1 = getBackendNum(backend)
+	assert.EqualValues(t, 2, v1)
 
 	BackendDec(backend)
-	BackendDec(backup)
-
 	v1 = getBackendNum(backend)
-	v2 = getBackendNum(backup)
+	assert.EqualValues(t, 1, v1)
 
+	BackendSet(backend, 0)
+	v1 = getBackendNum(backend)
 	assert.EqualValues(t, 0, v1)
-	assert.EqualValues(t, 0, v2)
 }
 
 func TestDiskUsageSet(t *testing.T) {
