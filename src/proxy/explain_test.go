@@ -257,18 +257,6 @@ func TestProxyExplainError(t *testing.T) {
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}
-
-	// parse query error.
-	{
-		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
-		assert.Nil(t, err)
-		query := "explain xx sdf"
-		qr, err := client.FetchAll(query, -1)
-		assert.Nil(t, err)
-		want := "query[ xx sdf].parser.error: syntax error at position 4 near 'xx'"
-		got := string(qr.Rows[0][0].Raw())
-		assert.Equal(t, want, got)
-	}
 }
 
 func TestProxyExplainUnsupported(t *testing.T) {
@@ -289,7 +277,7 @@ func TestProxyExplainUnsupported(t *testing.T) {
 		assert.Nil(t, err)
 		query := "explain create table t1(a int)"
 		_, err = client.FetchAll(query, -1)
-		want := "You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use, explain only supports SELECT/DELETE/INSERT/UNION (errno 1149) (sqlstate 42000)"
+		want := "You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use, syntax error at position 15 near 'create' (errno 1149) (sqlstate 42000)"
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}

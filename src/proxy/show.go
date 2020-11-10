@@ -330,13 +330,13 @@ func (spanner *Spanner) handleShowCreateTable(session *driver.Session, query str
 // handleShowColumns used to handle the 'SHOW COLUMNS' command.
 func (spanner *Spanner) handleShowColumns(session *driver.Session, query string, node *sqlparser.Show) (*sqltypes.Result, error) {
 	router := spanner.router
-	ast := node
+	showCol := node
 
-	table := ast.Table.Name.String()
-	if ast.Table.Qualifier.IsEmpty() {
-		ast.Table.Qualifier = sqlparser.NewTableIdent(session.Schema())
+	table := showCol.Table.Name.String()
+	if showCol.Table.Qualifier.IsEmpty() {
+		showCol.Table.Qualifier = sqlparser.NewTableIdent(session.Schema())
 	}
-	database := ast.Table.Qualifier.String()
+	database := showCol.Table.Qualifier.String()
 	if database == "" {
 		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)
 	}
@@ -352,10 +352,8 @@ func (spanner *Spanner) handleShowColumns(session *driver.Session, query string,
 	}
 	partTable := parts[0].Table
 	backend := parts[0].Backend
-	ast.Table.Name = sqlparser.NewTableIdent(partTable)
-	buf := sqlparser.NewTrackedBuffer(nil)
-	ast.Format(buf)
-	qr, err := spanner.ExecuteOnThisBackend(backend, buf.String())
+	showCol.Table.Name = sqlparser.NewTableIdent(partTable)
+	qr, err := spanner.ExecuteOnThisBackend(backend, sqlparser.String(showCol))
 	if err != nil {
 		return nil, err
 	}
@@ -366,13 +364,13 @@ func (spanner *Spanner) handleShowColumns(session *driver.Session, query string,
 // handleShowIndex used to handle the 'SHOW INDEX' command.
 func (spanner *Spanner) handleShowIndex(session *driver.Session, query string, node *sqlparser.Show) (*sqltypes.Result, error) {
 	router := spanner.router
-	ast := node
+	showIdx := node
 
-	table := ast.Table.Name.String()
-	if ast.Table.Qualifier.IsEmpty() {
-		ast.Table.Qualifier = sqlparser.NewTableIdent(session.Schema())
+	table := showIdx.Table.Name.String()
+	if showIdx.Table.Qualifier.IsEmpty() {
+		showIdx.Table.Qualifier = sqlparser.NewTableIdent(session.Schema())
 	}
-	database := ast.Table.Qualifier.String()
+	database := showIdx.Table.Qualifier.String()
 	if database == "" {
 		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)
 	}
@@ -388,11 +386,9 @@ func (spanner *Spanner) handleShowIndex(session *driver.Session, query string, n
 	}
 	partTable := parts[0].Table
 	backend := parts[0].Backend
-	ast.Table.Name = sqlparser.NewTableIdent(partTable)
-	buf := sqlparser.NewTrackedBuffer(nil)
-	ast.Format(buf)
+	showIdx.Table.Name = sqlparser.NewTableIdent(partTable)
 
-	qr, err := spanner.ExecuteOnThisBackend(backend, buf.String())
+	qr, err := spanner.ExecuteOnThisBackend(backend, sqlparser.String(showIdx))
 	if err != nil {
 		return nil, err
 	}

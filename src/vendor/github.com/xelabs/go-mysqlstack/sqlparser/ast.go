@@ -172,7 +172,7 @@ type (
 		DBName TableIdent
 	}
 
-	// OtherRead represents a DESCRIBE, or EXPLAIN statement.
+	// OtherRead represents EXPLAIN statement.
 	// It should be used only as an indicator. It does not contain
 	// the full AST for the statement.
 	OtherRead struct{}

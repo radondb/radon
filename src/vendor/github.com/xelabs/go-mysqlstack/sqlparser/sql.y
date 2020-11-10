@@ -183,7 +183,6 @@ func forceEOF(yylex interface{}) {
 	AS
 	EXISTS
 	ASC
-	DESC
 	INTO
 	DUPLICATE
 	DEFAULT
@@ -351,15 +350,17 @@ func forceEOF(yylex interface{}) {
 	COLUMN
 
 %token	<bytes>
-	SHOW
+	DESC
 	DESCRIBE
 	EXPLAIN
+	SHOW
+
+%token	<bytes>
 	DATE
 	ESCAPE
 	REPAIR
 	OPTIMIZE
 	TRUNCATE
-
 
 // Type Tokens
 %token	<bytes>
@@ -535,7 +536,9 @@ func forceEOF(yylex interface{}) {
 %type	<statement>
 	truncate_statement
 	xa_statement
+	describe_statement
 	explain_statement
+	explainable_statement
 	kill_statement
 	transaction_statement
 	radon_statement
@@ -676,6 +679,7 @@ func forceEOF(yylex interface{}) {
 
 %type	<showFilter>
 	like_or_where_opt
+	describe_column_opt
 
 %type	<tableNames>
 	table_name_list
@@ -822,6 +826,7 @@ func forceEOF(yylex interface{}) {
 	temporary_opt
 
 %type	<empty>
+	describe_command
 	non_rename_operation
 	index_opt
 	kill_opt
@@ -1061,6 +1066,7 @@ command:
 |	checksum_statement
 |	use_statement
 |	xa_statement
+|	describe_statement
 |	explain_statement
 |	kill_statement
 |	transaction_statement
@@ -2939,8 +2945,53 @@ xa_statement:
 		$$ = &Xa{}
 	}
 
+describe_command:
+	EXPLAIN
+	{}
+|	DESCRIBE
+	{}
+|	DESC
+	{}
+
+describe_column_opt:
+	{
+		$$ = nil
+	}
+|	col_id
+	{
+		$$ = &ShowFilter{Like: $1.String()}
+	}
+|	STRING
+	{
+		$$ = &ShowFilter{Like: string($1)}
+	}
+
+describe_statement:
+	describe_command table_name describe_column_opt
+	{
+		$$ = &Show{Type: ShowColumnsStr, Table: $2, Filter: $3}
+	}
+
+explainable_statement:
+	select_statement
+	{
+	    $$ = $1
+	}
+|	update_statement
+	{
+	    $$ = $1
+	}
+|	insert_statement
+	{
+	    $$ = $1
+	}
+|	delete_statement
+	{
+	    $$ = $1
+	}
+
 explain_statement:
-	EXPLAIN force_eof
+	EXPLAIN explainable_statement
 	{
 		$$ = &Explain{}
 	}
@@ -3192,15 +3243,7 @@ use_statement:
 	}
 
 other_statement:
-	DESC force_eof
-	{
-		$$ = &OtherRead{}
-	}
-|	DESCRIBE force_eof
-	{
-		$$ = &OtherRead{}
-	}
-|	REPAIR force_eof
+	REPAIR force_eof
 	{
 		$$ = &OtherAdmin{}
 	}

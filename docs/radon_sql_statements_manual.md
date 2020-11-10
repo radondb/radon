@@ -11,3 +11,4 @@ RadonDB runs SQL statements in parallel, multiple processes work together simult
 # [Database Administration Statements](sql_statements/database_administration_statements.md)
 # [Radon Administration Statements](sql_statements/radon_administration_statements.md)
 # [Others Statements](sql_statements/others_statements.md)
+# [Utility Statements](sql_statements/utility_statements.md)

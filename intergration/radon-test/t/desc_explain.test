@@ -1,0 +1,13 @@
+create database integrate_test DEFAULT CHARSET=utf8;
+create table integrate_test.t(c1 int key, c2 int) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+desc integrate_test.t;
+describe integrate_test.t;
+explain integrate_test.t;
+desc integrate_test.t c1;
+desc integrate_test.t "c1";
+desc integrate_test.t 'c1';
+desc integrate_test.t 'c_';
+desc integrate_test.t "c_%%%";
+
+drop database integrate_test;
