@@ -1,0 +1,125 @@
+drop database if exists integrate_test;
+
+create database if not exists integrate_test DEFAULT CHARSET=utf8;
+
+
+help;
+?         (\?) Synonym for `help'.
+clear     (\c) Clear the current input statement.
+connect   (\r) Reconnect to the server. Optional arguments are db and host.
+delimiter (\d) Set statement delimiter.
+edit      (\e) Edit command with $EDITOR.
+ego       (\G) Send command to mysql server, display result vertically.
+exit      (\q) Exit mysql. Same as quit.
+go        (\g) Send command to mysql server.
+help      (\h) Display this help.
+nopager   (\n) Disable pager, print to stdout.
+notee     (\t) Don't write into outfile.
+pager     (\P) Set PAGER [to_pager]. Print the query results via PAGER.
+print     (\p) Print current command.
+prompt    (\R) Change your mysql prompt.
+quit      (\q) Quit mysql.
+rehash    (\#) Rebuild completion hash.
+source    (\.) Execute an SQL script file. Takes a file name as an argument.
+status    (\s) Get status information from the server.
+system    (\!) Execute a system shell command.
+tee       (\T) Set outfile [to_outfile]. Append everything into given outfile.
+use       (\u) Use another database. Takes database name as argument.
+charset   (\C) Switch to another charset. Might be needed for processing binlog with multi-byte charsets.
+warnings  (\W) Show warnings after every statement.
+nowarning (\w) Don't show warnings after every statement.
+resetconnection(\x) Clean session context.
+
+help content;
+
+help 'index';
+   ALTER TABLE
+   CACHE INDEX
+   CREATE INDEX
+   CREATE TABLE
+   DROP INDEX
+   JOIN
+   LOAD INDEX
+   SHOW
+   SHOW INDEX
+   SPATIAL INDEXES
+
+
+help 'insert';
+Name: 'INSERT'
+Description:
+Syntax:
+INSERT [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE]
+    [INTO] tbl_name
+    [PARTITION (partition_name [, partition_name] ...)]
+    [(col_name [, col_name] ...)]
+    {VALUES | VALUE} (value_list) [, (value_list)] ...
+    [ON DUPLICATE KEY UPDATE assignment_list]
+
+INSERT [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE]
+    [INTO] tbl_name
+    [PARTITION (partition_name [, partition_name] ...)]
+    SET assignment_list
+    [ON DUPLICATE KEY UPDATE assignment_list]
+
+INSERT [LOW_PRIORITY | HIGH_PRIORITY] [IGNORE]
+    [INTO] tbl_name
+    [PARTITION (partition_name [, partition_name] ...)]
+    [(col_name [, col_name] ...)]
+    SELECT ...
+    [ON DUPLICATE KEY UPDATE assignment_list]
+
+value:
+    {expr | DEFAULT}
+
+value_list:
+    value [, value] ...
+
+assignment:
+    col_name = value
+
+assignment_list:
+    assignment [, assignment] ...
+
+INSERT inserts new rows into an existing table. The INSERT ... VALUES
+and INSERT ... SET forms of the statement insert rows based on
+explicitly specified values. The INSERT ... SELECT form inserts rows
+selected from another table or tables. INSERT with an ON DUPLICATE KEY
+UPDATE clause enables existing rows to be updated if a row to be
+inserted would cause a duplicate value in a UNIQUE index or PRIMARY
+KEY.
+
+For additional information about INSERT ... SELECT and INSERT ... ON
+DUPLICATE KEY UPDATE, see [HELP INSERT SELECT], and
+https://dev.mysql.com/doc/refman/5.7/en/insert-on-duplicate.html.
+
+In MySQL 5.7, the DELAYED keyword is accepted but ignored by the
+server. For the reasons for this, see [HELP INSERT DELAYED],
+
+Inserting into a table requires the INSERT privilege for the table. If
+the ON DUPLICATE KEY UPDATE clause is used and a duplicate key causes
+an UPDATE to be performed instead, the statement requires the UPDATE
+privilege for the columns to be updated. For columns that are read but
+not modified you need only the SELECT privilege (such as for a column
+referenced only on the right hand side of an col_name=expr assignment
+in an ON DUPLICATE KEY UPDATE clause).
+
+When inserting into a partitioned table, you can control which
+partitions and subpartitions accept new rows. The PARTITION option
+takes a list of the comma-separated names of one or more partitions or
+subpartitions (or both) of the table. If any of the rows to be inserted
+by a given INSERT statement do not match one of the partitions listed,
+the INSERT statement fails with the error Found a row not matching the
+given partition set. For more information and examples, see
+https://dev.mysql.com/doc/refman/5.7/en/partitioning-selection.html.
+
+URL: https://dev.mysql.com/doc/refman/5.7/en/insert.html
+
+
+
+help /*test nothing get*/ xx;
+
+help /*test nothing get*/ create create;
+
+
+drop database integrate_test;

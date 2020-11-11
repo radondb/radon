@@ -359,9 +359,10 @@ func forceEOF(yylex interface{}) {
 %token	<bytes>
 	DATE
 	ESCAPE
+	HELP
 	REPAIR
-	OPTIMIZE
 	TRUNCATE
+	OPTIMIZE
 
 // Type Tokens
 %token	<bytes>
@@ -547,9 +548,10 @@ func forceEOF(yylex interface{}) {
 	describe_statement
 	explain_statement
 	explainable_statement
+	help_statement
 	kill_statement
-	transaction_statement
 	radon_statement
+	transaction_statement
 
 %token	<bytes>
 	ENGINES
@@ -929,6 +931,7 @@ func forceEOF(yylex interface{}) {
 
 %type	<optVal>
 	id_or_string
+	id_or_string_opt
 
 %type	<str>
 	opt_charset
@@ -1079,6 +1082,7 @@ command:
 |	xa_statement
 |	describe_statement
 |	explain_statement
+|	help_statement
 |	kill_statement
 |	transaction_statement
 |	radon_statement
@@ -3045,6 +3049,35 @@ explain_statement:
 		$$ = &Explain{Type: ExplainTypeEmpty, Analyze: true, Statement: $6}
 	}
 
+id_or_string_opt:
+	{
+		$$ = nil
+	}
+|	ID
+	{
+		// Normal str as an identify, without quote
+		$$ = NewStrValWithoutQuote($1)
+	}
+|	STRING
+	{
+		// Str with Quote, it will be parsed by Lex begin with quote \' or \"
+		$$ = NewStrVal($1)
+	}
+|	reserved_keyword
+	{
+		$$ = NewStrValWithoutQuote($1)
+	}
+|	non_reserved_keyword
+	{
+		$$ = NewStrValWithoutQuote($1)
+	}
+
+help_statement:
+	HELP id_or_string_opt
+	{
+		$$ = &Help{HelpInfo: $2}
+	}
+
 kill_opt:
 	{}
 |	QUERY
@@ -4819,6 +4852,7 @@ reserved_keyword:
 |	FULL
 |	GROUP
 |	HAVING
+|	HELP
 |	IF
 |	IGNORE
 |	IN

@@ -198,6 +198,11 @@ type (
 		Statement Statement
 	}
 
+	// Help represents a help statement.
+	Help struct {
+		HelpInfo *SQLVal
+	}
+
 	// Kill represents a KILL statement.
 	Kill struct {
 		QueryID *NumVal
@@ -230,6 +235,7 @@ func (*OtherRead) iStatement()   {}
 func (*OtherAdmin) iStatement()  {}
 func (*Radon) iStatement()       {}
 func (*Explain) iStatement()     {}
+func (*Help) iStatement()        {}
 func (*Kill) iStatement()        {}
 func (*Transaction) iStatement() {}
 func (*Xa) iStatement()          {}
@@ -1929,6 +1935,14 @@ func (node *Radon) Format(buf *TrackedBuffer) {
 // Format formats the node.
 func (node *Explain) Format(buf *TrackedBuffer) {
 	buf.WriteString("explain")
+}
+
+// Format formats the node.
+func (node *Help) Format(buf *TrackedBuffer) {
+	buf.Myprintf("help")
+	if node.HelpInfo != nil {
+		buf.Myprintf(" %v", node.HelpInfo)
+	}
 }
 
 // Format formats the node.
