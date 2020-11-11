@@ -56,7 +56,7 @@ func TestProxyExplain(t *testing.T) {
 		qr, err := client.FetchAll(query, -1)
 		assert.Nil(t, err)
 		want := `{
-	"RawQuery": " select 1, sum(a),avg(a),a,b from test.t1 as t1 where id>1 group by a,b order by a desc limit 10 offset 100",
+	"RawQuery": "explain select 1, sum(a),avg(a),a,b from test.t1 as t1 where id>1 group by a,b order by a desc limit 10 offset 100",
 	"Project": "1, sum(a), avg(a), a, b",
 	"Partitions": [
 		{
@@ -256,6 +256,17 @@ func TestProxyExplainError(t *testing.T) {
 		want := "Table 'test.sdf' doesn't exist (errno 1146) (sqlstate 42S02)"
 		got := err.Error()
 		assert.Equal(t, want, got)
+	}
+
+	// parse query error.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		query := "explain format = none select xx from sdf"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+		want := "You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use, syntax error at position 22 near 'none' (errno 1149) (sqlstate 42000)"
+		assert.Equal(t, want, err.Error())
 	}
 }
 

@@ -117,6 +117,7 @@ func forceEOF(yylex interface{}) {
 	partitionDefinitions  []*PartitionDefinition
 	partitionOption       PartitionOption
 	showFilter            *ShowFilter
+	explainType	      ExplainType
 }
 
 %token LEX_ERROR
@@ -524,6 +525,9 @@ func forceEOF(yylex interface{}) {
 %token	<bytes>
 	UNUSED
 
+// Explain tokens
+%token <bytes> FORMAT TREE TRADITIONAL EXTENDED
+
 
 // RadonDB
 %token	<empty>
@@ -680,6 +684,9 @@ func forceEOF(yylex interface{}) {
 %type	<showFilter>
 	like_or_where_opt
 	describe_column_opt
+
+%type	<explainType>
+	explain_format_opt
 
 %type	<tableNames>
 	table_name_list
@@ -2990,10 +2997,48 @@ explainable_statement:
 	    $$ = $1
 	}
 
-explain_statement:
-	EXPLAIN explainable_statement
+explain_format_opt:
 	{
-		$$ = &Explain{}
+	    $$ = ExplainTypeEmpty
+	}
+|	FORMAT '=' JSON
+	{
+	    $$ = ExplainTypeJSON
+	}
+|	FORMAT '=' TREE
+	{
+	    $$ = ExplainTypeTree
+	}
+|	FORMAT '=' TRADITIONAL
+	{
+	    $$ = ExplainTypeTraditional
+	}
+|	EXTENDED
+	{
+	    $$ = ExplainTypeExtended
+	}
+|	PARTITIONS
+	{
+	    $$ = ExplainTypePartitions
+	}
+
+explain_statement:
+	describe_command explain_format_opt explainable_statement
+	{
+		$$ = &Explain{Type: $2, Statement: $3}
+	}
+|	describe_command explain_format_opt FOR CONNECTION INTEGRAL 
+	{
+		// Currently we just parse it.
+		$$ = &Explain{Type: $2, Statement: &OtherRead{}}
+	}
+|	describe_command ANALYZE explainable_statement
+	{
+		$$ = &Explain{Type: ExplainTypeEmpty, Analyze: true, Statement: $3}
+	}
+|	describe_command ANALYZE FORMAT '=' TREE explainable_statement
+	{
+		$$ = &Explain{Type: ExplainTypeEmpty, Analyze: true, Statement: $6}
 	}
 
 kill_opt:
@@ -4881,7 +4926,9 @@ non_reserved_keyword:
 |	DYNAMIC
 |	ENUM
 |	ENGINE
+|	EXTENDED
 |	EXPANSION
+|	FORMAT
 |	FIELDS
 |	FIXED
 |	FLOAT_TYPE
@@ -4922,6 +4969,8 @@ non_reserved_keyword:
 |	TEXT
 |	TIME
 |	TIMESTAMP
+|	TRADITIONAL
+|	TREE
 |	TRUNCATE
 |	UNUSED
 |	VIEW

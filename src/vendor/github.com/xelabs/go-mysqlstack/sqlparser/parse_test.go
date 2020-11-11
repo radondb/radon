@@ -702,6 +702,36 @@ func TestValid(t *testing.T) {
 		input:  "explain foobar t_",
 		output: "show columns from foobar like 't_'",
 	}, {
+		input:  "explain select * from t",
+		output: "explain",
+	}, {
+		input:  "explain format = traditional select * from t",
+		output: "explain",
+	}, {
+		input:  "explain analyze select * from t",
+		output: "explain",
+	}, {
+		input:  "explain format = tree select * from t",
+		output: "explain",
+	}, {
+		input:  "explain format = json select * from t",
+		output: "explain",
+	}, {
+		input:  "explain extended select * from t",
+		output: "explain",
+	}, {
+		input:  "explain partitions select * from t",
+		output: "explain",
+	}, {
+		input:  "explain delete from t",
+		output: "explain",
+	}, {
+		input:  "explain insert into t(col1, col2) values (1, 2)",
+		output: "explain",
+	}, {
+		input:  "explain update t set col = 2",
+		output: "explain",
+	}, {
 		input:  "truncate table foo",
 		output: "truncate table foo",
 	}, {
@@ -1225,6 +1255,18 @@ func TestErrors(t *testing.T) {
 		input  string
 		output string
 	}{{
+		input:  "explain select $ from t",
+		output: "syntax error at position 17 near '$'",
+	}, {
+		input:  "explain select analyze format = json from t",
+		output: "syntax error at position 23 near 'analyze'",
+	}, {
+		input:  "explain analyze format = tre select a from t",
+		output: "syntax error at position 29 near 'tre'",
+	}, {
+		input:  "explain analyze format = json select a from t",
+		output: "syntax error at position 30 near 'json'",
+	}, {
 		input:  "select $ from t",
 		output: "syntax error at position 9 near '$'",
 	}, {
@@ -1336,7 +1378,7 @@ func TestErrors(t *testing.T) {
 		}
 		_, err := Parse(tcase.input)
 		if err == nil || err.Error() != tcase.output {
-			t.Errorf("%s: %v, want %s", tcase.input, err, tcase.output)
+			t.Errorf("%s\ngot\n%v\nwant\n%s", tcase.input, err, tcase.output)
 		}
 	}
 }

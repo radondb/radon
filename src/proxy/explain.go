@@ -9,12 +9,8 @@
 package proxy
 
 import (
-	"fmt"
-	"regexp"
-
 	"optimizer"
 
-	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqldb"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
@@ -32,37 +28,21 @@ func (spanner *Spanner) handleExplain(session *driver.Session, query string, nod
 		{Name: "EXPLAIN", Type: querypb.Type_VARCHAR},
 	}
 
-	pat := `(?i)explain`
-	reg := regexp.MustCompile(pat)
-	idx := reg.FindStringIndex(query)
-	if len(idx) != 2 {
-		return nil, errors.Errorf("explain.query[%s].syntax.error", query)
-	}
-	cutQuery := query[idx[1]:]
-	subNode, err := sqlparser.Parse(cutQuery)
-	if err != nil {
-		msg := fmt.Sprintf("query[%s].parser.error: %v", cutQuery, err)
-		row := []sqltypes.Value{
-			sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte(msg)),
-		}
-		qr.Rows = append(qr.Rows, row)
-		return qr, nil
-	}
-
+	explainableStmt := node.(*sqlparser.Explain).Statement
 	privilegePlug := spanner.plugins.PlugPrivilege()
-	if err := privilegePlug.Check(database, session.User(), subNode); err != nil {
+	if err := privilegePlug.Check(database, session.User(), explainableStmt); err != nil {
 		return nil, err
 	}
 
 	// Explain only supports DML.
-	// see https://dev.mysql.com/doc/refman/5.7/en/explain.html
-	switch subNode.(type) {
+	// see: https://dev.mysql.com/doc/refman/8.0/en/explain.html
+	switch explainableStmt.(type) {
 	case *sqlparser.Union:
 	case *sqlparser.Select:
 	case *sqlparser.Delete:
 	case *sqlparser.Insert:
 		autoincPlug := spanner.plugins.PlugAutoIncrement()
-		if err := autoincPlug.Process(database, subNode.(*sqlparser.Insert)); err != nil {
+		if err := autoincPlug.Process(database, explainableStmt.(*sqlparser.Insert)); err != nil {
 			return nil, err
 		}
 	case *sqlparser.Update:
@@ -71,7 +51,7 @@ func (spanner *Spanner) handleExplain(session *driver.Session, query string, nod
 		return nil, sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, "explain only supports SELECT/DELETE/INSERT/UNION")
 	}
 
-	simOptimizer := optimizer.NewSimpleOptimizer(log, database, cutQuery, subNode, router)
+	simOptimizer := optimizer.NewSimpleOptimizer(log, database, query, explainableStmt, router)
 	planTree, err := simOptimizer.BuildPlanTree()
 	if err != nil {
 		log.Error("proxy.explain.error:%+v", err)

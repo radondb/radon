@@ -205,3 +205,15 @@ const (
 	// CommitTxnStr represents the txn commit.
 	CommitTxnStr = "commit"
 )
+
+// ExplainType is an enum for Explain-Type
+type ExplainType int8
+
+const (
+	ExplainTypeEmpty ExplainType = iota
+	ExplainTypeExtended
+	ExplainTypePartitions
+	ExplainTypeTree
+	ExplainTypeJSON
+	ExplainTypeTraditional
+)
