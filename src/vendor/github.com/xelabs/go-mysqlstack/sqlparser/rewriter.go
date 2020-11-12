@@ -286,14 +286,6 @@ func (r *replaceIndexHintsIndexes) inc() {
 	*r++
 }
 
-func replaceIndexLockAndAlgorithmAlgorithmOption(newNode, parent SQLNode) {
-	parent.(*IndexLockAndAlgorithm).AlgorithmOption = newNode.(AlgorithmOptionType)
-}
-
-func replaceIndexLockAndAlgorithmLockOption(newNode, parent SQLNode) {
-	parent.(*IndexLockAndAlgorithm).LockOption = newNode.(LockOptionType)
-}
-
 func replaceIndexOptionsBlockSize(newNode, parent SQLNode) {
 	parent.(*IndexOptions).BlockSize = newNode.(*SQLVal)
 }
@@ -709,8 +701,6 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 	// (the order of the cases is alphabetical)
 	switch n := node.(type) {
 	case nil:
-	case AlgorithmOptionType:
-
 	case *AliasedExpr:
 		a.apply(node, n.As, replaceAliasedExprAs)
 		a.apply(node, n.Expr, replaceAliasedExprExpr)
@@ -857,8 +847,6 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 		}
 
 	case *IndexLockAndAlgorithm:
-		a.apply(node, n.AlgorithmOption, replaceIndexLockAndAlgorithmAlgorithmOption)
-		a.apply(node, n.LockOption, replaceIndexLockAndAlgorithmLockOption)
 
 	case *IndexOptions:
 		a.apply(node, n.BlockSize, replaceIndexOptionsBlockSize)
@@ -888,8 +876,6 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 		a.apply(node, n.Rowcount, replaceLimitRowcount)
 
 	case ListArg:
-
-	case LockOptionType:
 
 	case *MatchExpr:
 		a.apply(node, n.Columns, replaceMatchExprColumns)
