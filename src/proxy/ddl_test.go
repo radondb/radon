@@ -622,12 +622,20 @@ func TestProxyDDLIndex(t *testing.T) {
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
-		query := "create index index1 on t1(a,b)"
-		_, err = client.FetchAll(query, -1)
-		assert.Nil(t, err)
+		querys := []string{
+			"create index index1 on t1(a,b)",
+			"create index index1 on t1(a,b) lock=shared",
+			"create index index1 on t1(a,b) algOrithm=inplace",
+			"create index index1 on t1(a,b) lock=none algOrithm=default",
+			"create index index1 on t1(a,b) algOrithm=copY Lock = shared",
+		}
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			assert.Nil(t, err)
+		}
 	}
 
-	// create index error.
+	// create index error, unknown database.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
@@ -638,33 +646,49 @@ func TestProxyDDLIndex(t *testing.T) {
 		assert.Equal(t, want, got)
 	}
 
-	// create index.
-	{
-		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
-		assert.Nil(t, err)
-		query := "create index index1 on t1(a,b)"
-		_, err = client.FetchAll(query, -1)
-		assert.Nil(t, err)
-	}
-
-	// create index error.
+	// create index error, wrong type name, duplicate lock or algorithm options.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
 		assert.Nil(t, err)
-		query := "create index index1 on xx.t1(a,b)"
-		_, err = client.FetchAll(query, -1)
-		want := "Unknown database 'xx' (errno 1049) (sqlstate 42000)"
-		got := err.Error()
-		assert.Equal(t, want, got)
+		querys := []string{
+			"create index index1 on t1(a,b) lock=xxx",
+			"create index index1 on t1(a,b) lock=default lock=none",
+			"create index index1 on t1(a,b) lock=default algorithm=default lock=default",
+			"create index index1 on t1(a,b) algorithm=wrong",
+			"create index index1 on t1(a,b) algorithm=copy algorithm=default",
+			"create index index1 on t1(a,b) lock=default algorithm=copy algorithm=default",
+		}
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			assert.NotNil(t, err)
+		}
 	}
 
 	// drop index.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
-		query := "drop index index1 on t1"
+		query := "drop index index1 on t1 lock=default algorithm=default"
 		_, err = client.FetchAll(query, -1)
 		assert.Nil(t, err)
+	}
+
+	// drop index error, wrong type name, duplicate lock or algorithm options.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		querys := []string{
+			"drop index index1 on t1 lock=xxx",
+			"drop index index1 on t1 lock=default lock=none",
+			"drop index index1 on t1 lock=default algorithm=default lock=default",
+			"drop index index1 on t1 algorithm=wrong",
+			"drop index index1 on t1 algorithm=copy algorithm=default",
+			"drop index index1 on t1 lock=default algorithm=copy algorithm=default",
+		}
+		for _, query := range querys {
+			_, err = client.FetchAll(query, -1)
+			assert.NotNil(t, err)
+		}
 	}
 
 	// create fulltext index.

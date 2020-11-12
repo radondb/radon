@@ -327,7 +327,7 @@ type PartitionDefinition struct {
 type PartitionDefinitions []*PartitionDefinition
 
 type (
-	// PartitionOption interface。
+	// PartitionOption interface.
 	PartitionOption interface {
 		PartitionType() string
 	}
@@ -413,10 +413,6 @@ const (
 	IndexOptionBlockSize
 	// IndexOptionParser is 'with parser' enum.
 	IndexOptionParser
-	// IndexOptionAlgorithm is 'algorithm' enum.
-	IndexOptionAlgorithm
-	// IndexOptionLock is 'lock' enum.
-	IndexOptionLock
 )
 
 // IndexColumn describes a column in an index definition with optional length
@@ -440,33 +436,65 @@ func NewIndexOptions(columns []*IndexColumn, idxOptList []*IndexOption) *IndexOp
 			idxOpts.BlockSize = idxOpt.Val
 		case IndexOptionParser:
 			idxOpts.Parser = String(idxOpt.Val)
-		case IndexOptionAlgorithm:
-			idxOpts.Algorithm = String(idxOpt.Val)
-		case IndexOptionLock:
-			idxOpts.Lock = String(idxOpt.Val)
 		}
 	}
 	return idxOpts
 }
 
-// CheckIndexLock use to check if the string value matches a supported value.
-// Supported values: default, exclusive, none, shared.
-func CheckIndexLock(lock string) bool {
-	switch strings.ToLower(lock) {
-	case "default", "exclusive", "none", "shared":
-		return true
+// LockType is the type for create/drop/alter index TableSpec.
+// See https://dev.mysql.com/doc/refman/5.7/en/alter-table.html#alter-table-concurrency
+type LockOptionType byte
+
+// Lock options.
+const (
+	LockOptionEmpty LockOptionType = iota + 1
+	LockOptionNone
+	LockOptionDefault
+	LockOptionShared
+	LockOptionExclusive
+)
+
+func (n LockOptionType) String() string {
+	switch n {
+	case LockOptionNone:
+		return "none"
+	case LockOptionDefault:
+		return "default"
+	case LockOptionShared:
+		return "shared"
+	case LockOptionExclusive:
+		return "exclusive"
+	default:
+		return ""
 	}
-	return false
 }
 
-// CheckIndexAlgorithm use to check if the string value matches a supported value.
-// Supported values: inplace, copy, default.
-func CheckIndexAlgorithm(algorithm string) bool {
-	switch strings.ToLower(algorithm) {
-	case "copy", "default", "inplace":
-		return true
+// AlgorithmType is the algorithm for create/drop/alter index TableSpec.
+// See https://dev.mysql.com/doc/refman/8.0/en/alter-table.html#alter-table-performance.
+type AlgorithmOptionType byte
+
+// Algorithms options.
+const (
+	AlgorithmOptionEmpty AlgorithmOptionType = iota
+	AlgorithmOptionDefault
+	AlgorithmOptionCopy
+	AlgorithmOptionInplace
+	AlgorithmOptionInstant
+)
+
+func (a AlgorithmOptionType) String() string {
+	switch a {
+	case AlgorithmOptionDefault:
+		return "default"
+	case AlgorithmOptionCopy:
+		return "copy"
+	case AlgorithmOptionInplace:
+		return "inplace"
+	case AlgorithmOptionInstant:
+		return "instant"
+	default:
+		return ""
 	}
-	return false
 }
 
 // AddColumn appends the given column to the list in the spec

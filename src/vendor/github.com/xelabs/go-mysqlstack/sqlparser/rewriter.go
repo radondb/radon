@@ -200,6 +200,10 @@ func replaceDDLTables(newNode, parent SQLNode) {
 	parent.(*DDL).Tables = newNode.(TableNames)
 }
 
+func replaceDDLindexLockAndAlgorithm(newNode, parent SQLNode) {
+	parent.(*DDL).indexLockAndAlgorithm = newNode.(*IndexLockAndAlgorithm)
+}
+
 func replaceDeleteComments(newNode, parent SQLNode) {
 	parent.(*Delete).Comments = newNode.(Comments)
 }
@@ -787,6 +791,7 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 		a.apply(node, n.Table, replaceDDLTable)
 		a.apply(node, n.TableSpec, replaceDDLTableSpec)
 		a.apply(node, n.Tables, replaceDDLTables)
+		a.apply(node, n.indexLockAndAlgorithm, replaceDDLindexLockAndAlgorithm)
 
 	case DatabaseOptionListOpt:
 
@@ -840,6 +845,8 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 			a.apply(node, item, replacerIndexesB.replace)
 			replacerIndexesB.inc()
 		}
+
+	case *IndexLockAndAlgorithm:
 
 	case *IndexOptions:
 		a.apply(node, n.BlockSize, replaceIndexOptionsBlockSize)

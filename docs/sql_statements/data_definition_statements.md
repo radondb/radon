@@ -214,7 +214,7 @@ Query OK, 1 row affected (0.00 sec)
 CREATE [UNIQUE | FULLTEXT | SPATIAL] INDEX index_name
     ON tbl_name (key_part,...)
     [index_option]
-    [algorithm_option | lock_option] ...
+    [index_lock_and_algorithm_opt]
 	
 key_part:
     col_name [(length)]
@@ -227,6 +227,12 @@ index_option:
 
 index_type:
     USING {BTREE | HASH}
+
+index_lock_and_algorithm_opt:
+    algorithm_option
+|   lock_option
+|   algorithm_option lock_option
+|   lock_option algorithm_option
 
 algorithm_option:
     ALGORITHM [=] {DEFAULT | INPLACE | COPY}
@@ -457,7 +463,19 @@ Query OK, 0 rows affected (0.01 sec)
 
 `Syntax`
 ```
-  DROP INDEX index_name ON table_name
+DROP INDEX index_name ON tbl_name index_lock_and_algorithm_opt
+
+index_lock_and_algorithm_opt:
+    algorithm_option
+|   lock_option
+|   algorithm_option lock_option
+|   lock_option algorithm_option
+
+algorithm_option:
+    ALGORITHM [=] {DEFAULT | INPLACE | COPY}
+
+lock_option:
+    LOCK [=] {DEFAULT | NONE | SHARED | EXCLUSIVE}
 ```
 
 `Instructions`
