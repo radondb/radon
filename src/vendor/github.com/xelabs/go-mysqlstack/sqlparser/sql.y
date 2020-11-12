@@ -1353,7 +1353,7 @@ fulltext_key_opt:
 	{
 		$$ = &IndexOption{
 			Type: IndexOptionParser,
-			Val: NewStrValWithoutQuote($3),
+			Val:  NewStrValWithoutQuote($3),
 		}
 	}
 
@@ -1369,35 +1369,35 @@ spatial_key_opts:
 index_lock_and_algorithm_opt:
 	{
 		$$ = &IndexLockAndAlgorithm{
-			LockOption: LockOptionEmpty,
+			LockOption:	 LockOptionEmpty,
 			AlgorithmOption: AlgorithmOptionEmpty,
 		}
 	}
 |	alter_lock_opt
 	{
 		$$ = &IndexLockAndAlgorithm{
-			LockOption: $1,
+			LockOption:	 $1,
 			AlgorithmOption: AlgorithmOptionEmpty,
 		}
 	}
 |	alter_algorithm_opt
 	{
 		$$ = &IndexLockAndAlgorithm{
-			LockOption: LockOptionEmpty,
+			LockOption:	 LockOptionEmpty,
 			AlgorithmOption: $1,
 		}
 	}
 |	alter_lock_opt alter_algorithm_opt
 	{
 		$$ = &IndexLockAndAlgorithm{
-			LockOption: $1,
+			LockOption:      $1,
 			AlgorithmOption: $2,
 		}
 	}
 |	alter_algorithm_opt alter_lock_opt
 	{
 		$$ = &IndexLockAndAlgorithm{
-			LockOption: $2,
+			LockOption:      $2,
 			AlgorithmOption: $1,
 		}
 	}
