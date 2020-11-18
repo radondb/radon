@@ -166,7 +166,8 @@ type (
 
 	// Checksum represents a CHECKSUM statement.
 	Checksum struct {
-		Table TableName
+		Tables         TableNames
+		ChecksumOption ChecksumOptionEnum
 	}
 
 	// Use represents a use statement.
@@ -869,7 +870,7 @@ func (node *Set) Format(buf *TrackedBuffer) {
 
 // Format formats the node.
 func (node *Checksum) Format(buf *TrackedBuffer) {
-	buf.Myprintf("checksum table %v", node.Table)
+	buf.Myprintf("checksum table %v%v", node.Tables, &(node.ChecksumOption))
 }
 
 // Format formats the node.
@@ -1994,4 +1995,12 @@ func (node *Transaction) Format(buf *TrackedBuffer) {
 // Format formats the node.
 func (node *Xa) Format(buf *TrackedBuffer) {
 	buf.WriteString("XA")
+}
+
+// Format formats the node.
+func (node *ChecksumOptionEnum) Format(buf *TrackedBuffer) {
+	if node == nil || *node == ChecksumOptionNone {
+		return
+	}
+	buf.Myprintf(" %s", ChecksumOption2Str[*node])
 }

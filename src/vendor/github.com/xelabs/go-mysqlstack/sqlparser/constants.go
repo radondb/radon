@@ -218,3 +218,20 @@ const (
 	ExplainTypeJSON
 	ExplainTypeTraditional
 )
+
+// ChecksumOptionEnum is an enum for checksum statement.
+// see: https://dev.mysql.com/doc/refman/8.0/en/checksum-table.html
+type ChecksumOptionEnum int
+
+// ChecksumOptionEnum const values.
+const (
+	ChecksumOptionNone ChecksumOptionEnum = iota
+	ChecksumOptionQuick
+	ChecksumOptionExtended
+)
+
+var ChecksumOption2Str = map[ChecksumOptionEnum]string{
+	ChecksumOptionNone:     "",
+	ChecksumOptionQuick:    "quick",
+	ChecksumOptionExtended: "extended",
+}

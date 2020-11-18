@@ -555,7 +555,7 @@ Query OK, 0 rows affected (0.09 sec)
 
 `Syntax`
 ```
-DROP TABLE [IF EXISTS] table_name
+DROP {TABLE | TABLES} [IF EXISTS] table_name
 ```
 ---------------------------------------------------------------------------------------------------
 

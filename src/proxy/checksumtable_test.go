@@ -58,6 +58,30 @@ var (
 			},
 		},
 	}
+
+	checksumTableResult3 = &sqltypes.Result{
+		RowsAffected: 2,
+		Fields: []*querypb.Field{
+			{
+				Name: "Table",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "Checksum",
+				Type: querypb.Type_INT64,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("a_0000")),
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("2000038982")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("a_0000")),
+				sqltypes.MakeTrusted(querypb.Type_INT64, []byte("NULL")),
+			},
+		},
+	}
 )
 
 func TestProxyChecksumTable(t *testing.T) {
@@ -72,6 +96,8 @@ func TestProxyChecksumTable(t *testing.T) {
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("checksum table .*", checksumTableResult1)
 		fakedbs.AddQueryPattern("checksum table xx.*", checksumTableResult2)
+		fakedbs.AddQueryPattern("checksum table t1, mock.t1", checksumTableResult3)
+		fakedbs.AddQueryPattern("checksum table t quick", checksumTableResult2)
 	}
 
 	// create database.
@@ -145,6 +171,49 @@ func TestProxyChecksumTable(t *testing.T) {
 		qr, err := client.FetchAll(query, -1)
 		assert.Nil(t, err)
 		want := "mock.t1"
+		got := qr.Rows[0][0].String()
+		assert.Equal(t, want, got)
+		want = "NULL"
+		got = qr.Rows[0][1].String()
+		assert.Equal(t, want, got)
+	}
+
+	// checksum with multi tables
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "checksum tables t1, mock.t1"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		{
+			var want uint32
+			// 30 is the partition tables number
+			for i := 0; i < 30; i++ {
+				want += 2000038982
+			}
+			got := uint32(qr.Rows[0][1].ToNative().(int64))
+			assert.Equal(t, want, got)
+		}
+		{
+			want := "mock.t1"
+			got := qr.Rows[1][0].String()
+			assert.Equal(t, want, got)
+			want = "NULL"
+			got = qr.Rows[1][1].String()
+			assert.Equal(t, want, got)
+		}
+	}
+
+	// checksum with quick option
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "checksum table t quick"
+		qr, err := client.FetchAll(query, -1)
+		assert.Nil(t, err)
+		want := "test.t"
 		got := qr.Rows[0][0].String()
 		assert.Equal(t, want, got)
 		want = "NULL"

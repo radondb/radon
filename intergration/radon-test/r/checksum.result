@@ -1,0 +1,84 @@
+create database if not exists integrate_test DEFAULT CHARSET=utf8;
+
+drop table if exists integrate_test.t1,integrate_test.t2;
+
+create /*test partition hash, Test of refering to old values*/ table integrate_test.t1 (a int not null key);
+
+insert into integrate_test.t1 values (1), (6);
+
+checksum table integrate_test.t1;
+Table	Checksum
+integrate_test.t1	3727148865
+
+
+create /*Test of duplicate key values with packed keys */ table integrate_test.t2 (id bigint not null auto_increment primary key, username varchar(32) not null);
+
+insert into integrate_test.t2 values (0,"mysql");
+
+insert into integrate_test.t2 values (0,"mysql ab");
+
+insert into integrate_test.t2 values (0,"mysql a");
+
+insert into integrate_test.t2 values (0,"r1manic");
+
+insert into integrate_test.t2 values (0,"r1man");
+
+checksum table integrate_test.t1, integrate_test.t2;
+Table	Checksum
+integrate_test.t1	3727148865
+integrate_test.t2	92212347
+
+
+create /*test partition single, Test of refering to old values*/ table integrate_test.t3 (a int not null key) single;
+
+insert into integrate_test.t3 values (1);
+
+insert into integrate_test.t3 values (a+2);
+
+insert into integrate_test.t3 values (a+3),(a+4);
+
+insert into integrate_test.t3 values (5),(a+6);
+
+checksum tables integrate_test.t3;
+Table	Checksum
+integrate_test.t3	1646839619
+
+checksum tables integrate_test.t3 quick;
+Table	Checksum
+integrate_test.t3	NULL
+
+checksum tables integrate_test.t3 extended;
+Table	Checksum
+integrate_test.t3	1646839619
+
+
+checksum table integrate_test.t1, integrate_test.t2, integrate_test.t3 extended;
+Table	Checksum
+integrate_test.t1	3727148865
+integrate_test.t2	92212347
+integrate_test.t3	1646839619
+
+checksum table integrate_test.t1, integrate_test.t2, integrate_test.t3 quick;
+Table	Checksum
+integrate_test.t1	NULL
+integrate_test.t2	NULL
+integrate_test.t3	NULL
+
+checksum table integrate_test.t1, integrate_test.t2, xx.t, integrate_test.t3 quick;
+Table	Checksum
+integrate_test.t1	NULL
+integrate_test.t2	NULL
+xx.t	NULL
+integrate_test.t3	NULL
+
+checksum table integrate_test.t1, integrate_test.t2, integrate_test.t3, xx.t extended;
+Table	Checksum
+integrate_test.t1	3727148865
+integrate_test.t2	92212347
+integrate_test.t3	1646839619
+xx.t	NULL
+
+
+drop table integrate_test.t1, integrate_test.t2, integrate_test.t3;
+
+drop database integrate_test;
