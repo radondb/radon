@@ -2,6 +2,7 @@ Table of Contents
 =================
 
    * [DESCRIBE Statement](#describe-statement)
+   * [EXPLAIN Statement](#explain-statement)
 
 # DESCRIBE Statement
 The DESCRIBE and EXPLAIN statements are synonyms, used either to obtain information about table structure or query execution plans. For more information, see [EXPLAIN Statement](#explain-statement).
