@@ -25,7 +25,7 @@ func TestExplain(t *testing.T) {
 		output string
 	}{
 		{
-			input:  "explain select * from 1",
+			input:  "explain select * from t",
 			output: "explain",
 		},
 	}

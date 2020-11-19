@@ -691,10 +691,16 @@ func TestValid(t *testing.T) {
 		output: "use `ks:-80@master`",
 	}, {
 		input:  "describe foobar",
-		output: "otherread",
+		output: "show columns from foobar",
 	}, {
 		input:  "desc foobar",
-		output: "otherread",
+		output: "show columns from foobar",
+	}, {
+		input:  "desc foobar t1",
+		output: "show columns from foobar like 't1'",
+	}, {
+		input:  "explain foobar t_",
+		output: "show columns from foobar like 't_'",
 	}, {
 		input:  "truncate table foo",
 		output: "truncate table foo",

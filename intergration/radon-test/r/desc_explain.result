@@ -1,0 +1,44 @@
+create database integrate_test DEFAULT CHARSET=utf8;
+
+create table integrate_test.t(c1 int key, c2 int) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+desc integrate_test.t;
+Field	Type	Null	Key	Default	Extra
+c1	int(11)	NO	PRI	NULL	
+c2	int(11)	YES		NULL	
+
+describe integrate_test.t;
+Field	Type	Null	Key	Default	Extra
+c1	int(11)	NO	PRI	NULL	
+c2	int(11)	YES		NULL	
+
+explain integrate_test.t;
+Field	Type	Null	Key	Default	Extra
+c1	int(11)	NO	PRI	NULL	
+c2	int(11)	YES		NULL	
+
+desc integrate_test.t c1;
+Field	Type	Null	Key	Default	Extra
+c1	int(11)	NO	PRI	NULL	
+
+desc integrate_test.t "c1";
+Field	Type	Null	Key	Default	Extra
+c1	int(11)	NO	PRI	NULL	
+
+desc integrate_test.t 'c1';
+Field	Type	Null	Key	Default	Extra
+c1	int(11)	NO	PRI	NULL	
+
+desc integrate_test.t 'c_';
+Field	Type	Null	Key	Default	Extra
+c1	int(11)	NO	PRI	NULL	
+c2	int(11)	YES		NULL	
+
+desc integrate_test.t "c_%%%";
+Field	Type	Null	Key	Default	Extra
+c1	int(11)	NO	PRI	NULL	
+c2	int(11)	YES		NULL	
+
+
+drop database integrate_test;

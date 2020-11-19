@@ -92,14 +92,14 @@ func TestProxyChecksumTable(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	// explain.
+	// explain not support.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
 		defer client.Close()
 		query := "explain checksum table t1"
 		_, err = client.FetchAll(query, -1)
-		assert.Nil(t, err)
+		assert.NotNil(t, err)
 	}
 
 	// checksum with table exist.
