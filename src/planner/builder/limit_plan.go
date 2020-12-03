@@ -9,7 +9,6 @@
 package builder
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -110,11 +109,11 @@ func (p *LimitPlan) Type() ChildType {
 
 // JSON returns the plan info.
 func (p *LimitPlan) JSON() string {
-	bout, err := json.MarshalIndent(p, "", "\t")
+	out, err := common.ToJSONString(p, false, "", "\t")
 	if err != nil {
 		return err.Error()
 	}
-	return string(bout)
+	return out
 }
 
 // ReWritten used to re-write the limit clause.

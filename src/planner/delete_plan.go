@@ -9,8 +9,6 @@
 package planner
 
 import (
-	"encoding/json"
-
 	"planner/builder"
 	"router"
 	"xcontext"
@@ -136,11 +134,11 @@ func (p *DeletePlan) JSON() string {
 		RawQuery:   p.RawQuery,
 		Partitions: parts,
 	}
-	bout, err := json.MarshalIndent(exp, "", "\t")
+	out, err := common.ToJSONString(exp, false, "", "\t")
 	if err != nil {
 		return err.Error()
 	}
-	return common.BytesToString(bout)
+	return out
 }
 
 // Size returns the memory size.

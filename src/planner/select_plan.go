@@ -9,7 +9,6 @@
 package planner
 
 import (
-	"encoding/json"
 	"errors"
 	"strings"
 
@@ -161,11 +160,11 @@ func (p *SelectPlan) JSON() string {
 		HashGroupBy: hashGroup,
 		Limit:       lim,
 	}
-	bout, err := json.MarshalIndent(exp, "", "\t")
+	out, err := common.ToJSONString(exp, false, "", "\t")
 	if err != nil {
 		return err.Error()
 	}
-	return common.BytesToString(bout)
+	return out
 }
 
 // Size returns the memory size.

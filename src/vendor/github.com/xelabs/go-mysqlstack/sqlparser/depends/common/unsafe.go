@@ -10,6 +10,8 @@
 package common
 
 import (
+	"bytes"
+	"encoding/json"
 	"reflect"
 	"unsafe"
 )
@@ -36,4 +38,18 @@ func StringToBytes(s string) []byte {
 	bh := reflect.SliceHeader{Data: sh.Data, Len: sh.Len, Cap: sh.Len}
 
 	return *(*[]byte)(unsafe.Pointer(&bh))
+}
+
+// ToJSONString format v to the JSON encoding, return a string.
+func ToJSONString(v interface{}, escapeHTML bool, prefix, indent string) (string, error) {
+	bf := bytes.NewBuffer([]byte{})
+	jsonEncoder := json.NewEncoder(bf)
+	jsonEncoder.SetEscapeHTML(escapeHTML)
+	jsonEncoder.SetIndent(prefix, indent)
+	if err := jsonEncoder.Encode(v); err != nil {
+		return "", err
+	}
+	// Remove the newline added by (*Encoder).Encode.
+	bf.Truncate(bf.Len() - 1)
+	return bf.String(), nil
 }

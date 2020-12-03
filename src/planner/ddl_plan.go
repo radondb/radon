@@ -9,7 +9,6 @@
 package planner
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -291,13 +290,12 @@ func (p *DDLPlan) JSON() string {
 		RawQuery:   p.RawQuery,
 		Partitions: parts,
 	}
-	// If exp include escape, json will add '\' before it.
-	// e.g.: "\n\t tbl \n" will be "\\n\\t tbl \\n"
-	bout, err := json.MarshalIndent(exp, "", "\t")
+
+	out, err := common.ToJSONString(exp, false, "", "\t")
 	if err != nil {
 		return err.Error()
 	}
-	return common.BytesToString(bout)
+	return out
 }
 
 // Size returns the memory size.
