@@ -9,10 +9,9 @@
 package builder
 
 import (
-	"encoding/json"
-
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -138,9 +137,9 @@ func (p *OrderByPlan) Type() ChildType {
 
 // JSON returns the plan info.
 func (p *OrderByPlan) JSON() string {
-	bout, err := json.MarshalIndent(p, "", "\t")
+	out, err := common.ToJSONString(p, false, "", "\t")
 	if err != nil {
 		return err.Error()
 	}
-	return string(bout)
+	return out
 }

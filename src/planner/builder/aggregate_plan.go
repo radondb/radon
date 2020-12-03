@@ -9,12 +9,12 @@
 package builder
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
@@ -160,11 +160,11 @@ func (p *AggregatePlan) JSON() string {
 	buf.Myprintf("%v", p.rewritten)
 	a.ReWritten = buf.String()
 
-	bout, err := json.MarshalIndent(a, "", "\t")
+	out, err := common.ToJSONString(a, false, "", "\t")
 	if err != nil {
 		return err.Error()
 	}
-	return string(bout)
+	return out
 }
 
 // NormalAggregators returns the aggregators.

@@ -21,36 +21,36 @@ import (
 func TestSelectPlan(t *testing.T) {
 	results := []string{
 		`{
-	"RawQuery": "select 1, sum(a),avg(a),a,b from sbtest.A where id\u003e1 group by a,b order by A.a desc limit 10 offset 100",
+	"RawQuery": "select 1, sum(a),avg(a),a,b from sbtest.A where id>1 group by a,b order by A.a desc limit 10 offset 100",
 	"Project": "1, sum(a), avg(a), a, b",
 	"Partitions": [
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A1 as A where id \u003e 1 group by a, b order by A.a desc",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A1 as A where id > 1 group by a, b order by A.a desc",
 			"Backend": "backend1",
 			"Range": "[0-32)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A2 as A where id \u003e 1 group by a, b order by A.a desc",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A2 as A where id > 1 group by a, b order by A.a desc",
 			"Backend": "backend2",
 			"Range": "[32-64)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A3 as A where id \u003e 1 group by a, b order by A.a desc",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A3 as A where id > 1 group by a, b order by A.a desc",
 			"Backend": "backend3",
 			"Range": "[64-96)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A4 as A where id \u003e 1 group by a, b order by A.a desc",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A4 as A where id > 1 group by a, b order by A.a desc",
 			"Backend": "backend4",
 			"Range": "[96-256)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A5 as A where id \u003e 1 group by a, b order by A.a desc",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A5 as A where id > 1 group by a, b order by A.a desc",
 			"Backend": "backend5",
 			"Range": "[256-512)"
 		},
 		{
-			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A6 as A where id \u003e 1 group by a, b order by A.a desc",
+			"Query": "select 1, sum(a), sum(a) as ` + "`avg(a)`" + `, count(a), a, b from sbtest.A6 as A where id > 1 group by a, b order by A.a desc",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
 		}
@@ -74,36 +74,36 @@ func TestSelectPlan(t *testing.T) {
 	}
 }`,
 		`{
-	"RawQuery": "select id, sum(a) as A from A group by id having id\u003e1000",
+	"RawQuery": "select id, sum(a) as A from A group by id having id>1000",
 	"Project": "id, A",
 	"Partitions": [
 		{
-			"Query": "select id, sum(a) as A from sbtest.A1 as A group by id having id \u003e 1000 order by id asc",
+			"Query": "select id, sum(a) as A from sbtest.A1 as A group by id having id > 1000 order by id asc",
 			"Backend": "backend1",
 			"Range": "[0-32)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A2 as A group by id having id \u003e 1000 order by id asc",
+			"Query": "select id, sum(a) as A from sbtest.A2 as A group by id having id > 1000 order by id asc",
 			"Backend": "backend2",
 			"Range": "[32-64)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A3 as A group by id having id \u003e 1000 order by id asc",
+			"Query": "select id, sum(a) as A from sbtest.A3 as A group by id having id > 1000 order by id asc",
 			"Backend": "backend3",
 			"Range": "[64-96)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A4 as A group by id having id \u003e 1000 order by id asc",
+			"Query": "select id, sum(a) as A from sbtest.A4 as A group by id having id > 1000 order by id asc",
 			"Backend": "backend4",
 			"Range": "[96-256)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A5 as A group by id having id \u003e 1000 order by id asc",
+			"Query": "select id, sum(a) as A from sbtest.A5 as A group by id having id > 1000 order by id asc",
 			"Backend": "backend5",
 			"Range": "[256-512)"
 		},
 		{
-			"Query": "select id, sum(a) as A from sbtest.A6 as A group by id having id \u003e 1000 order by id asc",
+			"Query": "select id, sum(a) as A from sbtest.A6 as A group by id having id > 1000 order by id asc",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
 		}
@@ -113,11 +113,11 @@ func TestSelectPlan(t *testing.T) {
 	]
 }`,
 		`{
-	"RawQuery": "select id,a from sbtest.A where (a\u003e1 and (id=1))",
+	"RawQuery": "select id,a from sbtest.A where (a>1 and (id=1))",
 	"Project": "id, a",
 	"Partitions": [
 		{
-			"Query": "select id, a from sbtest.A6 as A where a \u003e 1 and id = 1",
+			"Query": "select id, a from sbtest.A6 as A where a > 1 and id = 1",
 			"Backend": "backend6",
 			"Range": "[512-4096)"
 		}
@@ -303,22 +303,22 @@ func TestSelectPlan(t *testing.T) {
 	]
 }`,
 		`{
-	"RawQuery": "select 1, sum(a),avg(a),a,b from sbtest.S where id\u003e1 group by a,b order by a desc limit 10 offset 100",
+	"RawQuery": "select 1, sum(a),avg(a),a,b from sbtest.S where id>1 group by a,b order by a desc limit 10 offset 100",
 	"Project": "1, sum(a), avg(a), a, b",
 	"Partitions": [
 		{
-			"Query": "select 1, sum(a), avg(a), a, b from sbtest.S where id \u003e 1 group by a, b order by a desc limit 100, 10",
+			"Query": "select 1, sum(a), avg(a), a, b from sbtest.S where id > 1 group by a, b order by a desc limit 100, 10",
 			"Backend": "backend1",
 			"Range": ""
 		}
 	]
 }`,
 		`{
-	"RawQuery": "select sum(G.a), S.b from G join S on G.id=S.id where G.id\u003e1 group by S.b",
+	"RawQuery": "select sum(G.a), S.b from G join S on G.id=S.id where G.id>1 group by S.b",
 	"Project": "sum(G.a), b",
 	"Partitions": [
 		{
-			"Query": "select sum(G.a), S.b from sbtest.G join sbtest.S on G.id = S.id where G.id \u003e 1 group by S.b",
+			"Query": "select sum(G.a), S.b from sbtest.G join sbtest.S on G.id = S.id where G.id > 1 group by S.b",
 			"Backend": "backend1",
 			"Range": ""
 		}
