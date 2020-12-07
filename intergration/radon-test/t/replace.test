@@ -1,0 +1,78 @@
+create database if not exists integrate_test DEFAULT CHARSET=utf8;
+
+CREATE /*test hash*/ TABLE integrate_test.t1 (
+  gesuchnr int(11) DEFAULT '0' NOT NULL,
+  benutzer_id int(11) DEFAULT '0' NOT NULL,
+  PRIMARY KEY (gesuchnr,benutzer_id)
+);
+
+replace into integrate_test.t1 (gesuchnr,benutzer_id) values (2,1);
+replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
+replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
+replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
+select * from integrate_test.t1 order by integrate_test.t1.gesuchnr asc;
+drop table integrate_test.t1;
+
+create table integrate_test.t2 (a bigint not null auto_increment primary key, b char(20) default "default_value");
+insert into integrate_test.t2 values (126,"first"),(63, "middle"),(0,"last");
+insert /*error: dup*/ into integrate_test.t2 values (0,"error");
+replace /*error: dup*/ into integrate_test.t2 values (0,"error");
+replace into integrate_test.t2 values (126,"first updated");
+replace into integrate_test.t2 values (63,default);
+select * from integrate_test.t2 order by integrate_test.t2.a;
+drop table integrate_test.t2;
+
+CREATE /*test single*/ TABLE integrate_test.t1 (
+  gesuchnr int(11) DEFAULT '0' NOT NULL,
+  benutzer_id int(11) DEFAULT '0' NOT NULL,
+  PRIMARY KEY (gesuchnr,benutzer_id)
+) single;
+
+replace into integrate_test.t1 (gesuchnr,benutzer_id) values (2,1);
+replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
+replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
+replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
+select * from integrate_test.t1 order by integrate_test.t1.gesuchnr asc;
+drop table integrate_test.t1;
+
+create table integrate_test.t2 (a bigint not null auto_increment primary key, b char(20) default "default_value") single;
+insert into integrate_test.t2 values (126,"first"),(63, "middle"),(0,"last");
+insert /*error: dup*/ into integrate_test.t2 values (0,"error");
+replace /*error: dup*/ into integrate_test.t2 values (0,"error");
+replace into integrate_test.t2 values (126,"first updated");
+replace into integrate_test.t2 values (63,default);
+select * from integrate_test.t2 order by integrate_test.t2.a;
+drop table integrate_test.t2;
+
+CREATE /*test global*/ TABLE integrate_test.t1 (
+  gesuchnr int(11) DEFAULT '0' NOT NULL,
+  benutzer_id int(11) DEFAULT '0' NOT NULL,
+  PRIMARY KEY (gesuchnr,benutzer_id)
+) global;
+
+replace into integrate_test.t1 (gesuchnr,benutzer_id) values (2,1);
+replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
+replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
+replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
+select * from integrate_test.t1 order by integrate_test.t1.gesuchnr asc;
+drop table integrate_test.t1;
+
+create table integrate_test.t2 (a bigint not null auto_increment primary key, b char(20) default "default_value") global;
+insert into integrate_test.t2 values (126,"first"),(63, "middle"),(0,"last");
+insert /*error: dup*/ into integrate_test.t2 values (0,"error");
+replace /*error: dup*/ into integrate_test.t2 values (0,"error");
+replace into integrate_test.t2 values (126,"first updated");
+replace into integrate_test.t2 values (63,default);
+select * from integrate_test.t2 order by integrate_test.t2.a;
+drop table integrate_test.t2;
+
+drop table if exists integrate_test.t1,integrate_test.t2;
+create /*test partition list*/ table integrate_test.t_list(c1 int, c2 int) ENGINE=InnoDB DEFAULT CHARSET=utf8 partition by list(c1) (partition backend1 values in (1,3,7), partition backend2 values in (2,5,8));
+insert into integrate_test.t_list values (1,2), (3,5), (2,4);
+insert /*test error: has no parition*/ into integrate_test.t_list values (10,2), (13,5);
+select * from integrate_test.t_list order by integrate_test.t_list.c1 asc;
+replace into integrate_test.t_list values (1,4), (7,9), (2,8);
+select * from integrate_test.t_list order by integrate_test.t_list.c1 asc;
+drop table integrate_test.t_list;
+
+drop database integrate_test;

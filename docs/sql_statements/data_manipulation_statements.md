@@ -33,41 +33,108 @@ Query OK, 2 rows affected (0.01 sec)
 
 `Syntax`
 ```
-INSERT INTO tbl_name
-    (col_name,...)
-    {VALUES | VALUE}
+INSERT [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE]
+    [INTO] tbl_name
+    [PARTITION (partition_name [, partition_name] ...)]
+    [(col_name [, col_name] ...)]
+    {VALUES | VALUE} (value_list) [, (value_list)] ...
+    [ON DUPLICATE KEY UPDATE assignment_list]
+
+INSERT [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE]
+    [INTO] tbl_name
+    [PARTITION (partition_name [, partition_name] ...)]
+    SET assignment_list
+    [ON DUPLICATE KEY UPDATE assignment_list]
+
+value:
+    {expr | DEFAULT}
+
+value_list:
+    value [, value] ...
+
+assignment:
+    col_name = value
+
+assignment_list:
+    assignment [, assignment] ...
 ```
 
 `Instructions`
  * Support distributed transactions to ensure cross-partition write atomicity
  * Support insert multiple values, these values can be in different partitions
- * Must specify the write column
- *  *Does not support clauses*
+ *  *Does not support clauses like INSERT ... SELECT Statement*
+ * *Not support PARTITION* we support parser PARTITION, but the function hasn't supported yet.
+ * If we write data with specified columns, we'll get a better performance.
+ * Not support all default values: "INSERT INTO t VALUES (),(),();"
+ * Not support subquery clause: "INSERT INTO t select * from t1 ... "
+ * Not support expr in values: "INSERT INTO t values (a+2)"
 
 `Example: `
+`Write data with columns(In this way we'll get a better performance.)`
 ```
-mysql> INSERT INTO t2(id, age) VALUES(1, 24), (2, 28), (3, 29);
-Query OK, 3 rows affected (0.01 sec)
+mysql> desc t;
++-------+---------+------+-----+---------+-------+
+| Field | Type    | Null | Key | Default | Extra |
++-------+---------+------+-----+---------+-------+
+| a     | int(11) | NO   | PRI | NULL    |       |
+| b     | int(11) | YES  |     | NULL    |       |
+| c     | int(11) | YES  |     | NULL    |       |
++-------+---------+------+-----+---------+-------+
+3 rows in set (0.00 sec)
+
+mysql> INSERT INTO t(id, age, c) VALUES(1, 24, 2), (2, 28, 3), (3, 29, 4);
+Query OK, 3 rows affected (0.03 sec)
+```
+
+`Write data without columns(In this way there will be some performance loss.)`
+```
+
+mysql> insert into t values (11, 2, 3), (12, 4, 5), (13, 2, 3);
+Query OK, 2 rows affected (0.03 sec)
 ```
 
 ## REPLACE
 
 `Syntax`
 ```
-REPLACE INTO tbl_name
-    [(col_name,...)]
-    {VALUES | VALUE} ({expr | DEFAULT},...),(...),...
+REPLACE [LOW_PRIORITY | DELAYED]
+    [INTO] tbl_name
+    [PARTITION (partition_name [, partition_name] ...)]
+    [(col_name [, col_name] ...)]
+    {VALUES | VALUE} (value_list) [, (value_list)] ...
+
+REPLACE [LOW_PRIORITY | DELAYED]
+    [INTO] tbl_name
+    [PARTITION (partition_name [, partition_name] ...)]
+    SET assignment_list
+
+value:
+    {expr | DEFAULT}
+
+value_list:
+    value [, value] ...
+
+assignment:
+    col_name = value
+
+assignment_list:
+    assignment [, assignment] ...
 ```
 
 `Instructions`
  * Support distributed transactions to ensure cross-partition write atomicity
  * Support replace multiple values, these values can be in different partitions
- * Must specify write column
+ *  *Does not support clauses like INSERT ... SELECT Statement*
+ * *Not support PARTITION* we support parser PARTITION, but the function hasn't supported yet. 
+ * If we write data with specified columns, we'll get a better performance.
 
 `Example: `
 ```
-mysql> REPLACE INTO t2 (id, age) VALUES(3,34),(5, 55);
-Query OK, 2 rows affected (0.01 sec)
+mysql> replace into t values (23, 2, 3), (24, 4, 5), (25, 5, 6);
+Query OK, 3 rows affected (0.01 sec)
+
+mysql> replace into t(a,b,c) values (33, 2, 3), (34, 4, 5), (35, 5, 6);
+Query OK, 3 rows affected (0.01 sec)
 ```
 
 ## SELECT

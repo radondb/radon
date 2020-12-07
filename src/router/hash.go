@@ -66,7 +66,7 @@ func NewHash(log *xlog.Log, slots int, conf *config.TableConfig) *Hash {
 		log:        log,
 		conf:       conf,
 		slots:      slots,
-		typ:        methodTypeHash,
+		typ:        MethodTypeHash,
 		partitions: make(map[int]Segment),
 		Segments:   make([]Segment, 0, 16),
 	}

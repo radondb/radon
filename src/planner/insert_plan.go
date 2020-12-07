@@ -65,123 +65,136 @@ func NewInsertPlan(log *xlog.Log, database string, query string, node *sqlparser
 
 // Build used to build distributed querys.
 func (p *InsertPlan) Build() error {
-	node := p.node
+	newNode := *(p.node)
 
-	database := p.database
-	// Qualifier is database in the insert query, such as "db.t1".
-	if !node.Table.Qualifier.IsEmpty() {
-		database = node.Table.Qualifier.String()
+	// 1. Currently insert/replace not support subquery.
+	rows, ok := newNode.Rows.(sqlparser.Values)
+	if !ok {
+		return errors.Errorf("unsupported: rows.can.not.be.subquery[%T]", newNode.Rows)
 	}
-	table := node.Table.Name.String()
 
-	// Get the shard key.
-	shardKey, err := p.router.ShardKey(database, table)
+	// 2. Currently insert/replace not support partitions.
+	if len(newNode.Partitions) != 0 {
+		return errors.Errorf("unsupported: radon.now.not.support.insert.with.partition.")
+	}
+
+	// We`ll rewrite ast on newNode and the table`s format should be like "db.t1", so the "Qualifier" in ast should be not empty.
+	if newNode.Table.Qualifier.IsEmpty() {
+		newNode.Table.Qualifier = sqlparser.NewTableIdent(p.database)
+	}
+	database := newNode.Table.Qualifier.String()
+	table := newNode.Table.Name.String()
+
+	methodType, err := p.router.PartitionType(database, table)
 	if err != nil {
 		return err
 	}
-
-	rows, ok := node.Rows.(sqlparser.Values)
-	if !ok {
-		return errors.Errorf("unsupported: rows.can.not.be.subquery[%T]", node.Rows)
-	}
-
-	// Table is global or single table.
-	if shardKey == "" {
+	switch methodType {
+	case router.MethodTypeGlobal, router.MethodTypeSingle:
 		segments, err := p.router.Lookup(database, table, nil, nil)
 		if err != nil {
 			return err
 		}
+
 		for _, segment := range segments {
-			buf := sqlparser.NewTrackedBuffer(nil)
-			buf.Myprintf("%s %v%sinto %s.%s%v %v%v", node.Action, node.Comments, node.Ignore, database, segment.Table, node.Columns, node.Rows, node.OnDup)
 			tuple := xcontext.QueryTuple{
-				Query:   buf.String(),
+				Query:   sqlparser.String(&newNode),
 				Backend: segment.Backend,
 				Range:   segment.Range.String(),
 			}
 			p.Querys = append(p.Querys, tuple)
 		}
 		return nil
-	}
-
-	// Check the OnDup.
-	if len(node.OnDup) > 0 {
-		// analyze whether update shardkey.
-		if isUpdateShardKey(sqlparser.UpdateExprs(node.OnDup), shardKey) {
-			return errors.New("unsupported: cannot.update.shard.key")
-		}
-	}
-
-	// Find the shard key index.
-	idx := -1
-	for i, column := range node.Columns {
-		if column.EqualString(shardKey) {
-			idx = i
-			break
-		}
-	}
-	if idx == -1 {
-		return errors.Errorf("unsupported: shardkey.column[%v].missing", shardKey)
-	}
-
-	// Rebuild distributed querys.
-	type valTuple struct {
-		backend string
-		table   string
-		rangi   string
-		vals    sqlparser.Values
-	}
-	vals := make(map[string]*valTuple)
-
-	for _, row := range rows {
-		if idx >= len(row) {
-			return errors.Errorf("unsupported: shardkey[%v].out.of.index:[%v]", shardKey, idx)
-		}
-		shardVal, ok := row[idx].(*sqlparser.SQLVal)
-		if !ok {
-			return errors.Errorf("unsupported: shardkey[%v].type.canot.be[%T]", shardKey, row[idx])
-		}
-
-		segments, err := p.router.Lookup(database, table, shardVal, shardVal)
+	case router.MethodTypeHash, router.MethodTypeList:
+		// Get the shard key.
+		shardKey, err := p.router.ShardKey(database, table)
 		if err != nil {
 			return err
 		}
-		rewrittenTable := segments[0].Table
-		backend := segments[0].Backend
-		rangi := segments[0].Range.String()
-		val, ok := vals[rewrittenTable]
-		if !ok {
-			val = &valTuple{
-				backend: backend,
-				table:   rewrittenTable,
-				rangi:   rangi,
-				vals:    make(sqlparser.Values, 0, 16),
+
+		// Check the OnDup.
+		if len(newNode.OnDup) > 0 {
+			// analyze whether update shardkey.
+			if isUpdateShardKey(sqlparser.UpdateExprs(newNode.OnDup), shardKey) {
+				return errors.New("unsupported: cannot.update.shard.key")
 			}
-			vals[rewrittenTable] = val
 		}
-		val.vals = append(val.vals, row)
-	}
 
-	// sorts SQL by rewrittenTable in increasing order to avoid deadlock #605.
-	ks := []string{}
-	for k := range vals {
-		ks = append(ks, k)
-	}
-	sort.Strings(ks)
-
-	// Rebuild querys with router info.
-	for _, rewritten := range ks {
-		v := vals[rewritten]
-		buf := sqlparser.NewTrackedBuffer(nil)
-		buf.Myprintf("%s %v%sinto %s.%s%v %v%v", node.Action, node.Comments, node.Ignore, database, rewritten, node.Columns, v.vals, node.OnDup)
-		tuple := xcontext.QueryTuple{
-			Query:   buf.String(),
-			Backend: v.backend,
-			Range:   v.rangi,
+		// Find the shard key index.
+		idx := -1
+		for i, column := range newNode.Columns {
+			if column.EqualString(shardKey) {
+				idx = i
+				break
+			}
 		}
-		p.Querys = append(p.Querys, tuple)
+		if idx == -1 {
+			return errors.Errorf("unsupported: shardkey.column[%v].missing", shardKey)
+		}
+
+		// Rebuild distributed querys.
+		type rowsTuple struct {
+			backend string
+			table   string
+			rangi   string
+			rows    sqlparser.Values
+		}
+
+		// key: partition table, value: rowsTuple.
+		rTuples := make(map[string]*rowsTuple)
+
+		for _, row := range rows {
+			if idx >= len(row) {
+				return errors.Errorf("unsupported: shardkey[%v].out.of.index:[%v]", shardKey, idx)
+			}
+			shardVal, ok := row[idx].(*sqlparser.SQLVal)
+			if !ok {
+				return errors.Errorf("unsupported: shardkey[%v].type.canot.be[%T]", shardKey, row[idx])
+			}
+
+			segments, err := p.router.Lookup(database, table, shardVal, shardVal)
+			if err != nil {
+				return err
+			}
+			partTable := segments[0].Table
+			backend := segments[0].Backend
+			rangi := segments[0].Range.String()
+			rTuple, ok := rTuples[partTable]
+			if !ok {
+				rTuple = &rowsTuple{
+					backend: backend,
+					table:   partTable,
+					rangi:   rangi,
+					rows:    make(sqlparser.Values, 0, 16),
+				}
+				rTuples[partTable] = rTuple
+			}
+			rTuple.rows = append(rTuple.rows, row)
+		}
+
+		// sorts SQL by partitionTable in increasing order to avoid deadlock #605.
+		partTables := []string{}
+		for partTable, _ := range rTuples {
+			partTables = append(partTables, partTable)
+		}
+		sort.Strings(partTables)
+
+		// Rebuild querys with router info.
+		for _, partTable := range partTables {
+			v := rTuples[partTable]
+			newNode.Table.Name = sqlparser.NewTableIdent(partTable)
+			newNode.Rows = v.rows
+			tuple := xcontext.QueryTuple{
+				Query:   sqlparser.String(&newNode),
+				Backend: v.backend,
+				Range:   v.rangi,
+			}
+			p.Querys = append(p.Querys, tuple)
+		}
+		return nil
+	default:
+		return errors.Errorf("unsupported: radon.not.support.method.type[%s].", methodType)
 	}
-	return nil
 }
 
 // Type returns the type of the plan.

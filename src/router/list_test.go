@@ -23,7 +23,7 @@ func TestList(t *testing.T) {
 	{
 		err := list.Build()
 		assert.Nil(t, err)
-		assert.Equal(t, string(list.Type()), methodTypeList)
+		assert.Equal(t, string(list.Type()), MethodTypeList)
 	}
 
 	{
@@ -51,7 +51,7 @@ func TestListLookup(t *testing.T) {
 	{
 		parts, err := list.Lookup(intVal, intVal)
 		assert.Nil(t, err)
-		assert.Equal(t, string(list.Type()), methodTypeList)
+		assert.Equal(t, string(list.Type()), MethodTypeList)
 		assert.Equal(t, 1, len(parts))
 		assert.Equal(t, "L_0000", parts[0].Table)
 		assert.Equal(t, "backend1", parts[0].Backend)

@@ -1,0 +1,349 @@
+create database if not exists integrate_test DEFAULT CHARSET=utf8;
+
+drop table if exists integrate_test.t1,integrate_test.t2;
+
+create /*test partition hash, Test of refering to old values*/ table integrate_test.t1 (a int not null key);
+
+insert into integrate_test.t1 values (1), (6);
+
+select * from integrate_test.t1 order by integrate_test.t1.a asc;
+a
+1
+6
+
+drop table integrate_test.t1;
+
+
+create /*Test of duplicate key values with packed keys */ table integrate_test.t2 (id bigint not null auto_increment primary key, username varchar(32) not null);
+
+insert into integrate_test.t2 values (0,"mysql");
+
+insert into integrate_test.t2 values (0,"mysql ab");
+
+insert into integrate_test.t2 values (0,"mysql a");
+
+insert into integrate_test.t2 values (0,"r1manic");
+
+insert into integrate_test.t2 values (0,"r1man");
+
+select * from integrate_test.t2 order by integrate_test.t2.id asc;
+id	username
+1	mysql
+2	mysql ab
+3	mysql a
+4	r1manic
+5	r1man
+
+drop table integrate_test.t2;
+
+
+create /*Test insert syntax*/ table integrate_test.t1 (a bigint not null auto_increment, primary key (a), t timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, c char(10) default "hello", i int);
+
+insert into integrate_test.t1 values (1 ,default,default,default), (2 ,default,default,default), (4,default,"a",5),(5,default,default,default);
+
+select a,t>0,c,i from integrate_test.t1 order by integrate_test.t1.a asc;
+a	t > 0	c	i
+1	1	hello	NULL
+2	1	hello	NULL
+4	1	a	5
+5	1	hello	NULL
+
+truncate table integrate_test.t1;
+
+insert into integrate_test.t1 set a=6,t=default,c=default;
+
+insert into integrate_test.t1 set a=7,t=default,c=default,i=default;
+
+insert into integrate_test.t1 set a=8,t=default,c="a",i=5;
+
+insert into integrate_test.t1 set a=9,t=default,c="a",i=null;
+
+insert into integrate_test.t1 set a=10,t=default,c=default,i=default;
+
+select a,t>0,c,i from integrate_test.t1 order by integrate_test.t1.a asc;
+a	t > 0	c	i
+6	1	hello	NULL
+7	1	hello	NULL
+8	1	a	5
+9	1	a	NULL
+10	1	hello	NULL
+
+drop table integrate_test.t1;
+
+
+create /*Test of behaviour with INSERT VALUES (NULL)*/ table integrate_test.t2 (id int NOT NULL DEFAULT 8, a int key);
+
+insert /*test error: id cannot be null*/ into integrate_test.t2 values(NULL, 1);
+ERROR 1048 (23000): Column 'id' cannot be null
+
+insert ignore into integrate_test.t2 values (1, 2), (NULL, 3), (2, 4);
+
+select * from integrate_test.t2 order by integrate_test.t2.a asc;
+id	a
+1	2
+0	3
+2	4
+
+drop table integrate_test.t2;
+
+
+create /*Test of mysqld crash with fully qualified column names*/ table integrate_test.t1 (c int key);
+
+insert into integrate_test.t1 set integrate_test.t1.c = '1';
+
+select * from integrate_test.t1;
+c
+1
+
+drop table integrate_test.t1;
+
+
+CREATE /*Test ER_FIELD_SPECIFIED_TWICE*/ TABLE integrate_test.t2 (a INT key);
+
+INSERT  INTO integrate_test.t2 (a, a) VALUES (1, 1);
+ERROR 1110 (42000): Column 'a' specified twice
+
+INSERT IGNORE integrate_test.t2 (a, a) VALUES (1, 1);
+ERROR 1110 (42000): Column 'a' specified twice
+
+drop table integrate_test.t2;
+
+
+drop table if exists integrate_test.t1,integrate_test.t2;
+
+create /*test partition list*/ table integrate_test.t_list(c1 int, c2 int) ENGINE=InnoDB DEFAULT CHARSET=utf8 partition by list(c1) (partition backend1 values in (1,3,7), partition backend2 values in (2,5,8));
+
+insert into integrate_test.t_list values (1,2), (3,5), (2,4);
+
+insert /*test error: has no parition*/ into integrate_test.t_list values (10,2), (13,5);
+ERROR 1105 (HY000): Table has no partition for value 10
+
+select * from integrate_test.t_list order by integrate_test.t_list.c1 asc;
+c1	c2
+1	2
+2	4
+3	5
+
+drop table integrate_test.t_list;
+
+
+create /*test global, Test of refering to old values*/ table integrate_test.t1 (a int not null key) global;
+
+insert into integrate_test.t1 values (1);
+
+insert into integrate_test.t1 values (a+2);
+
+insert into integrate_test.t1 values (a+3),(a+4);
+
+insert into integrate_test.t1 values (5),(a+6);
+
+select * from integrate_test.t1 order by integrate_test.t1.a asc;
+a
+1
+2
+3
+4
+5
+6
+
+drop table integrate_test.t1;
+
+
+create /*Test of duplicate key values with packed keys */ table integrate_test.t2 (id bigint not null auto_increment primary key, username varchar(32) not null) global;
+
+insert into integrate_test.t2 values (0,"mysql");
+
+insert into integrate_test.t2 values (0,"mysql ab");
+
+insert into integrate_test.t2 values (0,"mysql a");
+
+insert into integrate_test.t2 values (0,"r1manic");
+
+insert into integrate_test.t2 values (0,"r1man");
+
+drop table integrate_test.t2;
+
+
+create /*Test insert syntax*/ table integrate_test.t1 (a bigint not null auto_increment, primary key (a), t timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, c char(10) default "hello", i int) global;
+
+insert into integrate_test.t1 values (1 ,default,default,default), (2 ,default,default,default), (4,default,"a",5),(5,default,default,default);
+
+select a,t>0,c,i from integrate_test.t1 order by integrate_test.t1.a asc;
+a	t > 0	c	i
+1	1	hello	NULL
+2	1	hello	NULL
+4	1	a	5
+5	1	hello	NULL
+
+truncate table integrate_test.t1;
+
+insert into integrate_test.t1 set a=6,t=default,c=default;
+
+insert into integrate_test.t1 set a=7,t=default,c=default,i=default;
+
+insert into integrate_test.t1 set a=8,t=default,c="a",i=5;
+
+insert into integrate_test.t1 set a=9,t=default,c="a",i=null;
+
+insert into integrate_test.t1 set a=10,t=default,c=default,i=default;
+
+select a,t>0,c,i from integrate_test.t1 order by integrate_test.t1.a asc;
+a	t > 0	c	i
+6	1	hello	NULL
+7	1	hello	NULL
+8	1	a	5
+9	1	a	NULL
+10	1	hello	NULL
+
+drop table integrate_test.t1;
+
+
+create /*Test of behaviour with INSERT VALUES (NULL)*/ table integrate_test.t2 (id int NOT NULL DEFAULT 8, a int key) global;
+
+insert into integrate_test.t2 values(NULL, 1);
+ERROR 1048 (23000): Column 'id' cannot be null
+
+insert ignore into integrate_test.t2 values (1, 2), (NULL, 3), (2, 4);
+
+select * from integrate_test.t2 order by integrate_test.t2.id asc;
+id	a
+0	3
+1	2
+2	4
+
+drop table integrate_test.t2;
+
+
+create /*Test of mysqld crash with fully qualified column names*/ table integrate_test.t1 (c int key) global;
+
+insert into integrate_test.t1 set integrate_test.t1.c = '1';
+
+select * from integrate_test.t1;
+c
+1
+
+drop table integrate_test.t1;
+
+
+CREATE /*Test ER_FIELD_SPECIFIED_TWICE*/ TABLE integrate_test.t2 (a INT key) global;
+
+INSERT  INTO integrate_test.t2 (a, a) VALUES (1, 1);
+ERROR 1110 (42000): Column 'a' specified twice
+
+INSERT IGNORE integrate_test.t2 (a, a) VALUES (1, 1);
+ERROR 1110 (42000): Column 'a' specified twice
+
+drop table integrate_test.t2;
+
+
+drop table if exists integrate_test.t1,integrate_test.t2;
+
+create /*test partition single, Test of refering to old values*/ table integrate_test.t1 (a int not null key) single;
+
+insert into integrate_test.t1 values (1);
+
+insert into integrate_test.t1 values (a+2);
+
+insert into integrate_test.t1 values (a+3),(a+4);
+
+insert into integrate_test.t1 values (5),(a+6);
+
+select * from integrate_test.t1 order by integrate_test.t1.a asc;
+a
+1
+2
+3
+4
+5
+6
+
+drop table integrate_test.t1;
+
+
+create /*Test of duplicate key values with packed keys */ table integrate_test.t2 (id bigint not null auto_increment primary key, username varchar(32) not null) single;
+
+insert into integrate_test.t2 values (0,"mysql");
+
+insert into integrate_test.t2 values (0,"mysql ab");
+
+insert into integrate_test.t2 values (0,"mysql a");
+
+insert into integrate_test.t2 values (0,"r1manic");
+
+insert into integrate_test.t2 values (0,"r1man");
+
+drop table integrate_test.t2;
+
+
+create /*Test insert syntax*/ table integrate_test.t1 (a bigint not null auto_increment, primary key (a), t timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, c char(10) default "hello", i int) single;
+
+insert into integrate_test.t1 values (1 ,default,default,default), (2 ,default,default,default), (4,default,"a",5),(5,default,default,default);
+
+select a,t>0,c,i from integrate_test.t1 order by integrate_test.t1.a asc;
+a	t > 0	c	i
+1	1	hello	NULL
+2	1	hello	NULL
+4	1	a	5
+5	1	hello	NULL
+
+truncate table integrate_test.t1;
+
+insert into integrate_test.t1 set a=6,t=default,c=default;
+
+insert into integrate_test.t1 set a=7,t=default,c=default,i=default;
+
+insert into integrate_test.t1 set a=8,t=default,c="a",i=5;
+
+insert into integrate_test.t1 set a=9,t=default,c="a",i=null;
+
+insert into integrate_test.t1 set a=10,t=default,c=default,i=default;
+
+select a,t>0,c,i from integrate_test.t1 order by integrate_test.t1.a asc;
+a	t > 0	c	i
+6	1	hello	NULL
+7	1	hello	NULL
+8	1	a	5
+9	1	a	NULL
+10	1	hello	NULL
+
+drop table integrate_test.t1;
+
+
+create /*Test of behaviour with INSERT VALUES (NULL)*/ table integrate_test.t2 (id int NOT NULL DEFAULT 8, a int key) single;
+
+insert into integrate_test.t2 values(NULL, 1);
+ERROR 1048 (23000): Column 'id' cannot be null
+
+insert ignore into integrate_test.t2 values (1, 2), (NULL, 3), (2, 4);
+
+select * from integrate_test.t2 order by integrate_test.t2.id asc;
+id	a
+0	3
+1	2
+2	4
+
+drop table integrate_test.t2;
+
+
+create /*Test of mysqld crash with fully qualified column names*/ table integrate_test.t1 (c int key) single;
+
+insert into integrate_test.t1 set integrate_test.t1.c = '1';
+
+select * from integrate_test.t1;
+c
+1
+
+drop table integrate_test.t1;
+
+
+CREATE /*Test ER_FIELD_SPECIFIED_TWICE*/ TABLE integrate_test.t2 (a INT key);
+
+INSERT  INTO integrate_test.t2 (a, a) VALUES (1, 1);
+ERROR 1110 (42000): Column 'a' specified twice
+
+INSERT IGNORE integrate_test.t2 (a, a) VALUES (1, 1);
+ERROR 1110 (42000): Column 'a' specified twice
+
+drop table integrate_test.t2;
+
+drop database integrate_test;

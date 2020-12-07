@@ -347,9 +347,9 @@ func TestRouterPartitionType(t *testing.T) {
 
 		partitionType, err := router.PartitionType("sbtest", "A")
 		assert.Nil(t, err)
-		assert.EqualValues(t, methodTypeHash, partitionType)
+		assert.EqualValues(t, MethodTypeHash, partitionType)
 
-		isHash := router.IsPartitionHash(methodTypeHash)
+		isHash := router.IsPartitionHash(MethodTypeHash)
 		assert.Equal(t, true, isHash)
 	}
 }
@@ -705,6 +705,6 @@ func TestRouterIsPartitionHash(t *testing.T) {
 	err = router.AddForTest("sbtest", MockTableMConfig())
 	assert.Nil(t, err)
 
-	isHash := router.IsPartitionHash(methodTypeHash)
+	isHash := router.IsPartitionHash(MethodTypeHash)
 	assert.Equal(t, true, isHash)
 }

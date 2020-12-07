@@ -85,13 +85,15 @@ type (
 	// Replaces are currently disallowed in sharded schemas because
 	// of the implications the deletion part may have on vindexes.
 	Insert struct {
-		Action   string
-		Comments Comments
-		Ignore   string
-		Table    TableName
-		Columns  Columns
-		Rows     InsertRows
-		OnDup    OnDup
+		Action     string
+		Comments   Comments
+		LockOption string
+		Ignore     string
+		Table      TableName
+		Partitions Partitions
+		Columns    Columns
+		Rows       InsertRows
+		OnDup      OnDup
 	}
 
 	// Update represents an UPDATE statement.
@@ -406,6 +408,9 @@ func (Nextval) iSelectExpr()      {}
 
 // Columns represents an insert column list.
 type Columns []ColIdent
+
+// Partitions is a type alias for Columns so we can handle printing efficiently
+type Partitions Columns
 
 // TableExprs represents a list of table expressions.
 type TableExprs []TableExpr
@@ -837,10 +842,12 @@ func (node *Union) SetLimit(limit *Limit) {
 
 // Format formats the node.
 func (node *Insert) Format(buf *TrackedBuffer) {
-	buf.Myprintf("%s %v%sinto %v%v %v%v",
-		node.Action,
-		node.Comments, node.Ignore,
-		node.Table, node.Columns, node.Rows, node.OnDup)
+	buf.Myprintf("%s %v", node.Action, node.Comments)
+	if node.LockOption != "" {
+		buf.Myprintf("%s ", node.LockOption)
+	}
+	buf.Myprintf("%sinto %v%v%v %v%v",
+		node.Ignore, node.Table, node.Partitions, node.Columns, node.Rows, node.OnDup)
 }
 
 // Format formats the node.
@@ -1274,6 +1281,19 @@ func (node Columns) Format(buf *TrackedBuffer) {
 		return
 	}
 	prefix := "("
+	for _, n := range node {
+		buf.Myprintf("%s%v", prefix, n)
+		prefix = ", "
+	}
+	buf.WriteString(")")
+}
+
+// Format formats the node
+func (node Partitions) Format(buf *TrackedBuffer) {
+	if node == nil {
+		return
+	}
+	prefix := " partition ("
 	for _, n := range node {
 		buf.Myprintf("%s%v", prefix, n)
 		prefix = ", "

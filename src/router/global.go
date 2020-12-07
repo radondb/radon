@@ -50,7 +50,7 @@ func NewGlobal(log *xlog.Log, conf *config.TableConfig) *Global {
 	return &Global{
 		log:      log,
 		conf:     conf,
-		typ:      methodTypeGlobal,
+		typ:      MethodTypeGlobal,
 		Segments: make([]Segment, 0, 16),
 	}
 }

@@ -545,6 +545,12 @@ func TestValid(t *testing.T) {
 	}, {
 		input: "insert /* simple */ into a values (1)",
 	}, {
+		input: "insert /* simple */ high_priority into a partition (col_1) values (1)",
+	}, {
+		input: "insert /* simple */ low_priority into a partition (col_1, col_2) values (1)",
+	}, {
+		input: "insert /* simple */ delayed ignore into a partition (col_1, col_2) values (1)",
+	}, {
 		input: "insert into a values (rand())",
 	}, {
 		input: "insert /* a.b */ into a.b values (1)",
@@ -823,12 +829,12 @@ func TestValid(t *testing.T) {
 		}
 		tree, err := Parse(tcase.input)
 		if err != nil {
-			t.Errorf("input: %s, err: %v", tcase.input, err)
+			t.Errorf("input: \n%s\n, err: \n%v", tcase.input, err)
 			continue
 		}
 		out := String(tree)
 		if out != tcase.output {
-			t.Errorf("out: %s, want %s", out, tcase.output)
+			t.Errorf("out: \n%s\n, want \n%s", out, tcase.output)
 		}
 		// This test just exercises the tree walking functionality.
 		// There's no way automated way to verify that a node calls
@@ -1359,6 +1365,12 @@ func TestErrors(t *testing.T) {
 	}, {
 		input:  "insert into a values (select * from b)",
 		output: "syntax error at position 29 near 'select'",
+	}, {
+		input:  "replace  into a values(1,2,3)  on duplicate  key update d=e",
+		output: "syntax error at position 34 near 'on'",
+	}, {
+		input:  "replace  high_priority into a values(1,2,3)",
+		output: "syntax error at position 23 near 'high_priority'",
 	}, {
 		input:  "select database",
 		output: "syntax error at position 17",

@@ -21,7 +21,7 @@ func TestGlobal(t *testing.T) {
 	{
 		err := global.Build()
 		assert.Nil(t, err)
-		assert.Equal(t, string(global.Type()), methodTypeGlobal)
+		assert.Equal(t, string(global.Type()), MethodTypeGlobal)
 	}
 
 	{
@@ -34,7 +34,7 @@ func TestGlobal(t *testing.T) {
 	{
 		err := global.Build()
 		assert.Nil(t, err)
-		assert.Equal(t, string(global.Type()), methodTypeGlobal)
+		assert.Equal(t, string(global.Type()), MethodTypeGlobal)
 	}
 
 	{
