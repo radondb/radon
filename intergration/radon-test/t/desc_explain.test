@@ -10,8 +10,8 @@ desc integrate_test.t 'c1';
 desc integrate_test.t 'c_';
 desc integrate_test.t "c_%%%";
 
-explain select * from integrate_test.t;
-desc insert into integrate_test.t(c1) values(1);
-explain delete from integrate_test.t where c1=2;
+explain select * from integrate_test.t\G;
+desc insert into integrate_test.t(c1) values(1)\G;
+explain delete from integrate_test.t where c1=2\G;
 
 drop database integrate_test;

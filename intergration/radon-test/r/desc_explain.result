@@ -41,17 +41,360 @@ c1	int(11)	NO	PRI	NULL
 c2	int(11)	YES		NULL	
 
 
-explain select * from integrate_test.t;
-EXPLAIN
-{\n\t"RawQuery": "explain select * from integrate_test.t",\n\t"Project": "*",\n\t"Partitions": [\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0000 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[0-64)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0001 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[64-128)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0002 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[128-192)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0003 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[192-256)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0004 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[256-320)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0005 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[320-384)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0006 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[384-448)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0007 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[448-512)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0008 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[512-576)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0009 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[576-640)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0010 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[640-704)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0011 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[704-768)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0012 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[768-832)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0013 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[832-896)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0014 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[896-960)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0015 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[960-1024)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0016 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1024-1088)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0017 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1088-1152)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0018 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1152-1216)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0019 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1216-1280)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0020 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1280-1344)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0021 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1344-1408)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0022 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1408-1472)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0023 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1472-1536)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0024 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1536-1600)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0025 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1600-1664)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0026 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1664-1728)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0027 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1728-1792)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0028 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1792-1856)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0029 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1856-1920)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0030 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1920-1984)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0031 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[1984-2048)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0032 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2048-2112)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0033 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2112-2176)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0034 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2176-2240)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0035 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2240-2304)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0036 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2304-2368)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0037 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2368-2432)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0038 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2432-2496)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0039 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2496-2560)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0040 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2560-2624)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0041 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2624-2688)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0042 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2688-2752)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0043 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2752-2816)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0044 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2816-2880)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0045 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2880-2944)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0046 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2944-3008)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0047 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3008-3072)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0048 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3072-3136)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0049 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3136-3200)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0050 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3200-3264)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0051 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3264-3328)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0052 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3328-3392)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0053 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3392-3456)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0054 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3456-3520)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0055 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3520-3584)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0056 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3584-3648)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0057 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3648-3712)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0058 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3712-3776)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0059 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3776-3840)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0060 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3840-3904)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0061 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3904-3968)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0062 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3968-4032)"\n\t\t},\n\t\t{\n\t\t\t"Query": "select * from integrate_test.t_0063 as t",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[4032-4096)"\n\t\t}\n\t]\n}
+explain select * from integrate_test.t\G;
+*************************** 1. row ***************************
+EXPLAIN: {
+	"RawQuery": "explain select * from integrate_test.t",
+	"Project": "*",
+	"Partitions": [
+		{
+			"Query": "select * from integrate_test.t_0000 as t",
+			"Backend": "backend1",
+			"Range": "[0-64)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0001 as t",
+			"Backend": "backend1",
+			"Range": "[64-128)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0002 as t",
+			"Backend": "backend1",
+			"Range": "[128-192)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0003 as t",
+			"Backend": "backend1",
+			"Range": "[192-256)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0004 as t",
+			"Backend": "backend1",
+			"Range": "[256-320)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0005 as t",
+			"Backend": "backend1",
+			"Range": "[320-384)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0006 as t",
+			"Backend": "backend1",
+			"Range": "[384-448)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0007 as t",
+			"Backend": "backend1",
+			"Range": "[448-512)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0008 as t",
+			"Backend": "backend1",
+			"Range": "[512-576)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0009 as t",
+			"Backend": "backend1",
+			"Range": "[576-640)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0010 as t",
+			"Backend": "backend1",
+			"Range": "[640-704)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0011 as t",
+			"Backend": "backend1",
+			"Range": "[704-768)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0012 as t",
+			"Backend": "backend1",
+			"Range": "[768-832)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0013 as t",
+			"Backend": "backend1",
+			"Range": "[832-896)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0014 as t",
+			"Backend": "backend1",
+			"Range": "[896-960)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0015 as t",
+			"Backend": "backend1",
+			"Range": "[960-1024)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0016 as t",
+			"Backend": "backend1",
+			"Range": "[1024-1088)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0017 as t",
+			"Backend": "backend1",
+			"Range": "[1088-1152)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0018 as t",
+			"Backend": "backend1",
+			"Range": "[1152-1216)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0019 as t",
+			"Backend": "backend1",
+			"Range": "[1216-1280)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0020 as t",
+			"Backend": "backend1",
+			"Range": "[1280-1344)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0021 as t",
+			"Backend": "backend1",
+			"Range": "[1344-1408)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0022 as t",
+			"Backend": "backend1",
+			"Range": "[1408-1472)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0023 as t",
+			"Backend": "backend1",
+			"Range": "[1472-1536)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0024 as t",
+			"Backend": "backend1",
+			"Range": "[1536-1600)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0025 as t",
+			"Backend": "backend1",
+			"Range": "[1600-1664)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0026 as t",
+			"Backend": "backend1",
+			"Range": "[1664-1728)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0027 as t",
+			"Backend": "backend1",
+			"Range": "[1728-1792)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0028 as t",
+			"Backend": "backend1",
+			"Range": "[1792-1856)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0029 as t",
+			"Backend": "backend1",
+			"Range": "[1856-1920)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0030 as t",
+			"Backend": "backend1",
+			"Range": "[1920-1984)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0031 as t",
+			"Backend": "backend1",
+			"Range": "[1984-2048)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0032 as t",
+			"Backend": "backend2",
+			"Range": "[2048-2112)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0033 as t",
+			"Backend": "backend2",
+			"Range": "[2112-2176)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0034 as t",
+			"Backend": "backend2",
+			"Range": "[2176-2240)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0035 as t",
+			"Backend": "backend2",
+			"Range": "[2240-2304)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0036 as t",
+			"Backend": "backend2",
+			"Range": "[2304-2368)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0037 as t",
+			"Backend": "backend2",
+			"Range": "[2368-2432)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0038 as t",
+			"Backend": "backend2",
+			"Range": "[2432-2496)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0039 as t",
+			"Backend": "backend2",
+			"Range": "[2496-2560)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0040 as t",
+			"Backend": "backend2",
+			"Range": "[2560-2624)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0041 as t",
+			"Backend": "backend2",
+			"Range": "[2624-2688)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0042 as t",
+			"Backend": "backend2",
+			"Range": "[2688-2752)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0043 as t",
+			"Backend": "backend2",
+			"Range": "[2752-2816)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0044 as t",
+			"Backend": "backend2",
+			"Range": "[2816-2880)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0045 as t",
+			"Backend": "backend2",
+			"Range": "[2880-2944)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0046 as t",
+			"Backend": "backend2",
+			"Range": "[2944-3008)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0047 as t",
+			"Backend": "backend2",
+			"Range": "[3008-3072)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0048 as t",
+			"Backend": "backend2",
+			"Range": "[3072-3136)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0049 as t",
+			"Backend": "backend2",
+			"Range": "[3136-3200)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0050 as t",
+			"Backend": "backend2",
+			"Range": "[3200-3264)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0051 as t",
+			"Backend": "backend2",
+			"Range": "[3264-3328)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0052 as t",
+			"Backend": "backend2",
+			"Range": "[3328-3392)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0053 as t",
+			"Backend": "backend2",
+			"Range": "[3392-3456)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0054 as t",
+			"Backend": "backend2",
+			"Range": "[3456-3520)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0055 as t",
+			"Backend": "backend2",
+			"Range": "[3520-3584)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0056 as t",
+			"Backend": "backend2",
+			"Range": "[3584-3648)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0057 as t",
+			"Backend": "backend2",
+			"Range": "[3648-3712)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0058 as t",
+			"Backend": "backend2",
+			"Range": "[3712-3776)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0059 as t",
+			"Backend": "backend2",
+			"Range": "[3776-3840)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0060 as t",
+			"Backend": "backend2",
+			"Range": "[3840-3904)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0061 as t",
+			"Backend": "backend2",
+			"Range": "[3904-3968)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0062 as t",
+			"Backend": "backend2",
+			"Range": "[3968-4032)"
+		},
+		{
+			"Query": "select * from integrate_test.t_0063 as t",
+			"Backend": "backend2",
+			"Range": "[4032-4096)"
+		}
+	]
+}
 
-desc insert into integrate_test.t(c1) values(1);
-EXPLAIN
-{\n\t"RawQuery": "desc insert into integrate_test.t(c1) values(1)",\n\t"Partitions": [\n\t\t{\n\t\t\t"Query": "insert into integrate_test.t_0036(c1) values (1)",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[2304-2368)"\n\t\t}\n\t]\n}
+desc insert into integrate_test.t(c1) values(1)\G;
+*************************** 1. row ***************************
+EXPLAIN: {
+	"RawQuery": "desc insert into integrate_test.t(c1) values(1)",
+	"Partitions": [
+		{
+			"Query": "insert into integrate_test.t_0036(c1) values (1)",
+			"Backend": "backend2",
+			"Range": "[2304-2368)"
+		}
+	]
+}
 
-explain delete from integrate_test.t where c1=2;
-EXPLAIN
-{\n\t"RawQuery": "explain delete from integrate_test.t where c1=2",\n\t"Partitions": [\n\t\t{\n\t\t\t"Query": "delete from integrate_test.t_0061 where c1 = 2",\n\t\t\t"Backend": "backend1",\n\t\t\t"Range": "[3904-3968)"\n\t\t}\n\t]\n}
+explain delete from integrate_test.t where c1=2\G;
+*************************** 1. row ***************************
+EXPLAIN: {
+	"RawQuery": "explain delete from integrate_test.t where c1=2",
+	"Partitions": [
+		{
+			"Query": "delete from integrate_test.t_0061 where c1 = 2",
+			"Backend": "backend2",
+			"Range": "[3904-3968)"
+		}
+	]
+}
 
 
 drop database integrate_test;

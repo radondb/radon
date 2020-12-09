@@ -526,7 +526,11 @@ func forceEOF(yylex interface{}) {
 	UNUSED
 
 // Explain tokens
-%token <bytes> FORMAT TREE TRADITIONAL EXTENDED
+%token <bytes>
+	FORMAT
+	TREE
+	TRADITIONAL
+	EXTENDED
 
 
 // RadonDB
@@ -4926,8 +4930,8 @@ non_reserved_keyword:
 |	DYNAMIC
 |	ENUM
 |	ENGINE
-|	EXTENDED
 |	EXPANSION
+|	EXTENDED
 |	FORMAT
 |	FIELDS
 |	FIXED

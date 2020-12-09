@@ -191,6 +191,9 @@ type (
 		NewName TableName
 	}
 
+	// ExplainType is an enum for Explain-Type
+	ExplainType int8
+
 	// Explain represents a explain statement.
 	Explain struct {
 		Type      ExplainType
