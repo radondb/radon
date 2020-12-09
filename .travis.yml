@@ -11,6 +11,8 @@ before_script:
   - mysqld --defaults-file=intergration/my3307.cnf &
   - mysqld --defaults-file=intergration/my3309.cnf --initialize-insecure
   - mysqld --defaults-file=intergration/my3309.cnf &
+  - mysqld --defaults-file=intergration/my3310.cnf --initialize-insecure
+  - mysqld --defaults-file=intergration/my3310.cnf &
   - make
   - mkdir -p bin/bin/radon-meta
   - cp intergration/backend.json bin/bin/radon-meta/

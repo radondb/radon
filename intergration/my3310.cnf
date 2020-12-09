@@ -1,0 +1,12 @@
+[mysqld]
+port = 3310
+socket = /tmp/mysql.sock.3310
+datadir = ./data3310
+log_bin=mysql-bin
+log_bin_index=mysql-bin.index
+binlog_format=ROW
+server-id        = 12348
+gtid-mode = ON
+enforce_gtid_consistency = ON
+
+[mysqld_safe]
