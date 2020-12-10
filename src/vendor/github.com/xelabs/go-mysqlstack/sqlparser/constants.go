@@ -206,6 +206,9 @@ const (
 	CommitTxnStr = "commit"
 )
 
+// ExplainType is an enum for Explain-Type
+type ExplainType int8
+
 const (
 	ExplainTypeEmpty ExplainType = iota
 	ExplainTypeExtended
