@@ -228,6 +228,10 @@ func replaceExistsExprSubquery(newNode, parent SQLNode) {
 	parent.(*ExistsExpr).Subquery = newNode.(*Subquery)
 }
 
+func replaceExplainStatement(newNode, parent SQLNode) {
+	parent.(*Explain).Statement = newNode.(Statement)
+}
+
 type replaceExprsItems int
 
 func (r *replaceExprsItems) replace(newNode, container SQLNode) {
@@ -808,6 +812,7 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 		a.apply(node, n.Subquery, replaceExistsExprSubquery)
 
 	case *Explain:
+		a.apply(node, n.Statement, replaceExplainStatement)
 
 	case Exprs:
 		replacer := replaceExprsItems(0)

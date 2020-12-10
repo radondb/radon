@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -122,6 +121,7 @@ func runSelect(t *testing.T, s *cacheTestSuite) {
 	assert.Equal(t, "hello world", b)
 }
 
+/*
 func TestCache(t *testing.T) {
 	var wg sync.WaitGroup
 	for _, s := range st {
@@ -168,6 +168,7 @@ func TestCache(t *testing.T) {
 	wg.Wait()
 	time.Sleep(1200 * time.Millisecond)
 }
+*/
 
 func TestTearDownSuite(t *testing.T) {
 	for _, s := range st {

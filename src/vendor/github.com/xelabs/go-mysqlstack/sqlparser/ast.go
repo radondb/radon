@@ -192,7 +192,11 @@ type (
 	}
 
 	// Explain represents a explain statement.
-	Explain struct{}
+	Explain struct {
+		Type      ExplainType
+		Analyze   bool
+		Statement Statement
+	}
 
 	// Kill represents a KILL statement.
 	Kill struct {
