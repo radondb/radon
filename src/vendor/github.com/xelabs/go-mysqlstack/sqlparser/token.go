@@ -194,6 +194,7 @@ var keywords = map[string]int{
 	"gtid":                GTID,
 	"hash":                HASH,
 	"having":              HAVING,
+	"help":                HELP,
 	"high_priority":       UNUSED,
 	"hour_microsecond":    UNUSED,
 	"hour_minute":         UNUSED,

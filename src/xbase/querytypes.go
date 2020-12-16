@@ -31,6 +31,9 @@ const (
 	// EXPLAIN type.
 	EXPLAIN = "EXPLAIN"
 
+	// HELP type.
+	HELP = "HELP"
+
 	// KILL type.
 	KILL = "KILL"
 

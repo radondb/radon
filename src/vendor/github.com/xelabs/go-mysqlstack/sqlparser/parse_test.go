@@ -732,6 +732,18 @@ func TestValid(t *testing.T) {
 		input:  "explain update t set col = 2",
 		output: "explain",
 	}, {
+		input:  "help",
+		output: "help",
+	}, {
+		input:  "helP Create",
+		output: "help create",
+	}, {
+		input:  "helP 'Create'",
+		output: "help 'Create'",
+	}, {
+		input:  "helP \"Create\"",
+		output: "help 'Create'",
+	}, {
 		input:  "truncate table foo",
 		output: "truncate table foo",
 	}, {
@@ -1266,6 +1278,9 @@ func TestErrors(t *testing.T) {
 	}, {
 		input:  "explain analyze format = json select a from t",
 		output: "syntax error at position 30 near 'json'",
+	}, {
+		input:  "help create create",
+		output: "syntax error at position 19 near 'create'",
 	}, {
 		input:  "select $ from t",
 		output: "syntax error at position 9 near '$'",

@@ -272,6 +272,10 @@ func replaceGroupConcatExprOrderBy(newNode, parent SQLNode) {
 	parent.(*GroupConcatExpr).OrderBy = newNode.(OrderBy)
 }
 
+func replaceHelpHelpInfo(newNode, parent SQLNode) {
+	parent.(*Help).HelpInfo = newNode.(*SQLVal)
+}
+
 func replaceIndexDefinitionName(newNode, parent SQLNode) {
 	parent.(*IndexDefinition).Name = newNode.(ColIdent)
 }
@@ -838,6 +842,9 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 	case *GroupConcatExpr:
 		a.apply(node, n.Exprs, replaceGroupConcatExprExprs)
 		a.apply(node, n.OrderBy, replaceGroupConcatExprOrderBy)
+
+	case *Help:
+		a.apply(node, n.HelpInfo, replaceHelpHelpInfo)
 
 	case *IndexDefinition:
 		a.apply(node, n.Name, replaceIndexDefinitionName)

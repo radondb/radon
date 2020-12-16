@@ -1,0 +1,11 @@
+drop database if exists integrate_test;
+create database if not exists integrate_test DEFAULT CHARSET=utf8;
+
+help;
+help content;
+help 'index';
+help 'insert';
+help /*test nothing get*/ xx;
+help /*test nothing get*/ create create;
+
+drop database integrate_test;
