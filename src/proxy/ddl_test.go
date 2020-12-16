@@ -145,6 +145,45 @@ func TestProxyDDLDB(t *testing.T) {
 	}
 }
 
+func TestProxyDDLResultError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// Add pattern
+	{
+		fakedbs.AddQueryErrorPattern("alter database .*", errors.New("alter database error"))
+		fakedbs.AddQueryPattern(".* database .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+	}
+
+	// create database test.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database if not exists test"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// alter database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		// use database
+		query := "use test1"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+
+		// test alter with default session database test1
+		query = "alter database test collate = utf8mb4_0900_ai_ci read only = default character set = utf8"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+	}
+
+}
+
 func TestProxyDDLDBError(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
