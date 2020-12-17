@@ -1,0 +1,24 @@
+drop database if exists integrate_test;
+
+create /*test alter database start*/ database integrate_test DEFAULT CHARSET=utf8 collate utf8_unicode_ci;
+
+show create database integrate_test;
+Database	Create Database
+integrate_test	CREATE DATABASE `integrate_test` /*!40100 DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci */
+
+alter /*no database selected*/ database default character set = utf8 collate = utf8_unicode_ci;
+ERROR 1046 (3D000): No database selected
+
+alter database integrate_test default character set = utf8mb4 collate = utf8mb4_bin;
+
+show create database integrate_test;
+Database	Create Database
+integrate_test	CREATE DATABASE `integrate_test` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin */
+
+alter database integrate_test default character set = utf8 collate = utf8_unicode_ci;
+
+show create database integrate_test;
+Database	Create Database
+integrate_test	CREATE DATABASE `integrate_test` /*!40100 DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci */
+
+drop /*test alter database end */ database integrate_test;

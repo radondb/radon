@@ -2,6 +2,7 @@ Table of Contents
 =================
 
    * [Data Definition Statements](#data-definition-statements)
+      * [ALTER Database Statement](#alter-database-statement)
       * [ALTER TABLE Statement](#alter-table-statement)
          * [Add  Column](#add--column)
          * [Change Table Engine](#change-table-engine)
@@ -17,6 +18,68 @@ Table of Contents
       * [TRUNCATE TABLE Statement](#truncate-table-statement)
 
 # Data Definition Statements
+
+## ALTER TABLE Statement
+`Syntax`
+```
+ALTER {DATABASE | SCHEMA} [db_name]
+    alter_option ...
+
+alter_option: {
+    [DEFAULT] CHARACTER SET [=] charset_name
+  | [DEFAULT] COLLATE [=] collation_name
+  | [DEFAULT] ENCRYPTION [=] {'Y' | 'N'}
+  | READ ONLY [=] {DEFAULT | 0 | 1}
+}
+```
+
+`Instructions`
+* RadonDB sends the corresponding backend execution engine changes based on the routing information
+* *Cross-partition non-atomic operations*
+* radon completely support syntax with MySQL 8.0 and abandon "alter ... UPGRADE DATA DIRECTORY NAME" feature in 5.7.
+
+`Example: `
+1. alter with specify database.
+```
+mysql> create database testdb DEFAULT CHARSET=utf8 collate utf8_unicode_ci;
+Query OK, 2 rows affected (0.02 sec)
+
+mysql> show create database testdb;
++----------+-----------------------------------------------------------------------------------------+
+| Database | Create Database                                                                         |
++----------+-----------------------------------------------------------------------------------------+
+| testdb   | CREATE DATABASE `testdb` /*!40100 DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci */ |
++----------+-----------------------------------------------------------------------------------------+
+1 row in set (0.00 sec)
+
+mysql> alter database testdb default character set = utf8mb4 collate = utf8mb4_bin;
+Query OK, 2 rows affected (0.01 sec)
+
+mysql> show create database testdb;
++----------+----------------------------------------------------------------------------------------+
+| Database | Create Database                                                                        |
++----------+----------------------------------------------------------------------------------------+
+| testdb   | CREATE DATABASE `testdb` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin */ |
++----------+----------------------------------------------------------------------------------------+
+1 row in set (0.00 sec)
+```
+2. Alter without specify database, use the current default session database.
+```
+mysql> alter /*current session has no db, no database selected*/ database default character set = utf8 collate = utf8_unicode_ci;
+ERROR 1046 (3D000): No database selected
+mysql> use testdb;
+Database changed
+mysql> alter /*use current session testdb*/ database default character set = utf8 collate = utf8_unicode_ci;
+Query OK, 2 rows affected (0.02 sec)
+
+mysql> show create database testdb;
++----------+-----------------------------------------------------------------------------------------+
+| Database | Create Database                                                                         |
++----------+-----------------------------------------------------------------------------------------+
+| testdb   | CREATE DATABASE `testdb` /*!40100 DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci */ |
++----------+-----------------------------------------------------------------------------------------+
+1 row in set (0.00 sec)
+```
 
 ## ALTER TABLE Statement
 `Syntax`

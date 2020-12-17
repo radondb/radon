@@ -58,6 +58,7 @@ const (
 	AlterAddColumnStr       = "alter table add column"
 	AlterDropColumnStr      = "alter table drop column"
 	AlterModifyColumnStr    = "alter table modify column"
+	AlterDatabase           = "alter database"
 	RenameStr               = "rename table"
 	TruncateTableStr        = "truncate table"
 	SingleTableType         = "singletable"

@@ -817,6 +817,16 @@ func TestDDL1(t *testing.T) {
 			output: "alter table test.t1 convert to character set utf8",
 		},
 
+		// Alter database.
+		{
+			input:  "alter database mydb READ ONLY = 1",
+			output: "alter database mydb read only = 1",
+		},
+		{
+			input:  "alter database READ ONLY = 1 DEFAULT COLLATE utf8mb4_bin default character set=utf8",
+			output: "alter database  read only = 1 collate utf8mb4_bin character set utf8",
+		},
+
 		// Index.
 		{
 			input:  "create index idx on test(a,b) using hash comment 'c' lock=EXCLUSIVE",

@@ -921,6 +921,8 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 		buf.Myprintf("alter table %v drop column `%s`", node.NewName, node.DropColumnName)
 	case AlterModifyColumnStr:
 		buf.Myprintf("alter table %v modify column %v", node.NewName, node.ModifyColumnDef)
+	case AlterDatabase:
+		buf.Myprintf("%s %s%v", node.Action, node.Database.String(), node.DatabaseOptions)
 	case TruncateTableStr:
 		buf.Myprintf("%s %v", node.Action, node.NewName)
 	}
@@ -929,7 +931,12 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 // Format formats the node
 func (optList DatabaseOptionListOpt) Format(buf *TrackedBuffer) {
 	for _, dbOpt := range optList.DBOptList {
-		buf.Myprintf(" %s %v", dbOpt.OptType, dbOpt.Value)
+		if dbOpt.ReadOnlyValue != "" {
+			// only in case alter database
+			buf.Myprintf(" read only = %s", dbOpt.ReadOnlyValue)
+		} else {
+			buf.Myprintf(" %s %v", dbOpt.OptType, dbOpt.Value)
+		}
 	}
 }
 

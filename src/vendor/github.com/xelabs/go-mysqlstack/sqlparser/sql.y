@@ -864,6 +864,7 @@ func forceEOF(yylex interface{}) {
 	table_alias
 	as_opt_id
 	db_name
+	db_name_or_empty
 
 %type	<empty>
 	as_opt
@@ -928,6 +929,7 @@ func forceEOF(yylex interface{}) {
 	collate_opt
 	column_format_opt
 	storage_opt
+	ternary_opt
 
 %type	<optVal>
 	id_or_string
@@ -1481,6 +1483,23 @@ database_option_list:
 // The ENCRYPTION option, introduced in MySQL 8.0.16, defines the default database encryption.
 // Inherited by tables created in the database
 // See: https://dev.mysql.com/doc/refman/8.0/en/create-database.html
+ternary_opt:
+	INTEGRAL
+	{
+		switch string($1) {
+		case "0", "1":
+			$$ = string($1)
+			break
+		default:
+			yylex.Error("Invalid ternary option, argument (should be 0, 1 or 'default')")
+			return 1
+		}
+	}
+|	DEFAULT
+	{
+		$$ = "default"
+	}
+
 database_option:
 	opt_default COLLATE opt_equal id_or_default
 	{
@@ -1501,6 +1520,12 @@ database_option:
 		$$ = &DatabaseOption{
 			OptType: "encryption",
 			Value:   $2,
+		}
+	}
+|	READ ONLY opt_equal ternary_opt
+	{
+		$$ = &DatabaseOption{
+			ReadOnlyValue: $4,
 		}
 	}
 
@@ -2882,6 +2907,19 @@ alter_statement:
 |	ALTER ignore_opt TABLE table_name MODIFY COLUMN column_definition
 	{
 		$$ = &DDL{Action: AlterModifyColumnStr, Table: $4, NewName: $4, ModifyColumnDef: $7}
+	}
+|	ALTER DATABASE db_name_or_empty database_option_list_opt
+	{
+		$$ = &DDL{Action: AlterDatabase, Database: $3, DatabaseOptions: $4}
+	}
+
+db_name_or_empty:
+	{
+		$$ = NewTableIdent("")
+	}
+|	db_name
+	{
+		$$ = $1
 	}
 
 temporary_opt:
