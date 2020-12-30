@@ -50,7 +50,7 @@ func NewSingle(log *xlog.Log, conf *config.TableConfig) *Single {
 	return &Single{
 		log:      log,
 		conf:     conf,
-		typ:      methodTypeSingle,
+		typ:      MethodTypeSingle,
 		Segments: make([]Segment, 0, 16),
 	}
 }

@@ -53,7 +53,7 @@ func NewList(log *xlog.Log, conf *config.TableConfig) *List {
 	return &List{
 		log:      log,
 		conf:     conf,
-		typ:      methodTypeList,
+		typ:      MethodTypeList,
 		Segments: make([]Segment, 0, 16),
 	}
 }

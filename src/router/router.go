@@ -99,7 +99,7 @@ func (r *Router) addTable(db string, tbl *config.TableConfig) error {
 
 	// methods
 	switch tbl.ShardType {
-	case methodTypeHash:
+	case MethodTypeHash:
 		slots := tbl.Slots
 		if slots == 0 {
 			slots = r.conf.Slots
@@ -109,19 +109,19 @@ func (r *Router) addTable(db string, tbl *config.TableConfig) error {
 			return err
 		}
 		table.Partition = hash
-	case methodTypeGlobal:
+	case MethodTypeGlobal:
 		global := NewGlobal(r.log, tbl)
 		if err := global.Build(); err != nil {
 			return err
 		}
 		table.Partition = global
-	case methodTypeSingle:
+	case MethodTypeSingle:
 		single := NewSingle(r.log, tbl)
 		if err := single.Build(); err != nil {
 			return err
 		}
 		table.Partition = single
-	case methodTypeList:
+	case MethodTypeList:
 		list := NewList(r.log, tbl)
 		if err := list.Build(); err != nil {
 			return err
@@ -216,7 +216,7 @@ func (r *Router) IsSystemDB(database string) bool {
 
 // IsPartitionHash used to check whether the partitionType is hash.
 func (r *Router) IsPartitionHash(partitionType MethodType) bool {
-	return partitionType == methodTypeHash
+	return partitionType == MethodTypeHash
 }
 
 func (r *Router) getTable(database string, tableName string) (*Table, error) {

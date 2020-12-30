@@ -21,7 +21,7 @@ func TestSingle(t *testing.T) {
 	{
 		err := single.Build()
 		assert.Nil(t, err)
-		assert.Equal(t, string(single.Type()), methodTypeSingle)
+		assert.Equal(t, string(single.Type()), MethodTypeSingle)
 	}
 
 	{

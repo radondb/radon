@@ -69,7 +69,7 @@ func (r *Router) HashUniform(table, shardkey string, backends []string, partitio
 		Slots:      slots,
 		Blocks:     blocks,
 		ShardKey:   shardkey,
-		ShardType:  methodTypeHash,
+		ShardType:  MethodTypeHash,
 		Partitions: make([]*config.PartitionConfig, 0, 16),
 	}
 
@@ -111,7 +111,7 @@ func (r *Router) GlobalUniform(table string, backends []string) (*config.TableCo
 
 	tableConf := &config.TableConfig{
 		Name:       table,
-		ShardType:  methodTypeGlobal,
+		ShardType:  MethodTypeGlobal,
 		ShardKey:   "",
 		Partitions: make([]*config.PartitionConfig, 0, 16),
 	}
@@ -138,7 +138,7 @@ func (r *Router) SingleUniform(table string, backends []string) (*config.TableCo
 
 	return &config.TableConfig{
 		Name:      table,
-		ShardType: methodTypeSingle,
+		ShardType: MethodTypeSingle,
 		ShardKey:  "",
 		Partitions: []*config.PartitionConfig{&config.PartitionConfig{
 			Table:   table,
@@ -187,7 +187,7 @@ func (r *Router) ListUniform(table string, shardkey string, partitionDef sqlpars
 
 	tableConf := &config.TableConfig{
 		Name:       table,
-		ShardType:  methodTypeList,
+		ShardType:  MethodTypeList,
 		ShardKey:   shardkey,
 		Partitions: make([]*config.PartitionConfig, 0, 16),
 	}

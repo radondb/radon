@@ -61,6 +61,7 @@ func forceEOF(yylex interface{}) {
 	selectExprs           SelectExprs
 	selectExpr            SelectExpr
 	columns               Columns
+	partitions	      Partitions
 	colName               *ColName
 	tableExprs            TableExprs
 	tableExpr             TableExpr
@@ -452,6 +453,9 @@ func forceEOF(yylex interface{}) {
 	STATS_PERSISTENT
 	STATS_SAMPLE_PAGES
 	TABLESPACE
+	DELAYED
+	LOW_PRIORITY
+	HIGH_PRIORITY
 
 // ROW_FORMAT options
 %token	<bytes>
@@ -480,7 +484,6 @@ func forceEOF(yylex interface{}) {
 	STATUS
 	COLUMNS
 	FIELDS
-
 
 // Functions
 %token	<bytes>
@@ -612,6 +615,7 @@ func forceEOF(yylex interface{}) {
 
 %type	<statement>
 	insert_statement
+	replace_statement
 	update_statement
 	delete_statement
 	set_statement
@@ -637,9 +641,10 @@ func forceEOF(yylex interface{}) {
 
 %type	<str>
 	union_op
-	insert_or_replace
 	now_sym_with_frac_opt
 	on_update_opt
+	insert_lock_opt
+	replace_lock_opt
 
 %type	<str>
 	distinct_opt
@@ -791,6 +796,10 @@ func forceEOF(yylex interface{}) {
 
 %type	<columns>
 	ins_column_list
+
+%type <partitions>
+	partition_clause_opt
+	partition_list
 
 %type	<updateExprs>
 	on_dup_opt
@@ -1070,6 +1079,7 @@ command:
 		$$ = $1
 	}
 |	insert_statement
+|	replace_statement
 |	update_statement
 |	delete_statement
 |	set_statement
@@ -1136,37 +1146,102 @@ union_rhs:
 	}
 
 insert_statement:
-	insert_or_replace comment_opt ignore_opt into_table_name insert_data on_dup_opt
+	INSERT comment_opt insert_lock_opt ignore_opt into_table_name partition_clause_opt insert_data on_dup_opt
 	{
 		// insert_data returns a *Insert pre-filled with Columns & Values
-		ins := $5
-		ins.Action = $1
+		ins := $7
+		ins.Action = InsertStr
 		ins.Comments = $2
-		ins.Ignore = $3
-		ins.Table = $4
-		ins.OnDup = OnDup($6)
+		ins.LockOption = $3
+		ins.Ignore = $4
+		ins.Table = $5
+		ins.Partitions = $6
+		ins.OnDup = OnDup($8)
 		$$ = ins
 	}
-|	insert_or_replace comment_opt ignore_opt into_table_name SET update_list on_dup_opt
+|	INSERT comment_opt insert_lock_opt ignore_opt into_table_name partition_clause_opt SET update_list on_dup_opt
 	{
-		cols := make(Columns, 0, len($6))
-		vals := make(ValTuple, 0, len($7))
-		for _, updateList := range $6 {
+		cols := make(Columns, 0, len($8))
+		vals := make(ValTuple, 0, len($9))
+		for _, updateList := range $8 {
 			cols = append(cols, updateList.Name.Name)
 			vals = append(vals, updateList.Expr)
 		}
-		$$ = &Insert{Action: $1, Comments: Comments($2), Ignore: $3, Table: $4, Columns: cols, Rows: Values{vals}, OnDup: OnDup($7)}
+		$$ = &Insert{Action: InsertStr, Comments: Comments($2), LockOption: $3, Ignore: $4, Table: $5, Partitions: $6, Columns: cols, Rows: Values{vals}, OnDup: OnDup($9)}
 	}
 
-insert_or_replace:
-	INSERT
+replace_statement:
+	REPLACE comment_opt replace_lock_opt ignore_opt into_table_name partition_clause_opt insert_data
 	{
-		$$ = InsertStr
+		// insert_data returns a *Insert pre-filled with Columns & Values
+		ins := $7
+		ins.Action = ReplaceStr
+		ins.Comments = $2
+		ins.LockOption = $3
+		ins.Ignore = $4
+		ins.Table = $5
+		ins.Partitions = $6
+		$$ = ins
 	}
-|	REPLACE
+|	REPLACE comment_opt replace_lock_opt ignore_opt into_table_name partition_clause_opt SET update_list
 	{
-		$$ = ReplaceStr
+		cols := make(Columns, 0, len($8))
+		vals := make(ValTuple, 0, len($8))
+		for _, updateList := range $8 {
+			cols = append(cols, updateList.Name.Name)
+			vals = append(vals, updateList.Expr)
+		}
+		$$ = &Insert{Action: ReplaceStr, Comments: Comments($2), LockOption: $3, Ignore: $4, Table: $5, Partitions: $6, Columns: cols, Rows: Values{vals}}
 	}
+
+insert_lock_opt:
+	{
+		$$ = ""
+	}
+|	LOW_PRIORITY
+	{
+		$$ = string($1)
+	}
+|	DELAYED
+	{
+		$$ = string($1)
+	}
+|	HIGH_PRIORITY
+	{
+		$$ = string($1)
+	}
+
+replace_lock_opt:
+	{
+	}
+|	LOW_PRIORITY
+	{
+		$$ = string($1)
+	}
+|	DELAYED
+	{
+		$$ = string($1)
+	}
+
+partition_list:
+	col_id
+	{
+		$$ = Partitions{$1}
+	}
+|	partition_list ',' col_id
+	{
+		$$ = append($$, $3)
+	}
+
+partition_clause_opt:
+	{
+		$$ = nil
+	}
+|	PARTITION openb partition_list closeb
+	{
+		$$ = $3
+	}
+	    
 
 update_statement:
 	UPDATE comment_opt table_name SET update_list where_expression_opt order_by_opt limit_opt
@@ -3038,6 +3113,10 @@ explainable_statement:
 	{
 	    $$ = $1
 	}
+|	replace_statement
+	{
+	    $$ = $1
+	}
 |	delete_statement
 	{
 	    $$ = $1
@@ -4455,19 +4534,19 @@ insert_data:
 	}
 
 ins_column_list:
-	sql_id
+	col_id
 	{
 		$$ = Columns{$1}
 	}
-|	sql_id '.' sql_id
+|	col_id '.' sql_id
 	{
 		$$ = Columns{$3}
 	}
-|	ins_column_list ',' sql_id
+|	ins_column_list ',' col_id
 	{
 		$$ = append($$, $3)
 	}
-|	ins_column_list ',' sql_id '.' sql_id
+|	ins_column_list ',' col_id '.' col_id
 	{
 		$$ = append($$, $5)
 	}

@@ -28,7 +28,7 @@ func TestHash(t *testing.T) {
 	{
 		err := hash.Build()
 		assert.Nil(t, err)
-		assert.Equal(t, string(hash.Type()), methodTypeHash)
+		assert.Equal(t, string(hash.Type()), MethodTypeHash)
 		assert.Equal(t, hash.slots, 4096)
 		assert.Equal(t, len(hash.partitions), 4096)
 	}

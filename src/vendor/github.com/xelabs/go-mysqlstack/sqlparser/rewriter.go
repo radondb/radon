@@ -310,6 +310,10 @@ func replaceInsertOnDup(newNode, parent SQLNode) {
 	parent.(*Insert).OnDup = newNode.(OnDup)
 }
 
+func replaceInsertPartitions(newNode, parent SQLNode) {
+	parent.(*Insert).Partitions = newNode.(Partitions)
+}
+
 func replaceInsertRows(newNode, parent SQLNode) {
 	parent.(*Insert).Rows = newNode.(InsertRows)
 }
@@ -409,6 +413,16 @@ func replaceParenSelectSelect(newNode, parent SQLNode) {
 
 func replaceParenTableExprExprs(newNode, parent SQLNode) {
 	parent.(*ParenTableExpr).Exprs = newNode.(TableExprs)
+}
+
+type replacePartitionsItems int
+
+func (r *replacePartitionsItems) replace(newNode, container SQLNode) {
+	container.(Partitions)[int(*r)] = newNode.(ColIdent)
+}
+
+func (r *replacePartitionsItems) inc() {
+	*r++
 }
 
 func replaceRadonNewName(newNode, parent SQLNode) {
@@ -867,6 +881,7 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 		a.apply(node, n.Columns, replaceInsertColumns)
 		a.apply(node, n.Comments, replaceInsertComments)
 		a.apply(node, n.OnDup, replaceInsertOnDup)
+		a.apply(node, n.Partitions, replaceInsertPartitions)
 		a.apply(node, n.Rows, replaceInsertRows)
 		a.apply(node, n.Table, replaceInsertTable)
 
@@ -939,6 +954,14 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 
 	case *ParenTableExpr:
 		a.apply(node, n.Exprs, replaceParenTableExprExprs)
+
+	case Partitions:
+		replacer := replacePartitionsItems(0)
+		replacerRef := &replacer
+		for _, item := range n {
+			a.apply(node, item, replacerRef.replace)
+			replacerRef.inc()
+		}
 
 	case *Radon:
 		a.apply(node, n.NewName, replaceRadonNewName)
