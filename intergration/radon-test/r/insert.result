@@ -6,6 +6,12 @@ create /*test partition hash, Test of refering to old values*/ table integrate_t
 
 insert into integrate_test.t1 values (1), (6);
 
+insert /*test column count doesn't match value count*/ into integrate_test.t1 values (2,2), (3,3);
+ERROR 1136 (21S01): Column count doesn't match value count at row 1
+
+insert /*test column count doesn't match value count*/ into integrate_test.t1(a) values (2,2), (3,3);
+ERROR 1136 (21S01): Column count doesn't match value count at row 1
+
 select * from integrate_test.t1 order by integrate_test.t1.a asc;
 a
 1
@@ -25,6 +31,9 @@ insert into integrate_test.t2 values (0,"mysql a");
 insert into integrate_test.t2 values (0,"r1manic");
 
 insert into integrate_test.t2 values (0,"r1man");
+
+insert /*Column count doesn't match value count*/ into integrate_test.t2 values (0,"r1mannn", "error");
+ERROR 1136 (21S01): Column count doesn't match value count at row 1
 
 select * from integrate_test.t2 order by integrate_test.t2.id asc;
 id	username
@@ -77,6 +86,9 @@ insert /*test error: id cannot be null*/ into integrate_test.t2 values(NULL, 1);
 ERROR 1048 (23000): Column 'id' cannot be null
 
 insert ignore into integrate_test.t2 values (1, 2), (NULL, 3), (2, 4);
+
+insert /*Column count doesn't match value count*/ ignore into integrate_test.t2(id, a) values (4, 8, 8), (2, 4);
+ERROR 1136 (21S01): Column count doesn't match value count at row 1
 
 select * from integrate_test.t2 order by integrate_test.t2.a asc;
 id	a
@@ -136,6 +148,9 @@ insert into integrate_test.t1 values (a+2);
 insert into integrate_test.t1 values (a+3),(a+4);
 
 insert into integrate_test.t1 values (5),(a+6);
+
+insert /*Column count doesn't match value count*/ into integrate_test.t1 values (6,"error"),(a+6);
+ERROR 1136 (21S01): Column count doesn't match value count at row 1
 
 select * from integrate_test.t1 order by integrate_test.t1.a asc;
 a
@@ -248,6 +263,9 @@ insert into integrate_test.t1 values (a+3),(a+4);
 
 insert into integrate_test.t1 values (5),(a+6);
 
+insert /*Column count doesn't match value count*/ into integrate_test.t1 values (6, 7),(a+6);
+ERROR 1136 (21S01): Column count doesn't match value count at row 1
+
 select * from integrate_test.t1 order by integrate_test.t1.a asc;
 a
 1
@@ -271,6 +289,9 @@ insert into integrate_test.t2 values (0,"mysql a");
 insert into integrate_test.t2 values (0,"r1manic");
 
 insert into integrate_test.t2 values (0,"r1man");
+
+insert /*Column count doesn't match value count*/ into integrate_test.t2 values (0,"r1mannn", "error");
+ERROR 1136 (21S01): Column count doesn't match value count at row 1
 
 drop table integrate_test.t2;
 
@@ -315,6 +336,9 @@ insert into integrate_test.t2 values(NULL, 1);
 ERROR 1048 (23000): Column 'id' cannot be null
 
 insert ignore into integrate_test.t2 values (1, 2), (NULL, 3), (2, 4);
+
+insert /*Column count doesn't match value count*/ ignore into integrate_test.t2 values (3, 8, 1), (NULL, 6, 9), (2, 7, 0);
+ERROR 1136 (21S01): Column count doesn't match value count at row 1
 
 select * from integrate_test.t2 order by integrate_test.t2.id asc;
 id	a

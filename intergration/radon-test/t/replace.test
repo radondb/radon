@@ -10,6 +10,7 @@ replace into integrate_test.t1 (gesuchnr,benutzer_id) values (2,1);
 replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
 replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
 replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
+replace /*Column count doesn't match value count*/ into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1,1),(2,3);
 select * from integrate_test.t1 order by integrate_test.t1.gesuchnr asc;
 drop table integrate_test.t1;
 
@@ -19,6 +20,7 @@ insert /*error: dup*/ into integrate_test.t2 values (0,"error");
 replace /*error: dup*/ into integrate_test.t2 values (0,"error");
 replace into integrate_test.t2 values (126,"first updated");
 replace into integrate_test.t2 values (63,default);
+replace /*Column count doesn't match value count*/ into integrate_test.t2 values (63,default, "column out");
 select * from integrate_test.t2 order by integrate_test.t2.a;
 drop table integrate_test.t2;
 
@@ -32,6 +34,7 @@ replace into integrate_test.t1 (gesuchnr,benutzer_id) values (2,1);
 replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
 replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
 replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
+replace /*Column count doesn't match value count*/ into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1,1);
 select * from integrate_test.t1 order by integrate_test.t1.gesuchnr asc;
 drop table integrate_test.t1;
 
@@ -41,6 +44,7 @@ insert /*error: dup*/ into integrate_test.t2 values (0,"error");
 replace /*error: dup*/ into integrate_test.t2 values (0,"error");
 replace into integrate_test.t2 values (126,"first updated");
 replace into integrate_test.t2 values (63,default);
+replace /*Column count doesn't match value count*/ into integrate_test.t2 values (63,default, "column out");
 select * from integrate_test.t2 order by integrate_test.t2.a;
 drop table integrate_test.t2;
 
@@ -54,6 +58,7 @@ replace into integrate_test.t1 (gesuchnr,benutzer_id) values (2,1);
 replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
 replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
 replace into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1);
+replace /*Column count doesn't match value count*/ into integrate_test.t1 (gesuchnr,benutzer_id) values (1,1,1);
 select * from integrate_test.t1 order by integrate_test.t1.gesuchnr asc;
 drop table integrate_test.t1;
 
@@ -63,6 +68,7 @@ insert /*error: dup*/ into integrate_test.t2 values (0,"error");
 replace /*error: dup*/ into integrate_test.t2 values (0,"error");
 replace into integrate_test.t2 values (126,"first updated");
 replace into integrate_test.t2 values (63,default);
+replace /*Column count doesn't match value count*/ into integrate_test.t2 values (63,default, "column out");
 select * from integrate_test.t2 order by integrate_test.t2.a;
 drop table integrate_test.t2;
 
@@ -72,6 +78,7 @@ insert into integrate_test.t_list values (1,2), (3,5), (2,4);
 insert /*test error: has no parition*/ into integrate_test.t_list values (10,2), (13,5);
 select * from integrate_test.t_list order by integrate_test.t_list.c1 asc;
 replace into integrate_test.t_list values (1,4), (7,9), (2,8);
+replace /*Column count doesn't match value count*/ into integrate_test.t_list values (1,4,8), (7,9), (2,8,0);
 select * from integrate_test.t_list order by integrate_test.t_list.c1 asc;
 drop table integrate_test.t_list;
 

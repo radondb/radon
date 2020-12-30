@@ -2,6 +2,8 @@ create database if not exists integrate_test DEFAULT CHARSET=utf8;
 drop table if exists integrate_test.t1,integrate_test.t2;
 create /*test partition hash, Test of refering to old values*/ table integrate_test.t1 (a int not null key);
 insert into integrate_test.t1 values (1), (6);
+insert /*test column count doesn't match value count*/ into integrate_test.t1 values (2,2), (3,3);
+insert /*test column count doesn't match value count*/ into integrate_test.t1(a) values (2,2), (3,3);
 select * from integrate_test.t1 order by integrate_test.t1.a asc;
 drop table integrate_test.t1;
 
@@ -11,6 +13,7 @@ insert into integrate_test.t2 values (0,"mysql ab");
 insert into integrate_test.t2 values (0,"mysql a");
 insert into integrate_test.t2 values (0,"r1manic");
 insert into integrate_test.t2 values (0,"r1man");
+insert /*Column count doesn't match value count*/ into integrate_test.t2 values (0,"r1mannn", "error");
 select * from integrate_test.t2 order by integrate_test.t2.id asc;
 drop table integrate_test.t2;
 
@@ -29,6 +32,7 @@ drop table integrate_test.t1;
 create /*Test of behaviour with INSERT VALUES (NULL)*/ table integrate_test.t2 (id int NOT NULL DEFAULT 8, a int key);
 insert /*test error: id cannot be null*/ into integrate_test.t2 values(NULL, 1);
 insert ignore into integrate_test.t2 values (1, 2), (NULL, 3), (2, 4);
+insert /*Column count doesn't match value count*/ ignore into integrate_test.t2(id, a) values (4, 8, 8), (2, 4);
 select * from integrate_test.t2 order by integrate_test.t2.a asc;
 drop table integrate_test.t2;
 
@@ -54,6 +58,7 @@ insert into integrate_test.t1 values (1);
 insert into integrate_test.t1 values (a+2);
 insert into integrate_test.t1 values (a+3),(a+4);
 insert into integrate_test.t1 values (5),(a+6);
+insert /*Column count doesn't match value count*/ into integrate_test.t1 values (6,"error"),(a+6);
 select * from integrate_test.t1 order by integrate_test.t1.a asc;
 drop table integrate_test.t1;
 
@@ -99,6 +104,7 @@ insert into integrate_test.t1 values (1);
 insert into integrate_test.t1 values (a+2);
 insert into integrate_test.t1 values (a+3),(a+4);
 insert into integrate_test.t1 values (5),(a+6);
+insert /*Column count doesn't match value count*/ into integrate_test.t1 values (6, 7),(a+6);
 select * from integrate_test.t1 order by integrate_test.t1.a asc;
 drop table integrate_test.t1;
 
@@ -108,6 +114,7 @@ insert into integrate_test.t2 values (0,"mysql ab");
 insert into integrate_test.t2 values (0,"mysql a");
 insert into integrate_test.t2 values (0,"r1manic");
 insert into integrate_test.t2 values (0,"r1man");
+insert /*Column count doesn't match value count*/ into integrate_test.t2 values (0,"r1mannn", "error");
 drop table integrate_test.t2;
 
 create /*Test insert syntax*/ table integrate_test.t1 (a bigint not null auto_increment, primary key (a), t timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, c char(10) default "hello", i int) single;
@@ -125,6 +132,7 @@ drop table integrate_test.t1;
 create /*Test of behaviour with INSERT VALUES (NULL)*/ table integrate_test.t2 (id int NOT NULL DEFAULT 8, a int key) single;
 insert into integrate_test.t2 values(NULL, 1);
 insert ignore into integrate_test.t2 values (1, 2), (NULL, 3), (2, 4);
+insert /*Column count doesn't match value count*/ ignore into integrate_test.t2 values (3, 8, 1), (NULL, 6, 9), (2, 7, 0);
 select * from integrate_test.t2 order by integrate_test.t2.id asc;
 drop table integrate_test.t2;
 
