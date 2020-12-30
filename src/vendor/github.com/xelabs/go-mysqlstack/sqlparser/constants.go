@@ -108,10 +108,6 @@ const (
 	IgnoreStr = "ignore "
 	ForceStr  = "force "
 
-	// Where.Type
-	WhereStr  = "where"
-	HavingStr = "having"
-
 	// ComparisonExpr.Operator
 	EqualStr             = "="
 	LessThanStr          = "<"
@@ -279,4 +275,41 @@ var CheckOption2Str = map[CheckOptionEnum]string{
 	CheckOptionMedium:     "medium",
 	CheckOptionExtended:   "extended",
 	CheckOptionChanged:    "changed",
+}
+
+// WhereType is an enum for Where.Type
+type WhereType int8
+
+// Constants for Enum Type - WhereType
+const (
+	NoWhereType WhereType = iota
+	WhereClause
+	HavingClause
+)
+
+// WhereType2Str will be used to format the statements.
+var WhereType2Str = map[WhereType]string{
+	NoWhereType:  "Unknown where type",
+	WhereClause:  "where",
+	HavingClause: "having",
+}
+
+// DeleteOptionsEnum is an enum for delete options
+// See https://dev.mysql.com/doc/refman/8.0/en/delete.html
+type DeleteOptionEnum int
+
+// DeleteOptions const values.
+const (
+	NoDeleteOption DeleteOptionEnum = iota
+	LowPriorityOption
+	QuickOption
+	IgnoreOption
+)
+
+// DeleteOptions2Str will be used to format the statements.
+var DeleteOptionStr = map[DeleteOptionEnum]string{
+	NoDeleteOption:    "Unknown delete option",
+	LowPriorityOption: "low_priority",
+	QuickOption:       "quick",
+	IgnoreOption:      "ignore",
 }

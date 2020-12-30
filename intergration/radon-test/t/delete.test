@@ -1,0 +1,82 @@
+create database if not exists integrate_test DEFAULT CHARSET=utf8;
+drop table if exists integrate_test.t1, integrate_test.t2;
+
+CREATE /*test hash*/ TABLE integrate_test.t1 (a tinyint(3) key, b tinyint(5));
+INSERT INTO integrate_test.t1 VALUES (1,1);
+INSERT LOW_PRIORITY INTO integrate_test.t1 VALUES (2,2);
+INSERT INTO integrate_test.t1 VALUES (3,3);
+DELETE from integrate_test.t1 where a=1 limit 1;
+DELETE LOW_PRIORITY from integrate_test.t1 where a=2;
+select * from integrate_test.t1;
+INSERT INTO integrate_test.t1 VALUES (1,1);
+DELETE quick from integrate_test.t1;
+select * from integrate_test.t1;
+drop table integrate_test.t1;
+
+create table integrate_test.t2 (
+        a bigint not null,
+        b bigint not null default 0,
+        c bigint not null default 0,
+        d bigint not null default 0,
+        e bigint not null default 0,
+        f bigint not null default 0,
+        g bigint not null default 0,
+        h bigint not null default 0,
+        i bigint not null default 0,
+        j bigint not null default 0,
+        primary key (a,b,c,d,e,f,g,h,i,j));
+insert into integrate_test.t2 (a) values (2),(4),(6),(8),(10),(12),(14),(16),(18),(20),(22),(24),(26),(23);
+delete from integrate_test.t2 where a=26;
+select * from integrate_test.t2 order by a;
+drop table integrate_test.t2;
+create table integrate_test.t1 (
+        a bigint not null,
+        b bigint not null default 0,
+        c bigint not null default 0,
+        d bigint not null default 0,
+        e bigint not null default 0,
+        f bigint not null default 0,
+        g bigint not null default 0,
+        h bigint not null default 0,
+        i bigint not null default 0,
+        j bigint not null default 0,
+        primary key (a,b,c,d,e,f,g,h,i,j));
+insert into integrate_test.t1 (a) values (2),(4),(6),(8),(10),(12),(14),(16),(18),(20),(22),(24),(26),(23),(27);
+delete from integrate_test.t1 where a=27;
+select * from integrate_test.t1 order by a;
+drop table integrate_test.t1;
+
+CREATE /*test error, column not exist*/ TABLE integrate_test.t1 (
+  `i` int(10) NOT NULL default '0',
+  `i2` int(10) NOT NULL default '0',
+  PRIMARY KEY  (`i`)
+);
+DELETE FROM integrate_test.t1 WHERE post='1';
+drop table integrate_test.t1;
+
+create /*test global*/ table integrate_test.t2 (a bigint not null auto_increment primary key, b char(32)) global;
+insert into integrate_test.t2 (a,b) values (1,'apple'), (2,'apple');
+select * from integrate_test.t2;
+delete /*test unsupport, currently not support delete multitables*/ integrate_test.t2 from integrate_test.t2, integrate_test.t2 as t1 where integrate_test.t2.b = integrate_test.t1.b and integrate_test.t2.a > integrate_test.t1.a;
+delete /*test unsupport, currently not support delete with partition*/ from integrate_test.t2 partition (p0) where a = 1;
+DELETE /*test unsupport, currently not support delete with subquery*/ FROM integrate_test.t2 ORDER BY (SELECT x);
+drop table integrate_test.t2;
+
+CREATE TABLE integrate_test.t1(a INTEGER PRIMARY KEY) single;
+INSERT INTO integrate_test.t1 VALUES(10),(20);
+CREATE TABLE integrate_test.t2(b INTEGER key);
+INSERT INTO integrate_test.t2 VALUES(10),(20);
+DELETE /*test unsupport with join, not support delete with multitables*/ integrate_test.t1 FROM integrate_test.t1 JOIN integrate_test.t2 WHERE integrate_test.t1.a = 10;
+DELETE /*test parse error*/ FROM integrate_test.t1 alias USING integrate_test.t1, integrate_test.t2 alias WHERE integrate_test.t1.a = alias.a;
+DELETE /*test parse error*/ FROM integrate_test.t1 alias USING integrate_test.t1, integrate_test.t1 alias WHERE integrate_test.t1.a = alias.a;
+DELETE /*test parse error*/ FROM integrate_test.t1 alias USING integrate_test.t1 alias WHERE a = 2;
+drop table integrate_test.t1, integrate_test.t2;
+
+CREATE /*test list*/ TABLE integrate_test.t1 ( a int PRIMARY KEY ) ENGINE=InnoDB DEFAULT CHARSET=utf8 partition by list(a) (partition backend1 values in (0,1,3), partition backend2 values in (2,5,8));
+DELETE FROM integrate_test.t1 WHERE a > 0 ORDER BY a;
+INSERT INTO integrate_test.t1 VALUES (0),(1),(2);
+DELETE FROM integrate_test.t1 WHERE a > 0 ORDER BY a LIMIT 1;
+SELECT * FROM integrate_test.t1;
+DROP TABLE integrate_test.t1;
+
+drop database integrate_test;

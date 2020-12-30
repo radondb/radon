@@ -178,7 +178,7 @@ func TestSQLDelete(t *testing.T) {
 		tree := ast.(*sqlparser.Delete)
 
 		// table
-		log.Debug("table:%+v", tree.Table)
+		log.Debug("table:%+v", tree.TableRefs[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName))
 
 		// where
 		filters := splitAndExpression(nil, tree.Where.Expr)

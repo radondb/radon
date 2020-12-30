@@ -101,7 +101,7 @@ func (p *UpdatePlan) Build() error {
 	}
 
 	// Get the routing segments info.
-	segments, err := builder.GetDMLRouting(database, table, shardkey, node.Where, p.router)
+	segments, err := builder.LookupFromWhere(database, table, shardkey, node.Where, p.router)
 	if err != nil {
 		return err
 	}

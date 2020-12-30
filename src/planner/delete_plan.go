@@ -65,12 +65,17 @@ func NewDeletePlan(log *xlog.Log, database string, query string, node *sqlparser
 // analyze used to analyze the 'delete' is at the support level.
 func (p *DeletePlan) analyze() error {
 	node := p.node
-	// analyze subquery.
+	// Currently we both support parse delete with single or multi tables, but only support build plans for single table.
+	if !node.IsSingleTable {
+		return errors.New("unsupported: currently.not.support.multitables.in.delete")
+	}
+	// Currently not support deal with partitions.
+	if node.Partitions != nil {
+		return errors.New("unsupported: currently.not.support.partitions.in.delete")
+	}
+	// Not support subquery.
 	if hasSubquery(node) {
 		return errors.New("unsupported: subqueries.in.delete")
-	}
-	if node.Where == nil {
-		return errors.New("unsupported: missing.where.clause.in.DML")
 	}
 	return nil
 }
@@ -81,32 +86,45 @@ func (p *DeletePlan) Build() error {
 		return err
 	}
 
-	node := p.node
-	// Database.
-	database := p.database
-	if !node.Table.Qualifier.IsEmpty() {
-		database = node.Table.Qualifier.String()
-	}
-	table := node.Table.Name.String()
-
-	// Sharding key.
-	shardkey, err := p.router.ShardKey(database, table)
-	if err != nil {
-		return err
+	newNode := *p.node
+	// For single table, the len(TableRefs)=1 and the type of TableExpr must be AliasedTableExpr.
+	newAliseExpr := newNode.TableRefs[0].(*sqlparser.AliasedTableExpr)
+	tableID := newAliseExpr.Expr.(sqlparser.TableName).Name
+	databaseID := newAliseExpr.Expr.(sqlparser.TableName).Qualifier
+	if databaseID.IsEmpty() {
+		databaseID = sqlparser.NewTableIdent(p.database)
+		// Construction a new sqlparser.SimpleTableExpr
+		newAliseExpr.Expr = sqlparser.TableName{Name: tableID, Qualifier: databaseID}
 	}
 
-	// Get the routing segments info.
-	segments, err := builder.GetDMLRouting(database, table, shardkey, node.Where, p.router)
-	if err != nil {
-		return err
+	var segments []router.Segment
+	var err error
+	if newNode.Where == nil {
+		// delete all datas, send sql to different backends, except for single table which has only one backend.
+		segments, err = p.router.Lookup(databaseID.String(), tableID.String(), nil, nil)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Sharding key.
+		shardkey, err := p.router.ShardKey(databaseID.String(), tableID.String())
+		if err != nil {
+			return err
+		}
+
+		// Get the routing segments info.
+		segments, err = builder.LookupFromWhere(databaseID.String(), tableID.String(), shardkey, newNode.Where, p.router)
+		if err != nil {
+			return err
+		}
 	}
 
-	// Rewritten the query.
+	// Rewritten the newNode to produce a new query.
 	for _, segment := range segments {
-		buf := sqlparser.NewTrackedBuffer(nil)
-		buf.Myprintf("delete %vfrom %s.%s%v%v%v", node.Comments, database, segment.Table, node.Where, node.OrderBy, node.Limit)
+		tableID = sqlparser.NewTableIdent(segment.Table)
+		newAliseExpr.Expr = sqlparser.TableName{Name: tableID, Qualifier: databaseID}
 		tuple := xcontext.QueryTuple{
-			Query:   buf.String(),
+			Query:   sqlparser.String(&newNode),
 			Backend: segment.Backend,
 			Range:   segment.Range.String(),
 		}

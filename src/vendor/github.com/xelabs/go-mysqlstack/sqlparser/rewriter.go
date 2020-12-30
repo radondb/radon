@@ -220,8 +220,16 @@ func replaceDeleteOrderBy(newNode, parent SQLNode) {
 	parent.(*Delete).OrderBy = newNode.(OrderBy)
 }
 
-func replaceDeleteTable(newNode, parent SQLNode) {
-	parent.(*Delete).Table = newNode.(TableName)
+func replaceDeletePartitions(newNode, parent SQLNode) {
+	parent.(*Delete).Partitions = newNode.(Partitions)
+}
+
+func replaceDeleteTableList(newNode, parent SQLNode) {
+	parent.(*Delete).TableList = newNode.(TableNames)
+}
+
+func replaceDeleteTableRefs(newNode, parent SQLNode) {
+	parent.(*Delete).TableRefs = newNode.(TableExprs)
 }
 
 func replaceDeleteWhere(newNode, parent SQLNode) {
@@ -842,8 +850,12 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 		a.apply(node, n.Comments, replaceDeleteComments)
 		a.apply(node, n.Limit, replaceDeleteLimit)
 		a.apply(node, n.OrderBy, replaceDeleteOrderBy)
-		a.apply(node, n.Table, replaceDeleteTable)
+		a.apply(node, n.Partitions, replaceDeletePartitions)
+		a.apply(node, n.TableList, replaceDeleteTableList)
+		a.apply(node, n.TableRefs, replaceDeleteTableRefs)
 		a.apply(node, n.Where, replaceDeleteWhere)
+
+	case *DeleteOptionList:
 
 	case *Do:
 		a.apply(node, n.Exprs, replaceDoExprs)

@@ -81,7 +81,7 @@ func (node *Select) AddWhere(expr Expr) {
 	}
 	if node.Where == nil {
 		node.Where = &Where{
-			Type: WhereStr,
+			Type: WhereClause,
 			Expr: expr,
 		}
 		return
@@ -103,7 +103,7 @@ func (node *Select) AddHaving(expr Expr) {
 	}
 	if node.Having == nil {
 		node.Having = &Where{
-			Type: HavingStr,
+			Type: HavingClause,
 			Expr: expr,
 		}
 		return
@@ -704,7 +704,7 @@ func (node TableName) IsEmpty() bool {
 
 // NewWhere creates a WHERE or HAVING clause out
 // of a Expr. If the expression is nil, it returns nil.
-func NewWhere(typ string, expr Expr) *Where {
+func NewWhere(typ WhereType, expr Expr) *Where {
 	if expr == nil {
 		return nil
 	}

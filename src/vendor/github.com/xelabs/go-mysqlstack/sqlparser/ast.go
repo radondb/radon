@@ -106,13 +106,24 @@ type (
 		Limit    *Limit
 	}
 
+	// DeleteOptions is used by delete_stmt
+	DeleteOptionList []DeleteOptionEnum
+
 	// Delete represents a DELETE statement.
 	Delete struct {
-		Comments Comments
-		Table    TableName
-		Where    *Where
-		OrderBy  OrderBy
-		Limit    *Limit
+		Comments         Comments
+		DeleteOptionList DeleteOptionList
+		// TableRefs is used in both single table and multiple table delete statement.
+		// For single table, the len(TableRefs)=1 and the type of TableExpr is AliasedTableExpr.
+		IsSingleTable bool
+		TableRefs     TableExprs
+		Partitions    Partitions
+		// TableList is only used in multiple table delete statement.
+		IsTableBeforeFrom bool
+		TableList         TableNames
+		Where             *Where
+		OrderBy           OrderBy
+		Limit             *Limit
 	}
 
 	// Do represents a DO statement.
@@ -508,7 +519,7 @@ type IndexHints struct {
 
 // Where represents a WHERE or HAVING clause.
 type Where struct {
-	Type string
+	Type WhereType
 	Expr Expr
 }
 
@@ -882,7 +893,14 @@ func (node *Update) Format(buf *TrackedBuffer) {
 
 // Format formats the node.
 func (node *Delete) Format(buf *TrackedBuffer) {
-	buf.Myprintf("delete %vfrom %v%v%v%v", node.Comments, node.Table, node.Where, node.OrderBy, node.Limit)
+	if node.IsSingleTable {
+		// Single table
+		buf.Myprintf("delete %v%vfrom %v%v%v%v%v", node.Comments, &(node.DeleteOptionList), node.TableRefs, node.Partitions, node.Where, node.OrderBy, node.Limit)
+	} else {
+		// delete t1,t2... from table_references ...
+		// delete ... from t1,t2 ... using ... ---> delete t1,t2... from table_references ...
+		buf.Myprintf("delete %v%v%v from %v%v%v%v", node.Comments, &(node.DeleteOptionList), node.TableList, node.TableRefs, node.Where, node.OrderBy, node.Limit)
+	}
 }
 
 // Format formats the node.
@@ -1389,7 +1407,7 @@ func (node *Where) Format(buf *TrackedBuffer) {
 	if node == nil || node.Expr == nil {
 		return
 	}
-	buf.Myprintf(" %s %v", node.Type, node.Expr)
+	buf.Myprintf(" %s %v", WhereType2Str[node.Type], node.Expr)
 }
 
 // Format formats the node.
@@ -2061,4 +2079,14 @@ func (node *Check) Format(buf *TrackedBuffer) {
 		return
 	}
 	buf.Myprintf("check table %v%v", node.Tables, &(node.CheckOptions))
+}
+
+// Format formats the node.
+func (node *DeleteOptionList) Format(buf *TrackedBuffer) {
+	if node == nil || len(*node) == 0 {
+		return
+	}
+	for _, opt := range *node {
+		buf.Myprintf("%s ", DeleteOptionStr[opt])
+	}
 }
