@@ -33,7 +33,7 @@ func (spanner *Spanner) handleInsert(session *driver.Session, query string, node
 	if err != nil {
 		return nil, err
 	}
-	// If single or globle table, just send sql to backends directly.
+	// If single or global table, just send sql to backends directly.
 	if methodType == router.MethodTypeHash || methodType == router.MethodTypeList {
 		// Pre-filled columns after table for insert if node.Columns is nil.
 		// For statement "insert into t ... set ...", the columns will never be nil.
@@ -57,7 +57,7 @@ func (spanner *Spanner) handleInsert(session *driver.Session, query string, node
 
 		// AutoIncrement plugin process.
 		// 1. We should not process if table type is single or global
-		// 2. For single or globle table, fix bug for add additional auto_increment column when do
+		// 2. For single or global table, fix bug for add additional auto_increment column when do
 		// "insert into t values(1,2,3)", after process will be "insert into t(a) values(1,2,3)", this is not correct.
 		if err := autoincPlug.Process(database, node.(*sqlparser.Insert)); err != nil {
 			return nil, err
