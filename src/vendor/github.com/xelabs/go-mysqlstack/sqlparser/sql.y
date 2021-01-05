@@ -1232,25 +1232,6 @@ replace_statement:
 		$$ = &Insert{Action: ReplaceStr, Comments: Comments($2), LockOption: $3, Ignore: $4, Table: $5, Partitions: $6, Columns: cols, Rows: Values{vals}}
 	}
 
-/*
-priority_opt:
-        {
-                $$ = NoPriority
-        }
-|       LOW_PRIORITY
-        {
-                $$ = LowPriority
-        }
-|       HIGH_PRIORITY
-        {
-                $$ = HighPriority
-        }
-|       DELAYED
-        {
-                $$ = DelayedPriority
-        }
-	*/
-
 insert_lock_opt:
 	{
 		$$ = ""

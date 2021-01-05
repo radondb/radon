@@ -704,7 +704,7 @@ func (node TableName) IsEmpty() bool {
 
 // NewWhere creates a WHERE or HAVING clause out
 // of a Expr. If the expression is nil, it returns nil.
-func NewWhere(typ WhereType, expr Expr) *Where {
+func NewWhere(typ WhereTypeEnum, expr Expr) *Where {
 	if expr == nil {
 		return nil
 	}

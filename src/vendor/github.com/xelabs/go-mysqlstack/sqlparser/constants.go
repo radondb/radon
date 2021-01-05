@@ -278,17 +278,17 @@ var CheckOption2Str = map[CheckOptionEnum]string{
 }
 
 // WhereType is an enum for Where.Type
-type WhereType int8
+type WhereTypeEnum int8
 
 // Constants for Enum Type - WhereType
 const (
-	NoWhereType WhereType = iota
+	NoWhereType WhereTypeEnum = iota
 	WhereClause
 	HavingClause
 )
 
 // WhereType2Str will be used to format the statements.
-var WhereType2Str = map[WhereType]string{
+var WhereType2Str = map[WhereTypeEnum]string{
 	NoWhereType:  "Unknown where type",
 	WhereClause:  "where",
 	HavingClause: "having",
@@ -307,7 +307,7 @@ const (
 )
 
 // DeleteOptions2Str will be used to format the statements.
-var DeleteOptionStr = map[DeleteOptionEnum]string{
+var DeleteOptions2Str = map[DeleteOptionEnum]string{
 	NoDeleteOption:    "Unknown delete option",
 	LowPriorityOption: "low_priority",
 	QuickOption:       "quick",

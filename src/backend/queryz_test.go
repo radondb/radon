@@ -65,5 +65,9 @@ func TestQueryz(t *testing.T) {
 		rows := qz.GetQueryzRows()
 		assert.Equal(t, querys[0], rows[0].Query)
 		assert.Equal(t, querys[1], rows[1].Query)
+		// Test byStartTime.Swap() funciton to improve test coverage.
+		rows.Swap(0, 1)
+		assert.Equal(t, querys[0], rows[1].Query)
+		assert.Equal(t, querys[1], rows[0].Query)
 	}
 }

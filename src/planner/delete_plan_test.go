@@ -261,7 +261,8 @@ func TestDeleteUnsupportedPlan(t *testing.T) {
 }
 
 func TestDeleteErrorPlan(t *testing.T) {
-	query := "delete from A where id=1"
+	query1 := "delete from A where id=1"
+	query2 := "delete from B"
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
@@ -274,12 +275,29 @@ func TestDeleteErrorPlan(t *testing.T) {
 	err = route.AddForTest(database, router.MockTableMConfig())
 	assert.Nil(t, err)
 	databaseNull := ""
-	node, err := sqlparser.Parse(query)
-	assert.Nil(t, err)
-	plan := NewDeletePlan(log, databaseNull, query, node.(*sqlparser.Delete), route)
 
 	// plan build
 	{
+		// test delete with no database.
+		node, err := sqlparser.Parse(query1)
+		assert.Nil(t, err)
+		plan := NewDeletePlan(log, databaseNull, query1, node.(*sqlparser.Delete), route)
+		planTree := NewPlanTree()
+		{
+			err := planTree.Add(plan)
+			assert.Nil(t, err)
+		}
+
+		{
+			err := planTree.Build()
+			assert.NotNil(t, err)
+		}
+	}
+	{
+		// test route table "B" not exist
+		node, err := sqlparser.Parse(query2)
+		assert.Nil(t, err)
+		plan := NewDeletePlan(log, database, query2, node.(*sqlparser.Delete), route)
 		planTree := NewPlanTree()
 		{
 			err := planTree.Add(plan)

@@ -519,7 +519,7 @@ type IndexHints struct {
 
 // Where represents a WHERE or HAVING clause.
 type Where struct {
-	Type WhereType
+	Type WhereTypeEnum
 	Expr Expr
 }
 
@@ -2087,6 +2087,6 @@ func (node *DeleteOptionList) Format(buf *TrackedBuffer) {
 		return
 	}
 	for _, opt := range *node {
-		buf.Myprintf("%s ", DeleteOptionStr[opt])
+		buf.Myprintf("%s ", DeleteOptions2Str[opt])
 	}
 }
