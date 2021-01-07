@@ -14,6 +14,7 @@ import (
 	"router"
 	"xcontext"
 
+	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
 	"github.com/xelabs/go-mysqlstack/xlog"
@@ -64,43 +65,69 @@ func NewOthersPlan(log *xlog.Log, database string, query string, node sqlparser.
 
 // Build used to build distributed querys.
 func (p *OthersPlan) Build() error {
-	node := p.node
-	router := p.router
-
-	switch node := node.(type) {
+	switch node := p.node.(type) {
 	// Checksum Table.
 	case *sqlparser.Checksum:
-		database := p.database
-		if !node.Table.Qualifier.IsEmpty() {
-			database = node.Table.Qualifier.String()
+		newNode := *node
+		// We`ll rewrite ast on newNode and the table`s format should be like "db.t1", so the "Qualifier" in ast should not be empty.
+		if newNode.Tables[0].Qualifier.IsEmpty() {
+			newNode.Tables[0].Qualifier = sqlparser.NewTableIdent(p.database)
 		}
-		table := node.Table.Name.String()
-		route, err := router.TableConfig(database, table)
+		database := newNode.Tables[0].Qualifier.String()
+		table := newNode.Tables[0].Name.String()
+		route, err := p.router.TableConfig(database, table)
 		if err != nil {
 			return err
 		}
 
-		// Global table or Single table.
-		if route.ShardKey == "" {
+		methodType, err := p.router.PartitionType(database, table)
+		if err != nil {
+			return err
+		}
+		switch methodType {
+		case router.MethodTypeGlobal, router.MethodTypeSingle:
 			segment := route.Partitions[0]
 			tuple := xcontext.QueryTuple{
-				Query:   p.RawQuery,
+				Query:   sqlparser.String(&newNode),
 				Backend: segment.Backend,
 				Range:   segment.Segment,
 			}
 			p.Querys = append(p.Querys, tuple)
-		} else {
+		case router.MethodTypeHash, router.MethodTypeList:
 			segments := route.Partitions
 			for _, segment := range segments {
-				buf := sqlparser.NewTrackedBuffer(nil)
-				buf.Myprintf("checksum table %s.%s", database, segment.Table)
+				newNode.Tables[0].Name = sqlparser.NewTableIdent(segment.Table)
 				tuple := xcontext.QueryTuple{
-					Query:   buf.String(),
+					Query:   sqlparser.String(&newNode),
 					Backend: segment.Backend,
 					Range:   segment.Segment,
 				}
 				p.Querys = append(p.Querys, tuple)
 			}
+		default:
+			return errors.Errorf("unsupported: radon.not.support.method.type[%s].", methodType)
+		}
+	case *sqlparser.Optimize:
+		newNode := *node
+		// We`ll rewrite ast on newNode and the table`s format should be like "db.t1", so the "Qualifier" in ast should not be empty.
+		if newNode.Tables[0].Qualifier.IsEmpty() {
+			newNode.Tables[0].Qualifier = sqlparser.NewTableIdent(p.database)
+		}
+		database := newNode.Tables[0].Qualifier.String()
+		table := newNode.Tables[0].Name.String()
+
+		route, err := p.router.TableConfig(database, table)
+		if err != nil {
+			return err
+		}
+		for _, segment := range route.Partitions {
+			newNode.Tables[0].Name = sqlparser.NewTableIdent(segment.Table)
+			tuple := xcontext.QueryTuple{
+				Query:   sqlparser.String(&newNode),
+				Backend: segment.Backend,
+				Range:   segment.Segment,
+			}
+			p.Querys = append(p.Querys, tuple)
 		}
 	}
 	return nil

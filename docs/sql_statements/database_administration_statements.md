@@ -2,8 +2,6 @@ Table of Contents
 =================
 
    * [Database Administration Statements](#database-administration-statements)
-      * [CHECKSUM](#checksum)
-         * [CHECKSUM TABLE](#checksum-table)
       * [SET](#set)
       * [SHOW](#show)
          * [SHOW CHARSET](#show-charset)
@@ -17,35 +15,13 @@ Table of Contents
          * [SHOW INDEX](#show-index)
          * [SHOW PROCESSLIST](#show-processlist)
          * [SHOW VARIABLES](#show-variables)
+      * [Table Maintenance Statements](#table-maintenance-statements)
+         * [CHECKSUM TABLE Statements](#checksum-table-statements)
+         * [OPTIMIZE TABLE Statements](#optimize-table-statements)
       * [Other Administrative Statements](#other-administrative-statements)
          * [KILL Statement](#kill-statement)
 
 # Database Administration Statements
-
-## CHECKSUM
-
-### CHECKSUM TABLE
-
-`Syntax`
-```
-CHECKSUM TABLE  [database_name.]table_name
-```
-
-`Instructions`
-* Reports a checksum for the contents of a table
-* RadonDB gives same result as MySQL
-
-`Example: `
-
-```
-mysql> checksum table test.t1;
-+----------+------------+
-| Table    | Checksum   |
-+----------+------------+
-| test.t1  | 2464930879 |
-+----------+------------+
-1 row in set (0.00 sec)
-```
 
 ## SET
 
@@ -345,6 +321,159 @@ SHOW VARIABLES
 `Instructions`
 * For compatibility JDBC/mydumper
 * The SHOW VARIABLES command is sent to the backend partition MySQL (random partition) to get and return
+
+## Table Maintenance Statements
+
+### CHECKSUM TABLE Statements
+
+`Syntax`
+```
+CHECKSUM {TABLE | TABLES} tbl_name [, tbl_name] ... [QUICK | EXTENDED]
+```
+
+`Instructions`
+* Reports a checksum for the contents of a table
+* RadonDB gives same result as MySQL
+
+`Example: `
+
+```
+mysql> checksum tables t1, t extended;
++---------+------------+
+| Table   | Checksum   |
++---------+------------+
+| test.t1 | 1910461541 |
+| test.t  | 2643913285 |
++---------+------------+
+2 rows in set (0.00 sec)
+
+mysql> checksum tables t1;
++---------+------------+
+| Table   | Checksum   |
++---------+------------+
+| test.t1 | 1910461541 |
++---------+------------+
+1 row in set (0.00 sec)
+
+mysql> checksum /*db not exsit*/ tables t1, db.t;
++---------+------------+
+| Table   | Checksum   |
++---------+------------+
+| test.t1 | 1910461541 |
+| db.t    |       NULL |
++---------+------------+
+2 rows in set (0.00 sec)
+
+mysql> create table t2(a int key, b int);
+insertQuery OK, 0 rows affected (1.20 sec)
+
+mysql> insert into t2(a,b) values (1,2),(3,4);
+Query OK, 2 rows affected (0.01 sec)
+
+mysql> checksum tables t,t1,t2 quick;
++---------+------------+
+| Table   | Checksum   |
++---------+------------+
+| test.t  | NULL       |
+| test.t1 | NULL       |
+| test.t2 | NULL       |
++---------+------------+
+3 rows in set (0.03 sec)
+```
+
+### OPTIMIZE TABLE Statements
+`Syntax`
+```
+OPTIMIZE [NO_WRITE_TO_BINLOG | LOCAL]
+    {TABLE | TABLES} tbl_name [, tbl_name] ...
+```
+
+`Instructions`
+* Reports a checksum for the contents of a table
+* RadonDB gives same result as MySQL
+
+`Example: `
+1. optimize global table
+```
+mysql> create table t_global(a int, b char) global;
+Query OK, 0 rows affected (0.06 sec)
+
+mysql> optimize local tables t_global;
++---------------+----------+----------+-------------------------------------------------------------------+
+| Table         | Op       | Msg_type | Msg_text                                                          |
++---------------+----------+----------+-------------------------------------------------------------------+
+| test.t_global | optimize | status   | OK                                                                |
+| test.t_global | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
+| test.t_global | optimize | status   | OK                                                                |
+| test.t_global | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
++---------------+----------+----------+-------------------------------------------------------------------+
+4 rows in set (0.04 sec)
+```
+
+2. optimize single table
+```
+mysql> create table t_single(a int, b char) single;
+Query OK, 0 rows affected (0.05 sec)
+
+mysql> optimize local tables t_single;
++---------------+----------+----------+-------------------------------------------------------------------+
+| Table         | Op       | Msg_type | Msg_text                                                          |
++---------------+----------+----------+-------------------------------------------------------------------+
+| test.t_single | optimize | status   | OK                                                                |
+| test.t_single | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
++---------------+----------+----------+-------------------------------------------------------------------+
+2 rows in set (0.04 sec)
+```
+
+3. optimize partition table
+```
+mysql> create table t_part(a int key, b char);
+Query OK, 0 rows affected (0.05 sec)
+
+mysql> optimize local tables t_part;
++------------------+----------+----------+-------------------------------------------------------------------+
+| Table            | Op       | Msg_type | Msg_text                                                          |
++------------------+----------+----------+-------------------------------------------------------------------+
+| test.t_part_0000 | optimize | status   | OK                                                                |
+| test.t_part_0000 | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
+| test.t_part_0001 | optimize | status   | OK                                                                |
+| test.t_part_0001 | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
+| test.t_part_0002 | optimize | status   | OK                                                                |
+....
+....
+| test.t_part_0062 | optimize | status   | OK                                                                |
+| test.t_part_0062 | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
+| test.t_part_0063 | optimize | status   | OK                                                                |
+| test.t_part_0063 | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
++------------------+----------+----------+-------------------------------------------------------------------+
+128 rows in set (1.65 sec)
+```
+
+4. optimize list table
+```
+mysql> create /*test partition list*/ table t_list(c1 int, c2 int) ENGINE=InnoDB DEFAULT CHARSET=utf8 partition by list(c1) (partition backend1 values in (1,3,7), partition backend2 values in (2,5,8));
+Query OK, 0 rows affected (0.14 sec)
+
+mysql> optimize table t_list;
++------------------+----------+----------+-------------------------------------------------------------------+
+| Table            | Op       | Msg_type | Msg_text                                                          |
++------------------+----------+----------+-------------------------------------------------------------------+
+| test.t_list_0000 | optimize | status   | OK                                                                |
+| test.t_list_0000 | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
+| test.t_list_0001 | optimize | status   | OK                                                                |
+| test.t_list_0001 | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
+| test.t_list_0002 | optimize | status   | OK                                                                |
+| test.t_list_0002 | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
+| test.t_list_0003 | optimize | status   | OK                                                                |
+| test.t_list_0003 | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
+| test.t_list_0004 | optimize | status   | OK                                                                |
+| test.t_list_0004 | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
+| test.t_list_0005 | optimize | status   | OK                                                                |
+| test.t_list_0005 | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
++------------------+----------+----------+-------------------------------------------------------------------+
+12 rows in set (0.34 sec)
+```
+
 
 ## Other Administrative Statements
 

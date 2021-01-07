@@ -25,13 +25,16 @@ func TestChecksumTable(t *testing.T) {
 		output string
 	}{
 		{
-			input:  "checksum table test.t1",
-			output: "checksum table test.t1",
+			input:  "checksum table test.t1 quick",
+			output: "checksum table test.t1 quick",
 		},
-
 		{
-			input:  "checksum table t1",
-			output: "checksum table t1",
+			input:  "checksum table t1, t2 EXTENDED",
+			output: "checksum table t1, t2 extended",
+		},
+		{
+			input:  "checksum tables test.t1, t2,test.x",
+			output: "checksum table test.t1, t2, test.x",
 		},
 	}
 

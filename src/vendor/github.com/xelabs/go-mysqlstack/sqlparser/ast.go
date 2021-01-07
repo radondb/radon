@@ -166,7 +166,14 @@ type (
 
 	// Checksum represents a CHECKSUM statement.
 	Checksum struct {
-		Table TableName
+		Tables         TableNames
+		ChecksumOption ChecksumOptionEnum
+	}
+
+	// Optimize represents a Optimize statement.
+	Optimize struct {
+		OptimizeOption OptimizeOptionEnum
+		Tables         TableNames
 	}
 
 	// Use represents a use statement.
@@ -180,7 +187,7 @@ type (
 	OtherRead struct{}
 
 	// OtherAdmin represents a misc statement that relies on ADMIN privileges,
-	// such as REPAIR, OPTIMIZE, or TRUNCATE statement.
+	// such as REPAIR statement.
 	// It should be used only as an indicator. It does not contain
 	// the full AST for the statement.
 	OtherAdmin struct{}
@@ -241,6 +248,7 @@ func (*Help) iStatement()        {}
 func (*Kill) iStatement()        {}
 func (*Transaction) iStatement() {}
 func (*Xa) iStatement()          {}
+func (*Optimize) iStatement()    {}
 
 func (*Select) iSelectStatement()      {}
 func (*Union) iSelectStatement()       {}
@@ -865,11 +873,6 @@ func (node *Delete) Format(buf *TrackedBuffer) {
 // Format formats the node.
 func (node *Set) Format(buf *TrackedBuffer) {
 	buf.Myprintf("set %v%v", node.Comments, node.Exprs)
-}
-
-// Format formats the node.
-func (node *Checksum) Format(buf *TrackedBuffer) {
-	buf.Myprintf("checksum table %v", node.Table)
 }
 
 // Format formats the node.
@@ -1994,4 +1997,30 @@ func (node *Transaction) Format(buf *TrackedBuffer) {
 // Format formats the node.
 func (node *Xa) Format(buf *TrackedBuffer) {
 	buf.WriteString("XA")
+}
+
+// Format formats the node.
+func (node *ChecksumOptionEnum) Format(buf *TrackedBuffer) {
+	if node == nil || *node == ChecksumOptionNone {
+		return
+	}
+	buf.Myprintf(" %s", ChecksumOption2Str[*node])
+}
+
+// Format formats the node.
+func (node *Checksum) Format(buf *TrackedBuffer) {
+	buf.Myprintf("checksum table %v%v", node.Tables, &(node.ChecksumOption))
+}
+
+// Format formats the node.
+func (node *Optimize) Format(buf *TrackedBuffer) {
+	buf.Myprintf("optimize %vtable %v", &(node.OptimizeOption), node.Tables)
+}
+
+// Format formats the node.
+func (node *OptimizeOptionEnum) Format(buf *TrackedBuffer) {
+	if node == nil || *node == OptimizeOptionNone {
+		return
+	}
+	buf.Myprintf("%s ", OptimizeOption2Str[*node])
 }

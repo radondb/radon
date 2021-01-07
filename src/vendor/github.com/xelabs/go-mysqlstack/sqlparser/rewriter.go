@@ -70,8 +70,8 @@ func (r *replaceCaseExprWhens) inc() {
 	*r++
 }
 
-func replaceChecksumTable(newNode, parent SQLNode) {
-	parent.(*Checksum).Table = newNode.(TableName)
+func replaceChecksumTables(newNode, parent SQLNode) {
+	parent.(*Checksum).Tables = newNode.(TableNames)
 }
 
 func replaceColNameName(newNode, parent SQLNode) {
@@ -379,6 +379,10 @@ func (r *replaceOnDupItems) inc() {
 
 func replaceOptValValue(newNode, parent SQLNode) {
 	parent.(*OptVal).Value = newNode.(Expr)
+}
+
+func replaceOptimizeTables(newNode, parent SQLNode) {
+	parent.(*Optimize).Tables = newNode.(TableNames)
 }
 
 func replaceOrExprLeft(newNode, parent SQLNode) {
@@ -753,7 +757,9 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 		}
 
 	case *Checksum:
-		a.apply(node, n.Table, replaceChecksumTable)
+		a.apply(node, n.Tables, replaceChecksumTables)
+
+	case *ChecksumOptionEnum:
 
 	case ColIdent:
 
@@ -926,6 +932,11 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 
 	case *OptVal:
 		a.apply(node, n.Value, replaceOptValValue)
+
+	case *Optimize:
+		a.apply(node, n.Tables, replaceOptimizeTables)
+
+	case *OptimizeOptionEnum:
 
 	case *OrExpr:
 		a.apply(node, n.Left, replaceOrExprLeft)
