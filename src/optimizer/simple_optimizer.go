@@ -70,7 +70,7 @@ func (so *SimpleOptimizer) BuildPlanTree() (*planner.PlanTree, error) {
 	case *sqlparser.Union:
 		node := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), router)
 		plans.Add(node)
-	case *sqlparser.Checksum:
+	case *sqlparser.Checksum, *sqlparser.Optimize:
 		node := planner.NewOthersPlan(log, database, query, node, router)
 		plans.Add(node)
 	default:

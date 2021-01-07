@@ -276,7 +276,7 @@ var keywords = map[string]int{
 	"nchar":               NCHAR,
 	"next":                NEXT,
 	"not":                 NOT,
-	"no_write_to_binlog":  UNUSED,
+	"no_write_to_binlog":  NO_WRITE_TO_BINLOG,
 	"null":                NULL,
 	"numeric":             NUMERIC,
 	"offset":              OFFSET,
