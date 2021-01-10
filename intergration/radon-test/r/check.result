@@ -1,0 +1,106 @@
+drop database if exists integrate_test;
+
+create database if not exists integrate_test DEFAULT CHARSET=utf8;
+
+create /*test partition hash, Test of refering to old values*/ table integrate_test.t_part (a int not null key);
+
+create /*test partition list*/ table integrate_test.t_list(c1 int, c2 int) ENGINE=InnoDB DEFAULT CHARSET=utf8 partition by list(c1) (partition backend1 values in (1,3,7), partition backend2 values in (2,5,8));
+
+create /*test partition single, Test of refering to old values*/ table integrate_test.t_single (a int not null key) single;
+
+create /*test global, Test of refering to old values*/ table integrate_test.t_global (a int not null key) global;
+
+check tables integrate_test.t_global for upgrade quick fast medium extended changed;
+Table	Op	Msg_type	Msg_text
+integrate_test.t_global	check	status	OK
+integrate_test.t_global	check	status	OK
+
+check tables integrate_test.t_global, integrate_test.t_single;
+Table	Op	Msg_type	Msg_text
+integrate_test.t_global	check	status	OK
+integrate_test.t_global	check	status	OK
+integrate_test.t_single	check	status	OK
+
+check table integrate_test.t_list;
+Table	Op	Msg_type	Msg_text
+integrate_test.t_list_0000	check	status	OK
+integrate_test.t_list_0001	check	status	OK
+integrate_test.t_list_0002	check	status	OK
+integrate_test.t_list_0003	check	status	OK
+integrate_test.t_list_0004	check	status	OK
+integrate_test.t_list_0005	check	status	OK
+
+check table integrate_test.t_part;
+Table	Op	Msg_type	Msg_text
+integrate_test.t_part_0000	check	status	OK
+integrate_test.t_part_0001	check	status	OK
+integrate_test.t_part_0002	check	status	OK
+integrate_test.t_part_0003	check	status	OK
+integrate_test.t_part_0004	check	status	OK
+integrate_test.t_part_0005	check	status	OK
+integrate_test.t_part_0006	check	status	OK
+integrate_test.t_part_0007	check	status	OK
+integrate_test.t_part_0008	check	status	OK
+integrate_test.t_part_0009	check	status	OK
+integrate_test.t_part_0010	check	status	OK
+integrate_test.t_part_0011	check	status	OK
+integrate_test.t_part_0012	check	status	OK
+integrate_test.t_part_0013	check	status	OK
+integrate_test.t_part_0014	check	status	OK
+integrate_test.t_part_0015	check	status	OK
+integrate_test.t_part_0016	check	status	OK
+integrate_test.t_part_0017	check	status	OK
+integrate_test.t_part_0018	check	status	OK
+integrate_test.t_part_0019	check	status	OK
+integrate_test.t_part_0020	check	status	OK
+integrate_test.t_part_0021	check	status	OK
+integrate_test.t_part_0022	check	status	OK
+integrate_test.t_part_0023	check	status	OK
+integrate_test.t_part_0024	check	status	OK
+integrate_test.t_part_0025	check	status	OK
+integrate_test.t_part_0026	check	status	OK
+integrate_test.t_part_0027	check	status	OK
+integrate_test.t_part_0028	check	status	OK
+integrate_test.t_part_0029	check	status	OK
+integrate_test.t_part_0030	check	status	OK
+integrate_test.t_part_0031	check	status	OK
+integrate_test.t_part_0032	check	status	OK
+integrate_test.t_part_0033	check	status	OK
+integrate_test.t_part_0034	check	status	OK
+integrate_test.t_part_0035	check	status	OK
+integrate_test.t_part_0036	check	status	OK
+integrate_test.t_part_0037	check	status	OK
+integrate_test.t_part_0038	check	status	OK
+integrate_test.t_part_0039	check	status	OK
+integrate_test.t_part_0040	check	status	OK
+integrate_test.t_part_0041	check	status	OK
+integrate_test.t_part_0042	check	status	OK
+integrate_test.t_part_0043	check	status	OK
+integrate_test.t_part_0044	check	status	OK
+integrate_test.t_part_0045	check	status	OK
+integrate_test.t_part_0046	check	status	OK
+integrate_test.t_part_0047	check	status	OK
+integrate_test.t_part_0048	check	status	OK
+integrate_test.t_part_0049	check	status	OK
+integrate_test.t_part_0050	check	status	OK
+integrate_test.t_part_0051	check	status	OK
+integrate_test.t_part_0052	check	status	OK
+integrate_test.t_part_0053	check	status	OK
+integrate_test.t_part_0054	check	status	OK
+integrate_test.t_part_0055	check	status	OK
+integrate_test.t_part_0056	check	status	OK
+integrate_test.t_part_0057	check	status	OK
+integrate_test.t_part_0058	check	status	OK
+integrate_test.t_part_0059	check	status	OK
+integrate_test.t_part_0060	check	status	OK
+integrate_test.t_part_0061	check	status	OK
+integrate_test.t_part_0062	check	status	OK
+integrate_test.t_part_0063	check	status	OK
+
+check /*test error: No Database Selected*/ table t_part;
+ERROR 1046 (3D000): No database selected
+
+check /*test error: No such table*/ table integrate_test.t_xxx, integrate_test.t_single;
+ERROR 1146 (42S02): Table 't_xxx' doesn't exist
+
+drop database integrate_test;

@@ -1,7 +1,7 @@
 /*
  * Radon
  *
- * Copyright 2018 The Radon Authors.
+ * Copyright 2020 The Radon Authors.
  * Code is licensed under the GPLv3.
  *
  */
@@ -61,5 +61,38 @@ func (spanner *Spanner) handleOptimizeTable(session *driver.Session, query strin
 			newqr.Rows[i][3], newqr.Rows[j][3] = newqr.Rows[j][3], newqr.Rows[i][3]
 		}
 	}
+	return newqr, nil
+}
+
+// handleCheckTable used to handle the 'Check TABLE ...' command.
+// mysql> check table t,t1 quick extended;
+// +---------+-------+----------+----------+
+// | Table   | Op    | Msg_type | Msg_text |
+// +---------+-------+----------+----------+
+// | test.t  | check | status   | OK       |
+// | test.t1 | check | status   | OK       |
+// +---------+-------+----------+----------+
+// 2 rows in set (0.00 sec)
+func (spanner *Spanner) handleCheckTable(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+	database := session.Schema()
+	check := node.(*sqlparser.Check)
+	newqr := &sqltypes.Result{}
+
+	for _, tbl := range check.Tables {
+		// Construct a new sql with check one table one time, we'll send single table to backends.
+		newNode := *check
+		newNode.Tables = sqlparser.TableNames{tbl}
+		qr, err := spanner.ExecuteNormal(session, database, sqlparser.String(&newNode), &newNode)
+		if err != nil {
+			return nil, err
+		}
+		newqr.AppendResult(qr)
+	}
+
+	// 1. sort by field "Table"
+	sort.Slice(newqr.Rows, func(i, j int) bool {
+		val := sqltypes.NullsafeCompare(newqr.Rows[i][0], newqr.Rows[j][0])
+		return (-1 == val)
+	})
 	return newqr, nil
 }

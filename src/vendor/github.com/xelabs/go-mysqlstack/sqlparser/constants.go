@@ -252,3 +252,31 @@ var OptimizeOption2Str = map[OptimizeOptionEnum]string{
 	OptimizeOptionNoWriteToBinlog: "no_write_to_binlog",
 	OptimizeOptionLocal:           "local",
 }
+
+// CheckOptionEnum is an enum for optimize statement.
+type CheckOptionEnum int
+
+// CheckOptionList is used by check statement.
+type CheckOptionList []CheckOptionEnum
+
+// CheckOptionEnum const values.
+const (
+	CheckOptionNone CheckOptionEnum = iota
+	CheckOptionForUpgrade
+	CheckOptionQuick
+	CheckOptionFast
+	CheckOptionMedium
+	CheckOptionExtended
+	CheckOptionChanged
+)
+
+// CheckOption2Str is a map for enum option --> string.
+var CheckOption2Str = map[CheckOptionEnum]string{
+	CheckOptionNone:       "",
+	CheckOptionForUpgrade: "for upgrade",
+	CheckOptionQuick:      "quick",
+	CheckOptionFast:       "fast",
+	CheckOptionMedium:     "medium",
+	CheckOptionExtended:   "extended",
+	CheckOptionChanged:    "changed",
+}

@@ -119,8 +119,10 @@ func forceEOF(yylex interface{}) {
 	partitionOption       PartitionOption
 	showFilter            *ShowFilter
 	explainType	      ExplainType
-	checksumOptionEnum	      ChecksumOptionEnum
-	optimizeOptionEnum            OptimizeOptionEnum
+	checksumOptionEnum    ChecksumOptionEnum
+	optimizeOptionEnum    OptimizeOptionEnum
+	checkOptionEnum       CheckOptionEnum
+	checkOptionList       CheckOptionList
 }
 
 %token LEX_ERROR
@@ -194,7 +196,13 @@ func forceEOF(yylex interface{}) {
 	SET
 	LOCK
 	FULL
+	CHANGED
+	CHECK
 	CHECKSUM
+	FAST
+	MEDIUM
+	UPGRADE
+	
 
 %token	<bytes>
 	VALUES
@@ -641,6 +649,7 @@ func forceEOF(yylex interface{}) {
 	other_statement
 	checksum_statement
 	optimize_statement
+	check_statement
 
 %type	<bytes2>
 	comment_opt
@@ -711,6 +720,12 @@ func forceEOF(yylex interface{}) {
 
 %type	<optimizeOptionEnum>
 	optimize_opt
+
+%type	<checkOptionEnum>
+	check_option
+
+%type	<checkOptionList>
+	check_option_list
 
 %type	<tableNames>
 	table_name_list
@@ -1115,6 +1130,7 @@ command:
 |	other_statement
 |	do_statement
 |	optimize_statement
+|	check_statement
 
 select_statement:
 	base_select order_by_opt limit_opt select_lock_opt
@@ -3501,6 +3517,48 @@ optimize_statement:
 		$$ = &Optimize{OptimizeOption: $2, Tables: $4}
 	}
 
+check_option:
+	FOR UPGRADE
+	{
+		$$ = CheckOptionForUpgrade
+	}
+|	QUICK
+	{
+		$$ = CheckOptionQuick
+	}
+|	FAST
+	{
+		$$ = CheckOptionFast
+	}
+|	MEDIUM
+	{
+		$$ = CheckOptionMedium
+	}
+|	EXTENDED
+	{
+		$$ = CheckOptionExtended
+	}
+|	CHANGED
+	{
+		$$ = CheckOptionChanged
+	}
+
+check_option_list:
+	{
+		$$ = []CheckOptionEnum{}
+	}
+|	check_option_list check_option
+	{
+		$$ = append($1, $2)
+	}
+
+
+check_statement:
+	CHECK table_or_tables table_name_list check_option_list
+	{
+		$$ = &Check{Tables: $3,CheckOptions: $4}
+	}
+
 other_statement:
 	REPAIR force_eof
 	{
@@ -4990,9 +5048,11 @@ reserved_keyword:
 |	BY
 |	CASCADE
 |	CASE
+|	CHANGED
 |	CHAR
 |	CHARACTER
 |	CHARSET
+|	CHECK
 |	COLLATE
 |	COLUMNS
 |	COMPRESSION
@@ -5020,6 +5080,7 @@ reserved_keyword:
 |	EXISTS
 |	EXPLAIN
 |	FALSE
+|	FAST
 |	FOR
 |	FORCE
 |	FROM
@@ -5050,6 +5111,7 @@ reserved_keyword:
 |	LONGTEXT
 |	MATCH
 |	MEDIUMBLOB
+|	MEDIUM
 |	MEDIUMINT
 |	MEDIUMTEXT
 |	MOD
@@ -5185,6 +5247,7 @@ non_reserved_keyword:
 |	TRADITIONAL
 |	TREE
 |	TRUNCATE
+|	UPGRADE
 |	UNUSED
 |	VIEW
 |	YEAR

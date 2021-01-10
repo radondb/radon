@@ -70,6 +70,10 @@ func (r *replaceCaseExprWhens) inc() {
 	*r++
 }
 
+func replaceCheckTables(newNode, parent SQLNode) {
+	parent.(*Check).Tables = newNode.(TableNames)
+}
+
 func replaceChecksumTables(newNode, parent SQLNode) {
 	parent.(*Checksum).Tables = newNode.(TableNames)
 }
@@ -759,6 +763,11 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 			a.apply(node, item, replacerWhensB.replace)
 			replacerWhensB.inc()
 		}
+
+	case *Check:
+		a.apply(node, n.Tables, replaceCheckTables)
+
+	case *CheckOptionList:
 
 	case *Checksum:
 		a.apply(node, n.Tables, replaceChecksumTables)
