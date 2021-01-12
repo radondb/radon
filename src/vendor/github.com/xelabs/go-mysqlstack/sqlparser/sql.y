@@ -131,6 +131,7 @@ func forceEOF(yylex interface{}) {
 	INSERT
 	UPDATE
 	DELETE
+	DO
 	FROM
 	WHERE
 	GROUP
@@ -621,6 +622,7 @@ func forceEOF(yylex interface{}) {
 	update_statement
 	delete_statement
 	set_statement
+	do_statement
 
 %type	<statement>
 	create_statement
@@ -1105,6 +1107,7 @@ command:
 |	transaction_statement
 |	radon_statement
 |	other_statement
+|	do_statement
 
 select_statement:
 	base_select order_by_opt limit_opt select_lock_opt
@@ -1259,6 +1262,12 @@ delete_statement:
 	DELETE comment_opt FROM table_name where_expression_opt order_by_opt limit_opt
 	{
 		$$ = &Delete{Comments: Comments($2), Table: $4, Where: NewWhere(WhereStr, $5), OrderBy: $6, Limit: $7}
+	}
+
+do_statement:
+	DO expression_list
+	{
+		$$ = &Do{Exprs:$2}
 	}
 
 set_statement:
@@ -4980,6 +4989,7 @@ reserved_keyword:
 |	DESCRIBE
 |	DISTINCT
 |	DIV
+|	DO
 |	DROP
 |	ELSE
 |	END

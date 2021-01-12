@@ -115,6 +115,11 @@ type (
 		Limit    *Limit
 	}
 
+	// Do represents a DO statement.
+	Do struct {
+		Exprs Exprs
+	}
+
 	// Set represents a SET statement.
 	Set struct {
 		Comments Comments
@@ -242,6 +247,7 @@ func (*Help) iStatement()        {}
 func (*Kill) iStatement()        {}
 func (*Transaction) iStatement() {}
 func (*Xa) iStatement()          {}
+func (*Do) iStatement()          {}
 
 func (*Select) iSelectStatement()      {}
 func (*Union) iSelectStatement()       {}
@@ -2003,4 +2009,9 @@ func (node *ChecksumOptionEnum) Format(buf *TrackedBuffer) {
 		return
 	}
 	buf.Myprintf(" %s", ChecksumOption2Str[*node])
+}
+
+// Format formats the node.
+func (node *Do) Format(buf *TrackedBuffer) {
+	buf.Myprintf("do %v", node.Exprs)
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
-// handleHelp used to handle the HELP command.
-func (spanner *Spanner) handleHelp(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
+// handleDo used to handle the DO command.
+func (spanner *Spanner) handleDo(session *driver.Session, query string, node sqlparser.Statement) (*sqltypes.Result, error) {
 	return spanner.ExecuteSingle(query)
 }
