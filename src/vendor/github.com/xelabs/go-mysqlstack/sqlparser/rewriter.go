@@ -70,8 +70,8 @@ func (r *replaceCaseExprWhens) inc() {
 	*r++
 }
 
-func replaceChecksumTable(newNode, parent SQLNode) {
-	parent.(*Checksum).Table = newNode.(TableName)
+func replaceChecksumTables(newNode, parent SQLNode) {
+	parent.(*Checksum).Tables = newNode.(TableNames)
 }
 
 func replaceColNameName(newNode, parent SQLNode) {
@@ -753,7 +753,9 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 		}
 
 	case *Checksum:
-		a.apply(node, n.Table, replaceChecksumTable)
+		a.apply(node, n.Tables, replaceChecksumTables)
+
+	case *ChecksumOptionEnum:
 
 	case ColIdent:
 

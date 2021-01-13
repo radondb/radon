@@ -303,6 +303,7 @@ var keywords = map[string]int{
 	"processlist":         PROCESSLIST,
 	"query":               QUERY,
 	"queryz":              QUERYZ,
+	"quick":               QUICK,
 	"radon":               RADON,
 	"range":               UNUSED,
 	"read":                READ,

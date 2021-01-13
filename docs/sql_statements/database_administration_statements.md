@@ -2,8 +2,6 @@ Table of Contents
 =================
 
    * [Database Administration Statements](#database-administration-statements)
-      * [CHECKSUM](#checksum)
-         * [CHECKSUM TABLE](#checksum-table)
       * [SET](#set)
       * [SHOW](#show)
          * [SHOW CHARSET](#show-charset)
@@ -17,35 +15,12 @@ Table of Contents
          * [SHOW INDEX](#show-index)
          * [SHOW PROCESSLIST](#show-processlist)
          * [SHOW VARIABLES](#show-variables)
+      * [Table Maintenance Statements](#table-maintenance-statements)
+         * [CHECKSUM TABLE](#checksum-table)
       * [Other Administrative Statements](#other-administrative-statements)
          * [KILL Statement](#kill-statement)
 
 # Database Administration Statements
-
-## CHECKSUM
-
-### CHECKSUM TABLE
-
-`Syntax`
-```
-CHECKSUM TABLE  [database_name.]table_name
-```
-
-`Instructions`
-* Reports a checksum for the contents of a table
-* RadonDB gives same result as MySQL
-
-`Example: `
-
-```
-mysql> checksum table test.t1;
-+----------+------------+
-| Table    | Checksum   |
-+----------+------------+
-| test.t1  | 2464930879 |
-+----------+------------+
-1 row in set (0.00 sec)
-```
 
 ## SET
 
@@ -345,6 +320,65 @@ SHOW VARIABLES
 `Instructions`
 * For compatibility JDBC/mydumper
 * The SHOW VARIABLES command is sent to the backend partition MySQL (random partition) to get and return
+
+## Table Maintenance Statements
+
+### CHECKSUM TABLE
+
+`Syntax`
+```
+CHECKSUM {TABLE | TABLES} tbl_name [, tbl_name] ... [QUICK | EXTENDED]
+```
+
+`Instructions`
+* Reports a checksum for the contents of a table
+* RadonDB gives same result as MySQL
+
+`Example: `
+
+```
+mysql> checksum tables t1, t extended;
++---------+------------+
+| Table   | Checksum   |
++---------+------------+
+| test.t1 | 1910461541 |
+| test.t  | 2643913285 |
++---------+------------+
+2 rows in set (0.00 sec)
+
+mysql> checksum tables t1;
++---------+------------+
+| Table   | Checksum   |
++---------+------------+
+| test.t1 | 1910461541 |
++---------+------------+
+1 row in set (0.00 sec)
+
+mysql> checksum /*db not exsit*/ tables t1, db.t;
++---------+------------+
+| Table   | Checksum   |
++---------+------------+
+| test.t1 | 1910461541 |
+| db.t    |       NULL |
++---------+------------+
+2 rows in set (0.00 sec)
+
+mysql> create table t2(a int key, b int);
+insertQuery OK, 0 rows affected (1.20 sec)
+
+mysql> insert into t2(a,b) values (1,2),(3,4);
+Query OK, 2 rows affected (0.01 sec)
+
+mysql> checksum tables t,t1,t2 quick;
++---------+------------+
+| Table   | Checksum   |
++---------+------------+
+| test.t  | NULL       |
+| test.t1 | NULL       |
+| test.t2 | NULL       |
++---------+------------+
+3 rows in set (0.03 sec)
+```
 
 ## Other Administrative Statements
 

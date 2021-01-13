@@ -93,7 +93,27 @@ func TestOthersPlanChecksumTable(t *testing.T) {
 	"RawQuery": "checksum table G",
 	"Partitions": [
 		{
-			"Query": "checksum table G",
+			"Query": "checksum table sbtest.G",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
+		`{
+	"RawQuery": "checksum table sbtest.S",
+	"Partitions": [
+		{
+			"Query": "checksum table sbtest.S",
+			"Backend": "backend1",
+			"Range": ""
+		}
+	]
+}`,
+		`{
+	"RawQuery": "checksum tables A, G, sbtest.S",
+	"Partitions": [
+		{
+			"Query": checksum tables A, G, sbtest.S",
 			"Backend": "backend1",
 			"Range": ""
 		}
@@ -104,6 +124,7 @@ func TestOthersPlanChecksumTable(t *testing.T) {
 		"checksum table A",
 		"checksum table sbtest.A",
 		"checksum table G",
+		"checksum table sbtest.S",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -114,7 +135,7 @@ func TestOthersPlanChecksumTable(t *testing.T) {
 
 	err := route.CreateDatabase(database)
 	assert.Nil(t, err)
-	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableGConfig())
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableGConfig(), router.MockTableSConfig())
 	assert.Nil(t, err)
 	planTree := NewPlanTree()
 	for i, query := range querys {
@@ -134,6 +155,35 @@ func TestOthersPlanChecksumTable(t *testing.T) {
 			want := results[i]
 			assert.Equal(t, want, got)
 			assert.Equal(t, PlanTypeOthers, plan.Type())
+		}
+	}
+}
+
+func TestOthersPlanChecksumTableError(t *testing.T) {
+	querys := []string{
+		"checksum table A",
+		"checksum table xx.A",
+	}
+
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	database := "sbtest"
+
+	route, cleanup := router.MockNewRouter(log)
+	defer cleanup()
+
+	err := route.CreateDatabase(database)
+	assert.Nil(t, err)
+	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableGConfig(), router.MockTableSConfig())
+	assert.Nil(t, err)
+	for _, query := range querys {
+		node, err := sqlparser.Parse(query)
+		assert.Nil(t, err)
+		plan := NewOthersPlan(log, "", query, node, route)
+
+		// plan build
+		{
+			err := plan.Build()
+			assert.NotNil(t, err)
 		}
 	}
 }
