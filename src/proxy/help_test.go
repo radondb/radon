@@ -1,7 +1,7 @@
 /*
  * Radon
  *
- * Copyright 2018 The Radon Authors.
+ * Copyright 2020 The Radon Authors.
  * Code is licensed under the GPLv3.
  *
  */
@@ -9,6 +9,7 @@
 package proxy
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,9 +28,10 @@ func TestHelpStmt(t *testing.T) {
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("help *.*", &sqltypes.Result{})
+		fakedbs.AddQueryErrorPattern("help go", errors.New("Nothing found"))
 	}
 
-	// show databases.
+	// normal help stmt.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
@@ -44,5 +46,15 @@ func TestHelpStmt(t *testing.T) {
 			_, err = client.FetchAll(query, -1)
 			assert.Nil(t, err)
 		}
+	}
+	// Error help stmt.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "help go"
+		_, actual := client.FetchAll(query, -1)
+		expected := "Nothing found (errno 1105) (sqlstate HY000)"
+		assert.EqualValues(t, expected, actual.Error())
 	}
 }

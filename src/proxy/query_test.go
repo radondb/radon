@@ -711,3 +711,25 @@ func TestProxyQuerySubQuery(t *testing.T) {
 		}
 	}
 }
+
+func TestProxyQueryNotSupport(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs
+	{
+		fakedbs.AddQueryPattern("use *.*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("repair *.*", &sqltypes.Result{})
+	}
+
+	client, err := driver.NewConn("mock", "mock", address, " ", "utf8")
+	assert.Nil(t, err)
+	defer client.Close()
+
+	query := "repair"
+	_, actual := client.FetchAll(query, -1)
+	expected := "unsupported.query:repair (errno 1105) (sqlstate HY000)"
+	assert.EqualValues(t, expected, actual.Error())
+}
