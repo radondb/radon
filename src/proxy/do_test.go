@@ -18,7 +18,7 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
-func TestHelpStmt(t *testing.T) {
+func TestDoStmt(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	fakedbs, proxy, cleanup := MockProxy(log)
 	defer cleanup()
@@ -27,34 +27,33 @@ func TestHelpStmt(t *testing.T) {
 	// fakedbs.
 	{
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
-		fakedbs.AddQueryPattern("help *.*", &sqltypes.Result{})
-		fakedbs.AddQueryErrorPattern("help go", errors.New("Nothing found"))
+		fakedbs.AddQueryPattern("do 1 *.*", &sqltypes.Result{})
+		fakedbs.AddQueryErrorPattern("do a", errors.New("ERROR 1054 (42S22): Unknown column 'a' in 'field list'"))
 	}
 
-	// normal help stmt.
+	// Normal do stmt.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
 		defer client.Close()
 		querys := []string{
-			"help",
-			"help index",
-			"help content",
-			"help 'any string'",
+			"do 1",
+			"do 1,1+1,1&1",
+			"do 1 != 3, not 1, null is null, not null, 1 or 2",
 		}
 		for _, query := range querys {
 			_, err = client.FetchAll(query, -1)
 			assert.Nil(t, err)
 		}
 	}
-	// Error help stmt.
+	// Error do stmt.
 	{
 		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
 		assert.Nil(t, err)
 		defer client.Close()
-		query := "help go"
+		query := "do a"
 		_, actual := client.FetchAll(query, -1)
-		expected := "Nothing found (errno 1105) (sqlstate HY000)"
+		expected := "ERROR 1054 (42S22): Unknown column 'a' in 'field list' (errno 1105) (sqlstate HY000)"
 		assert.EqualValues(t, expected, actual.Error())
 	}
 }

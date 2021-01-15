@@ -3,6 +3,7 @@ Table of Contents
 
    * [Data Manipulation Statements](#data-manipulation-statements)
       * [DELETE Statement](#delete-statement)
+      * [DO Statement](#do-statement)
       * [INSERT](#insert)
       * [REPLACE](#replace)
       * [SELECT](#select)
@@ -27,6 +28,25 @@ DELETE  FROM tbl_name
 ```
 mysql> DELETE FROM t1 WHERE id=1;
 Query OK, 2 rows affected (0.01 sec)
+```
+
+## DO Statement
+`Syntax`
+```
+DO expr [, expr] ...
+```
+
+`Example: `
+```
+mysql> do 1;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> do 2
+    -> ;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> do 1 > 2, 1&2;
+Query OK, 0 rows affected (0.00 sec)
 ```
 
 ## INSERT

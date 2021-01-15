@@ -46,6 +46,9 @@ const (
 	// CHECKSUM type.
 	CHECKSUM = "CHECKSUM"
 
+	// DO type.
+	DO = "DO"
+
 	// RADON type
 	RADON = "RADON"
 )

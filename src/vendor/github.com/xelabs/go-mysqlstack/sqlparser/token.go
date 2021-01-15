@@ -148,6 +148,7 @@ var keywords = map[string]int{
 	"div":                 DIV,
 	"distributed":         DISTRIBUTED,
 	"disk":                DISK,
+	"do":                  DO,
 	"double":              DOUBLE,
 	"drop":                DROP,
 	"duplicate":           DUPLICATE,

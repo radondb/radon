@@ -821,6 +821,14 @@ func TestValid(t *testing.T) {
 		input: "select name, group_concat(score) from t group by name",
 	}, {
 		input: "select name, group_concat(distinct id, score order by id desc separator ':') from t group by name",
+	}, {
+		input: "do 1",
+	}, {
+		input: "do 1 collate utf8_general_ci",
+	}, {
+		input: "do 1 > 2",
+	}, {
+		input: "do 1 > 2, 1 != 3, not 1, null is null, not null, 1 or 2, null and 1, 1 not like 2",
 	}}
 
 	for _, tcase := range validSQL {

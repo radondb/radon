@@ -9,6 +9,7 @@
 package proxy
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -1497,5 +1498,36 @@ func TestProxyShowTxnzPrivilege(t *testing.T) {
 		want := fmt.Sprintf("Access denied; lacking super privilege for the operation (errno 1227) (sqlstate 42000)")
 		got := err.Error()
 		assert.Equal(t, want, got)
+	}
+}
+
+func TestProxyShowReturnError(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryErrorPattern("show *.*", errors.New("backend return error"))
+	}
+	// Error do stmt.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		querys := []string{
+			"show databases",
+			"show engines",
+			"show create database test",
+			"show warnings",
+		}
+
+		expected := "backend return error (errno 1105) (sqlstate HY000)"
+		for _, query := range querys {
+			_, actual := client.FetchAll(query, -1)
+			assert.EqualValues(t, expected, actual.Error())
+		}
 	}
 }

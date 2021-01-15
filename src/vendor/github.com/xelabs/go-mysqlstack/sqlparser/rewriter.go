@@ -224,6 +224,10 @@ func replaceDeleteWhere(newNode, parent SQLNode) {
 	parent.(*Delete).Where = newNode.(*Where)
 }
 
+func replaceDoExprs(newNode, parent SQLNode) {
+	parent.(*Do).Exprs = newNode.(Exprs)
+}
+
 func replaceExistsExprSubquery(newNode, parent SQLNode) {
 	parent.(*ExistsExpr).Subquery = newNode.(*Subquery)
 }
@@ -827,6 +831,9 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 		a.apply(node, n.OrderBy, replaceDeleteOrderBy)
 		a.apply(node, n.Table, replaceDeleteTable)
 		a.apply(node, n.Where, replaceDeleteWhere)
+
+	case *Do:
+		a.apply(node, n.Exprs, replaceDoExprs)
 
 	case *ExistsExpr:
 		a.apply(node, n.Subquery, replaceExistsExprSubquery)
