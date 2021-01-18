@@ -756,8 +756,12 @@ func TestValid(t *testing.T) {
 		input:  "repair foo",
 		output: "otheradmin",
 	}, {
-		input:  "optimize foo",
-		output: "otheradmin",
+		input: "optimize table foo",
+	}, {
+		input:  "optimize NO_WRITE_TO_BINLOG tables t1, t2",
+		output: "optimize no_write_to_binlog table t1, t2",
+	}, {
+		input: "optimize local table t1, t2",
 	}, {
 		input: "select /* EQ true */ 1 from t where a = true",
 	}, {

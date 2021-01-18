@@ -1,0 +1,181 @@
+drop database if exists integrate_test;
+
+create database if not exists integrate_test DEFAULT CHARSET=utf8;
+
+create /*test partition hash, Test of refering to old values*/ table integrate_test.t_part (a int not null key);
+
+create /*test partition list*/ table integrate_test.t_list(c1 int, c2 int) ENGINE=InnoDB DEFAULT CHARSET=utf8 partition by list(c1) (partition backend1 values in (1,3,7), partition backend2 values in (2,5,8));
+
+create /*test partition single, Test of refering to old values*/ table integrate_test.t_single (a int not null key) single;
+
+create /*test global, Test of refering to old values*/ table integrate_test.t_global (a int not null key) global;
+
+optimize local tables integrate_test.t_global;
+Table	Op	Msg_type	Msg_text
+integrate_test.t_global	optimize	status	OK
+integrate_test.t_global	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_global	optimize	status	OK
+integrate_test.t_global	optimize	note	Table does not support optimize, doing recreate + analyze instead
+
+optimize NO_WRITE_TO_BINLOG tables integrate_test.t_global, integrate_test.t_single;
+Table	Op	Msg_type	Msg_text
+integrate_test.t_global	optimize	status	OK
+integrate_test.t_global	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_global	optimize	status	OK
+integrate_test.t_global	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_single	optimize	status	OK
+integrate_test.t_single	optimize	note	Table does not support optimize, doing recreate + analyze instead
+
+optimize table integrate_test.t_list;
+Table	Op	Msg_type	Msg_text
+integrate_test.t_list_0000	optimize	status	OK
+integrate_test.t_list_0000	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_list_0001	optimize	status	OK
+integrate_test.t_list_0001	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_list_0002	optimize	status	OK
+integrate_test.t_list_0002	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_list_0003	optimize	status	OK
+integrate_test.t_list_0003	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_list_0004	optimize	status	OK
+integrate_test.t_list_0004	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_list_0005	optimize	status	OK
+integrate_test.t_list_0005	optimize	note	Table does not support optimize, doing recreate + analyze instead
+
+optimize table integrate_test.t_part;
+Table	Op	Msg_type	Msg_text
+integrate_test.t_part_0000	optimize	status	OK
+integrate_test.t_part_0000	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0001	optimize	status	OK
+integrate_test.t_part_0001	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0002	optimize	status	OK
+integrate_test.t_part_0002	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0003	optimize	status	OK
+integrate_test.t_part_0003	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0004	optimize	status	OK
+integrate_test.t_part_0004	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0005	optimize	status	OK
+integrate_test.t_part_0005	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0006	optimize	status	OK
+integrate_test.t_part_0006	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0007	optimize	status	OK
+integrate_test.t_part_0007	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0008	optimize	status	OK
+integrate_test.t_part_0008	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0009	optimize	status	OK
+integrate_test.t_part_0009	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0010	optimize	status	OK
+integrate_test.t_part_0010	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0011	optimize	status	OK
+integrate_test.t_part_0011	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0012	optimize	status	OK
+integrate_test.t_part_0012	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0013	optimize	status	OK
+integrate_test.t_part_0013	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0014	optimize	status	OK
+integrate_test.t_part_0014	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0015	optimize	status	OK
+integrate_test.t_part_0015	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0016	optimize	status	OK
+integrate_test.t_part_0016	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0017	optimize	status	OK
+integrate_test.t_part_0017	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0018	optimize	status	OK
+integrate_test.t_part_0018	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0019	optimize	status	OK
+integrate_test.t_part_0019	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0020	optimize	status	OK
+integrate_test.t_part_0020	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0021	optimize	status	OK
+integrate_test.t_part_0021	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0022	optimize	status	OK
+integrate_test.t_part_0022	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0023	optimize	status	OK
+integrate_test.t_part_0023	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0024	optimize	status	OK
+integrate_test.t_part_0024	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0025	optimize	status	OK
+integrate_test.t_part_0025	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0026	optimize	status	OK
+integrate_test.t_part_0026	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0027	optimize	status	OK
+integrate_test.t_part_0027	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0028	optimize	status	OK
+integrate_test.t_part_0028	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0029	optimize	status	OK
+integrate_test.t_part_0029	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0030	optimize	status	OK
+integrate_test.t_part_0030	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0031	optimize	status	OK
+integrate_test.t_part_0031	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0032	optimize	status	OK
+integrate_test.t_part_0032	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0033	optimize	status	OK
+integrate_test.t_part_0033	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0034	optimize	status	OK
+integrate_test.t_part_0034	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0035	optimize	status	OK
+integrate_test.t_part_0035	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0036	optimize	status	OK
+integrate_test.t_part_0036	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0037	optimize	status	OK
+integrate_test.t_part_0037	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0038	optimize	status	OK
+integrate_test.t_part_0038	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0039	optimize	status	OK
+integrate_test.t_part_0039	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0040	optimize	status	OK
+integrate_test.t_part_0040	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0041	optimize	status	OK
+integrate_test.t_part_0041	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0042	optimize	status	OK
+integrate_test.t_part_0042	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0043	optimize	status	OK
+integrate_test.t_part_0043	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0044	optimize	status	OK
+integrate_test.t_part_0044	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0045	optimize	status	OK
+integrate_test.t_part_0045	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0046	optimize	status	OK
+integrate_test.t_part_0046	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0047	optimize	status	OK
+integrate_test.t_part_0047	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0048	optimize	status	OK
+integrate_test.t_part_0048	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0049	optimize	status	OK
+integrate_test.t_part_0049	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0050	optimize	status	OK
+integrate_test.t_part_0050	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0051	optimize	status	OK
+integrate_test.t_part_0051	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0052	optimize	status	OK
+integrate_test.t_part_0052	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0053	optimize	status	OK
+integrate_test.t_part_0053	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0054	optimize	status	OK
+integrate_test.t_part_0054	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0055	optimize	status	OK
+integrate_test.t_part_0055	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0056	optimize	status	OK
+integrate_test.t_part_0056	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0057	optimize	status	OK
+integrate_test.t_part_0057	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0058	optimize	status	OK
+integrate_test.t_part_0058	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0059	optimize	status	OK
+integrate_test.t_part_0059	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0060	optimize	status	OK
+integrate_test.t_part_0060	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0061	optimize	status	OK
+integrate_test.t_part_0061	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0062	optimize	status	OK
+integrate_test.t_part_0062	optimize	note	Table does not support optimize, doing recreate + analyze instead
+integrate_test.t_part_0063	optimize	status	OK
+integrate_test.t_part_0063	optimize	note	Table does not support optimize, doing recreate + analyze instead
+
+optimize /*test error: No Database Selected*/ table t_part;
+ERROR 1046 (3D000): No database selected
+
+optimize /*test error: No such table*/ table integrate_test.t_xxx, integrate_test.t_single;
+ERROR 1146 (42S02): Table 't_xxx' doesn't exist
+
+drop database integrate_test;

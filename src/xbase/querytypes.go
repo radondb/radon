@@ -49,6 +49,9 @@ const (
 	// DO type.
 	DO = "DO"
 
+	// OPTIMIZE type.
+	OPTIMIZE = "OPTIMIZE"
+
 	// RADON type
 	RADON = "RADON"
 )

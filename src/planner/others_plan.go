@@ -107,6 +107,28 @@ func (p *OthersPlan) Build() error {
 		default:
 			return errors.Errorf("unsupported: radon.not.support.method.type[%s].", methodType)
 		}
+	case *sqlparser.Optimize:
+		newNode := *node
+		// We`ll rewrite ast on newNode and the table`s format should be like "db.t1", so the "Qualifier" in ast should not be empty.
+		if newNode.Tables[0].Qualifier.IsEmpty() {
+			newNode.Tables[0].Qualifier = sqlparser.NewTableIdent(p.database)
+		}
+		database := newNode.Tables[0].Qualifier.String()
+		table := newNode.Tables[0].Name.String()
+
+		route, err := p.router.TableConfig(database, table)
+		if err != nil {
+			return err
+		}
+		for _, segment := range route.Partitions {
+			newNode.Tables[0].Name = sqlparser.NewTableIdent(segment.Table)
+			tuple := xcontext.QueryTuple{
+				Query:   sqlparser.String(&newNode),
+				Backend: segment.Backend,
+				Range:   segment.Segment,
+			}
+			p.Querys = append(p.Querys, tuple)
+		}
 	}
 	return nil
 }

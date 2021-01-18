@@ -120,6 +120,7 @@ func forceEOF(yylex interface{}) {
 	showFilter            *ShowFilter
 	explainType	      ExplainType
 	checksumOptionEnum	      ChecksumOptionEnum
+	optimizeOptionEnum            OptimizeOptionEnum
 }
 
 %token LEX_ERROR
@@ -594,6 +595,7 @@ func forceEOF(yylex interface{}) {
 	COMMITTED
 	UNCOMMITTED
 	SERIALIZABLE
+	NO_WRITE_TO_BINLOG
 
 
 // Radon Tokens
@@ -638,6 +640,7 @@ func forceEOF(yylex interface{}) {
 	use_statement
 	other_statement
 	checksum_statement
+	optimize_statement
 
 %type	<bytes2>
 	comment_opt
@@ -705,6 +708,9 @@ func forceEOF(yylex interface{}) {
 
 %type	<checksumOptionEnum>
 	checksum_opt
+
+%type	<optimizeOptionEnum>
+	optimize_opt
 
 %type	<tableNames>
 	table_name_list
@@ -1108,6 +1114,7 @@ command:
 |	radon_statement
 |	other_statement
 |	do_statement
+|	optimize_statement
 
 select_statement:
 	base_select order_by_opt limit_opt select_lock_opt
@@ -3475,12 +3482,27 @@ use_statement:
 		$$ = &Use{DBName: $2}
 	}
 
+optimize_opt:
+	{
+		$$ = OptimizeOptionNone
+	}
+|	NO_WRITE_TO_BINLOG
+	{
+		$$ = OptimizeOptionNoWriteToBinlog
+	}
+|	LOCAL
+	{
+		$$ = OptimizeOptionLocal
+	}
+
+optimize_statement:
+	OPTIMIZE optimize_opt table_or_tables table_name_list
+	{
+		$$ = &Optimize{OptimizeOption: $2, Tables: $4}
+	}
+
 other_statement:
 	REPAIR force_eof
-	{
-		$$ = &OtherAdmin{}
-	}
-|	OPTIMIZE force_eof
 	{
 		$$ = &OtherAdmin{}
 	}

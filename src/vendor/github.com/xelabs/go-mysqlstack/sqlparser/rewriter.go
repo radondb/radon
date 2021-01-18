@@ -385,6 +385,10 @@ func replaceOptValValue(newNode, parent SQLNode) {
 	parent.(*OptVal).Value = newNode.(Expr)
 }
 
+func replaceOptimizeTables(newNode, parent SQLNode) {
+	parent.(*Optimize).Tables = newNode.(TableNames)
+}
+
 func replaceOrExprLeft(newNode, parent SQLNode) {
 	parent.(*OrExpr).Left = newNode.(Expr)
 }
@@ -935,6 +939,11 @@ func (a *application) apply(parent, node SQLNode, replacer replacerFunc) {
 
 	case *OptVal:
 		a.apply(node, n.Value, replaceOptValValue)
+
+	case *Optimize:
+		a.apply(node, n.Tables, replaceOptimizeTables)
+
+	case *OptimizeOptionEnum:
 
 	case *OrExpr:
 		a.apply(node, n.Left, replaceOrExprLeft)
