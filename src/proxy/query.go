@@ -384,7 +384,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 	case *sqlparser.Check:
 		log.Warning("proxy.query.check.query:%s", query)
 		if qr, err = spanner.handleCheckTable(session, query, node); err != nil {
-			log.Error("proxy.optimize[%s].from.session[%v].error:%+v", query, session.ID(), err)
+			log.Error("proxy.check[%s].from.session[%v].error:%+v", query, session.ID(), err)
 			status = 1
 		}
 		spanner.auditLog(session, R, xbase.CHECK, query, qr, status)

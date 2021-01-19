@@ -46,7 +46,7 @@ func (spanner *Spanner) handleOptimizeTable(session *driver.Session, query strin
 		val := sqltypes.NullsafeCompare(newqr.Rows[i][0], newqr.Rows[j][0])
 		return (-1 == val)
 	})
-	// 2. Formate output to mysql client, note is always displayed first. e.g.:
+	// 2. Formate output to mysql client, status is always displayed first. e.g.:
 	// change:
 	// | test.t       | optimize | note     | Table does not support optimize, doing recreate + analyze instead |
 	// | test.t       | optimize | status   | OK                                                                |
