@@ -763,6 +763,11 @@ func TestValid(t *testing.T) {
 	}, {
 		input: "optimize local table t1, t2",
 	}, {
+		input: "check table t quick fast medium extended changed for upgrade",
+	}, {
+		input:  "check tables t1,t2 quick quick",
+		output: "check table t1, t2 quick quick",
+	}, {
 		input: "select /* EQ true */ 1 from t where a = true",
 	}, {
 		input: "select /* EQ false */ 1 from t where a = false",

@@ -16,6 +16,7 @@ Table of Contents
          * [SHOW PROCESSLIST](#show-processlist)
          * [SHOW VARIABLES](#show-variables)
       * [Table Maintenance Statements](#table-maintenance-statements)
+         * [CHECK TABLE Statements](#check-table-statements)
          * [CHECKSUM TABLE Statements](#checksum-table-statements)
          * [OPTIMIZE TABLE Statements](#optimize-table-statements)
       * [Other Administrative Statements](#other-administrative-statements)
@@ -323,6 +324,40 @@ SHOW VARIABLES
 * The SHOW VARIABLES command is sent to the backend partition MySQL (random partition) to get and return
 
 ## Table Maintenance Statements
+
+### CHECK TABLE Statements
+`Syntax`
+```
+CHECK {TABLE | TABLES} tbl_name [, tbl_name] ... [option] ...
+
+option: {
+    FOR UPGRADE
+  | QUICK
+  | FAST
+  | MEDIUM
+  | EXTENDED
+  | CHANGED
+}
+```
+
+`Example: `
+
+```
+mysql> check tables t_part for quick;
++------------------+-------+----------+----------+
+| Table            | Op    | Msg_type | Msg_text |
++------------------+-------+----------+----------+
+| test.t_part_0000 | check | status   | OK       |
+| test.t_part_0001 | check | status   | OK       |
+| test.t_part_0002 | check | status   | OK       |
+| test.t_part_0003 | check | status   | OK       |
+...
+...
+| test.t_part_0062 | check | status   | OK       |
+| test.t_part_0063 | check | status   | OK       |
++------------------+-------+----------+----------+
+64 rows in set (0.02 sec)
+```
 
 ### CHECKSUM TABLE Statements
 

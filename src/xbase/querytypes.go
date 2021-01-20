@@ -52,6 +52,9 @@ const (
 	// OPTIMIZE type.
 	OPTIMIZE = "OPTIMIZE"
 
+	// CHECK type.
+	CHECK = "CHECK"
+
 	// RADON type
 	RADON = "RADON"
 )

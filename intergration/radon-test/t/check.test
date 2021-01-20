@@ -1,0 +1,13 @@
+drop database if exists integrate_test;
+create database if not exists integrate_test DEFAULT CHARSET=utf8;
+create /*test partition hash, Test of refering to old values*/ table integrate_test.t_part (a int not null key);
+create /*test partition list*/ table integrate_test.t_list(c1 int, c2 int) ENGINE=InnoDB DEFAULT CHARSET=utf8 partition by list(c1) (partition backend1 values in (1,3,7), partition backend2 values in (2,5,8));
+create /*test partition single, Test of refering to old values*/ table integrate_test.t_single (a int not null key) single;
+create /*test global, Test of refering to old values*/ table integrate_test.t_global (a int not null key) global;
+check tables integrate_test.t_global for upgrade quick fast medium extended changed;
+check tables integrate_test.t_global, integrate_test.t_single;
+check table integrate_test.t_list;
+check table integrate_test.t_part;
+check /*test error: No Database Selected*/ table t_part;
+check /*test error: No such table*/ table integrate_test.t_xxx, integrate_test.t_single;
+drop database integrate_test;

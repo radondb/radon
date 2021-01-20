@@ -181,6 +181,12 @@ type (
 		Tables         TableNames
 	}
 
+	// Check represents a Check statement.
+	Check struct {
+		Tables       TableNames
+		CheckOptions CheckOptionList
+	}
+
 	// Use represents a use statement.
 	Use struct {
 		DBName TableIdent
@@ -243,7 +249,6 @@ func (*Delete) iStatement()      {}
 func (*Set) iStatement()         {}
 func (*DDL) iStatement()         {}
 func (*Show) iStatement()        {}
-func (*Checksum) iStatement()    {}
 func (*Use) iStatement()         {}
 func (*OtherRead) iStatement()   {}
 func (*OtherAdmin) iStatement()  {}
@@ -254,11 +259,15 @@ func (*Kill) iStatement()        {}
 func (*Transaction) iStatement() {}
 func (*Xa) iStatement()          {}
 func (*Do) iStatement()          {}
-func (*Optimize) iStatement()    {}
 
 func (*Select) iSelectStatement()      {}
 func (*Union) iSelectStatement()       {}
 func (*ParenSelect) iSelectStatement() {}
+
+// Table Maintenance Statements
+func (*Check) iStatement()    {}
+func (*Checksum) iStatement() {}
+func (*Optimize) iStatement() {}
 
 type (
 	// InsertRows represents the rows for an INSERT statement.
@@ -2034,4 +2043,22 @@ func (node *OptimizeOptionEnum) Format(buf *TrackedBuffer) {
 		return
 	}
 	buf.Myprintf("%s ", OptimizeOption2Str[*node])
+}
+
+// Format formats the node.
+func (node *CheckOptionList) Format(buf *TrackedBuffer) {
+	if node == nil {
+		return
+	}
+	for _, opt := range *node {
+		buf.Myprintf(" %s", CheckOption2Str[opt])
+	}
+}
+
+// Format formats the node.
+func (node *Check) Format(buf *TrackedBuffer) {
+	if node == nil {
+		return
+	}
+	buf.Myprintf("check table %v%v", node.Tables, &(node.CheckOptions))
 }
