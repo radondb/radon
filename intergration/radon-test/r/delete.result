@@ -21,6 +21,29 @@ a	b
 
 INSERT INTO integrate_test.t1 VALUES (1,1);
 
+DELETE from integrate_test.t1 where t1.a=t1.b;
+
+select sleep(0.2);
+sleep(0.2)
+0
+
+select * from integrate_test.t1;
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where x.a=t1.b;
+ERROR 1054 (42S22): Unknown column 'x.a' in 'where clause'
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where integrate_test.t1.a=t1.b order by x.a;
+ERROR 1054 (42S22): Unknown column 'x.a' in 'order clause'
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where integrate_test.t1.a=x.b;
+ERROR 1054 (42S22): Unknown column 'x.b' in 'where clause'
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where integrate_test.t1.a=1 order by x.x.a;
+ERROR 1054 (42S22): Unknown column 'x.x.a' in 'order clause'
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where t1.a=t1.b limit a;
+ERROR 1327 (42000): Undeclared variable: a
+
 DELETE quick from integrate_test.t1;
 
 select * from integrate_test.t1;
@@ -100,18 +123,6 @@ a	b	c	d	e	f	g	h	i	j
 drop table integrate_test.t1;
 
 
-CREATE /*test error, column not exist*/ TABLE integrate_test.t1 (
-  `i` int(10) NOT NULL default '0',
-  `i2` int(10) NOT NULL default '0',
-  PRIMARY KEY  (`i`)
-);
-
-DELETE FROM integrate_test.t1 WHERE post='1';
-ERROR 1054 (42S22): Unknown column 'post' in 'where clause'
-
-drop table integrate_test.t1;
-
-
 create /*test global*/ table integrate_test.t2 (a bigint not null auto_increment primary key, b char(32)) global;
 
 insert into integrate_test.t2 (a,b) values (1,'apple'), (2,'apple');
@@ -129,6 +140,24 @@ ERROR 1105 (HY000): unsupported: currently.not.support.partitions.in.delete
 
 DELETE /*test unsupport, currently not support delete with subquery*/ FROM integrate_test.t2 ORDER BY (SELECT x);
 ERROR 1105 (HY000): unsupported: subqueries.in.delete
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where x.a=t2.b;
+ERROR 1054 (42S22): Unknown column 'x.a' in 'where clause'
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where integrate_test.t2.a=t2.b order by x.a;
+ERROR 1054 (42S22): Unknown column 'integrate_test.t2.a' in 'where clause'
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where integrate_test.t2.a=x.b;
+ERROR 1054 (42S22): Unknown column 'integrate_test.t2.a' in 'where clause'
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where integrate_test.t2.a=1 order by x.x.a;
+ERROR 1054 (42S22): Unknown column 'integrate_test.t2.a' in 'where clause'
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where t2.a=t2.b limit a;
+ERROR 1054 (42S22): Unknown column 't2.a' in 'where clause'
+
+DELETE quick from integrate_test.t1;
+ERROR 1146 (42S02): Table 't1' doesn't exist
 
 drop table integrate_test.t2;
 
@@ -167,6 +196,23 @@ DELETE FROM integrate_test.t1 WHERE a > 0 ORDER BY a LIMIT 1;
 SELECT * FROM integrate_test.t1;
 a
 0
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where x.a=t1.b;
+ERROR 1054 (42S22): Unknown column 'x.a' in 'where clause'
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where integrate_test.t1.a=t1.b order by x.a;
+ERROR 1054 (42S22): Unknown column 'x.a' in 'order clause'
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where integrate_test.t1.a=x.b;
+ERROR 1054 (42S22): Unknown column 'x.b' in 'where clause'
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where integrate_test.t1.a=1 order by x.x.a;
+ERROR 1054 (42S22): Unknown column 'x.x.a' in 'order clause'
+
+DELETE /*test error: unkown column*/ from integrate_test.t1 where t1.a=t1.b limit a;
+ERROR 1327 (42000): Undeclared variable: a
+
+DELETE quick from integrate_test.t1;
 
 DROP TABLE integrate_test.t1;
 

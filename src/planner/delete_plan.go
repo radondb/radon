@@ -82,10 +82,11 @@ func (p *DeletePlan) analyze() error {
 
 // Build used to build distributed querys.
 func (p *DeletePlan) Build() error {
-	if err := p.analyze(); err != nil {
+	// step 1: analyze if delete has unsupported features.
+	var err error
+	if err = p.analyze(); err != nil {
 		return err
 	}
-
 	newNode := *p.node
 	// For single table, the len(TableRefs)=1 and the type of TableExpr must be AliasedTableExpr.
 	newAliseExpr := newNode.TableRefs[0].(*sqlparser.AliasedTableExpr)
@@ -97,8 +98,13 @@ func (p *DeletePlan) Build() error {
 		newAliseExpr.Expr = sqlparser.TableName{Name: tableID, Qualifier: databaseID}
 	}
 
+	// step 2: check if the column field illegal or not if delete statement has column field.
+	if err = checkField(databaseID.String(), tableID.String(), &newNode, p.log); err != nil {
+		return err
+	}
+
+	// step 3: get segments
 	var segments []router.Segment
-	var err error
 	if newNode.Where == nil {
 		// delete all datas, send sql to different backends, except for single table which has only one backend.
 		segments, err = p.router.Lookup(databaseID.String(), tableID.String(), nil, nil)
@@ -119,10 +125,13 @@ func (p *DeletePlan) Build() error {
 		}
 	}
 
-	// Rewritten the newNode to produce a new query.
+	// step 4: Rewritten the newNode to produce a new query.
 	for _, segment := range segments {
-		tableID = sqlparser.NewTableIdent(segment.Table)
-		newAliseExpr.Expr = sqlparser.TableName{Name: tableID, Qualifier: databaseID}
+		// rewrite column field
+		rewriteField(databaseID.String(), segment.Table, &newNode, p.log)
+		// rewrite table expr
+		newTableID := sqlparser.NewTableIdent(segment.Table)
+		newAliseExpr.Expr = sqlparser.TableName{Name: newTableID, Qualifier: databaseID}
 		tuple := xcontext.QueryTuple{
 			Query:   sqlparser.String(&newNode),
 			Backend: segment.Backend,

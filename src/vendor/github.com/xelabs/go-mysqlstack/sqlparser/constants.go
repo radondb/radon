@@ -203,9 +203,10 @@ const (
 	CommitTxnStr = "commit"
 )
 
-// ExplainType is an enum for Explain-Type
+// ExplainType is an enum for Explain-Type.
 type ExplainType int8
 
+// ExplainType const values.
 const (
 	ExplainTypeEmpty ExplainType = iota
 	ExplainTypeExtended
@@ -226,6 +227,7 @@ const (
 	ChecksumOptionExtended
 )
 
+// ChecksumOption2Str is a map for enum option-->string
 var ChecksumOption2Str = map[ChecksumOptionEnum]string{
 	ChecksumOptionNone:     "",
 	ChecksumOptionQuick:    "quick",
@@ -249,7 +251,7 @@ var OptimizeOption2Str = map[OptimizeOptionEnum]string{
 	OptimizeOptionLocal:           "local",
 }
 
-// CheckOptionEnum is an enum for optimize statement.
+// CheckOptionEnum is an enum for check statement.
 type CheckOptionEnum int
 
 // CheckOptionList is used by check statement.
@@ -280,25 +282,25 @@ var CheckOption2Str = map[CheckOptionEnum]string{
 // WhereType is an enum for Where.Type
 type WhereTypeEnum int8
 
-// Constants for Enum Type - WhereType
+// WhereType const values.
 const (
 	NoWhereType WhereTypeEnum = iota
 	WhereClause
 	HavingClause
 )
 
-// WhereType2Str will be used to format the statements.
+// WhereType2Str is a map for enum option --> string.
 var WhereType2Str = map[WhereTypeEnum]string{
 	NoWhereType:  "Unknown where type",
 	WhereClause:  "where",
 	HavingClause: "having",
 }
 
-// DeleteOptionsEnum is an enum for delete options
+// DeleteOptionsEnum is an enum for delete statement.
 // See https://dev.mysql.com/doc/refman/8.0/en/delete.html
 type DeleteOptionEnum int
 
-// DeleteOptions const values.
+// DeleteOptionEnum const values.
 const (
 	NoDeleteOption DeleteOptionEnum = iota
 	LowPriorityOption
@@ -306,7 +308,7 @@ const (
 	IgnoreOption
 )
 
-// DeleteOptions2Str will be used to format the statements.
+// DeleteOptions2Str is a map for enum option --> string.
 var DeleteOptions2Str = map[DeleteOptionEnum]string{
 	NoDeleteOption:    "Unknown delete option",
 	LowPriorityOption: "low_priority",

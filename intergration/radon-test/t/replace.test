@@ -77,8 +77,8 @@ create /*test partition list*/ table integrate_test.t_list(c1 int, c2 int) ENGIN
 insert into integrate_test.t_list values (1,2), (3,5), (2,4);
 insert /*test error: has no parition*/ into integrate_test.t_list values (10,2), (13,5);
 select * from integrate_test.t_list order by integrate_test.t_list.c1 asc;
-replace into integrate_test.t_list values (1,4), (7,9), (2,8);
-replace /*Column count doesn't match value count*/ into integrate_test.t_list values (1,4,8), (7,9), (2,8,0);
+replace into integrate_test.t_list values (5,4), (7,9), (8,8);
+replace /*Column count doesn't match value count*/ into integrate_test.t_list values (1,4,8), (2,8,0);
 select * from integrate_test.t_list order by integrate_test.t_list.c1 asc;
 drop table integrate_test.t_list;
 

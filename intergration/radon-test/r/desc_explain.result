@@ -389,7 +389,7 @@ EXPLAIN: {
 	"RawQuery": "explain delete from integrate_test.t where c1=2",
 	"Partitions": [
 		{
-			"Query": "delete from integrate_test.t_0061 where c1 = 2",
+			"Query": "delete from integrate_test.t_0061 where integrate_test.t_0061.c1 = 2",
 			"Backend": "backend2",
 			"Range": "[3904-3968)"
 		}

@@ -172,19 +172,19 @@ c1	c2
 2	4
 3	5
 
-replace into integrate_test.t_list values (1,4), (7,9), (2,8);
+replace into integrate_test.t_list values (5,4), (7,9), (8,8);
 
-replace /*Column count doesn't match value count*/ into integrate_test.t_list values (1,4,8), (7,9), (2,8,0);
+replace /*Column count doesn't match value count*/ into integrate_test.t_list values (1,4,8), (2,8,0);
 ERROR 1136 (21S01): Column count doesn't match value count at row 1
 
 select * from integrate_test.t_list order by integrate_test.t_list.c1 asc;
 c1	c2
-1	4
 1	2
-2	8
 2	4
 3	5
+5	4
 7	9
+8	8
 
 drop table integrate_test.t_list;
 
