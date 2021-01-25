@@ -123,6 +123,8 @@ func forceEOF(yylex interface{}) {
 	optimizeOptionEnum    OptimizeOptionEnum
 	checkOptionEnum       CheckOptionEnum
 	checkOptionList       CheckOptionList
+	deleteOptionsList     DeleteOptionList
+	deleteOption          DeleteOptionEnum 
 }
 
 %token LEX_ERROR
@@ -360,8 +362,8 @@ func forceEOF(yylex interface{}) {
 	QUICK
 	TABLE
 	TO
-	VIEW
 	USING
+	VIEW
 
 %token	<bytes>
 	DESC
@@ -700,6 +702,7 @@ func forceEOF(yylex interface{}) {
 %type	<tableName>
 	table_name
 	into_table_name
+	table_ident_wild_opt
 
 %type	<str>
 	columns_or_fields
@@ -729,6 +732,7 @@ func forceEOF(yylex interface{}) {
 
 %type	<tableNames>
 	table_name_list
+	table_alias_ref_list
 
 %type	<aliasedTableName>
 	aliased_table_name
@@ -744,9 +748,6 @@ func forceEOF(yylex interface{}) {
 
 %type	<expr>
 	condition
-
-%type	<boolVal>
-	boolean_value
 
 %type	<str>
 	compare
@@ -884,6 +885,7 @@ func forceEOF(yylex interface{}) {
 	table_opt
 	table_or_tables
 	to_opt
+	wild_opt
 
 %type	<bytes>
 	reserved_keyword
@@ -979,17 +981,16 @@ func forceEOF(yylex interface{}) {
 	opt_default
 	charset_name_or_default
 
-%type	<boolVal>
-	unsigned_opt
-	zero_fill_opt
-
 %type	<lengthScaleOption>
 	float_length_opt
 	decimal_length_opt
 
 %type	<boolVal>
-	null_opt
 	auto_increment_opt
+	boolean_value
+	null_opt
+	unsigned_opt
+	zero_fill_opt
 
 %type	<colPrimaryKeyOpt>
 	column_primary_key_opt
@@ -1085,6 +1086,11 @@ func forceEOF(yylex interface{}) {
 %type	<partitionOption>
 	partition_option
 
+%type   <deleteOptionsList>
+	delete_option_list
+
+%type   <deleteOption>
+	delete_opt
 
 %start	any_command
 
@@ -1154,7 +1160,7 @@ select_statement:
 base_select:
 	SELECT comment_opt cache_opt distinct_opt straight_join_opt select_expression_list from_opt where_expression_opt group_by_opt having_opt
 	{
-		$$ = &Select{Comments: Comments($2), Cache: $3, Distinct: $4, Hints: $5, SelectExprs: $6, From: $7, Where: NewWhere(WhereStr, $8), GroupBy: GroupBy($9), Having: NewWhere(HavingStr, $10)}
+		$$ = &Select{Comments: Comments($2), Cache: $3, Distinct: $4, Hints: $5, SelectExprs: $6, From: $7, Where: NewWhere(WhereClause, $8), GroupBy: GroupBy($9), Having: NewWhere(HavingClause, $10)}
 	}
 
 union_lhs:
@@ -1274,17 +1280,75 @@ partition_clause_opt:
 		$$ = $3
 	}
 	    
-
 update_statement:
 	UPDATE comment_opt table_name SET update_list where_expression_opt order_by_opt limit_opt
 	{
-		$$ = &Update{Comments: Comments($2), Table: $3, Exprs: $5, Where: NewWhere(WhereStr, $6), OrderBy: $7, Limit: $8}
+		$$ = &Update{Comments: Comments($2), Table: $3, Exprs: $5, Where: NewWhere(WhereClause, $6), OrderBy: $7, Limit: $8}
 	}
 
 delete_statement:
-	DELETE comment_opt FROM table_name where_expression_opt order_by_opt limit_opt
+	DELETE comment_opt delete_option_list FROM table_name as_opt_id partition_clause_opt where_expression_opt order_by_opt limit_opt
 	{
-		$$ = &Delete{Comments: Comments($2), Table: $4, Where: NewWhere(WhereStr, $5), OrderBy: $6, Limit: $7}
+		// Single table
+		$$ = &Delete{Comments: Comments($2), DeleteOptionList: ($3), TableRefs: TableExprs{&AliasedTableExpr{Expr: TableName{Qualifier: $5.Qualifier, Name: $5.Name}, As: $6}}, Partitions: $7, Where: NewWhere(WhereClause, $8), OrderBy: $9, Limit: $10, IsSingleTable: true}
+	}
+|	DELETE comment_opt delete_option_list table_alias_ref_list FROM table_references where_expression_opt
+	{
+		// Multi table
+		$$ = &Delete{Comments: Comments($2), DeleteOptionList: ($3), TableList: $4, TableRefs: $6, Where: NewWhere(WhereClause, $7), IsSingleTable: false, IsTableBeforeFrom: false}
+	}
+|	DELETE comment_opt delete_option_list FROM table_alias_ref_list USING table_references where_expression_opt
+	{
+		// Multi table
+		$$ = &Delete{Comments: Comments($2), DeleteOptionList: ($3),TableList: $5, TableRefs: $7, Where: NewWhere(WhereClause, $8), IsSingleTable: false, IsTableBeforeFrom: false}
+	}
+
+delete_opt:
+	QUICK
+	{
+		$$ = QuickOption
+	}
+|	LOW_PRIORITY
+	{
+		$$ = LowPriorityOption
+	}
+|	IGNORE
+	{
+		$$ = IgnoreOption
+	}
+
+delete_option_list:
+	{
+		$$ = []DeleteOptionEnum{}
+	}
+| delete_option_list delete_opt
+	{
+		$$ = append($1, $2)
+	}
+
+wild_opt:
+	{}
+|	'.''*'
+	{}
+
+table_ident_wild_opt:
+	table_id wild_opt
+	{
+		$$ = TableName{Name: $1}
+	}
+|	table_id '.' reserved_table_id wild_opt
+	{
+		$$ = TableName{Qualifier: $1, Name: $3}
+	}
+
+table_alias_ref_list:
+	table_ident_wild_opt
+	{
+		$$ = TableNames{$1}
+	}
+|	table_alias_ref_list ',' table_ident_wild_opt
+	{
+		$$ = append($$, $3)
 	}
 
 do_statement:

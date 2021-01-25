@@ -122,8 +122,8 @@ func parseWhereOrJoinExprs(exprs sqlparser.Expr, tbInfos map[string]*tableInfo) 
 	return joins, wheres, nil
 }
 
-// GetDMLRouting used to get the routing from the where clause.
-func GetDMLRouting(database, table, shardkey string, where *sqlparser.Where, router *router.Router) ([]router.Segment, error) {
+// LookupFromWhere used to get the routing from the where clause.
+func LookupFromWhere(database, table, shardkey string, where *sqlparser.Where, router *router.Router) ([]router.Segment, error) {
 	if shardkey != "" && where != nil {
 		filters := splitAndExpression(nil, where.Expr)
 		for _, filter := range filters {

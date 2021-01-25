@@ -632,6 +632,72 @@ func TestValid(t *testing.T) {
 	}, {
 		input: "delete /* limit */ from a limit b",
 	}, {
+		input: "delete a from a join b on a.id = b.id where b.name = 'test'",
+	}, {
+		input: "delete a, b from a, b where a.id = b.id and b.name = 'test'",
+	}, {
+		input: "delete /* simple */ ignore from a",
+	}, {
+		input: "delete ignore from a",
+	}, {
+		input: "delete /* limit */ ignore from a",
+	}, {
+		input:  "delete from a1, a2 using t1 as a1 inner join t2 as a2 where a1.id=a2.id",
+		output: "delete a1, a2 from t1 as a1 join t2 as a2 where a1.id = a2.id",
+	}, {
+		input: "delete from t partition (p0) where a = 1",
+	}, {
+		input:  "delete a.*, b.* from tbl_a a, tbl_b b where a.id = b.id and b.name = 'test'",
+		output: "delete a, b from tbl_a as a, tbl_b as b where a.id = b.id and b.name = 'test'",
+	}, {
+		input:  "DELETE from t1 where a=1 limit 1",
+		output: "delete from t1 where a = 1 limit 1",
+	}, {
+		input:  "DELETE LOW_PRIORITY from t1 where a=1",
+		output: "delete low_priority from t1 where a = 1",
+	}, {
+		input:  "DELETE FROM t1 USING t1 WHERE post='1'",
+		output: "delete t1 from t1 where post = '1'",
+	}, {
+		input:  "DELETE FROM t1 WHERE t1.a > 0 ORDER BY t1.a",
+		output: "delete from t1 where t1.a > 0 order by t1.a asc",
+	}, {
+		input:  "DELETE FROM t1 WHERE t1.a > 0 ORDER BY t1.a LIMIT 1",
+		output: "delete from t1 where t1.a > 0 order by t1.a asc limit 1",
+	}, {
+		input:  "DELETE FROM t1 ORDER BY date ASC, time ASC LIMIT 1",
+		output: "delete from t1 order by `date` asc, `time` asc limit 1",
+	}, {
+		input:  "DELETE FROM t1 ORDER BY x",
+		output: "delete from t1 order by x asc",
+	}, {
+		input:  "DELETE FROM t1 ORDER BY (SELECT x)",
+		output: "delete from t1 order by (select x from dual) asc",
+	}, {
+		input:  "DELETE FROM alias USING t1, t2 alias WHERE t1.a = alias.a",
+		output: "delete alias from t1, t2 as alias where t1.a = alias.a",
+	}, {
+		input:  "DELETE FROM t1, alias USING t1, t2 alias WHERE t1.a = alias.a",
+		output: "delete t1, alias from t1, t2 as alias where t1.a = alias.a",
+	}, {
+		input:  "DELETE FROM t1 ORDER BY (f1(10)) LIMIT 1",
+		output: "delete from t1 order by (f1(10)) asc limit 1",
+	}, {
+		input:  "DELETE a1,a2 FROM db1.t1, db2.t2",
+		output: "delete a1, a2 from db1.t1, db2.t2",
+	}, {
+		input:  "DELETE a1,a2 FROM db1.t1 AS a1, db2.t2",
+		output: "delete a1, a2 from db1.t1 as a1, db2.t2",
+	}, {
+		input:  "DELETE a1,a2 FROM db1.t1, db2.t2 AS a2",
+		output: "delete a1, a2 from db1.t1, db2.t2 as a2",
+	}, {
+		input:  "DELETE a1,a2 FROM db3.t1 AS a1, db4.t2 AS a2",
+		output: "delete a1, a2 from db3.t1 as a1, db4.t2 as a2",
+	}, {
+		input:  "DELETE ignore Low_priority QUICK QUICK t1, t2, t3 FROM t1, t2, t3",
+		output: "delete ignore low_priority quick quick t1, t2, t3 from t1, t2, t3",
+	}, {
 		input:  "alter table a alter foo",
 		output: "alter table a",
 	}, {
@@ -1415,6 +1481,15 @@ func TestErrors(t *testing.T) {
 	}, {
 		input:  "select * from t where id = ((select a from t1 union select b from t2) order by a limit 1)",
 		output: "syntax error at position 76 near 'order'",
+	}, {
+		input:  "DELETE FROM t1 alias USING t1, t2 alias WHERE t1.a = alias.a",
+		output: "syntax error at position 27 near 'using'",
+	}, {
+		input:  "DELETE FROM db1.t1 alias USING db1.t1, db2.t1 alias WHERE db1.t1.a = alias.a",
+		output: "syntax error at position 31 near 'using'",
+	}, {
+		input:  "DELETE FROM t1 alias USING t1 alias WHERE a = 2",
+		output: "syntax error at position 27 near 'using'",
 	}}
 	for _, tcase := range invalidSQL {
 		if tcase.output == "" {

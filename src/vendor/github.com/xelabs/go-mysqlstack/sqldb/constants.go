@@ -293,6 +293,9 @@ const (
 	// ER_BAD_DB_ERROR enum.
 	ER_TABLE_EXISTS_ERROR = 1050
 
+	// ER_BAD_FIELD_ERROR enum.
+	ER_BAD_FIELD_ERROR = 1054
+
 	// ER_TOO_LONG_IDENT enum
 	ER_TOO_LONG_IDENT = 1059
 
@@ -346,6 +349,7 @@ var SQLErrors = map[uint16]*SQLError{
 	ER_NO_DB_ERROR:                  &SQLError{Num: ER_NO_DB_ERROR, State: "3D000", Message: "No database selected"},
 	ER_BAD_DB_ERROR:                 &SQLError{Num: ER_BAD_DB_ERROR, State: "42000", Message: "Unknown database '%-.192s'"},
 	ER_TABLE_EXISTS_ERROR:           &SQLError{Num: ER_TABLE_EXISTS_ERROR, State: "42S01", Message: "Table '%s' already exists"},
+	ER_BAD_FIELD_ERROR:              &SQLError{Num: ER_BAD_FIELD_ERROR, State: "42S22", Message: "Unknown column '%s' in '%s'"},
 	ER_TOO_LONG_IDENT:               &SQLError{Num: ER_TOO_LONG_IDENT, State: "42000", Message: "Identifier name '%-.100s' is too long"},
 	ER_KILL_DENIED_ERROR:            &SQLError{Num: ER_KILL_DENIED_ERROR, State: "HY000", Message: "You are not owner of thread '%-.192s'"},
 	ER_UNKNOWN_ERROR:                &SQLError{Num: ER_UNKNOWN_ERROR, State: "HY000", Message: "%v"},

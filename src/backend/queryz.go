@@ -77,7 +77,7 @@ func (a byStartTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byStartTime) Less(i, j int) bool { return a[i].Start.Before(a[j].Start) }
 
 // GetQueryzRows returns a list of QueryDetailzRow sorted by start time
-func (qz *Queryz) GetQueryzRows() []QueryDetailzRow {
+func (qz *Queryz) GetQueryzRows() byStartTime {
 	qz.mu.RLock()
 	rows := []QueryDetailzRow{}
 	for _, qd := range qz.queryDetails {

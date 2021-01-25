@@ -18,7 +18,7 @@ import (
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
-func TestGetDMLRouting(t *testing.T) {
+func TestLookupFromWhere(t *testing.T) {
 	querys := []string{
 		"select * from B where B.b between 10 and 20 and B.id = 10",
 		"select * from B where id = 10",
@@ -53,13 +53,13 @@ func TestGetDMLRouting(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		n := node.(*sqlparser.Select)
 		assert.Nil(t, err)
-		got, err := GetDMLRouting(database, "B", "id", n.Where, route)
+		got, err := LookupFromWhere(database, "B", "id", n.Where, route)
 		assert.Nil(t, err)
 		assert.Equal(t, want[i], len(got))
 	}
 }
 
-func TestGetDMLRoutingErr(t *testing.T) {
+func TestLookupFromWhereErr(t *testing.T) {
 	testcases := []struct {
 		query string
 		out   string
@@ -84,7 +84,7 @@ func TestGetDMLRoutingErr(t *testing.T) {
 		node, err := sqlparser.Parse(testcase.query)
 		n := node.(*sqlparser.Select)
 		assert.Nil(t, err)
-		_, err = GetDMLRouting(database, "B", "id", n.Where, route)
+		_, err = LookupFromWhere(database, "B", "id", n.Where, route)
 		assert.NotNil(t, err)
 		assert.Equal(t, testcase.out, err.Error())
 	}

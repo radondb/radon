@@ -13,20 +13,40 @@ Table of Contents
 
 ## DELETE Statement
 
-`Syntax`
+`Single-Table Syntax`
 ```
-DELETE  FROM tbl_name
+DELETE [LOW_PRIORITY] [QUICK] [IGNORE] FROM tbl_name [[AS] tbl_alias]
+    [PARTITION (partition_name [, partition_name] ...)]
+    [WHERE where_condition]
+    [ORDER BY ...]
+    [LIMIT row_count]
+```
+
+`Multiple-Table Syntax`
+```
+DELETE [LOW_PRIORITY] [QUICK] [IGNORE]
+    tbl_name[.*] [, tbl_name[.*]] ...
+    FROM table_references
+    [WHERE where_condition]
+
+DELETE [LOW_PRIORITY] [QUICK] [IGNORE]
+    FROM tbl_name[.*] [, tbl_name[.*]] ...
+    USING table_references
     [WHERE where_condition]
 ```
 
 ``Instructions``
  * Support distributed transactions to ensure that atomicity is removed across partitions
- *  *Does not support delete without WHERE condition*
  *  *Does not support clauses*
+ *  *Does not support partition feature*
+ *  *Currently we support parse syntax 'delete with multitables',but the function does not implement yet*
 
 `Example: `
 ```
-mysql> DELETE FROM t1 WHERE id=1;
+mysql> DELETE FROM t1 WHERE id=1 order by id limit 2;
+Query OK, 2 rows affected (0.01 sec)
+
+mysql> DELETE FROM t1;
 Query OK, 2 rows affected (0.01 sec)
 ```
 
