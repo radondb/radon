@@ -296,7 +296,7 @@ var WhereType2Str = map[WhereTypeEnum]string{
 	HavingClause: "having",
 }
 
-// DeleteOptionsEnum is an enum for delete statement.
+// DeleteOptionEnum is an enum for delete statement.
 // See https://dev.mysql.com/doc/refman/8.0/en/delete.html
 type DeleteOptionEnum int
 

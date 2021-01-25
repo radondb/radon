@@ -46,7 +46,7 @@ func isUpdateShardKey(exprs sqlparser.UpdateExprs, shardkey string) bool {
 func checkField(database, table string, node sqlparser.SQLNode, log *xlog.Log) error {
 	switch node.(type) {
 	case *sqlparser.Delete:
-		// Here we not should do check on limit clause, leave it to the backend mysql.
+		// Here we should not do check on limit clause, leave it to the backend mysql.
 		nodePtr := node.(*sqlparser.Delete)
 		if err := checkFieldImpl(database, table, nodePtr.Where, "where clause"); err != nil {
 			return err
@@ -83,7 +83,7 @@ func checkFieldImpl(database, table string, node sqlparser.SQLNode, suffix strin
 					return false, sqldb.NewSQLError(sqldb.ER_BAD_FIELD_ERROR, badField, suffix)
 				}
 			}
-			// case 3: where/order by a, return
+			// case 3: where/order by a
 			// Currently if column a is not in table t, the err msg output is different with mysql.
 			// e.g.: DELETE FROM integrate_test.t WHERE post='1';
 			// In radondb we'll get:

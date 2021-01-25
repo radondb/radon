@@ -38,7 +38,7 @@ DELETE [LOW_PRIORITY] [QUICK] [IGNORE]
 ``Instructions``
  * Support distributed transactions to ensure that atomicity is removed across partitions
  *  *Does not support clauses*
- *  *Does not partition feature*
+ *  *Does not support partition feature*
  *  *Currently we support parse syntax 'delete with multitables',but the function does not implement yet*
 
 `Example: `

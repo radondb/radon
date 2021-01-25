@@ -123,8 +123,8 @@ func forceEOF(yylex interface{}) {
 	optimizeOptionEnum    OptimizeOptionEnum
 	checkOptionEnum       CheckOptionEnum
 	checkOptionList       CheckOptionList
-	delete_options_list   DeleteOptionList
-	delete_option         DeleteOptionEnum 
+	deleteOptionsList     DeleteOptionList
+	deleteOption          DeleteOptionEnum 
 }
 
 %token LEX_ERROR
@@ -1086,10 +1086,10 @@ func forceEOF(yylex interface{}) {
 %type	<partitionOption>
 	partition_option
 
-%type   <delete_options_list>
+%type   <deleteOptionsList>
 	delete_option_list
 
-%type   <delete_option>
+%type   <deleteOption>
 	delete_opt
 
 %start	any_command

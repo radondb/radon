@@ -110,8 +110,8 @@ type yySymType struct {
 	optimizeOptionEnum    OptimizeOptionEnum
 	checkOptionEnum       CheckOptionEnum
 	checkOptionList       CheckOptionList
-	delete_options_list   DeleteOptionList
-	delete_option         DeleteOptionEnum
+	deleteOptionsList     DeleteOptionList
+	deleteOption          DeleteOptionEnum
 }
 
 const LEX_ERROR = 57346
@@ -3430,51 +3430,51 @@ yydefault:
 		//line sql.y:1291
 		{
 			// Single table
-			yyVAL.statement = &Delete{Comments: Comments(yyDollar[2].bytes2), DeleteOptionList: (yyDollar[3].delete_options_list), TableRefs: TableExprs{&AliasedTableExpr{Expr: TableName{Qualifier: yyDollar[5].tableName.Qualifier, Name: yyDollar[5].tableName.Name}, As: yyDollar[6].tableIdent}}, Partitions: yyDollar[7].partitions, Where: NewWhere(WhereClause, yyDollar[8].expr), OrderBy: yyDollar[9].orderBy, Limit: yyDollar[10].limit, IsSingleTable: true}
+			yyVAL.statement = &Delete{Comments: Comments(yyDollar[2].bytes2), DeleteOptionList: (yyDollar[3].deleteOptionsList), TableRefs: TableExprs{&AliasedTableExpr{Expr: TableName{Qualifier: yyDollar[5].tableName.Qualifier, Name: yyDollar[5].tableName.Name}, As: yyDollar[6].tableIdent}}, Partitions: yyDollar[7].partitions, Where: NewWhere(WhereClause, yyDollar[8].expr), OrderBy: yyDollar[9].orderBy, Limit: yyDollar[10].limit, IsSingleTable: true}
 		}
 	case 54:
 		yyDollar = yyS[yypt-7 : yypt+1]
 		//line sql.y:1296
 		{
 			// Multi table
-			yyVAL.statement = &Delete{Comments: Comments(yyDollar[2].bytes2), DeleteOptionList: (yyDollar[3].delete_options_list), TableList: yyDollar[4].tableNames, TableRefs: yyDollar[6].tableExprs, Where: NewWhere(WhereClause, yyDollar[7].expr), IsSingleTable: false, IsTableBeforeFrom: false}
+			yyVAL.statement = &Delete{Comments: Comments(yyDollar[2].bytes2), DeleteOptionList: (yyDollar[3].deleteOptionsList), TableList: yyDollar[4].tableNames, TableRefs: yyDollar[6].tableExprs, Where: NewWhere(WhereClause, yyDollar[7].expr), IsSingleTable: false, IsTableBeforeFrom: false}
 		}
 	case 55:
 		yyDollar = yyS[yypt-8 : yypt+1]
 		//line sql.y:1301
 		{
 			// Multi table
-			yyVAL.statement = &Delete{Comments: Comments(yyDollar[2].bytes2), DeleteOptionList: (yyDollar[3].delete_options_list), TableList: yyDollar[5].tableNames, TableRefs: yyDollar[7].tableExprs, Where: NewWhere(WhereClause, yyDollar[8].expr), IsSingleTable: false, IsTableBeforeFrom: false}
+			yyVAL.statement = &Delete{Comments: Comments(yyDollar[2].bytes2), DeleteOptionList: (yyDollar[3].deleteOptionsList), TableList: yyDollar[5].tableNames, TableRefs: yyDollar[7].tableExprs, Where: NewWhere(WhereClause, yyDollar[8].expr), IsSingleTable: false, IsTableBeforeFrom: false}
 		}
 	case 56:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		//line sql.y:1308
 		{
-			yyVAL.delete_option = QuickOption
+			yyVAL.deleteOption = QuickOption
 		}
 	case 57:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		//line sql.y:1312
 		{
-			yyVAL.delete_option = LowPriorityOption
+			yyVAL.deleteOption = LowPriorityOption
 		}
 	case 58:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		//line sql.y:1316
 		{
-			yyVAL.delete_option = IgnoreOption
+			yyVAL.deleteOption = IgnoreOption
 		}
 	case 59:
 		yyDollar = yyS[yypt-0 : yypt+1]
 		//line sql.y:1321
 		{
-			yyVAL.delete_options_list = []DeleteOptionEnum{}
+			yyVAL.deleteOptionsList = []DeleteOptionEnum{}
 		}
 	case 60:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		//line sql.y:1325
 		{
-			yyVAL.delete_options_list = append(yyDollar[1].delete_options_list, yyDollar[2].delete_option)
+			yyVAL.deleteOptionsList = append(yyDollar[1].deleteOptionsList, yyDollar[2].deleteOption)
 		}
 	case 61:
 		yyDollar = yyS[yypt-0 : yypt+1]
