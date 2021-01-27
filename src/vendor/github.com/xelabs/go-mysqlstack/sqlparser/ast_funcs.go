@@ -70,6 +70,36 @@ func Append(buf *strings.Builder, node SQLNode) {
 	node.Format(tbuf)
 }
 
+// LowerCaseTableNames use to lower case the table names(table ident).
+func LowerCaseTableNames(stmt SQLNode) SQLNode {
+	return Rewrite(stmt, func(cursor *Cursor) bool {
+		switch n := cursor.Node().(type) {
+		case TableName:
+			if !n.IsEmpty() {
+				name := NewTableIdent(strings.ToLower(n.Name.v))
+				qualifier := NewTableIdent("")
+				if !n.Qualifier.IsEmpty() {
+					qualifier.v = strings.ToLower(n.Qualifier.v)
+				}
+				tb := TableName{
+					Name:      name,
+					Qualifier: qualifier,
+				}
+				cursor.Replace(tb)
+			}
+			return false
+		case TableIdent:
+			if !n.IsEmpty() {
+				id := NewTableIdent(strings.ToLower(n.v))
+				cursor.Replace(id)
+			}
+			return false
+		default:
+			return true
+		}
+	}, nil)
+}
+
 // AddWhere adds the boolean expression to the
 // WHERE clause as an AND condition. If the expression
 // is an OR clause, it parenthesizes it. Currently,

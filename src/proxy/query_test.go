@@ -733,3 +733,44 @@ func TestProxyQueryNotSupport(t *testing.T) {
 	expected := "unsupported.query:repair (errno 1105) (sqlstate HY000)"
 	assert.EqualValues(t, expected, actual.Error())
 }
+
+func TestProxyLowerCase(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+	proxy.SetLowerCaseTableNames(true)
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create database TEST"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "create table test.T1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// select.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		query := "select  * from test.t1"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+}

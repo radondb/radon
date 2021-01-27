@@ -10,6 +10,7 @@ package proxy
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/xelabs/go-mysqlstack/driver"
 	"github.com/xelabs/go-mysqlstack/sqldb"
@@ -23,6 +24,10 @@ func (spanner *Spanner) ComInitDB(session *driver.Session, database string) erro
 	// Check the database ACL.
 	if err := router.DatabaseACL(database); err != nil {
 		return err
+	}
+
+	if spanner.isLowerCaseTableNames() {
+		database = strings.ToLower(database)
 	}
 
 	privilegePlug := spanner.plugins.PlugPrivilege()

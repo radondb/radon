@@ -196,7 +196,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32) {
 			session.writeErrFromError(err)
 			return
 		}
-		session.SetSchema(db)
 	}
 
 	if err = session.packets.WriteOK(0, 0, session.greeting.Status(), 0); err != nil {
@@ -227,7 +226,6 @@ func (l *Listener) handle(conn net.Conn, ID uint32) {
 					return
 				}
 			} else {
-				session.SetSchema(db)
 				if err = session.packets.WriteOK(0, 0, session.greeting.Status(), 0); err != nil {
 					return
 				}

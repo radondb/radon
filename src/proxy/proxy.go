@@ -314,3 +314,11 @@ func (p *Proxy) SetBlocks(blocks int) {
 	p.log.Info("proxy.SetBlocks:[%d->%d]", p.conf.Router.Blocks, blocks)
 	p.conf.Router.Blocks = blocks
 }
+
+// SetLowerCaseTableNames used to set LowerCaseTableNames to false or true.
+func (p *Proxy) SetLowerCaseTableNames(lowerCase bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.log.Info("proxy.SetLowerCaseTableNames:[%v->%v]", p.conf.Proxy.LowerCaseTableNames, lowerCase)
+	p.conf.Proxy.LowerCaseTableNames = lowerCase
+}

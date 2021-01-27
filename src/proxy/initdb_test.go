@@ -35,6 +35,18 @@ func TestProxyUseDatabase(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
+	// lower case.
+	{
+		session := proxy.sessions.getSession(1).session
+		spanner := proxy.Spanner()
+		spanner.ComInitDB(session, "TEST")
+		assert.Equal(t, "TEST", session.Schema())
+
+		proxy.SetLowerCaseTableNames(true)
+		spanner.ComInitDB(session, "TEST")
+		assert.Equal(t, "test", session.Schema())
+	}
+
 	// use db.
 	{
 		_, err := driver.NewConn("mock", "mock", address, "test", "utf8")

@@ -18,17 +18,18 @@ import (
 )
 
 type radonParams struct {
-	MaxConnections   *int     `json:"max-connections"`
-	MaxResultSize    *int     `json:"max-result-size"`
-	MaxJoinRows      *int     `json:"max-join-rows"`
-	DDLTimeout       *int     `json:"ddl-timeout"`
-	QueryTimeout     *int     `json:"query-timeout"`
-	TwoPCEnable      *bool    `json:"twopc-enable"`
-	LoadBalance      *int     `json:"load-balance"`
-	AllowIP          []string `json:"allowip,omitempty"`
-	AuditMode        *string  `json:"audit-mode"`
-	StreamBufferSize *int     `json:"stream-buffer-size"`
-	Blocks           *int     `json:"blocks-readonly"`
+	MaxConnections      *int     `json:"max-connections"`
+	MaxResultSize       *int     `json:"max-result-size"`
+	MaxJoinRows         *int     `json:"max-join-rows"`
+	DDLTimeout          *int     `json:"ddl-timeout"`
+	QueryTimeout        *int     `json:"query-timeout"`
+	TwoPCEnable         *bool    `json:"twopc-enable"`
+	LoadBalance         *int     `json:"load-balance"`
+	AllowIP             []string `json:"allowip,omitempty"`
+	AuditMode           *string  `json:"audit-mode"`
+	StreamBufferSize    *int     `json:"stream-buffer-size"`
+	Blocks              *int     `json:"blocks-readonly"`
+	LowerCaseTableNames *bool    `json:"lower-case-table-names"`
 }
 
 // RadonConfigHandler impl.
@@ -79,6 +80,9 @@ func radonConfigHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter
 	}
 	if p.Blocks != nil {
 		proxy.SetBlocks(*p.Blocks)
+	}
+	if p.LowerCaseTableNames != nil {
+		proxy.SetLowerCaseTableNames(*p.LowerCaseTableNames)
 	}
 
 	// reset the allow ip table list.

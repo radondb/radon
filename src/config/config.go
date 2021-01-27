@@ -24,11 +24,12 @@ const (
 
 // ProxyConfig tuple.
 type ProxyConfig struct {
-	IPS         []string `json:"allowip"`
-	MetaDir     string   `json:"meta-dir"`
-	Endpoint    string   `json:"endpoint"`
-	TwopcEnable bool     `json:"twopc-enable"`
-	LoadBalance int      `json:"load-balance"` // 0 -- disable balance, 1 -- enable balance to replica
+	IPS                 []string `json:"allowip"`
+	MetaDir             string   `json:"meta-dir"`
+	Endpoint            string   `json:"endpoint"`
+	TwopcEnable         bool     `json:"twopc-enable"`
+	LoadBalance         int      `json:"load-balance"` // 0 -- disable balance, 1 -- enable balance to replica
+	LowerCaseTableNames bool     `json:"lower-case-table-names"`
 
 	MaxConnections   int    `json:"max-connections"`
 	MaxResultSize    int    `json:"max-result-size"`

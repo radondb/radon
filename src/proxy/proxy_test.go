@@ -105,6 +105,14 @@ func TestProxy1(t *testing.T) {
 		assert.Equal(t, 0, proxy.conf.Proxy.LoadBalance)
 	}
 
+	// SetLowerCaseTableNames.
+	{
+		proxy.SetLowerCaseTableNames(true)
+		assert.Equal(t, true, proxy.conf.Proxy.LowerCaseTableNames)
+		proxy.SetLowerCaseTableNames(false)
+		assert.Equal(t, false, proxy.conf.Proxy.LowerCaseTableNames)
+	}
+
 	// FlushConfig.
 	{
 		err := proxy.FlushConfig()

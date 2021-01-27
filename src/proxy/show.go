@@ -79,8 +79,8 @@ func (spanner *Spanner) handleShowTableStatus(session *driver.Session, query str
 	router := spanner.router
 
 	database := session.Schema()
-	if ast.Database != "" {
-		database = ast.Database
+	if !ast.Database.IsEmpty() {
+		database = ast.Database.String()
 	}
 
 	if database == "" {
@@ -204,8 +204,8 @@ func (spanner *Spanner) handleShowTables(session *driver.Session, query string, 
 	ast := node
 
 	database := session.Schema()
-	if ast.Database != "" {
-		database = ast.Database
+	if !ast.Database.IsEmpty() {
+		database = ast.Database.String()
 	}
 	if database == "" {
 		return nil, sqldb.NewSQLError(sqldb.ER_NO_DB_ERROR)

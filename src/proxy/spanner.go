@@ -151,3 +151,7 @@ func (spanner *Spanner) isTwoPC() bool {
 func (spanner *Spanner) isAutocommitFalseIsTxn() bool {
 	return spanner.conf.Proxy.AutocommitFalseIsTxn
 }
+
+func (spanner *Spanner) isLowerCaseTableNames() bool {
+	return spanner.conf.Proxy.LowerCaseTableNames
+}

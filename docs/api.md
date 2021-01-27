@@ -55,16 +55,17 @@ This document describes the RadonDB REST API, which allows users to achieve most
 Path:    /v1/radon/config
 Method:  PUT
 Request: {
-			"max-connections": The maximum permitted number of simultaneous client connections,
-			"max-result-size": The maximum result size(in bytes) of a query,
-			"max-join-rows":   The maximum number of rows that will be held in memory for join's intermediate results,
-			"ddl-timeout":     The execution timeout(in millisecond) for DDL statements,
-			"query-timeout":   The execution timeout(in millisecond) for DML statements,
-			"twopc-enable":    Enables(true or false) radon two phase commit, for distrubuted transaction,
-			"allowip":         ["allow-ip-1", "allow-ip-2", "allow-ip-regexp"],
-			"audit-mode":      The audit log mode, "N": disabled, "R": read enabled, "W": write enabled, "A": read/write enabled,
-			"blocks-readonly": The size of a block when create hash tables,
-			"load-balance":    Enables(0 or 1) load balance, for read-write separation.
+			"max-connections":        The maximum permitted number of simultaneous client connections,
+			"max-result-size":        The maximum result size(in bytes) of a query,
+			"max-join-rows":          The maximum number of rows that will be held in memory for join's intermediate results,
+			"ddl-timeout":            The execution timeout(in millisecond) for DDL statements,
+			"query-timeout":          The execution timeout(in millisecond) for DML statements,
+			"twopc-enable":           Enables(true or false) radon two phase commit, for distrubuted transaction,
+			"allowip":                ["allow-ip-1", "allow-ip-2", "allow-ip-regexp"],
+			"audit-mode":             The audit log mode, "N": disabled, "R": read enabled, "W": write enabled, "A": read/write enabled,
+			"blocks-readonly":        The size of a block when create hash tables,
+			"load-balance":           Enables(0 or 1) load balance, for read-write separation,
+			"lower-case-table-names": If set false, table names are stored as specified and comparisons are case-sensitive, else not case-sensitive.
          }
          
 ```
