@@ -733,3 +733,155 @@ func TestProxyQueryNotSupport(t *testing.T) {
 	expected := "unsupported.query:repair (errno 1105) (sqlstate HY000)"
 	assert.EqualValues(t, expected, actual.Error())
 }
+
+func TestProxyLowerCase(t *testing.T) {
+	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
+	fakedbs, proxy, cleanup := MockProxy(log)
+	defer cleanup()
+	address := proxy.Address()
+
+	r1 := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{
+				Name: "table",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "create table",
+				Type: querypb.Type_VARCHAR,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("t1")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("create table t1")),
+			},
+		},
+	}
+
+	// fakedbs.
+	{
+		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("delete .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("update .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("show create .*", r1)
+	}
+
+	{
+		proxy.SetLowerCaseTableNames(1)
+	}
+
+	// create database.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "create database TEST"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// create test table.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "create table test.T1(id int, b int) partition by hash(id)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// insert.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "insert into Test.t1(id,b) values(1,1)"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// update.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "test", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "update t1 set b=2 where id=1"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// select.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "select  * from tEst.t1 as T where t.b=2"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// delete.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "TEST", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "delete from t1 where T1.id=1"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// show.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "show create table test.t1"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// lower_case_table_names=0
+	{
+		proxy.SetLowerCaseTableNames(0)
+	}
+
+	// select.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "select  * from test.t1 as t where t.b=2"
+		_, err = client.FetchAll(query, -1)
+		assert.Nil(t, err)
+	}
+
+	// select error 1.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "select  * from TEST.T1 as t where t.b=2"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+		want := "Table 'TEST.T1' doesn't exist (errno 1146) (sqlstate 42S02)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+
+	// select error 2.
+	{
+		client, err := driver.NewConn("mock", "mock", address, "", "utf8")
+		assert.Nil(t, err)
+		defer client.Close()
+		query := "select  * from test.t1 as T where t.b=2"
+		_, err = client.FetchAll(query, -1)
+		assert.NotNil(t, err)
+		want := "unsupported: unknown.column.'t.b'.in.clause (errno 1105) (sqlstate HY000)"
+		got := err.Error()
+		assert.Equal(t, want, got)
+	}
+}

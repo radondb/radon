@@ -706,7 +706,6 @@ func forceEOF(yylex interface{}) {
 
 %type	<str>
 	columns_or_fields
-	database_from_opt
 	from_or_in
 	full_opt
 	index_symbols
@@ -905,6 +904,7 @@ func forceEOF(yylex interface{}) {
 	as_opt_id
 	db_name
 	db_name_or_empty
+	database_from_opt
 
 %type	<empty>
 	as_opt
@@ -3377,7 +3377,7 @@ show_statement:
 	}
 |	SHOW CREATE DATABASE table_id force_eof
 	{
-		$$ = &Show{Type: ShowCreateDatabaseStr, Database: $4.v}
+		$$ = &Show{Type: ShowCreateDatabaseStr, Database: $4}
 	}
 |	SHOW DATABASES force_eof
 	{
@@ -3393,8 +3393,8 @@ show_statement:
 	}
 |	SHOW index_symbols from_or_in table_name database_from_opt where_expression_opt
 	{
-		if $5 != ""{
-			$4.Qualifier.v = $5
+		if $5.v != ""{
+			$4.Qualifier = $5
 		}
 		var filter *ShowFilter
 		if $6 != nil{
@@ -3404,8 +3404,8 @@ show_statement:
 	}
 |	SHOW full_opt columns_or_fields from_or_in table_name database_from_opt like_or_where_opt
 	{
-		if $6 != ""{
-			$5.Qualifier.v = $6
+		if $6.v != ""{
+			$5.Qualifier = $6
 		}
 		$$ = &Show{Full: $2, Type: ShowColumnsStr, Table: $5, Filter: $7}
 	}
@@ -3480,11 +3480,11 @@ index_symbols:
 database_from_opt:
 	/* empty */
 	{
-		$$ = ""
+		$$ = NewTableIdent("")
 	}
 |	from_or_in table_id
 	{
-		$$ = $2.v
+		$$ = $2
 	}
 
 from_or_in:

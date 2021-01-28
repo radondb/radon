@@ -46,6 +46,20 @@ func TestAppend(t *testing.T) {
 	}
 }
 
+func TestLowerCaseTableNames(t *testing.T) {
+	tree, err := Parse("select tT.A from tEst.T as TT where a = 1")
+	if err != nil {
+		t.Error(err)
+	}
+
+	node := LowerCaseTableNames(tree)
+	got := String(node)
+	want := "select tt.A from test.t as tt where a = 1"
+	if got != want {
+		t.Errorf("Append: %s, want %s", got, want)
+	}
+}
+
 func TestSelect(t *testing.T) {
 	tree, err := Parse("select * from t where a = 1")
 	if err != nil {

@@ -24,11 +24,12 @@ const (
 
 // ProxyConfig tuple.
 type ProxyConfig struct {
-	IPS         []string `json:"allowip"`
-	MetaDir     string   `json:"meta-dir"`
-	Endpoint    string   `json:"endpoint"`
-	TwopcEnable bool     `json:"twopc-enable"`
-	LoadBalance int      `json:"load-balance"` // 0 -- disable balance, 1 -- enable balance to replica
+	IPS                 []string `json:"allowip"`
+	MetaDir             string   `json:"meta-dir"`
+	Endpoint            string   `json:"endpoint"`
+	TwopcEnable         bool     `json:"twopc-enable"`
+	LoadBalance         int      `json:"load-balance"`           // 0 -- disable balance, 1 -- enable balance to replica
+	LowerCaseTableNames int      `json:"lower-case-table-names"` // 0 -- case sensitive, 1 -- case insensitive
 
 	MaxConnections   int    `json:"max-connections"`
 	MaxResultSize    int    `json:"max-result-size"`
@@ -48,18 +49,19 @@ type ProxyConfig struct {
 // DefaultProxyConfig returns default proxy config.
 func DefaultProxyConfig() *ProxyConfig {
 	return &ProxyConfig{
-		MetaDir:          "./radon-meta",
-		Endpoint:         "127.0.0.1:3308",
-		LoadBalance:      0,
-		MaxConnections:   1024,
-		MaxResultSize:    1024 * 1024 * 1024, // 1GB
-		MaxJoinRows:      32768,
-		DDLTimeout:       10 * 3600 * 1000, // 10hours
-		QueryTimeout:     5 * 60 * 1000,    // 5minutes
-		PeerAddress:      "127.0.0.1:8080",
-		LongQueryTime:    5,                // 5 seconds
-		StreamBufferSize: 1024 * 1024 * 32, // 32MB
-		IdleTxnTimeout:   60,               // 60 seconds
+		MetaDir:             "./radon-meta",
+		Endpoint:            "127.0.0.1:3308",
+		LoadBalance:         0,
+		LowerCaseTableNames: 0,
+		MaxConnections:      1024,
+		MaxResultSize:       1024 * 1024 * 1024, // 1GB
+		MaxJoinRows:         32768,
+		DDLTimeout:          10 * 3600 * 1000, // 10hours
+		QueryTimeout:        5 * 60 * 1000,    // 5minutes
+		PeerAddress:         "127.0.0.1:8080",
+		LongQueryTime:       5,                // 5 seconds
+		StreamBufferSize:    1024 * 1024 * 32, // 32MB
+		IdleTxnTimeout:      60,               // 60 seconds
 	}
 }
 

@@ -89,6 +89,11 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 			return sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, err.Error())
 		}
 	}
+
+	if spanner.isLowerCaseTableNames() {
+		node = sqlparser.LowerCaseTableNames(node).(sqlparser.Statement)
+		query = sqlparser.String(node)
+	}
 	log.Debug("query:%v", query)
 
 	// Readonly check.

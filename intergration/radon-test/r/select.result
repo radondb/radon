@@ -29,6 +29,15 @@ sum(a)	b
 select c from integrate_test.t;
 ERROR 1054 (42S22): Unknown column 'c' in 'field list'
 
+select a from integrate_test.T;
+ERROR 1146 (42S02): Table 'T' doesn't exist
+
+select a from INTEGRATE_TEST.t;
+ERROR 1146 (42S02): Table 'INTEGRATE_TEST.t' doesn't exist
+
+select tt.a from integrate_test.t as TT;
+ERROR 1105 (HY000): unsupported: unknown.column.'tt.a'.in.field.list
+
 
 create table integrate_test.s(a int key, b int) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
