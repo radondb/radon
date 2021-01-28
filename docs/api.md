@@ -65,7 +65,7 @@ Request: {
 			"audit-mode":             The audit log mode, "N": disabled, "R": read enabled, "W": write enabled, "A": read/write enabled,
 			"blocks-readonly":        The size of a block when create hash tables,
 			"load-balance":           Enables(0 or 1) load balance, for read-write separation,
-			"lower-case-table-names": If set false, table names are stored as specified and comparisons are case-sensitive, else not case-sensitive.
+			"lower-case-table-names": If set 0, table names are stored as specified and comparisons are case-sensitive. If set 1, not case-sensitive.
          }
          
 ```

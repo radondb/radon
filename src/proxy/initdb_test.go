@@ -42,7 +42,7 @@ func TestProxyUseDatabase(t *testing.T) {
 		spanner.ComInitDB(session, "TEST")
 		assert.Equal(t, "TEST", session.Schema())
 
-		proxy.SetLowerCaseTableNames(true)
+		proxy.SetLowerCaseTableNames(1)
 		spanner.ComInitDB(session, "TEST")
 		assert.Equal(t, "test", session.Schema())
 	}

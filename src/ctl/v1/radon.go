@@ -29,7 +29,7 @@ type radonParams struct {
 	AuditMode           *string  `json:"audit-mode"`
 	StreamBufferSize    *int     `json:"stream-buffer-size"`
 	Blocks              *int     `json:"blocks-readonly"`
-	LowerCaseTableNames *bool    `json:"lower-case-table-names"`
+	LowerCaseTableNames *int     `json:"lower-case-table-names"`
 }
 
 // RadonConfigHandler impl.

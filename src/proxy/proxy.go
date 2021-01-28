@@ -316,7 +316,7 @@ func (p *Proxy) SetBlocks(blocks int) {
 }
 
 // SetLowerCaseTableNames used to set LowerCaseTableNames to false or true.
-func (p *Proxy) SetLowerCaseTableNames(lowerCase bool) {
+func (p *Proxy) SetLowerCaseTableNames(lowerCase int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.log.Info("proxy.SetLowerCaseTableNames:[%v->%v]", p.conf.Proxy.LowerCaseTableNames, lowerCase)

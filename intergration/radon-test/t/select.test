@@ -8,6 +8,9 @@ select a, b c from integrate_test.t where a in (0,1,2) order by C desc;
 select a, b from integrate_test.t where A>0;
 select sum(a), b from integrate_test.t where a>=0 group by B;
 select c from integrate_test.t;
+select a from integrate_test.T;
+select a from INTEGRATE_TEST.t;
+select tt.a from integrate_test.t as TT;
 
 create table integrate_test.s(a int key, b int) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 insert into integrate_test.s(a, b) values(0,1), (2,2);

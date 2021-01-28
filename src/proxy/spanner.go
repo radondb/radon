@@ -153,5 +153,8 @@ func (spanner *Spanner) isAutocommitFalseIsTxn() bool {
 }
 
 func (spanner *Spanner) isLowerCaseTableNames() bool {
-	return spanner.conf.Proxy.LowerCaseTableNames
+	if spanner.conf.Proxy.LowerCaseTableNames == 0 {
+		return false
+	}
+	return true
 }
