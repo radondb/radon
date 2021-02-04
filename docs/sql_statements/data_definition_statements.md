@@ -19,7 +19,7 @@ Table of Contents
 
 # Data Definition Statements
 
-## ALTER TABLE Statement
+## ALTER DATABASE Statement
 `Syntax`
 ```
 ALTER {DATABASE | SCHEMA} [db_name]
@@ -91,7 +91,6 @@ alter_option: {
   | ADD COLUMN (col_name column_definition,...)
   | DROP COLUMN col_name
   | MODIFY COLUMN col_name column_definition
-
 }
 
   table_option: {
@@ -390,7 +389,7 @@ table_option: {
 }
 
 partition_options:
-    PARTITION BY HASH(shard-key) [PARTITIONS num]
+      PARTITION BY HASH(shard-key) [PARTITIONS num]
     | PARTITION BY LIST(shard-key)(PARTITION backend VALUES IN (value_list),...)
     | SINGLE
     | GLOBAL
@@ -507,7 +506,7 @@ Create Table: CREATE TABLE `t4` (
 
 `Syntax`
 ```
- DROP {DATABASE | SCHEMA} [IF EXISTS] db_name
+DROP {DATABASE | SCHEMA} [IF EXISTS] db_name
 ```
 
 `Instructions`
