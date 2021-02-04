@@ -6,7 +6,7 @@ Table of Contents
    * [Others](#others)
       * [Using AUTO INCREMENT](#using-auto-increment)
       * [Streaming fetch](#streaming-fetch)
-         * [Read-write Separation](#read-write-separation)
+      * [Read-write Separation](#read-write-separation)
    * [Full Text Search](#full-text-search)
       * [ngram Full Text Parser](#ngram-full-text-parser)
 
@@ -123,7 +123,7 @@ mysql> select /*+ streaming */ * from t1;
 Empty set (0.00 sec)
 ```
 
-### Read-write Separation
+## Read-write Separation
 
 `Instructions`
 * If `load-balance` is 1, the query can route to the `replica-address`.

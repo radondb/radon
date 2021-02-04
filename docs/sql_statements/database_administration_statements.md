@@ -424,8 +424,7 @@ OPTIMIZE [NO_WRITE_TO_BINLOG | LOCAL]
 ```
 
 `Instructions`
-* Reports a checksum for the contents of a table
-* RadonDB gives same result as MySQL
+* Reorganizes the physical storage of table data and associated index data, to reduce storage space and improve I/O efficiency when accessing the table. 
 
 `Example: `
 1. optimize global table

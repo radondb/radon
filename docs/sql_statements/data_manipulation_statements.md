@@ -196,10 +196,7 @@ SELECT
 `JOIN`
 ```
 table_references:
-    escaped_table_reference [, escaped_table_reference] ...
-escaped_table_reference:
-    table_reference
-  | { OJ table_reference }
+    table_reference [, table_reference] ...
 table_reference:
     table_factor
   | join_table
