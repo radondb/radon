@@ -31,51 +31,37 @@ $cd go-mydumper
 $make
 
 $./bin/mydumper --help
-Usage: ./bin/mydumper -h [HOST] -P [PORT] -u [USER] -p [PASSWORD] -db [DATABASE] -o [OUTDIR]
-  -F int
-        Split tables into chunks of this output file size. This value is in MB (default 128)
-  -P int
-        TCP/IP port to connect to (default 3306)
-  -db string
-        Database to dump
-  -h string
-        The host to connect to
-  -o string
-        Directory to output files to
-  -p string
-        User password
-  -s int
-        Attempted size of INSERT statement in bytes (default 1000000)
-  -t int
-        Number of threads to use (default 16)
-  -table string
-        Table to dump
-  -u string
-        Username with privileges to run the dump
+Usage: ./bin/mydumper -c config/mydumper.ini.sample
+  -c string
+    	config file
 
 $./bin/myloader --help
-Usage: ./bin/myloader -h [HOST] -P [PORT] -u [USER] -p [PASSWORD] -d  [DIR]
+Usage: ./bin/myloader -h [HOST] -P [PORT] -u [USER] -p [PASSWORD] -d [DIR] [-o]
   -P int
-        TCP/IP port to connect to (default 3306)
+    	TCP/IP port to connect to (default 3306)
   -d string
-        Directory of the dump to import
+    	Directory of the dump to import
   -h string
-        The host to connect to
+    	The host to connect to
+  -o	Drop tables if they already exist
   -p string
-        User password
+    	User password
   -t int
-        Number of threads to use (default 16)
+    	Number of threads to use (default 16)
   -u string
-        Username with privileges to run the loader
+    	Username with privileges to run the loader
 ```
 
 ## 3. How to import data
 
 ### 3.1 export data from data source
 
-Firstly, use `mydumper` to export data from the other `MySQL` data source. For example:
+Firstly, configure `config/mydumper.ini.sample`, set the `host`, `port`, `user`, `password`, `database`, `outdir`. Use `mydumper` to export data from the other `MySQL` data source. 
+
+For example:
+
 ```plain
-$./bin/mydumper -h 192.168.0.2 -P 3306 -u test -p test -db sbtest  -o sbtest.sql
+$./bin/mydumper -c config/mydumper.ini.sample
  2017/10/25 13:12:52.933391 dumper.go:35:         [INFO]        dumping.database[sbtest].schema...
  2017/10/25 13:12:52.937743 dumper.go:45:         [INFO]        dumping.table[sbtest.benchyou0].schema...
  2017/10/25 13:12:52.937791 dumper.go:168:        [INFO]        dumping.table[sbtest.benchyou0].datas.thread[1]...
@@ -99,7 +85,7 @@ $./bin/mydumper -h 192.168.0.2 -P 3306 -u test -p test -db sbtest  -o sbtest.sql
 
 In the export directory(such as `sbtest.sql`), find `*-schema.sql`(such as `sbtest.benchyou0-scehma.sql`) :
 
-At the end of the original sentence, adding ‘`PARTITON BY HASH(ShardKey)`’ syntax:
+If the primary key or unique index is not specified in the table (or want to manually specify the partition key), we need add ‘`PARTITON BY HASH(ShardKey)`’ syntax at the end of the original sentence. We can also specify the table type by adding `GLOBAL|SINGLE`. 
 
 sbtest.benchyou0-schema.sql:
 
@@ -125,6 +111,19 @@ CREATE TABLE `benchyou0` (
   PRIMARY KEY (`id`),
   KEY `k_1` (`k`)
 ) ENGINE=InnoDB PARTITION BY HASH(id);
+```
+
+Modified (global table):
+
+```sql
+CREATE TABLE `benchyou0` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `k` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `c` char(120) NOT NULL DEFAULT '',
+  `pad` char(60) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`),
+  KEY `k_1` (`k`)
+) ENGINE=InnoDB GLOBAL;
 ```
 
 ### 3.3 import data to radon
@@ -220,10 +219,10 @@ mysql> select count(*) from benchyou1;
 
 ## 4. How to export data
 
-Use `mydumper` to export data from `radon`, this process is stream acquire (with `set @@SESSION.radon_streaming_fetch='ON'`) and export, basically does not occupy system memory.
+Use `mydumper` to export data from `radon`, this process is stream acquire (set `vars= "set @@SESSION.radon_streaming_fetch='ON'"` in `config/mydumper.ini.sample`) and export, basically does not occupy system memory.
 
 ```plain
-$./bin/mydumper -h 192.168.0.2 -P 3306 -u radondb -p radondb -db sbtest  -o sbtest.sql
+$./bin/mydumper -c config/mydumper.ini.sample
  2017/10/25 13:12:52.933391 dumper.go:35:         [INFO]        dumping.database[sbtest].schema...
  2017/10/25 13:12:52.937743 dumper.go:45:         [INFO]        dumping.table[sbtest.benchyou0].schema...
  2017/10/25 13:12:52.937791 dumper.go:168:        [INFO]        dumping.table[sbtest.benchyou0].datas.thread[1]...
