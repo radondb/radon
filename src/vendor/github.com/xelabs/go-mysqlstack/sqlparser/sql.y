@@ -158,6 +158,7 @@ func forceEOF(yylex interface{}) {
 %type   <str>
 	index_name
 	DATABASE_SYM
+	DATABASES_SYM
 
 // INDEX.
 %token	<bytes>
@@ -487,17 +488,18 @@ func forceEOF(yylex interface{}) {
 
 // Supported SHOW tokens
 %token	<bytes>
-	COLLATION
-	DATABASES
-	TABLES
-	WARNINGS
-	VARIABLES
-	EVENTS
 	BINLOG
-	GTID
-	STATUS
+	COLLATION
 	COLUMNS
+	DATABASES
+	EVENTS
 	FIELDS
+	GTID
+	SCHEMAS
+	STATUS
+	TABLES
+	VARIABLES
+	WARNINGS
 
 // Functions
 %token	<bytes>
@@ -709,6 +711,7 @@ func forceEOF(yylex interface{}) {
 	from_or_in
 	full_opt
 	index_symbols
+	val_type_opt
 
 %type	<showFilter>
 	like_or_where_opt
@@ -877,10 +880,11 @@ func forceEOF(yylex interface{}) {
 
 %type	<empty>
 	describe_command
-	non_rename_operation
 	index_opt
 	kill_opt
+	non_rename_operation
 	restrict_or_cascade_opt
+	storage_or_empty
 	table_opt
 	table_or_tables
 	to_opt
@@ -2788,7 +2792,7 @@ charset_opt:
 
 // TODO in the futrue we'll combine col_collate_opt and collate_opt into one.
 col_collate_opt:
-COLLATE id_or_string
+	COLLATE id_or_string
 	{
 		$$ = $2
 	}
@@ -2803,7 +2807,7 @@ collate_opt:
 	}
 
 column_format_opt:
-COLUMN_FORMAT FIXED
+	COLUMN_FORMAT FIXED
 	{
 		$$ = string($2)
 	}
@@ -2817,7 +2821,7 @@ COLUMN_FORMAT FIXED
 	}
 
 storage_opt:
-STORAGE DEFAULT
+	STORAGE DEFAULT
 	{
 		// "default" is not in official doc: https://dev.mysql.com/doc/refman/5.7/en/create-table.html
 		// but actually mysql support it, see: https://github.com/mysql/mysql-server/blob/5.7/sql/sql_yacc.yy#L6953
@@ -3152,10 +3156,10 @@ table_name_list:
 	}
 
 table_opt:
-        /* empty */
-        {}
-|       TABLE
-        {}
+	/* empty */
+	{}
+|	TABLE
+	{}
 
 truncate_statement:
 	TRUNCATE table_opt table_name
@@ -3305,7 +3309,7 @@ kill_opt:
 	{}
 
 kill_statement:
-	KILL kill_opt INTEGRAL force_eof
+	KILL kill_opt INTEGRAL
 	{
 		$$ = &Kill{QueryID: &NumVal{raw: string($3)}}
 	}
@@ -3329,61 +3333,61 @@ transaction_statement:
 	}
 
 radon_statement:
-	RADON ATTACH row_tuple force_eof
+	RADON ATTACH row_tuple
 	{
 		$$ = &Radon{Action: AttachStr, Row: $3}
 	}
-|	RADON DETACH row_tuple force_eof
+|	RADON DETACH row_tuple
 	{
 		$$ = &Radon{Action: DetachStr, Row: $3}
 	}
-|	RADON ATTACHLIST force_eof
+|	RADON ATTACHLIST
 	{
 		$$ = &Radon{Action: AttachListStr}
 	}
-|	RADON RESHARD table_name to_opt table_name force_eof
+|	RADON RESHARD table_name to_opt table_name
 	{
 		$$ = &Radon{Action: ReshardStr, Table: $3, NewName: $5}
 	}
-|	RADON CLEANUP force_eof
+|	RADON CLEANUP
 	{
 		$$ = &Radon{Action: CleanupStr}
 	}
-|	RADON REBALANCE force_eof
+|	RADON REBALANCE
 	{
 		$$ = &Radon{Action: RebalanceStr}
 	}
-|	RADON XA RECOVER force_eof
+|	RADON XA RECOVER
         {
 		$$ = &Radon{Action: XARecoverStr}
 	}
-|	RADON XA COMMIT force_eof
+|	RADON XA COMMIT
         {
 		$$ = &Radon{Action: XACommitStr}
 	}
-|	RADON XA ROLLBACK force_eof
+|	RADON XA ROLLBACK
 	{
 		$$ = &Radon{Action: XARollbackStr}
 	}
 
 show_statement:
-	SHOW BINLOG EVENTS binlog_from_opt limit_opt force_eof
+	SHOW BINLOG EVENTS binlog_from_opt limit_opt
 	{
 		$$ = &Show{Type: ShowBinlogEventsStr, From: $4, Limit: $5}
 	}
-|	SHOW CREATE TABLE table_name force_eof
+|	SHOW CREATE TABLE table_name
 	{
 		$$ = &Show{Type: ShowCreateTableStr, Table: $4}
 	}
-|	SHOW CREATE DATABASE table_id force_eof
+|	SHOW CREATE DATABASE_SYM db_name
 	{
 		$$ = &Show{Type: ShowCreateDatabaseStr, Database: $4}
 	}
-|	SHOW DATABASES force_eof
+|	SHOW DATABASES_SYM like_or_where_opt
 	{
-		$$ = &Show{Type: ShowDatabasesStr}
+		$$ = &Show{Type: ShowDatabasesStr, Filter: $3}
 	}
-|	SHOW ENGINES force_eof
+|	SHOW storage_or_empty ENGINES
 	{
 		$$ = &Show{Type: ShowEnginesStr}
 	}
@@ -3409,11 +3413,11 @@ show_statement:
 		}
 		$$ = &Show{Full: $2, Type: ShowColumnsStr, Table: $5, Filter: $7}
 	}
-|	SHOW PROCESSLIST force_eof
+|	SHOW PROCESSLIST
 	{
 		$$ = &Show{Type: ShowProcesslistStr}
 	}
-|	SHOW QUERYZ force_eof
+|	SHOW QUERYZ
 	{
 		$$ = &Show{Type: ShowQueryzStr}
 	}
@@ -3421,31 +3425,31 @@ show_statement:
 	{
 		$$ = &Show{Type: ShowStatusStr}
 	}
-|	SHOW TABLE STATUS database_from_opt force_eof
+|	SHOW TABLE STATUS database_from_opt like_or_where_opt
 	{
-		$$ = &Show{Type: ShowTableStatusStr, Database: $4}
+		$$ = &Show{Type: ShowTableStatusStr, Database: $4, Filter: $5}
 	}
-|	SHOW TXNZ force_eof
+|	SHOW TXNZ
 	{
 		$$ = &Show{Type: ShowTxnzStr}
 	}
-|	SHOW VARIABLES force_eof
+|	SHOW val_type_opt VARIABLES like_or_where_opt
 	{
-		$$ = &Show{Type: ShowVariablesStr}
+		$$ = &Show{Type: ShowVariablesStr, Scope: $2, Filter: $4}
 	}
-|	SHOW VERSIONS force_eof
+|	SHOW VERSIONS
 	{
 		$$ = &Show{Type: ShowVersionsStr}
 	}
-|	SHOW WARNINGS force_eof
+|	SHOW WARNINGS limit_opt
 	{
-		$$ = &Show{Type: ShowWarningsStr}
+		$$ = &Show{Type: ShowWarningsStr, Limit: $3}
 	}
-|	SHOW COLLATION force_eof
+|	SHOW COLLATION like_or_where_opt
 	{
-		$$ = &Show{Type: ShowCollationStr}
+		$$ = &Show{Type: ShowCollationStr, Filter: $3}
 	}
-|	SHOW CHARSET force_eof
+|	SHOW opt_charset
 	{
 		$$ = &Show{Type: ShowCharsetStr}
 	}
@@ -3531,6 +3535,32 @@ like_or_where_opt:
 		$$ = &ShowFilter{Filter: $2}
 	}
 
+storage_or_empty:
+	/* empty */
+	{}
+|	STORAGE
+	{}
+
+val_type_opt:
+	/* empty */
+	{
+		$$ = ""
+	}
+|	set_session_or_global
+	{
+		$$ = $1
+	}
+
+DATABASES_SYM:
+	DATABASES
+	{
+		$$ = string($1)
+	}
+|	SCHEMAS
+	{
+		$$ = string($1)
+	}
+
 checksum_opt:
 	{
 		$$ = ChecksumOptionNone
@@ -3545,7 +3575,7 @@ checksum_opt:
 	}
 
 checksum_statement:
-	CHECKSUM table_or_tables table_name_list checksum_opt force_eof
+	CHECKSUM table_or_tables table_name_list checksum_opt
 	{
 		$$ = &Checksum{Tables: $3, ChecksumOption: $4}
 	}
@@ -5202,6 +5232,7 @@ reserved_keyword:
 |	RESTRICT
 |	RIGHT
 |	SCHEMA
+|	SCHEMAS
 |	SELECT
 |	SEPARATOR
 |	SET
@@ -5252,6 +5283,7 @@ non_reserved_keyword:
 |	BOOLEAN
 |	CLEANUP
 |	COMMENT_KEYWORD
+|	COLLATION
 |	COLUMN_FORMAT
 |	CONNECTION
 |	DATA

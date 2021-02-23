@@ -35,6 +35,14 @@ func TestShow1(t *testing.T) {
 			output: "show table status from sbtest",
 		},
 		{
+			input:  "show table status from sbtest where Name='t'",
+			output: "show table status from sbtest where Name = 't'",
+		},
+		{
+			input:  "show table status from sbtest like 't'",
+			output: "show table status from sbtest like 't'",
+		},
+		{
 			input:  "show create table t1",
 			output: "show create table t1",
 		},
@@ -75,6 +83,14 @@ func TestShow1(t *testing.T) {
 			output: "show create database sbtest",
 		},
 		{
+			input:  "show create schema sbtest",
+			output: "show create database sbtest",
+		},
+		{
+			input:  "show storage engines",
+			output: "show engines",
+		},
+		{
 			input:  "show engines",
 			output: "show engines",
 		},
@@ -103,8 +119,24 @@ func TestShow1(t *testing.T) {
 			output: "show warnings",
 		},
 		{
+			input:  "show warnings limit 1",
+			output: "show warnings limit 1",
+		},
+		{
 			input:  "show variables",
 			output: "show variables",
+		},
+		{
+			input:  "show variables like 'wait_timeout'",
+			output: "show variables like 'wait_timeout'",
+		},
+		{
+			input:  "show global variables like 'wait_timeout'",
+			output: "show global variables like 'wait_timeout'",
+		},
+		{
+			input:  "show variables where Variable_name='wait_timeout'",
+			output: "show variables where Variable_name = 'wait_timeout'",
 		},
 		{
 			input:  "show binlog events",
@@ -203,7 +235,23 @@ func TestShow1(t *testing.T) {
 			output: "show collation",
 		},
 		{
+			input:  "show collation where Collation='binary'",
+			output: "show collation where `collation` = 'binary'",
+		},
+		{
+			input:  "show collation like 'binary'",
+			output: "show collation like 'binary'",
+		},
+		{
 			input:  "show charset",
+			output: "show charset",
+		},
+		{
+			input:  "show char set",
+			output: "show charset",
+		},
+		{
+			input:  "show character set",
 			output: "show charset",
 		},
 	}

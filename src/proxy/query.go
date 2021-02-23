@@ -136,6 +136,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 		show := node
 		switch show.Type {
 		case sqlparser.ShowDatabasesStr:
+			// TODO: need to support like_or_where.
 			if qr, err = spanner.handleShowDatabases(session, query, node); err != nil {
 				log.Error("proxy.show.databases[%s].from.session[%v].error:%+v", query, session.ID(), err)
 				status = 1
@@ -200,6 +201,7 @@ func (spanner *Spanner) ComQuery(session *driver.Session, query string, bindVari
 			}
 		case sqlparser.ShowTableStatusStr:
 			// Support for Navicat.
+			// TODO: need to support like_or_where.
 			if qr, err = spanner.handleShowTableStatus(session, query, node); err != nil {
 				log.Error("proxy.show.table.status[%s].from.session[%v].error:%+v", query, session.ID(), err)
 				status = 1

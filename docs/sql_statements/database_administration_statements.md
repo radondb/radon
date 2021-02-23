@@ -32,11 +32,12 @@ Table of Contents
 
 ## SHOW
 
-### SHOW CHARSET
+### SHOW CHARACTER SET
 
 `Syntax`
 ```
-SHOW CHARSET
+SHOW CHARACTER SET
+    [LIKE 'pattern' | WHERE expr]
 ```
 
 `Instructions`
@@ -65,6 +66,7 @@ mysql> show charset;
 `Syntax`
 ```
 SHOW COLLATION
+    [LIKE 'pattern' | WHERE expr]
 ```
 
 `Instructions`
@@ -93,7 +95,7 @@ mysql> SHOW COLLATION;
 
 `Syntax`
 ```
-SHOW ENGINES
+SHOW [STORAGE] ENGINES
 ```
 
 `Instructions`
@@ -124,11 +126,13 @@ mysql> SHOW ENGINES;
 
 `Syntax`
 ```
-SHOW DATABASES
+SHOW {DATABASES | SCHEMAS}
+    [LIKE 'pattern' | WHERE expr]
 ```
 
 `Instructions`
 * Including system DB, such as mysql, information_schema
+* `[LIKE 'pattern' | WHERE expr]` currently only supported at the grammatical level.
 
 `Example: `
 ```
@@ -157,6 +161,7 @@ SHOW [FULL] TABLES
 
 `Instructions`
 * If db_name is not specified, the table under the current DB is returned
+* `[LIKE 'pattern' | WHERE expr]` currently only supported at the grammatical level.
 
 `Example: `
 ```
@@ -175,11 +180,13 @@ mysql> SHOW TABLES;
 `Syntax`
 ```
 SHOW TABLE STATUS
-[FROM db_name]
+    [{FROM | IN} db_name]
+    [LIKE 'pattern' | WHERE expr]
 ```
 
 `Instructions`
 * If db_name is not specified, the table under the current DB is returned
+* `[LIKE 'pattern' | WHERE expr]` currently only supported at the grammatical level.
 
 `Example: `
 ```
@@ -315,7 +322,7 @@ mysql> SHOW PROCESSLIST;
 
 `Syntax`
 ```
-SHOW VARIABLES
+SHOW [GLOBAL | SESSION] VARIABLES
     [LIKE 'pattern' | WHERE expr]
 ```
 
