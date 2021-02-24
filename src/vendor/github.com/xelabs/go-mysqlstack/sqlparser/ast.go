@@ -173,6 +173,7 @@ type (
 	Show struct {
 		Type     string
 		Full     string
+		Scope    string
 		Table    TableName
 		Database TableIdent
 		From     string
@@ -1194,14 +1195,9 @@ func (node *Show) Format(buf *TrackedBuffer) {
 	switch node.Type {
 	case ShowCreateDatabaseStr:
 		buf.Myprintf("show %s %s", node.Type, node.Database.String())
-	case ShowTableStatusStr:
-		buf.Myprintf("show %s", node.Type)
-		if !node.Database.IsEmpty() {
-			buf.Myprintf(" from %s", node.Database.String())
-		}
 	case ShowCreateTableStr:
 		buf.Myprintf("show %s %v", node.Type, node.Table)
-	case ShowTablesStr:
+	case ShowTableStatusStr, ShowTablesStr:
 		buf.Myprintf("show %s%s", node.Full, node.Type)
 		if !node.Database.IsEmpty() {
 			buf.Myprintf(" from %s", node.Database.String())
@@ -1223,6 +1219,24 @@ func (node *Show) Format(buf *TrackedBuffer) {
 		if node.Filter != nil {
 			buf.Myprintf("%v", node.Filter)
 		}
+	case ShowDatabasesStr, ShowCollationStr:
+		buf.Myprintf("show %s", node.Type)
+		if node.Filter != nil {
+			buf.Myprintf("%v", node.Filter)
+		}
+	case ShowVariablesStr:
+		buf.WriteString("show ")
+		if node.Scope != "" {
+			buf.WriteString(node.Scope)
+			buf.WriteString(" ")
+		}
+		buf.WriteString(node.Type)
+		if node.Filter != nil {
+			buf.Myprintf("%v", node.Filter)
+		}
+	case ShowWarningsStr:
+		buf.Myprintf("show %s", node.Type)
+		buf.Myprintf("%v", node.Limit)
 	default:
 		buf.Myprintf("show %s", node.Type)
 	}

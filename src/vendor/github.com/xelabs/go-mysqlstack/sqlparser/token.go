@@ -335,7 +335,7 @@ var keywords = map[string]int{
 	"redundant":           REDUNDANT,
 	"rollback":            ROLLBACK,
 	"rtree":               RTREE,
-	"schemas":             UNUSED,
+	"schemas":             SCHEMAS,
 	"second_microsecond":  UNUSED,
 	"select":              SELECT,
 	"sensitive":           UNUSED,
