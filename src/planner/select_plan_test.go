@@ -9,13 +9,42 @@
 package planner
 
 import (
+	"backend"
 	"testing"
 
 	"router"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
+)
+
+var (
+	descResult = &sqltypes.Result{
+		RowsAffected: 2,
+		Fields: []*querypb.Field{
+			{
+				Name: "Field",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "type",
+				Type: querypb.Type_INT24,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("id")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("int(11)")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("name")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("int(11)")),
+			},
+		},
+	}
 )
 
 func TestSelectPlan(t *testing.T) {
@@ -363,7 +392,7 @@ func TestSelectPlan(t *testing.T) {
 }`,
 		`{
 	"RawQuery": "select * from A where id=1 or 2=id",
-	"Project": "*",
+	"Project": "id, name",
 	"Partitions": [
 		{
 			"Query": "select * from sbtest.A6 as A where id in (1, 2)",
@@ -374,15 +403,15 @@ func TestSelectPlan(t *testing.T) {
 }`,
 		`{
 	"RawQuery": "select * from B where B.id=1 or B.id=2 or (B.id=0 and B.name='a')",
-	"Project": "*",
+	"Project": "id, name",
 	"Partitions": [
 		{
-			"Query": "select * from sbtest.B0 as B where (B.id = 0 and B.name = 'a' or B.id in (1, 2))",
+			"Query": "select B.id, B.name from sbtest.B0 as B where (B.id = 0 and B.name = 'a' or B.id in (1, 2))",
 			"Backend": "backend1",
 			"Range": "[0-512)"
 		},
 		{
-			"Query": "select * from sbtest.B1 as B where (B.id = 0 and B.name = 'a' or B.id in (1, 2))",
+			"Query": "select B.id, B.name from sbtest.B1 as B where (B.id = 0 and B.name = 'a' or B.id in (1, 2))",
 			"Backend": "backend2",
 			"Range": "[512-4096)"
 		}
@@ -448,6 +477,10 @@ func TestSelectPlan(t *testing.T) {
 		route, cleanup := router.MockNewRouter(log)
 		defer cleanup()
 
+		scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+		defer cleanup()
+		fakedbs.AddQueryPattern("desc .*", descResult)
+
 		err := route.CreateDatabase(database)
 		assert.Nil(t, err)
 		err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableSConfig(), router.MockTableGConfig())
@@ -455,7 +488,7 @@ func TestSelectPlan(t *testing.T) {
 		for i, query := range querys {
 			node, err := sqlparser.Parse(query)
 			assert.Nil(t, err)
-			plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+			plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route, scatter)
 
 			// plan build
 			{
@@ -495,7 +528,7 @@ func TestSelectUnsupportedPlan(t *testing.T) {
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
-		plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		plan := NewSelectPlan(log, database, query, node.(*sqlparser.Select), route, nil)
 
 		// plan build
 		{

@@ -86,7 +86,7 @@ func TestLimitOperator(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route, scatter)
 		err = plan.Build()
 		assert.Nil(t, err)
 		log.Debug("plan:%+v", plan.JSON())

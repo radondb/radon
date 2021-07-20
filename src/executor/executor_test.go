@@ -31,6 +31,7 @@ func TestExecutor1(t *testing.T) {
 	fakedbs.AddQueryPattern("create database.*", fakedb.Result3)
 	fakedbs.AddQueryPattern("select.*", fakedb.Result3)
 	fakedbs.AddQueryPattern("checksum.*", fakedb.Result3)
+	fakedbs.AddQueryPattern("desc .*", descResult)
 
 	database := "sbtest"
 	route, cleanup := router.MockNewRouter(log)
@@ -93,7 +94,7 @@ func TestExecutor1(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route, scatter)
 		err = plan.Build()
 		assert.Nil(t, err)
 		err = planTree.Add(plan)
@@ -106,7 +107,7 @@ func TestExecutor1(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		plan := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), route)
+		plan := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), route, scatter)
 		err = plan.Build()
 		assert.Nil(t, err)
 		err = planTree.Add(plan)

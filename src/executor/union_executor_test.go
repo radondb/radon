@@ -25,6 +25,28 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
+var (
+	descResult = &sqltypes.Result{
+		RowsAffected: 1,
+		Fields: []*querypb.Field{
+			{
+				Name: "Field",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "type",
+				Type: querypb.Type_INT24,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("id")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("int(11)")),
+			},
+		},
+	}
+)
+
 func TestUnionExecutorErr(t *testing.T) {
 	r1 := &sqltypes.Result{
 		Fields: []*querypb.Field{
@@ -57,6 +79,7 @@ func TestUnionExecutorErr(t *testing.T) {
 	// desc
 	fakedbs.AddQuery("select * from sbtest.A8 as A where id = 2", r1)
 	fakedbs.AddQueryErrorPattern("select id from sbtest.B1 as B where id = 1", errors.New("mock.execute.error"))
+	fakedbs.AddQueryPattern("desc .*", descResult)
 
 	querys := []string{
 		"select * from A where id = 2 union select id from B where id = 1 order by id",
@@ -69,7 +92,7 @@ func TestUnionExecutorErr(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		plan := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), route)
+		plan := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), route, scatter)
 		err = plan.Build()
 		assert.Nil(t, err)
 		log.Debug("plan:%+v", plan.JSON())

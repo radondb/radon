@@ -9,6 +9,7 @@
 package builder
 
 import (
+	"backend"
 	"testing"
 
 	"router"
@@ -31,6 +32,10 @@ func TestPushOrderBy(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	fakedbs.AddQueryPattern("desc .*", descResult)
+
 	err := route.CreateDatabase(database)
 	assert.Nil(t, err)
 	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
@@ -41,19 +46,20 @@ func TestPushOrderBy(t *testing.T) {
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
 
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, scatter, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parseSelectExprs(sel.SelectExprs, p)
+		fields, _, err := parseSelectExprs(scatter, b.root, b.tables, &sel.SelectExprs)
 		assert.Nil(t, err)
-		switch p := p.(type) {
+		switch p := b.root.(type) {
 		case *MergeNode:
 			p.fields = fields
 		case *JoinNode:
 			p.fields = fields
 		}
 
-		err = p.pushOrderBy(sel.OrderBy)
+		err = b.root.pushOrderBy(sel.OrderBy)
 		assert.Nil(t, err)
 	}
 }
@@ -83,19 +89,20 @@ func TestPushOrderByError(t *testing.T) {
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
 
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parseSelectExprs(sel.SelectExprs, p)
+		fields, _, err := parseSelectExprs(nil, b.root, b.tables, &sel.SelectExprs)
 		assert.Nil(t, err)
-		switch p := p.(type) {
+		switch p := b.root.(type) {
 		case *MergeNode:
 			p.fields = fields
 		case *JoinNode:
 			p.fields = fields
 		}
 
-		err = p.pushOrderBy(sel.OrderBy)
+		err = b.root.pushOrderBy(sel.OrderBy)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}
@@ -124,12 +131,13 @@ func TestPushLimit(t *testing.T) {
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
 
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		err = p.pushLimit(sel.Limit)
+		err = b.root.pushLimit(sel.Limit)
 		assert.Nil(t, err)
-		assert.Equal(t, 1, len(p.Children()))
+		assert.Equal(t, 1, len(b.root.Children()))
 	}
 }
 
@@ -152,16 +160,16 @@ func TestPushLimitError(t *testing.T) {
 	assert.Nil(t, err)
 	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
-
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
 
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		err = p.pushLimit(sel.Limit)
+		err = b.root.pushLimit(sel.Limit)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}
@@ -186,9 +194,9 @@ func TestPushMisc(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
-
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
-		p.pushMisc(sel)
+		b.root.pushMisc(sel)
 	}
 }

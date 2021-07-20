@@ -9,6 +9,7 @@
 package builder
 
 import (
+	"backend"
 	"testing"
 
 	"router"
@@ -42,15 +43,20 @@ func TestOrderByPlan(t *testing.T) {
 	assert.Nil(t, err)
 	err = route.AddForTest("sbtest", router.MockTableMConfig())
 	assert.Nil(t, err)
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	fakedbs.AddQueryPattern("desc .*", descResult)
+
 	for _, query := range querys {
 		tree, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		node := tree.(*sqlparser.Select)
-		p, err := scanTableExprs(log, route, "sbtest", node.From)
+		b := NewPlanBuilder(log, route, scatter, "sbtest")
+		b.root, err = b.scanTableExprs(node.From)
 		assert.Nil(t, err)
-		_, _, err = parseSelectExprs(node.SelectExprs, p)
+		_, _, err = parseSelectExprs(scatter, b.root, b.tables, &node.SelectExprs)
 		assert.Nil(t, err)
-		plan := NewOrderByPlan(log, node.OrderBy, p)
+		plan := NewOrderByPlan(log, node.OrderBy, b.root)
 		// plan build
 		{
 			err := plan.Build()
@@ -76,6 +82,9 @@ func TestOrderByPlanError(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	fakedbs.AddQueryPattern("desc .*", descResult)
 	err := route.CreateDatabase("sbtest")
 	assert.Nil(t, err)
 	err = route.AddForTest("sbtest", router.MockTableMConfig(), router.MockTableBConfig())
@@ -84,11 +93,12 @@ func TestOrderByPlanError(t *testing.T) {
 		tree, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		node := tree.(*sqlparser.Select)
-		p, err := scanTableExprs(log, route, "sbtest", node.From)
+		b := NewPlanBuilder(log, route, scatter, "sbtest")
+		b.root, err = b.scanTableExprs(node.From)
 		assert.Nil(t, err)
-		_, _, err = parseSelectExprs(node.SelectExprs, p)
+		_, _, err = parseSelectExprs(scatter, b.root, b.tables, &node.SelectExprs)
 		assert.Nil(t, err)
-		plan := NewOrderByPlan(log, node.OrderBy, p)
+		plan := NewOrderByPlan(log, node.OrderBy, b.root)
 		// plan build
 		{
 			err := plan.Build()

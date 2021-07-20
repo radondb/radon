@@ -14,6 +14,7 @@ import (
 	"planner/builder"
 	"xcontext"
 
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/expression/evaluation"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
@@ -40,8 +41,7 @@ func NewAggregateOperator(log *xlog.Log, plan builder.ChildPlan) *AggregateOpera
 // Execute used to execute the operator.
 func (operator *AggregateOperator) Execute(ctx *xcontext.ResultContext) error {
 	rs := ctx.Results
-	operator.aggregate(rs)
-	return nil
+	return operator.aggregate(rs)
 }
 
 // Aggregate used to do rows-aggregator(COUNT/SUM/MIN/MAX/AVG) and grouped them into group-by fields.
@@ -50,11 +50,12 @@ func (operator *AggregateOperator) Execute(ctx *xcontext.ResultContext) error {
 // eg: select a,b from tb group by b.        ×
 //     select count(a),b from tb group by b. √
 //     select b from tb group by b.          √
-func (operator *AggregateOperator) aggregate(result *sqltypes.Result) {
+func (operator *AggregateOperator) aggregate(result *sqltypes.Result) error {
 	var deIdxs []int
+	var err error
 	plan := operator.plan.(*builder.AggregatePlan)
 	if plan.Empty() {
-		return
+		return nil
 	}
 
 	aggPlans := plan.NormalAggregators()
@@ -75,13 +76,13 @@ func (operator *AggregateOperator) aggregate(result *sqltypes.Result) {
 
 	type group struct {
 		row      []sqltypes.Value
-		evalCtxs []*sqltypes.AggEvaluateContext
+		evalCtxs []*evaluation.AggEvaluateContext
 	}
 
-	var aggrs []*sqltypes.Aggregation
+	var aggrs []*evaluation.Aggregation
 	for _, aggPlan := range aggPlans {
-		aggr := sqltypes.NewAggregation(aggPlan.Index, aggPlan.Type, aggPlan.Distinct, plan.IsPushDown)
-		aggr.FixField(result.Fields[aggPlan.Index])
+		aggr := evaluation.NewAggregation(aggPlan.Index, aggPlan.Type, aggPlan.Distinct, plan.IsPushDown, aggPlan.Eval, result.Fields[aggPlan.Index])
+		aggr.FixField()
 		aggrs = append(aggrs, aggr)
 	}
 
@@ -89,7 +90,7 @@ func (operator *AggregateOperator) aggregate(result *sqltypes.Result) {
 	for _, row := range result.Rows {
 		length := len(groups)
 		if length == 0 {
-			evalCtxs := sqltypes.NewAggEvalCtxs(aggrs, row)
+			evalCtxs := evaluation.NewAggEvalCtxs(aggrs, row)
 			groups = append(groups, &group{row, evalCtxs})
 			continue
 		}
@@ -102,7 +103,7 @@ func (operator *AggregateOperator) aggregate(result *sqltypes.Result) {
 				}
 			}
 		} else {
-			evalCtxs := sqltypes.NewAggEvalCtxs(aggrs, row)
+			evalCtxs := evaluation.NewAggEvalCtxs(aggrs, row)
 			groups = append(groups, &group{row, evalCtxs})
 		}
 	}
@@ -111,17 +112,24 @@ func (operator *AggregateOperator) aggregate(result *sqltypes.Result) {
 	i := 0
 	result.Rows = make([][]sqltypes.Value, len(groups))
 	for _, g := range groups {
-		result.Rows[i], deIdxs = sqltypes.GetResults(aggrs, g.evalCtxs, g.row)
+		result.Rows[i], deIdxs, err = evaluation.GetResults(aggrs, g.evalCtxs, g.row)
+		if err != nil {
+			return err
+		}
 		i++
 	}
 
 	if len(groups) == 0 && aggPlansLen > 0 {
 		result.Rows = make([][]sqltypes.Value, 1)
-		evalCtxs := sqltypes.NewAggEvalCtxs(aggrs, nil)
-		result.Rows[0], deIdxs = sqltypes.GetResults(aggrs, evalCtxs, make([]sqltypes.Value, len(result.Fields)))
+		evalCtxs := evaluation.NewAggEvalCtxs(aggrs, nil)
+		result.Rows[0], deIdxs, err = evaluation.GetResults(aggrs, evalCtxs, make([]sqltypes.Value, len(result.Fields)))
+		if err != nil {
+			return err
+		}
 	}
 	// Remove avg decompose columns.
 	result.RemoveColumns(deIdxs...)
+	return nil
 }
 
 func keysEqual(row1, row2 []sqltypes.Value, groups []builder.Aggregator) bool {

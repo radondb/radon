@@ -6,13 +6,14 @@
  *
  */
 
-package sqltypes
+package evaluation
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
 func TestNewAggregation(t *testing.T) {
@@ -40,11 +41,11 @@ func TestNewAggregation(t *testing.T) {
 		}},
 		{{
 			Name:     "a",
-			Type:     Decimal,
+			Type:     sqltypes.Decimal,
 			Decimals: 28,
 		}, {
 			Name:     "b",
-			Type:     Decimal,
+			Type:     sqltypes.Decimal,
 			Decimals: 28,
 		}},
 		{{
@@ -98,26 +99,26 @@ func TestNewAggregation(t *testing.T) {
 	}
 
 	typs := [][]querypb.Type{
-		{Decimal, Decimal},
-		{Decimal, Decimal},
-		{Decimal, Decimal},
+		{sqltypes.Decimal, sqltypes.Decimal},
+		{sqltypes.Decimal, sqltypes.Decimal},
+		{sqltypes.Decimal, sqltypes.Decimal},
 		{querypb.Type_FLOAT64, querypb.Type_FLOAT64},
-		{querypb.Type_FLOAT64, Decimal},
-		{Decimal, querypb.Type_FLOAT64},
+		{querypb.Type_FLOAT64, sqltypes.Decimal},
+		{sqltypes.Decimal, querypb.Type_FLOAT64},
 		{querypb.Type_FLOAT64, querypb.Type_FLOAT64},
-		{Decimal, Decimal},
-		{Decimal, Decimal},
+		{sqltypes.Decimal, sqltypes.Decimal},
+		{sqltypes.Decimal, sqltypes.Decimal},
 	}
 	for i, field := range fields {
 		var aggrs []*Aggregation
 		for _, plan := range plan1 {
-			aggr := NewAggregation(plan.index, plan.typ, plan.distinct, false)
-			aggr.FixField(field[aggr.index])
+			aggr := NewAggregation(plan.index, plan.typ, plan.distinct, false, nil, field[plan.index])
+			aggr.FixField()
 			aggrs = append(aggrs, aggr)
 		}
 
 		for j, aggr := range aggrs {
-			assert.Equal(t, typs[i][j], aggr.fieldType)
+			assert.Equal(t, typs[i][j], aggr.field.Type)
 		}
 	}
 
@@ -132,17 +133,17 @@ func TestNewAggregation(t *testing.T) {
 		Type: querypb.Type_VARCHAR,
 	}}
 
-	aggr2 := NewAggregation(plan2[0].index, plan2[0].typ, plan2[0].distinct, false)
-	aggr2.FixField(field2[aggr2.index])
-	assert.Equal(t, querypb.Type_INT64, aggr2.fieldType)
+	aggr2 := NewAggregation(plan2[0].index, plan2[0].typ, plan2[0].distinct, false, nil, field2[plan2[0].index])
+	aggr2.FixField()
+	assert.Equal(t, querypb.Type_INT64, aggr2.field.Type)
 
 	field3 := []*querypb.Field{{
 		Name: "d",
 		Type: querypb.Type_VARCHAR,
 	}}
-	aggr3 := NewAggregation(plan2[1].index, plan2[1].typ, plan2[1].distinct, false)
-	aggr3.FixField(field3[aggr3.index])
-	assert.Equal(t, querypb.Type_FLOAT64, aggr3.fieldType)
+	aggr3 := NewAggregation(plan2[1].index, plan2[1].typ, plan2[1].distinct, false, nil, field3[plan2[1].index])
+	aggr3.FixField()
+	assert.Equal(t, querypb.Type_FLOAT64, aggr3.field.Type)
 }
 
 func TestGetResults(t *testing.T) {
@@ -151,134 +152,152 @@ func TestGetResults(t *testing.T) {
 			distinct:   false,
 			index:      0,
 			aggrTyp:    AggrTypeAvg,
-			fieldType:  querypb.Type_FLOAT64,
 			isPushDown: true,
 			prec:       -1,
+			field: &querypb.Field{
+				Type: querypb.Type_FLOAT64,
+			},
 		},
 		{
 			distinct:   false,
 			index:      0,
 			aggrTyp:    AggrTypeSum,
-			fieldType:  querypb.Type_FLOAT64,
 			isPushDown: true,
 			prec:       -1,
+			field: &querypb.Field{
+				Type: querypb.Type_FLOAT64,
+			},
 		},
 		{
 			distinct:   false,
 			index:      1,
 			aggrTyp:    AggrTypeCount,
-			fieldType:  querypb.Type_INT64,
 			isPushDown: true,
 			prec:       0,
+			field: &querypb.Field{
+				Type: querypb.Type_INT64,
+			},
 		},
 		{
 			distinct:   true,
 			index:      2,
 			aggrTyp:    AggrTypeAvg,
-			fieldType:  Decimal,
 			isPushDown: false,
 			prec:       4,
+			field: &querypb.Field{
+				Type: sqltypes.Decimal,
+			},
 		},
 		{
 			distinct:   false,
 			index:      3,
 			aggrTyp:    AggrTypeCount,
-			fieldType:  querypb.Type_INT64,
 			isPushDown: false,
 			prec:       0,
+			field: &querypb.Field{
+				Type: querypb.Type_INT64,
+			},
 		},
 		{
 			distinct:   false,
 			index:      4,
 			aggrTyp:    AggrTypeMax,
-			fieldType:  Decimal,
 			isPushDown: false,
 			prec:       4,
+			field: &querypb.Field{
+				Type: sqltypes.Decimal,
+			},
 		},
 		{
 			distinct:   true,
 			index:      5,
 			aggrTyp:    AggrTypeMin,
-			fieldType:  Decimal,
 			isPushDown: true,
 			prec:       4,
+			field: &querypb.Field{
+				Type: sqltypes.Decimal,
+			},
 		},
 		{
 			distinct:   false,
 			index:      6,
 			aggrTyp:    AggrTypeSum,
-			fieldType:  querypb.Type_FLOAT64,
 			isPushDown: false,
 			prec:       -1,
+			field: &querypb.Field{
+				Type: querypb.Type_FLOAT64,
+			},
 		},
 		{
 			distinct:   false,
 			index:      7,
 			aggrTyp:    AggrTypeCount,
-			fieldType:  querypb.Type_INT64,
 			isPushDown: true,
 			prec:       0,
+			field: &querypb.Field{
+				Type: querypb.Type_INT64,
+			},
 		},
 	}
 
-	r1 := []Value{
-		NewFloat64(3.1),
-		NewInt64(2),
-		NewInt64(5),
-		NewFloat64(3.1),
-		MakeTrusted(Decimal, []byte("3.124")),
-		MakeTrusted(Decimal, []byte("3.125")),
-		MakeTrusted(querypb.Type_VARCHAR, []byte("1nice name")),
-		NewInt64(2),
+	r1 := []sqltypes.Value{
+		sqltypes.NewFloat64(3.1),
+		sqltypes.NewInt64(2),
+		sqltypes.NewInt64(5),
+		sqltypes.NewFloat64(3.1),
+		sqltypes.MakeTrusted(sqltypes.Decimal, []byte("3.124")),
+		sqltypes.MakeTrusted(sqltypes.Decimal, []byte("3.125")),
+		sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("1nice name")),
+		sqltypes.NewInt64(2),
 	}
 
-	r2 := []Value{
-		NewFloat64(3.5),
-		NewInt64(3),
-		NewInt64(4),
-		NewFloat64(3.5),
-		MakeTrusted(Decimal, []byte("3.2")),
-		MakeTrusted(Decimal, []byte("3.121")),
-		NULL,
-		NewInt64(3),
+	r2 := []sqltypes.Value{
+		sqltypes.NewFloat64(3.5),
+		sqltypes.NewInt64(3),
+		sqltypes.NewInt64(4),
+		sqltypes.NewFloat64(3.5),
+		sqltypes.MakeTrusted(sqltypes.Decimal, []byte("3.2")),
+		sqltypes.MakeTrusted(sqltypes.Decimal, []byte("3.121")),
+		sqltypes.NULL,
+		sqltypes.NewInt64(3),
 	}
 
 	update := []*AggEvaluateContext{
 		{
 			count: 0,
-			val:   NewFloat64(3.1),
+			val:   sqltypes.NewFloat64(3.1),
 		},
 		{
 			count: 1,
-			val:   NewFloat64(6.6),
+			val:   sqltypes.NewFloat64(6.6),
 		},
 		{
 			count: 0,
-			val:   NewInt64(5),
+			val:   sqltypes.NewInt64(5),
 		},
 		{
 			count: 2,
-			val:   MakeTrusted(Decimal, []byte("9.0000")),
+			val:   sqltypes.MakeTrusted(sqltypes.Decimal, []byte("9.0000")),
 		},
 		{
 			count: 2,
-			val:   NewFloat64(3.1),
+			val:   sqltypes.NewFloat64(3.1),
 		},
 		{
 			count: 1,
-			val:   MakeTrusted(Decimal, []byte("3.2")),
+			val:   sqltypes.MakeTrusted(sqltypes.Decimal, []byte("3.2")),
 		},
 		{
 			count: 0,
-			val:   MakeTrusted(Decimal, []byte("3.121")),
+			val:   sqltypes.MakeTrusted(sqltypes.Decimal, []byte("3.121")),
 		},
 		{
 			count: 1,
-			val:   MakeTrusted(querypb.Type_VARCHAR, []byte("1nice name")),
+			val:   sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("1nice name")),
 		},
 		{
 			count: 0,
-			val:   NewInt64(5),
+			val:   sqltypes.NewInt64(5),
 		},
 	}
 	evalCtxs := NewAggEvalCtxs(aggrs, r1)
@@ -289,19 +308,20 @@ func TestGetResults(t *testing.T) {
 		assert.Equal(t, update[i].val, evalCtxs[i].val)
 	}
 
-	res := []Value{
-		NewFloat64(1.3199999999999998),
-		NULL,
-		MakeTrusted(Decimal, []byte("4.5000")),
-		NewInt64(2),
-		MakeTrusted(Decimal, []byte("3.2")),
-		MakeTrusted(Decimal, []byte("3.121")),
-		NewFloat64(0),
-		NewInt64(5),
-		NULL,
+	res := []sqltypes.Value{
+		sqltypes.NewFloat64(1.3199999999999998),
+		sqltypes.NULL,
+		sqltypes.MakeTrusted(sqltypes.Decimal, []byte("4.5000")),
+		sqltypes.NewInt64(2),
+		sqltypes.MakeTrusted(sqltypes.Decimal, []byte("3.2")),
+		sqltypes.MakeTrusted(sqltypes.Decimal, []byte("3.121")),
+		sqltypes.NewFloat64(0),
+		sqltypes.NewInt64(5),
+		sqltypes.NULL,
 	}
-	x := make([]Value, len(aggrs))
-	got, deIdxs := GetResults(aggrs, evalCtxs, x)
+	x := make([]sqltypes.Value, len(aggrs))
+	got, deIdxs, err := GetResults(aggrs, evalCtxs, x)
+	assert.Nil(t, err)
 	assert.Equal(t, res, got)
 	assert.Equal(t, []int{1}, deIdxs)
 }

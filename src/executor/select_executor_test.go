@@ -39,6 +39,7 @@ func TestSelectExecutorErr(t *testing.T) {
 	defer cleanup()
 	// desc
 	fakedbs.AddQueryErrorPattern("select .*", errors.New("mock.execute.error"))
+	fakedbs.AddQueryPattern("desc .*", descResult)
 
 	querys := []string{
 		"select * from A",
@@ -48,7 +49,7 @@ func TestSelectExecutorErr(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route)
+		plan := planner.NewSelectPlan(log, database, query, node.(*sqlparser.Select), route, scatter)
 		err = plan.Build()
 		assert.Nil(t, err)
 		log.Debug("plan:%+v", plan.JSON())

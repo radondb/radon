@@ -10,11 +10,11 @@ package builder
 
 import (
 	"config"
+	"reflect"
 	"router"
 
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
-	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
 // tableInfo represents one table information.
@@ -50,33 +50,33 @@ type tableInfo struct {
  *  MergeNode  MergeNode
  *  The leaf node is MergeNode, branch node is JoinNode.
  */
-func scanTableExprs(log *xlog.Log, router *router.Router, database string, tableExprs sqlparser.TableExprs) (PlanNode, error) {
+func (b *planBuilder) scanTableExprs(tableExprs sqlparser.TableExprs) (PlanNode, error) {
 	if len(tableExprs) == 1 {
-		return scanTableExpr(log, router, database, tableExprs[0])
+		return b.scanTableExpr(tableExprs[0])
 	}
 
 	var lpn, rpn PlanNode
 	var err error
-	if lpn, err = scanTableExpr(log, router, database, tableExprs[0]); err != nil {
+	if lpn, err = b.scanTableExpr(tableExprs[0]); err != nil {
 		return nil, err
 	}
-	if rpn, err = scanTableExprs(log, router, database, tableExprs[1:]); err != nil {
+	if rpn, err = b.scanTableExprs(tableExprs[1:]); err != nil {
 		return nil, err
 	}
-	return join(log, lpn, rpn, nil, router)
+	return b.join(lpn, rpn, nil)
 }
 
 // scanTableExpr produces a plannode subtree by the TableExpr.
-func scanTableExpr(log *xlog.Log, router *router.Router, database string, tableExpr sqlparser.TableExpr) (PlanNode, error) {
+func (b *planBuilder) scanTableExpr(tableExpr sqlparser.TableExpr) (PlanNode, error) {
 	var err error
 	var p PlanNode
 	switch tableExpr := tableExpr.(type) {
 	case *sqlparser.AliasedTableExpr:
-		p, err = scanAliasedTableExpr(log, router, database, tableExpr)
+		p, err = b.scanAliasedTableExpr(tableExpr)
 	case *sqlparser.JoinTableExpr:
-		p, err = scanJoinTableExpr(log, router, database, tableExpr)
+		p, err = b.scanJoinTableExpr(tableExpr)
 	case *sqlparser.ParenTableExpr:
-		p, err = scanTableExprs(log, router, database, tableExpr.Exprs)
+		p, err = b.scanTableExprs(tableExpr.Exprs)
 		// If finally p is a MergeNode, the pushed query need keep the parenthese.
 		setParenthese(p, true)
 	}
@@ -84,21 +84,19 @@ func scanTableExpr(log *xlog.Log, router *router.Router, database string, tableE
 }
 
 // scanAliasedTableExpr produces the table's tableInfo by the AliasedTableExpr, and build a MergeNode subtree.
-func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tableExpr *sqlparser.AliasedTableExpr) (PlanNode, error) {
+func (b *planBuilder) scanAliasedTableExpr(tableExpr *sqlparser.AliasedTableExpr) (PlanNode, error) {
 	var err error
-	mn := newMergeNode(log, r)
+	r := b.router
 	switch expr := tableExpr.Expr.(type) {
 	case sqlparser.TableName:
 		if expr.Qualifier.IsEmpty() {
-			expr.Qualifier = sqlparser.NewTableIdent(database)
+			expr.Qualifier = sqlparser.NewTableIdent(b.database)
 		}
 		tn := &tableInfo{
 			database: expr.Qualifier.String(),
 			Segments: make([]router.Segment, 0, 16),
 		}
-		if expr.Qualifier.IsEmpty() {
-			expr.Qualifier = sqlparser.NewTableIdent(database)
-		}
+
 		tableExpr.Expr = expr
 		tn.tableName = expr.Name.String()
 		tn.tableConfig, err = r.TableConfig(tn.database, tn.tableName)
@@ -109,6 +107,8 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 		tn.shardType = tn.tableConfig.ShardType
 		tn.tableExpr = tableExpr
 
+		mn := newMergeNode(b.log, r, b.scatter)
+		mn.Sel = &sqlparser.Select{From: sqlparser.TableExprs([]sqlparser.TableExpr{tableExpr})}
 		switch tn.shardType {
 		case "GLOBAL":
 			mn.nonGlobalCnt = 0
@@ -125,20 +125,24 @@ func scanAliasedTableExpr(log *xlog.Log, r *router.Router, database string, tabl
 
 		tn.parent = mn
 		tn.alias = tableExpr.As.String()
+		key := tn.tableName
 		if tn.alias != "" {
-			mn.referTables[tn.alias] = tn
-		} else {
-			mn.referTables[tn.tableName] = tn
+			key = tn.alias
 		}
+		if _, exists := b.tables[key]; exists {
+			return nil, errors.Errorf("unsupported: not.unique.table.or.alias:'%s'", key)
+		}
+		mn.referTables[key] = tn
+		b.tables[key] = tn
+		return mn, nil
 	case *sqlparser.Subquery:
-		err = errors.New("unsupported: subquery.in.select")
+		return nil, errors.New("unsupported: subquery.in.select")
 	}
-	mn.Sel = &sqlparser.Select{From: sqlparser.TableExprs([]sqlparser.TableExpr{tableExpr})}
-	return mn, err
+	return nil, errors.Errorf("invalid aliased table expression %+v of type %v", tableExpr.Expr, reflect.TypeOf(tableExpr.Expr))
 }
 
 // scanJoinTableExpr produces a PlanNode subtree by the JoinTableExpr.
-func scanJoinTableExpr(log *xlog.Log, router *router.Router, database string, joinExpr *sqlparser.JoinTableExpr) (PlanNode, error) {
+func (b *planBuilder) scanJoinTableExpr(joinExpr *sqlparser.JoinTableExpr) (PlanNode, error) {
 	switch joinExpr.Join {
 	case sqlparser.JoinStr, sqlparser.StraightJoinStr, sqlparser.LeftJoinStr:
 	case sqlparser.RightJoinStr:
@@ -146,35 +150,32 @@ func scanJoinTableExpr(log *xlog.Log, router *router.Router, database string, jo
 	default:
 		return nil, errors.Errorf("unsupported: join.type:%s", joinExpr.Join)
 	}
-	lpn, err := scanTableExpr(log, router, database, joinExpr.LeftExpr)
+	lpn, err := b.scanTableExpr(joinExpr.LeftExpr)
 	if err != nil {
 		return nil, err
 	}
 
-	rpn, err := scanTableExpr(log, router, database, joinExpr.RightExpr)
+	rpn, err := b.scanTableExpr(joinExpr.RightExpr)
 	if err != nil {
 		return nil, err
 	}
-	return join(log, lpn, rpn, joinExpr, router)
+	return b.join(lpn, rpn, joinExpr)
 }
 
 // join build a PlanNode subtree by judging whether left and right can be merged.
 // If can be merged, left and right merge into one MergeNode.
 // else build a JoinNode, the two nodes become new joinnode's Left and Right.
-func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, router *router.Router) (PlanNode, error) {
+func (b *planBuilder) join(lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr) (PlanNode, error) {
 	var joinOn, otherJoinOn []exprInfo
 	var err error
-
 	referTables := make(map[string]*tableInfo)
 	for k, v := range lpn.getReferTables() {
 		referTables[k] = v
 	}
 	for k, v := range rpn.getReferTables() {
-		if _, ok := referTables[k]; ok {
-			return nil, errors.Errorf("unsupported: not.unique.table.or.alias:'%s'", k)
-		}
 		referTables[k] = v
 	}
+
 	if joinExpr != nil {
 		if joinExpr.On == nil {
 			joinExpr = nil
@@ -223,7 +224,8 @@ func join(log *xlog.Log, lpn, rpn PlanNode, joinExpr *sqlparser.JoinTableExpr, r
 			}
 		}
 	}
-	jn := newJoinNode(log, lpn, rpn, router, joinExpr, joinOn, referTables)
+
+	jn := newJoinNode(b.log, lpn, rpn, b.router, joinExpr, joinOn, referTables)
 	lpn.setParent(jn)
 	rpn.setParent(jn)
 	if jn.IsLeftJoin {

@@ -25,6 +25,32 @@ import (
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 )
 
+var (
+	descResult = &sqltypes.Result{
+		RowsAffected: 2,
+		Fields: []*querypb.Field{
+			{
+				Name: "Field",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "type",
+				Type: querypb.Type_INT24,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("id")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("int(11)")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("name")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("int(11)")),
+			},
+		},
+	}
+)
+
 func TestUnionEngine(t *testing.T) {
 	r1 := &sqltypes.Result{
 		Fields: []*querypb.Field{
@@ -119,7 +145,7 @@ func TestUnionEngine(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		plan := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), route)
+		plan := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), route, scatter)
 		err = plan.Build()
 		assert.Nil(t, err)
 		log.Debug("plan:%+v", plan.JSON())
@@ -159,19 +185,6 @@ func TestUnionEngineErr(t *testing.T) {
 			},
 		},
 	}
-	r2 := &sqltypes.Result{
-		Fields: []*querypb.Field{
-			{
-				Name: "id",
-				Type: querypb.Type_INT32,
-			},
-		},
-		Rows: [][]sqltypes.Value{
-			{
-				sqltypes.MakeTrusted(querypb.Type_INT32, []byte("3")),
-			},
-		},
-	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
@@ -189,22 +202,20 @@ func TestUnionEngineErr(t *testing.T) {
 	defer cleanup()
 	// desc
 	fakedbs.AddQuery("select * from sbtest.A8 as A where id = 2", r1)
-	fakedbs.AddQuery("select id from sbtest.B0 as B where id = 0", r2)
+	fakedbs.AddQueryPattern("desc .*", descResult)
 
 	querys := []string{
-		"select * from A where id = 2 union select id from B where id = 0 order by id",
-		"select * from A where id = 2 union select id from B where id = 1 order by id",
+		"select * from A where id = 2 union select id, name from B where id = 1 order by id",
 	}
 	wants := []string{
-		"unsupported: the.used.'select'.statements.have.a.different.number.of.columns",
-		"mock.handler.query[select id from sbtest.b1 as b where id = 1].error[can.not.found.the.cond.please.set.first] (errno 1105) (sqlstate HY000)",
+		"mock.handler.query[select id, name from sbtest.b1 as b where id = 1].error[can.not.found.the.cond.please.set.first] (errno 1105) (sqlstate HY000)",
 	}
 
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		plan := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), route)
+		plan := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), route, scatter)
 		err = plan.Build()
 		assert.Nil(t, err)
 		log.Debug("plan:%+v", plan.JSON())

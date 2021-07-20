@@ -35,10 +35,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		m, ok := planNode.(*MergeNode)
+		m, ok := b.root.(*MergeNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -54,10 +55,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		m, ok := planNode.(*MergeNode)
+		m, ok := b.root.(*MergeNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -73,10 +75,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -99,10 +102,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -129,10 +133,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -149,10 +154,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -181,10 +187,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		m, ok := planNode.(*MergeNode)
+		m, ok := b.root.(*MergeNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -201,10 +208,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -224,10 +232,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		m, ok := planNode.(*MergeNode)
+		m, ok := b.root.(*MergeNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -244,10 +253,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -270,10 +280,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		m, ok := planNode.(*MergeNode)
+		m, ok := b.root.(*MergeNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -289,10 +300,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		m, ok := planNode.(*MergeNode)
+		m, ok := b.root.(*MergeNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -307,10 +319,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		m, ok := planNode.(*MergeNode)
+		m, ok := b.root.(*MergeNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -325,10 +338,11 @@ func TestScanTableExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -359,17 +373,17 @@ func TestScanTableExprsList(t *testing.T) {
 	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(),
 		router.MockTableCConfig(), router.MockTableGConfig(), router.MockTableListConfig())
 	assert.Nil(t, err)
-
 	// list table.
 	{
 		query := "select * from L"
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		m, ok := planNode.(*MergeNode)
+		m, ok := b.root.(*MergeNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -385,10 +399,11 @@ func TestScanTableExprsList(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -411,10 +426,11 @@ func TestScanTableExprsList(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -441,10 +457,11 @@ func TestScanTableExprsList(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -461,10 +478,11 @@ func TestScanTableExprsList(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -492,10 +510,11 @@ func TestScanTableExprsList(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		m, ok := planNode.(*MergeNode)
+		m, ok := b.root.(*MergeNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -512,10 +531,11 @@ func TestScanTableExprsList(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		m, ok := planNode.(*MergeNode)
+		m, ok := b.root.(*MergeNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -532,10 +552,11 @@ func TestScanTableExprsList(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -556,10 +577,11 @@ func TestScanTableExprsList(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -583,10 +605,11 @@ func TestScanTableExprsList(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -611,10 +634,11 @@ func TestScanTableExprsList(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		m, ok := planNode.(*MergeNode)
+		m, ok := b.root.(*MergeNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -629,10 +653,11 @@ func TestScanTableExprsList(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		m, ok := planNode.(*MergeNode)
+		m, ok := b.root.(*MergeNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -647,10 +672,11 @@ func TestScanTableExprsList(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 
-		planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		assert.Nil(t, err)
 
-		j, ok := planNode.(*JoinNode)
+		j, ok := b.root.(*JoinNode)
 		if !ok {
 			t.Errorf("scanTableExprs returned plannode error")
 		}
@@ -681,16 +707,16 @@ func TestScanTableExprsListErrorDebug(t *testing.T) {
 	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(),
 		router.MockTableCConfig(), router.MockTableGConfig(), router.MockTableListConfig())
 	assert.Nil(t, err)
-
+	b := NewPlanBuilder(log, route, nil, "sbtest")
 	//query := "select * from G join A on A.id=1"
 	query := "select L.id from A join L on A.id=1"
 	node, err := sqlparser.Parse(query)
 	assert.Nil(t, err)
 
-	planNode, err := scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+	b.root, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 	assert.Nil(t, err)
 
-	j, ok := planNode.(*JoinNode)
+	j, ok := b.root.(*JoinNode)
 	if !ok {
 		t.Errorf("scanTableExprs returned plannode error")
 	}
@@ -755,7 +781,8 @@ func TestScanTableExprsError(t *testing.T) {
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
-		_, err = scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		_, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}
@@ -804,7 +831,8 @@ func TestScanTableExprsListError(t *testing.T) {
 	for i, query := range querys {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
-		_, err = scanTableExprs(log, route, database, node.(*sqlparser.Select).From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		_, err = b.scanTableExprs(node.(*sqlparser.Select).From)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}

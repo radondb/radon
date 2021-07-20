@@ -67,8 +67,8 @@ func fetchIndex(tbInfo *tableInfo, val *sqlparser.SQLVal, router *router.Router)
 }
 
 // checkShard used to check whether the col is shardkey.
-func checkShard(table, col string, tbInfos map[string]*tableInfo, router *router.Router) (bool, error) {
-	tbInfo, ok := tbInfos[table]
+func (b *planBuilder) checkShard(table, col string) (bool, error) {
+	tbInfo, ok := b.tables[table]
 	if !ok {
 		return false, errors.Errorf("unsupported: unknown.column.'%s.%s'.in.field.list", table, col)
 	}

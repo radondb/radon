@@ -33,6 +33,7 @@ func TestProxyExecute(t *testing.T) {
 		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("xa .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("desc .*", &sqltypes.Result{})
 	}
 
 	// create database.
@@ -272,6 +273,7 @@ func TestProxyExecuteReadonly(t *testing.T) {
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("desc .*", &sqltypes.Result{})
 	}
 
 	// create database.
@@ -351,6 +353,7 @@ func TestProxyExecuteStreamFetch(t *testing.T) {
 	{
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("desc .*", &sqltypes.Result{})
 	}
 
 	// create database.
@@ -537,6 +540,7 @@ func TestProxyExecuteLoadBalance(t *testing.T) {
 	{
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("desc .*", &sqltypes.Result{})
 	}
 
 	// create database.

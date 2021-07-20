@@ -9,6 +9,7 @@
 package planner
 
 import (
+	"backend"
 	"planner/builder"
 	"router"
 	"xcontext"
@@ -29,6 +30,8 @@ type UnionPlan struct {
 	// router
 	router *router.Router
 
+	scatter *backend.Scatter
+
 	// select ast
 	node *sqlparser.Union
 
@@ -45,11 +48,12 @@ type UnionPlan struct {
 }
 
 // NewUnionPlan used to create SelectPlan.
-func NewUnionPlan(log *xlog.Log, database string, query string, node *sqlparser.Union, router *router.Router) *UnionPlan {
+func NewUnionPlan(log *xlog.Log, database string, query string, node *sqlparser.Union, router *router.Router, scatter *backend.Scatter) *UnionPlan {
 	return &UnionPlan{
 		log:      log,
 		node:     node,
 		router:   router,
+		scatter:  scatter,
 		database: database,
 		RawQuery: query,
 		typ:      PlanTypeUnion,
@@ -59,7 +63,7 @@ func NewUnionPlan(log *xlog.Log, database string, query string, node *sqlparser.
 // Build used to build distributed querys.
 func (p *UnionPlan) Build() error {
 	var err error
-	p.Root, err = builder.BuildNode(p.log, p.router, p.database, p.node)
+	p.Root, err = builder.BuildNode(p.log, p.router, p.scatter, p.database, p.node)
 	return err
 }
 

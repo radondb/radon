@@ -50,7 +50,7 @@ func (spanner *Spanner) handleExplain(session *driver.Session, query string, nod
 		return nil, sqldb.NewSQLError(sqldb.ER_SYNTAX_ERROR, "explain only supports SELECT/DELETE/INSERT/UNION")
 	}
 
-	simOptimizer := optimizer.NewSimpleOptimizer(log, database, query, explainableStmt, router)
+	simOptimizer := optimizer.NewSimpleOptimizer(log, database, query, explainableStmt, router, spanner.scatter)
 	planTree, err := simOptimizer.BuildPlanTree()
 	if err != nil {
 		log.Error("proxy.explain.error:%+v", err)

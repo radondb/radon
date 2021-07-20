@@ -9,6 +9,7 @@
 package planner
 
 import (
+	"backend"
 	"errors"
 	"strings"
 
@@ -32,6 +33,8 @@ type SelectPlan struct {
 	// router
 	router *router.Router
 
+	scatter *backend.Scatter
+
 	// select ast
 	node *sqlparser.Select
 
@@ -48,11 +51,12 @@ type SelectPlan struct {
 }
 
 // NewSelectPlan used to create SelectPlan.
-func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser.Select, router *router.Router) *SelectPlan {
+func NewSelectPlan(log *xlog.Log, database string, query string, node *sqlparser.Select, router *router.Router, scatter *backend.Scatter) *SelectPlan {
 	return &SelectPlan{
 		log:      log,
 		node:     node,
 		router:   router,
+		scatter:  scatter,
 		database: database,
 		RawQuery: query,
 		typ:      PlanTypeSelect,
@@ -67,7 +71,7 @@ func (p *SelectPlan) Build() error {
 	if hasSubquery(p.node) {
 		return errors.New("unsupported: subqueries.in.select")
 	}
-	p.Root, err = builder.BuildNode(p.log, p.router, p.database, p.node)
+	p.Root, err = builder.BuildNode(p.log, p.router, p.scatter, p.database, p.node)
 	return err
 }
 

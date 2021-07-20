@@ -84,6 +84,7 @@ func TestProxySessionTxnBeginCommit(t *testing.T) {
 		fakedbs.AddQueryPattern("insert * .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("begin", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("XA .*", result1)
+		fakedbs.AddQueryPattern("desc .*", &sqltypes.Result{})
 	}
 
 	// create database.

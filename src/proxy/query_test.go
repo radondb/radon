@@ -169,6 +169,7 @@ func TestProxyQuerys(t *testing.T) {
 	{
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", result11)
+		fakedbs.AddQueryPattern("desc .*", &sqltypes.Result{})
 	}
 
 	// create database.
@@ -768,6 +769,7 @@ func TestProxyLowerCase(t *testing.T) {
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("show create .*", r1)
+		fakedbs.AddQueryPattern("desc .*", &sqltypes.Result{})
 	}
 
 	{

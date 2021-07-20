@@ -99,10 +99,10 @@ func (p *OrderByPlan) analyze() error {
 				// If `orderby.field` not exists in the field list,
 				// we need push it into field list and record in RemovedIdxs.
 				tuple = &selectTuple{
-					expr:  &sqlparser.AliasedExpr{Expr: e},
-					info:  exprInfo{e, []string{tablename}, []*sqlparser.ColName{e}, nil},
-					field: orderBy.Field,
-					isCol: true,
+					expr:        &sqlparser.AliasedExpr{Expr: e},
+					field:       orderBy.Field,
+					referTables: []string{tablename},
+					isCol:       true,
 				}
 				index, _ := p.root.pushSelectExpr(*tuple)
 				p.RemovedIdxs = append(p.RemovedIdxs, index)
