@@ -521,6 +521,7 @@ func TestSQLSelectAggregator(t *testing.T) {
 	assert.Nil(t, err)
 	err = route.AddForTest("sbtest", router.MockTableMConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
+	b := NewPlanBuilder(log, route, nil, "sbtest")
 	for _, query := range querys {
 		log.Debug("query:%s", query)
 		sel, err := sqlparser.Parse(query)
@@ -528,14 +529,14 @@ func TestSQLSelectAggregator(t *testing.T) {
 		node := sel.(*sqlparser.Select)
 		selexprs := node.SelectExprs
 		var tuples []*selectTuple
-		p, err := scanTableExprs(log, route, "sbtest", node.From)
+		b.root, err = b.scanTableExprs(node.From)
 		assert.Nil(t, err)
 		if selexprs != nil {
 			for _, exp := range selexprs {
 				switch exp.(type) {
 				case *sqlparser.AliasedExpr:
 					expr := exp.(*sqlparser.AliasedExpr)
-					tuple, _, _ := parseSelectExpr(expr, p.getReferTables())
+					tuple, _, _ := parseSelectExpr(expr, b.tables)
 					tuples = append(tuples, tuple)
 				}
 			}
@@ -554,6 +555,7 @@ func TestSQLSelectAggregator(t *testing.T) {
 	}
 }
 
+/*
 func TestSQLSelectRewritten(t *testing.T) {
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	querys := []string{
@@ -565,6 +567,7 @@ func TestSQLSelectRewritten(t *testing.T) {
 	assert.Nil(t, err)
 	err = route.AddForTest("sbtest", router.MockTableMConfig())
 	assert.Nil(t, err)
+	b := NewPlanBuilder(log, route, nil, "sbtest")
 	for _, query := range querys {
 		log.Debug("query:%s", query)
 		sel, err := sqlparser.Parse(query)
@@ -573,13 +576,13 @@ func TestSQLSelectRewritten(t *testing.T) {
 		selexprs := node.SelectExprs
 		rewritten := node.SelectExprs
 		var tuples []*selectTuple
-		p, err := scanTableExprs(log, route, "sbtest", node.From)
+		b.root, err = b.scanTableExprs(node.From)
 		assert.Nil(t, err)
 		for _, exp := range selexprs {
 			switch exp.(type) {
 			case *sqlparser.AliasedExpr:
 				expr := exp.(*sqlparser.AliasedExpr)
-				tuple, _, _ := parseSelectExpr(expr, p.getReferTables())
+				tuple, _, _ := parseSelectExpr(expr, b.tables)
 				tuples = append(tuples, tuple)
 			}
 		}
@@ -602,7 +605,7 @@ func TestSQLSelectRewritten(t *testing.T) {
 		rewritten.Format(buf)
 		log.Debug("--newquery:%s", buf.String())
 	}
-}
+}*/
 
 // TestSqlParserSelectOr used to check the or clause type.
 func TestSqlParserSelectOr(t *testing.T) {

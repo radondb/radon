@@ -9,6 +9,7 @@
 package builder
 
 import (
+	"backend"
 	"testing"
 
 	"router"
@@ -16,7 +17,35 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
+	querypb "github.com/xelabs/go-mysqlstack/sqlparser/depends/query"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
 	"github.com/xelabs/go-mysqlstack/xlog"
+)
+
+var (
+	descResult = &sqltypes.Result{
+		RowsAffected: 2,
+		Fields: []*querypb.Field{
+			{
+				Name: "Field",
+				Type: querypb.Type_VARCHAR,
+			},
+			{
+				Name: "type",
+				Type: querypb.Type_INT24,
+			},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("id")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("int(11)")),
+			},
+			{
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("name")),
+				sqltypes.MakeTrusted(querypb.Type_VARCHAR, []byte("int(11)")),
+			},
+		},
+	}
 )
 
 func TestProcessSelect(t *testing.T) {
@@ -284,7 +313,7 @@ func TestProcessSelect(t *testing.T) {
 
 		{
 			query:   "select * from A where id=1 or 2=id",
-			project: "*",
+			project: "id, name",
 			out: []xcontext.QueryTuple{
 				{
 					Query:   "select * from sbtest.A6 as A where id in (1, 2)",
@@ -294,19 +323,20 @@ func TestProcessSelect(t *testing.T) {
 		},
 		{
 			query:   "select * from B where B.id=1 or B.id=2 or (B.id=0 and B.name='a')",
-			project: "*",
+			project: "id, name",
 			out: []xcontext.QueryTuple{
 				{
-					Query:   "select * from sbtest.B0 as B where (B.id = 0 and B.name = 'a' or B.id in (1, 2))",
+					Query:   "select B.id, B.name from sbtest.B0 as B where (B.id = 0 and B.name = 'a' or B.id in (1, 2))",
 					Backend: "backend1",
 					Range:   "[0-512)",
 				},
 				{
-					Query:   "select * from sbtest.B1 as B where (B.id = 0 and B.name = 'a' or B.id in (1, 2))",
+					Query:   "select B.id, B.name from sbtest.B1 as B where (B.id = 0 and B.name = 'a' or B.id in (1, 2))",
 					Backend: "backend2",
 					Range:   "[512-4096)",
 				}},
 		},
+
 		{
 			query:   "select A.id,B.id from A join B on A.id=B.id where A.id=0 or A.id=1 or A.id=2",
 			project: "id, id",
@@ -359,6 +389,10 @@ func TestProcessSelect(t *testing.T) {
 		log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 		database := "sbtest"
 
+		scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+		defer cleanup()
+		fakedbs.AddQueryPattern("desc .*", descResult)
+
 		route, cleanup := router.MockNewRouter(log)
 		defer cleanup()
 
@@ -373,7 +407,7 @@ func TestProcessSelect(t *testing.T) {
 			// plan build
 			{
 				log.Info("--select.query:%+v", tcase.query)
-				plan, err := BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+				plan, err := BuildNode(log, route, scatter, database, node.(sqlparser.SelectStatement))
 				assert.Nil(t, err)
 				q := plan.GetQuery()
 				assert.Equal(t, tcase.out, q)
@@ -477,7 +511,7 @@ func TestSelectDatabaseIsNull(t *testing.T) {
 			// plan build
 			{
 				log.Info("--select.query:%+v", tcase.query)
-				plan, err := BuildNode(log, route, "", node.(sqlparser.SelectStatement))
+				plan, err := BuildNode(log, route, nil, "", node.(sqlparser.SelectStatement))
 				assert.Nil(t, err)
 				q := plan.GetQuery()
 				assert.Equal(t, tcase.out, q)
@@ -491,7 +525,6 @@ func TestSelectUnsupported(t *testing.T) {
 	querys := []string{
 		"select * from A as A1 where id in (select id from B)",
 		"select distinct(b) from A",
-		"select * from A join B on B.id=A.id",
 		"select id from A limit x",
 		"select age,count(*) from A group by age having count(*) >=2",
 		"select * from A where B.a >1",
@@ -500,13 +533,11 @@ func TestSelectUnsupported(t *testing.T) {
 		"select id,group_concat(distinct name) from A group by id",
 		"select next value for A",
 		"select A.*,(select b.str from b where A.id=B.id) str from A",
-		"select avg(id)*1000 from A",
 		"select avg(*) from A",
 		"select B.* from A",
 		"select * from D,A",
 		"select * from A where a>1 having count(a) >3",
 		"select a,b from A group by B.a",
-		"select *,avg(a) from A",
 		"select sum(A.id) as tmp, B.id from A,B having tmp=1",
 		"select COALESCE(B.b, ''), IF(B.b IS NULL, FALSE, TRUE) AS spent from A left join B on A.a=B.a",
 		"select abs(B.a) AS spent,G.a from A left join B on A.a=B.a,G",
@@ -531,22 +562,19 @@ func TestSelectUnsupported(t *testing.T) {
 	results := []string{
 		"unsupported: subqueries.in.select",
 		"unsupported: distinct",
-		"unsupported: '*'.expression.in.cross-shard.query",
 		"unsupported: limit.offset.or.counts.must.be.IntVal",
 		"unsupported: expr[count(*)].in.having.clause",
 		"unsupported: unknown.column.'B.a'.in.clause",
 		"unsupported: invalid.use.of.group.function[count]",
-		"unsupported: 'round(avg(id))'.contain.aggregate.in.select.exprs",
+		"Unsupported Expression:round",
 		"unsupported: group_concat.in.select.exprs",
 		"unsupported: nextval.in.select.exprs",
 		"unsupported: subqueries.in.select.exprs",
-		"unsupported: 'avg(id) * 1000'.contain.aggregate.in.select.exprs",
-		"unsupported: syntax.error.at.'avg(*)'",
-		"unsupported:  unknown.table.'B'.in.field.list",
+		"unsupported: syntax.error.at.'avg'",
+		"unsupported: unknown.table.'B'.in.field.list",
 		"Table 'D' doesn't exist (errno 1146) (sqlstate 42S02)",
 		"unsupported: expr[count(a)].in.having.clause",
 		"unsupported: unknow.table.in.group.by.field[B.a]",
-		"unsupported: exists.aggregate.and.'*'.select.exprs",
 		"unsupported: aggregation.in.having.clause",
 		"unsupported: expr.'COALESCE(B.b, '')'.in.cross-shard.left.join",
 		"unsupported: expr.'abs(B.a)'.in.cross-shard.left.join",
@@ -563,7 +591,7 @@ func TestSelectUnsupported(t *testing.T) {
 		"unsupported: orderby:[a + 1].type.should.be.colname",
 		"unsupported: group.by.field[A.a].should.be.in.select.list",
 		"unsupported: group.by.[a + 1].type.should.be.colname",
-		"unsupported: syntax.error.at.'count(distinct *)'",
+		"unsupported: syntax.error.at.'count'",
 		"unsupported: unknown.column.'t1.a'.in.exprs",
 		"unsupported: unknown.column.'S.id'.in.field.list",
 		"unsupported: unknown.column.'eeeee'.in.select.exprs",
@@ -571,6 +599,10 @@ func TestSelectUnsupported(t *testing.T) {
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
+
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	fakedbs.AddQueryPattern("desc .*", descResult)
 
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
@@ -586,7 +618,7 @@ func TestSelectUnsupported(t *testing.T) {
 		// plan build
 		{
 			log.Info("--select.query:%+v", query)
-			_, err := BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+			_, err := BuildNode(log, route, scatter, database, node.(sqlparser.SelectStatement))
 			want := results[i]
 			got := err.Error()
 			assert.Equal(t, want, got)
@@ -601,6 +633,8 @@ func TestSelectSupported(t *testing.T) {
 		"select avg(id + 1) from A",
 		"select concat(str1,str2) from A",
 		"select * from A join B on A.id=B.id where A.id=0",
+		"select * from A join B on A.name=B.name",
+		"select * from B join B as A where A.id=B.id and A.name=B.name",
 		"select A.id from A,B,B as C where B.id = 0 and A.id=C.id and A.id=0",
 		"select A.id from A,A as B where A.id=B.id and A.a=1",
 		"select A.id from A join B on A.id = B.id join G on G.id=A.id and A.id>1 and G.id=3",
@@ -623,10 +657,16 @@ func TestSelectSupported(t *testing.T) {
 		"select A.id from A left join B on B.id+1=A.id where B.str1+B.str2 is null",
 		"select A.id from A join B on A.id=B.id where A.id in (1,2) or B.a=1",
 		"select A.id from A join B on A.id = B.id join G on A.id+B.id<=G.id where A.str + B.str is null",
+		"select * from B, (G join A on G.a=A.a) where A.a=1",
+		"select * from B, A where A.id=1 and B.a=A.a",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
+
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	fakedbs.AddQueryPattern("desc .*", descResult)
 
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
@@ -642,7 +682,7 @@ func TestSelectSupported(t *testing.T) {
 		// plan build
 		{
 			log.Info("--select.query:%+v", query)
-			_, err := BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+			_, err := BuildNode(log, route, scatter, database, node.(sqlparser.SelectStatement))
 			assert.Nil(t, err)
 		}
 	}
@@ -742,7 +782,7 @@ func TestSelectPlanAs(t *testing.T) {
 			// plan build
 			{
 				log.Info("--select.query:%+v", tcase.query)
-				plan, err := BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+				plan, err := BuildNode(log, route, nil, database, node.(sqlparser.SelectStatement))
 				assert.Nil(t, err)
 				q := plan.GetQuery()
 				assert.Equal(t, tcase.out, q)
@@ -769,7 +809,7 @@ func TestSelectDatabaseNotFound(t *testing.T) {
 	databaseNull := ""
 	node, err := sqlparser.Parse(query)
 	assert.Nil(t, err)
-	_, err = BuildNode(log, route, databaseNull, node.(sqlparser.SelectStatement))
+	_, err = BuildNode(log, route, nil, databaseNull, node.(sqlparser.SelectStatement))
 	want := "No database selected (errno 1046) (sqlstate 3D000)"
 	got := err.Error()
 	assert.Equal(t, want, got)
@@ -792,7 +832,7 @@ func TestUnsportStatement(t *testing.T) {
 	databaseNull := ""
 	node, err := sqlparser.Parse(query)
 	assert.Nil(t, err)
-	_, err = BuildNode(log, route, databaseNull, node.(*sqlparser.Union).Right)
+	_, err = BuildNode(log, route, nil, databaseNull, node.(*sqlparser.Union).Right)
 	want := "unsupported: unknown.select.statement"
 	got := err.Error()
 	assert.Equal(t, want, got)
@@ -822,7 +862,7 @@ func TestSelectPlanGlobal(t *testing.T) {
 			// plan build
 			{
 				log.Info("--select.query:%+v", query)
-				plan, err := BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+				plan, err := BuildNode(log, route, nil, database, node.(sqlparser.SelectStatement))
 				assert.Nil(t, err)
 				want := 1
 				assert.Equal(t, want, len(plan.GetQuery()))
@@ -877,20 +917,6 @@ func TestSelectPlanJoin(t *testing.T) {
 					Range:   "[512-4096)",
 				}},
 		},
-		{
-			query: "select * from B join B as A where A.id=B.id and A.a=B.a",
-			out: []xcontext.QueryTuple{
-				{
-					Query:   "select * from sbtest.B0 as B, sbtest.B0 as A where A.id = B.id and A.a = B.a",
-					Backend: "backend1",
-					Range:   "[0-512)",
-				},
-				{
-					Query:   "select * from sbtest.B1 as B, sbtest.B1 as A where A.id = B.id and A.a = B.a",
-					Backend: "backend2",
-					Range:   "[512-4096)",
-				}},
-		},
 	}
 
 	{
@@ -911,7 +937,7 @@ func TestSelectPlanJoin(t *testing.T) {
 			// plan build
 			{
 				log.Info("--select.query:%+v", tcase.query)
-				plan, err := BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+				plan, err := BuildNode(log, route, nil, database, node.(sqlparser.SelectStatement))
 				assert.Nil(t, err)
 				q := plan.GetQuery()
 				assert.Equal(t, tcase.out, q)
@@ -926,15 +952,11 @@ func TestSelectPlanJoinErr(t *testing.T) {
 		"select C.a, C.b from sbtest.C join sbtest.G on G.id = C.id where C.id=1",
 		"select G1.a, G1.b from sbtest.G1 join sbtest.B on G1.id = B.id where B.id=1",
 		"select G1.a, G1.b from sbtest.G1 join sbtest.C on G1.id = C.id where C.id=1",
-		"select * from B, (G join A on G.a=A.a) where A.a=1",
-		"select * from B, A where A.id=1 and B.a=A.a",
 	}
 	results := []string{
 		"Table 'C' doesn't exist (errno 1146) (sqlstate 42S02)",
 		"Table 'G1' doesn't exist (errno 1146) (sqlstate 42S02)",
 		"Table 'G1' doesn't exist (errno 1146) (sqlstate 42S02)",
-		"unsupported: '*'.expression.in.cross-shard.query",
-		"unsupported: '*'.expression.in.cross-shard.query",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -954,7 +976,7 @@ func TestSelectPlanJoinErr(t *testing.T) {
 		// plan build
 		{
 			log.Info("--select.query:%+v", query)
-			_, err := BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+			_, err := BuildNode(log, route, nil, database, node.(sqlparser.SelectStatement))
 			want := results[i]
 			got := err.Error()
 			assert.Equal(t, want, got)
@@ -1056,7 +1078,7 @@ func TestProcessUnion(t *testing.T) {
 			// plan build
 			{
 				log.Info("--union.query:%+v", tcase.query)
-				plan, err := BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+				plan, err := BuildNode(log, route, nil, database, node.(sqlparser.SelectStatement))
 				assert.Nil(t, err)
 				q := plan.GetQuery()
 				assert.Equal(t, tcase.out, q)
@@ -1069,6 +1091,7 @@ func TestProcessUnion(t *testing.T) {
 
 func TestUnionUnsupported(t *testing.T) {
 	querys := []string{
+		"select * from A where id = 2 union select id from B where id = 0 order by id",
 		"select a from A union select a,b from B",
 		"select a from A union select b from B order by b",
 		"select a from A union select b from B order by A.a",
@@ -1077,6 +1100,7 @@ func TestUnionUnsupported(t *testing.T) {
 		"select a from A union select b from C",
 	}
 	results := []string{
+		"unsupported: the.used.'select'.statements.have.a.different.number.of.columns",
 		"unsupported: the.used.'select'.statements.have.a.different.number.of.columns",
 		"unsupported: unknown.column.'b'.in.'order.clause'",
 		"unsupported: table.'A'.from.one.of.the.SELECTs.cannot.be.used.in.field.list",
@@ -1091,6 +1115,10 @@ func TestUnionUnsupported(t *testing.T) {
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	fakedbs.AddQueryPattern("desc .*", descResult)
+
 	err := route.CreateDatabase("sbtest")
 	assert.Nil(t, err)
 	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
@@ -1102,7 +1130,7 @@ func TestUnionUnsupported(t *testing.T) {
 		// plan build
 		{
 			log.Info("--union.query:%+v", query)
-			_, err := BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+			_, err := BuildNode(log, route, scatter, database, node.(sqlparser.SelectStatement))
 			want := results[i]
 			got := err.Error()
 			assert.Equal(t, want, got)
@@ -1125,7 +1153,7 @@ func TestGenerateFieldQuery(t *testing.T) {
 
 	node, err := sqlparser.Parse(query)
 	assert.Nil(t, err)
-	plan, err := BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+	plan, err := BuildNode(log, route, nil, database, node.(sqlparser.SelectStatement))
 	assert.Nil(t, err)
 
 	got := plan.(*JoinNode).Right.(*MergeNode).GenerateFieldQuery().Query
@@ -1166,7 +1194,7 @@ func TestSelectPlanList(t *testing.T) {
 			// plan build
 			{
 				log.Info("--select.query:%+v", query)
-				plan, err := BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+				plan, err := BuildNode(log, route, nil, database, node.(sqlparser.SelectStatement))
 				assert.Nil(t, err)
 				want := wants[i]
 				assert.Equal(t, want, len(plan.GetQuery()))
@@ -1208,7 +1236,7 @@ func TestSelectSupportedPlanList(t *testing.T) {
 	for _, query := range querys {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
-		_, err = BuildNode(log, route, database, node.(sqlparser.SelectStatement))
+		_, err = BuildNode(log, route, nil, database, node.(sqlparser.SelectStatement))
 		assert.Nil(t, err)
 	}
 }

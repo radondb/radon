@@ -53,7 +53,7 @@ func explainHandler(log *xlog.Log, proxy *proxy.Proxy, w rest.ResponseWriter, r 
 		w.WriteJson(rsp)
 		return
 	}
-	simOptimizer := optimizer.NewSimpleOptimizer(log, "", query, node, router)
+	simOptimizer := optimizer.NewSimpleOptimizer(log, "", query, node, router, proxy.Scatter())
 	planTree, err := simOptimizer.BuildPlanTree()
 	if err != nil {
 		log.Error("ctl.v1.explain[%s].build.plan.error:%+v", query, err)

@@ -33,7 +33,7 @@ func (spanner *Spanner) ExecuteMultiStmtsInTxn(session *driver.Session, database
 
 	sessions.MultiStmtTxnBinding(session, nil, node, query)
 
-	plans, err := optimizer.NewSimpleOptimizer(log, database, query, node, router).BuildPlanTree()
+	plans, err := optimizer.NewSimpleOptimizer(log, database, query, node, router, spanner.scatter).BuildPlanTree()
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (spanner *Spanner) ExecuteSingleStmtTxnTwoPC(session *driver.Session, datab
 	}
 
 	// Transaction execute.
-	plans, err := optimizer.NewSimpleOptimizer(log, database, query, node, router).BuildPlanTree()
+	plans, err := optimizer.NewSimpleOptimizer(log, database, query, node, router, spanner.scatter).BuildPlanTree()
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (spanner *Spanner) executeWithTimeout(session *driver.Session, database str
 	sessions.TxnBinding(session, txn, node, query)
 	defer sessions.TxnUnBinding(session)
 
-	plans, err := optimizer.NewSimpleOptimizer(log, database, query, node, router).BuildPlanTree()
+	plans, err := optimizer.NewSimpleOptimizer(log, database, query, node, router, spanner.scatter).BuildPlanTree()
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (spanner *Spanner) ExecuteStreamFetch(session *driver.Session, database str
 		return errors.New("ExecuteStreamFetch.only.support.select")
 	}
 
-	plan := planner.NewSelectPlan(log, database, query, selectNode, router)
+	plan := planner.NewSelectPlan(log, database, query, selectNode, router, scatter)
 	if err := plan.Build(); err != nil {
 		return err
 	}

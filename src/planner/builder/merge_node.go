@@ -9,6 +9,7 @@
 package builder
 
 import (
+	"backend"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -27,7 +28,8 @@ type MergeNode struct {
 	// select ast.
 	Sel sqlparser.SelectStatement
 	// router.
-	router *router.Router
+	router  *router.Router
+	scatter *backend.Scatter
 	// non-global tables' count in the MergeNode.
 	nonGlobalCnt int
 	// if the query can be pushed down a backend, record.
@@ -58,10 +60,11 @@ type MergeNode struct {
 }
 
 // newMergeNode used to create MergeNode.
-func newMergeNode(log *xlog.Log, router *router.Router) *MergeNode {
+func newMergeNode(log *xlog.Log, router *router.Router, scatter *backend.Scatter) *MergeNode {
 	return &MergeNode{
 		log:         log,
 		router:      router,
+		scatter:     scatter,
 		referTables: make(map[string]*tableInfo),
 		ReqMode:     xcontext.ReqNormal,
 	}
@@ -78,7 +81,7 @@ func (m *MergeNode) getFields() []selectTuple {
 		exprs := getSelectExprs(m.Sel)
 		if len(exprs) > 0 {
 			var err error
-			m.fields, _, err = parseSelectExprs(exprs, m)
+			m.fields, _, err = parseSelectExprs(m.scatter, m, m.referTables, &exprs)
 			if err != nil {
 				panic(err)
 			}

@@ -2011,7 +2011,7 @@ func (node *Radon) Format(buf *TrackedBuffer) {
 
 // Format formats the node.
 func (node *Explain) Format(buf *TrackedBuffer) {
-	buf.WriteString("explain")
+	buf.Myprintf("explain %v", node.Statement)
 }
 
 // Format formats the node.

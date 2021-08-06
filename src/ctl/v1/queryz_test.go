@@ -35,6 +35,7 @@ func TestCtlV1Queryz(t *testing.T) {
 		fakedbs.AddQueryPattern("create .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 		fakedbs.AddQueryDelay("select * from test.t1_0014 as t1", &sqltypes.Result{}, 1000)
+		fakedbs.AddQueryPattern("desc .*", &sqltypes.Result{})
 	}
 
 	// create database.

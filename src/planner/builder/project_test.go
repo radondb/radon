@@ -9,6 +9,7 @@
 package builder
 
 import (
+	"backend"
 	"testing"
 
 	"router"
@@ -24,20 +25,25 @@ func TestParserSelectExprsSubquery(t *testing.T) {
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
+
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	fakedbs.AddQueryPattern("desc .*", descResult)
+
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
 	err := route.CreateDatabase(database)
 	assert.Nil(t, err)
 	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
 	assert.Nil(t, err)
-
+	b := NewPlanBuilder(log, route, scatter, "sbtest")
 	node, err := sqlparser.Parse(query)
 	assert.Nil(t, err)
 
 	sel := node.(*sqlparser.Select)
-	p, err := scanTableExprs(log, route, database, sel.From)
+	b.root, err = b.scanTableExprs(sel.From)
 	assert.Nil(t, err)
-	_, _, err = parseSelectExprs(sel.SelectExprs, p)
+	_, _, err = parseSelectExprs(scatter, b.root, b.tables, &sel.SelectExprs)
 	got := err.Error()
 	assert.Equal(t, want, got)
 }
@@ -105,14 +111,15 @@ func TestCheckGroupBy(t *testing.T) {
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
 
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parseSelectExprs(sel.SelectExprs, p)
+		fields, _, err := parseSelectExprs(nil, b.root, b.tables, &sel.SelectExprs)
 		assert.Nil(t, err)
 
-		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferTables(), ok)
+		_, ok := b.root.(*MergeNode)
+		groups, err := b.checkGroupBy(sel.GroupBy, fields, ok)
 		assert.Nil(t, err)
 		assert.Equal(t, wants[i], len(groups))
 	}
@@ -146,14 +153,15 @@ func TestCheckGroupByError(t *testing.T) {
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
 
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parseSelectExprs(sel.SelectExprs, p)
+		fields, _, err := parseSelectExprs(nil, b.root, b.tables, &sel.SelectExprs)
 		assert.Nil(t, err)
 
-		_, ok := p.(*MergeNode)
-		_, err = checkGroupBy(sel.GroupBy, fields, route, p.getReferTables(), ok)
+		_, ok := b.root.(*MergeNode)
+		_, err = b.checkGroupBy(sel.GroupBy, fields, ok)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}
@@ -164,11 +172,13 @@ func TestCheckDistinct(t *testing.T) {
 		"select distinct A.a,A.b as c from A",
 		"select distinct A.id from A",
 		"select distinct A.a,A.b,A.c from A group by a",
+		"select distinct * from A",
 	}
 	wants := []int{
 		2,
 		1,
 		1,
+		2,
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
@@ -176,6 +186,10 @@ func TestCheckDistinct(t *testing.T) {
 
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
+
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	fakedbs.AddQueryPattern("desc .*", descResult)
 
 	err := route.CreateDatabase(database)
 	assert.Nil(t, err)
@@ -187,14 +201,15 @@ func TestCheckDistinct(t *testing.T) {
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
 
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, scatter, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parseSelectExprs(sel.SelectExprs, p)
+		fields, _, err := parseSelectExprs(scatter, b.root, b.tables, &sel.SelectExprs)
 		assert.Nil(t, err)
 
-		_, ok := p.(*MergeNode)
-		_, err = checkDistinct(sel, nil, fields, route, p.getReferTables(), ok)
+		_, ok := b.root.(*MergeNode)
+		_, err = b.checkDistinct(sel, nil, fields, ok)
 		assert.Nil(t, err)
 		assert.Equal(t, wants[i], len(sel.GroupBy))
 	}
@@ -202,16 +217,18 @@ func TestCheckDistinct(t *testing.T) {
 
 func TestCheckDistinctError(t *testing.T) {
 	querys := []string{
-		"select distinct * from A",
 		"select distinct A.a+1 as a, A.b*10 from A",
 	}
 	wants := []string{
-		"unsupported: distinct",
 		"unsupported: distinct",
 	}
 
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
+
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	fakedbs.AddQueryPattern("desc .*", descResult)
 
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
@@ -226,14 +243,15 @@ func TestCheckDistinctError(t *testing.T) {
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
 
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, scatter, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		fields, _, err := parseSelectExprs(sel.SelectExprs, p)
+		fields, _, err := parseSelectExprs(scatter, b.root, b.tables, &sel.SelectExprs)
 		assert.Nil(t, err)
 
-		_, ok := p.(*MergeNode)
-		_, err = checkDistinct(sel, nil, fields, route, p.getReferTables(), ok)
+		_, ok := b.root.(*MergeNode)
+		_, err = b.checkDistinct(sel, nil, fields, ok)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
 	}
@@ -263,20 +281,21 @@ func TestSelectExprs(t *testing.T) {
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
 
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		fields, aggTyp, err := parseSelectExprs(sel.SelectExprs, p)
+		fields, aggTyp, err := parseSelectExprs(nil, b.root, b.tables, &sel.SelectExprs)
 		assert.Nil(t, err)
 
-		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferTables(), ok)
+		_, ok := b.root.(*MergeNode)
+		groups, err := b.checkGroupBy(sel.GroupBy, fields, ok)
 		assert.Nil(t, err)
 
-		err = p.pushSelectExprs(fields, groups, sel, aggTyp)
+		err = b.root.pushSelectExprs(fields, groups, sel, aggTyp)
 		assert.Nil(t, err)
 
-		err = p.pushOrderBy(sel.OrderBy)
+		err = b.root.pushOrderBy(sel.OrderBy)
 		assert.Nil(t, err)
 	}
 }
@@ -304,71 +323,19 @@ func TestSelectExprsError(t *testing.T) {
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
 
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		fields, aggTyp, err := parseSelectExprs(sel.SelectExprs, p)
+		fields, aggTyp, err := parseSelectExprs(nil, b.root, b.tables, &sel.SelectExprs)
 		assert.Nil(t, err)
 
-		_, ok := p.(*MergeNode)
-		groups, err := checkGroupBy(sel.GroupBy, fields, route, p.getReferTables(), ok)
+		_, ok := b.root.(*MergeNode)
+		groups, err := b.checkGroupBy(sel.GroupBy, fields, ok)
 		assert.Nil(t, err)
 
-		err = p.pushSelectExprs(fields, groups, sel, aggTyp)
+		err = b.root.pushSelectExprs(fields, groups, sel, aggTyp)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
-	}
-}
-
-func TestReplaceSelect(t *testing.T) {
-	query := "select tmp+a,cnt,b from (select a+1 as tmp,sum(b) as cnt,a from A) t"
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	database := "sbtest"
-
-	route, cleanup := router.MockNewRouter(log)
-	defer cleanup()
-
-	err := route.CreateDatabase(database)
-	assert.Nil(t, err)
-	err = route.AddForTest(database, router.MockTableMConfig())
-	assert.Nil(t, err)
-
-	node, err := sqlparser.Parse(query)
-	assert.Nil(t, err)
-	sel := node.(*sqlparser.Select)
-
-	p, err := BuildNode(log, route, database, sel.From[0].(*sqlparser.AliasedTableExpr).Expr.(*sqlparser.Subquery).Select)
-	assert.Nil(t, err)
-
-	colMap := make(map[string]selectTuple)
-	for _, field := range p.getFields() {
-		name := field.alias
-		if name == "" {
-			name = field.field
-		}
-		colMap[name] = field
-	}
-
-	{
-		tuple := parseExpr(sel.SelectExprs[0].(*sqlparser.AliasedExpr).Expr)
-		field, err := replaceSelect(tuple, colMap)
-		assert.Equal(t, "tmp + a", field.alias)
-
-		buf := sqlparser.NewTrackedBuffer(nil)
-		field.expr.Format(buf)
-		assert.Nil(t, err)
-		assert.Equal(t, "a + 1 + a as `tmp + a`", buf.String())
-	}
-	{
-		tuple := parseExpr(sel.SelectExprs[1].(*sqlparser.AliasedExpr).Expr)
-		_, err = replaceSelect(tuple, colMap)
-		assert.NotNil(t, err)
-		assert.Equal(t, "unsupported: aggregation.field.in.subquery.is.used.in.clause", err.Error())
-	}
-	{
-		tuple := parseExpr(sel.SelectExprs[2].(*sqlparser.AliasedExpr).Expr)
-		_, err = replaceSelect(tuple, colMap)
-		assert.NotNil(t, err)
-		assert.Equal(t, "unsupported: unknown.column.name.'b'", err.Error())
 	}
 }

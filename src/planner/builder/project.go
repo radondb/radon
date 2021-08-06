@@ -9,13 +9,14 @@
 package builder
 
 import (
+	"backend"
 	"fmt"
 	"strings"
 
-	"router"
-
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/expression"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/expression/evaluation"
 )
 
 // For example: select count(*), count(distinct x.a) as cstar, max(x.a) as mb, t.a as a1, x.b from t,x group by a1,b
@@ -27,28 +28,23 @@ import (
 type selectTuple struct {
 	//select expression.
 	expr sqlparser.SelectExpr
-	info exprInfo
 	//the field name.
 	field string
 	// the alias of the field.
-	alias string
-	//aggregate function name.
-	aggrFuc string
-	//field in the aggregate function.
-	aggrField       string
-	distinct, isCol bool
+	alias       string
+	referTables []string
+	hasAgg      bool
+	isCol       bool
 }
 
 // parseSelectExpr parses the AliasedExpr to select tuple.
-func parseSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*tableInfo) (*selectTuple, bool, error) {
+func parseSelectExpr(expr *sqlparser.AliasedExpr, tables map[string]*tableInfo) (*selectTuple, bool, error) {
 	var cols []*sqlparser.ColName
 	var referTables []string
-	funcName := ""
 	field := ""
-	aggrField := ""
-	distinct := false
 	isCol := false
-	hasAggregates := false
+	hasAggr := false
+	hasDist := false
 
 	alias := expr.As.String()
 	if col, ok := expr.Expr.(*sqlparser.ColName); ok {
@@ -66,13 +62,13 @@ func parseSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*tableInfo)
 			cols = append(cols, node)
 			tableName := node.Qualifier.Name.String()
 			if tableName == "" {
-				if len(tbInfos) == 1 {
-					tableName, _ = getOneTableInfo(tbInfos)
+				if len(tables) == 1 {
+					tableName, _ = getOneTableInfo(tables)
 				} else {
 					return false, errors.Errorf("unsupported: unknown.column.'%s'.in.select.exprs", node.Name.String())
 				}
 			} else {
-				if _, ok := tbInfos[tableName]; !ok {
+				if _, ok := tables[tableName]; !ok {
 					return false, errors.Errorf("unsupported: unknown.column.'%s.%s'.in.field.list", tableName, field)
 				}
 			}
@@ -82,21 +78,13 @@ func parseSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*tableInfo)
 			}
 			referTables = append(referTables, tableName)
 		case *sqlparser.FuncExpr:
-			distinct = node.Distinct
 			if node.IsAggregate() {
-				hasAggregates = true
-				if node != expr.Expr {
-					return false, errors.Errorf("unsupported: '%s'.contain.aggregate.in.select.exprs", field)
+				if hasAggr {
+					return false, errors.Errorf("unsupported: .more.than.one.aggregate.in.fileds.'%s'", field)
 				}
-				funcName = node.Name.String()
-				if len(node.Exprs) != 1 {
-					return false, errors.Errorf("unsupported: invalid.use.of.group.function[%s]", funcName)
-				}
-				buf := sqlparser.NewTrackedBuffer(nil)
-				node.Exprs.Format(buf)
-				aggrField = buf.String()
-				if aggrField == "*" && (node.Name.String() != "count" || distinct) {
-					return false, errors.Errorf("unsupported: syntax.error.at.'%s'", field)
+				hasAggr = true
+				if node.Distinct {
+					hasDist = true
 				}
 			}
 		case *sqlparser.GroupConcatExpr:
@@ -107,51 +95,51 @@ func parseSelectExpr(expr *sqlparser.AliasedExpr, tbInfos map[string]*tableInfo)
 		return true, nil
 	}, expr.Expr)
 	if err != nil {
-		return nil, hasAggregates, err
+		return nil, hasDist, err
 	}
 
-	return &selectTuple{expr, exprInfo{expr.Expr, referTables, cols, nil}, field, alias, funcName, aggrField, distinct, isCol}, hasAggregates, nil
+	return &selectTuple{expr, field, alias, referTables, hasAggr, isCol}, hasDist, nil
 }
 
-func parseSelectExprs(exprs sqlparser.SelectExprs, root PlanNode) ([]selectTuple, aggrType, error) {
+func parseSelectExprs(s *backend.Scatter, root PlanNode, tables map[string]*tableInfo, exprs *sqlparser.SelectExprs) ([]selectTuple, aggrType, error) {
 	var tuples []selectTuple
 	hasAggs := false
-	hasDist := false
-	aggType := nullAgg
-	tbInfos := root.getReferTables()
+	hasDists := false
 	_, isMergeNode := root.(*MergeNode)
-	for _, expr := range exprs {
-		switch exp := expr.(type) {
+	i := 0
+	for i < len(*exprs) {
+		switch exp := (*exprs)[i].(type) {
 		case *sqlparser.AliasedExpr:
-			tuple, hasAgg, err := parseSelectExpr(exp, tbInfos)
+			tuple, hasDist, err := parseSelectExpr(exp, tables)
 			if err != nil {
-				return nil, aggType, err
+				return nil, nullAgg, err
 			}
-			if hasAgg {
-				hasAggs = true
-				hasDist = hasDist || tuple.distinct
-			}
+			hasAggs = hasAggs || tuple.hasAgg
+			hasDists = hasDists || hasDist
 			tuples = append(tuples, *tuple)
 		case *sqlparser.StarExpr:
-			if !isMergeNode {
-				return nil, aggType, errors.New("unsupported: '*'.expression.in.cross-shard.query")
+			tuple, err := unfoldWildStar(s, exp, tables)
+			if err != nil {
+				return nil, nullAgg, err
 			}
-			tuple := selectTuple{expr: exp, field: "*"}
-			if !exp.TableName.IsEmpty() {
-				tbName := exp.TableName.Name.String()
-				if _, ok := tbInfos[tbName]; !ok {
-					return nil, aggType, errors.Errorf("unsupported:  unknown.table.'%s'.in.field.list", tbName)
+			tuples = append(tuples, tuple...)
+			for idx, t := range tuple {
+				if idx == 0 {
+					(*exprs)[i] = t.expr
+					continue
 				}
-				tuple.info.referTables = append(tuple.info.referTables, tbName)
+				i++
+				*exprs = append(*exprs, &sqlparser.AliasedExpr{})
+				copy((*exprs)[(i+1):], (*exprs)[i:])
+				(*exprs)[i] = t.expr
 			}
-
-			tuples = append(tuples, tuple)
 		case sqlparser.Nextval:
-			return nil, aggType, errors.Errorf("unsupported: nextval.in.select.exprs")
+			return nil, nullAgg, errors.Errorf("unsupported: nextval.in.select.exprs")
 		}
+		i++
 	}
 
-	return tuples, setAggregatorType(hasAggs, hasDist, isMergeNode), nil
+	return tuples, setAggregatorType(hasAggs, hasDists, isMergeNode), nil
 }
 
 // aggrType mark aggregate function whether can push down.
@@ -178,24 +166,24 @@ func setAggregatorType(hasAggr, hasDist, isMergeNode bool) aggrType {
 }
 
 // checkIsWithNull used to check whether `tb.col is null` or `tb.col<=> null`.
-func checkIsWithNull(filter exprInfo, tbInfos map[string]*tableInfo) (bool, selectTuple) {
+func checkIsWithNull(root PlanNode, filter exprInfo, tbInfos map[string]*tableInfo) (bool, selectTuple) {
 	if !checkTbInNode(filter.referTables, tbInfos) {
 		return false, selectTuple{}
 	}
 	if exp, ok := filter.expr.(*sqlparser.IsExpr); ok {
 		if exp.Operator == sqlparser.IsNullStr {
-			return true, parseExpr(exp.Expr)
+			return true, parseExpr(root, exp.Expr)
 		}
 	}
 
 	if exp, ok := filter.expr.(*sqlparser.ComparisonExpr); ok {
 		if exp.Operator == sqlparser.NullSafeEqualStr {
 			if _, ok := exp.Left.(*sqlparser.NullVal); ok {
-				return true, parseExpr(exp.Right)
+				return true, parseExpr(root, exp.Right)
 			}
 
 			if _, ok := exp.Right.(*sqlparser.NullVal); ok {
-				return true, parseExpr(exp.Left)
+				return true, parseExpr(root, exp.Left)
 			}
 		}
 	}
@@ -204,8 +192,10 @@ func checkIsWithNull(filter exprInfo, tbInfos map[string]*tableInfo) (bool, sele
 }
 
 // parseExpr used to parse the expr to selectTuple.
-func parseExpr(expr sqlparser.Expr) selectTuple {
-	tuple := selectTuple{expr: &sqlparser.AliasedExpr{Expr: expr}, info: exprInfo{expr: expr}}
+func parseExpr(root PlanNode, expr sqlparser.Expr) selectTuple {
+	tuple := selectTuple{
+		expr: &sqlparser.AliasedExpr{Expr: expr},
+	}
 	sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
 		switch node := node.(type) {
 		case *sqlparser.ColName:
@@ -214,11 +204,10 @@ func parseExpr(expr sqlparser.Expr) selectTuple {
 				tuple.isCol = true
 				tuple.field = node.Name.String()
 			}
-			tuple.info.cols = append(tuple.info.cols, node)
-			if isContainKey(tuple.info.referTables, tableName) {
+			if isContainKey(tuple.referTables, tableName) {
 				return true, nil
 			}
-			tuple.info.referTables = append(tuple.info.referTables, tableName)
+			tuple.referTables = append(tuple.referTables, tableName)
 		}
 		return true, nil
 	}, expr)
@@ -231,23 +220,51 @@ func parseExpr(expr sqlparser.Expr) selectTuple {
 	return tuple
 }
 
-// decomposeAvg decomposes avg(a) to sum(a) and count(a).
-func decomposeAvg(tuple *selectTuple) []*sqlparser.AliasedExpr {
-	var ret []*sqlparser.AliasedExpr
-	alias := tuple.alias
-	if alias == "" {
-		alias = tuple.field
+func extractAggregate(node sqlparser.Expr) (*expression.AggregateExpr, evaluation.Evaluation, error) {
+	expr, err := expression.ParseExpression(node)
+	if err != nil {
+		return nil, nil, err
 	}
+	if aggr, ok := expr.(*expression.AggregateExpr); ok {
+		return aggr, nil, nil
+	}
+
+	res := new(expression.AggregateExpr)
+	err = expression.Walk(func(plan expression.Expression) (kontinue bool, err error) {
+		switch node := plan.(type) {
+		case *expression.VariableExpr:
+			return false, errors.Errorf("unsupport: contain.aggregate.and.variable.in.select.exprs")
+		case *expression.AggregateExpr:
+			*res = *node
+			expression.ReplaceExpression(expr, node, expression.NewVariableExpr("tmp_aggr", "", ""))
+			return false, nil
+		}
+		return true, nil
+	}, expr)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	eval, err := expr.Materialize()
+	if err != nil {
+		return nil, nil, err
+	}
+	return res, eval, nil
+}
+
+// decomposeAvg decomposes avg(a) to sum(a) and count(a).
+func decomposeAvg(alias string, aggr *expression.AggregateExpr) []*sqlparser.AliasedExpr {
+	var ret []*sqlparser.AliasedExpr
 	sum := &sqlparser.AliasedExpr{
 		Expr: &sqlparser.FuncExpr{
 			Name:  sqlparser.NewColIdent("sum"),
-			Exprs: tuple.expr.(*sqlparser.AliasedExpr).Expr.(*sqlparser.FuncExpr).Exprs,
+			Exprs: aggr.Expr.(*sqlparser.FuncExpr).Exprs,
 		},
 		As: sqlparser.NewColIdent(alias),
 	}
 	count := &sqlparser.AliasedExpr{Expr: &sqlparser.FuncExpr{
 		Name:  sqlparser.NewColIdent("count"),
-		Exprs: tuple.expr.(*sqlparser.AliasedExpr).Expr.(*sqlparser.FuncExpr).Exprs,
+		Exprs: aggr.Expr.(*sqlparser.FuncExpr).Exprs,
 	}}
 	ret = append(ret, sum, count)
 	return ret
@@ -255,20 +272,15 @@ func decomposeAvg(tuple *selectTuple) []*sqlparser.AliasedExpr {
 
 // decomposeAgg decomposes the aggregate function.
 // such as: avg(a) -> a as `avg(a)`.
-func decomposeAgg(tuple *selectTuple) *sqlparser.AliasedExpr {
+func decomposeAgg(alias string, aggr *expression.AggregateExpr) *sqlparser.AliasedExpr {
 	var expr sqlparser.Expr
-	switch exp := tuple.expr.(*sqlparser.AliasedExpr).Expr.(*sqlparser.FuncExpr).Exprs[0].(type) {
+	switch exp := aggr.Expr.(*sqlparser.FuncExpr).Exprs[0].(type) {
 	case *sqlparser.StarExpr:
 		expr = sqlparser.NewIntVal([]byte("1"))
 	case *sqlparser.AliasedExpr:
 		expr = exp.Expr
 	case sqlparser.Nextval:
 		panic("unreachable")
-	}
-
-	alias := tuple.alias
-	if alias == "" {
-		alias = tuple.field
 	}
 
 	return &sqlparser.AliasedExpr{
@@ -294,12 +306,12 @@ func checkInTuple(field, table string, tuples []selectTuple) (bool, *selectTuple
 			return true, &tuple
 		}
 
-		if tuple.field == "*" && (len(tuple.info.referTables) == 0 || tuple.info.referTables[0] == table) {
+		if tuple.field == "*" && (len(tuple.referTables) == 0 || tuple.referTables[0] == table) {
 			return true, &tuple
 		}
 
 		if tuple.isCol {
-			if strings.EqualFold(field, tuple.field) && (table == "" || table == tuple.info.referTables[0]) {
+			if strings.EqualFold(field, tuple.field) && (table == "" || table == tuple.referTables[0]) {
 				return true, &tuple
 			}
 		}
@@ -307,18 +319,8 @@ func checkInTuple(field, table string, tuples []selectTuple) (bool, *selectTuple
 	return false, nil
 }
 
-//getMatchedField used to find the matched field from colMap.
-func getMatchedField(fieldName string, colMap map[string]selectTuple) (selectTuple, error) {
-	for field, tuple := range colMap {
-		if fieldName == field {
-			return tuple, nil
-		}
-	}
-	return selectTuple{}, errors.Errorf("unsupported: unknown.column.name.'%s'", fieldName)
-}
-
 // checkGroupBy used to check groupby.
-func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.Router, tbInfos map[string]*tableInfo, canOpt bool) ([]selectTuple, error) {
+func (b *planBuilder) checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, canOpt bool) ([]selectTuple, error) {
 	var groupTuples []selectTuple
 	hasShard := false
 	for _, expr := range exprs {
@@ -333,7 +335,7 @@ func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.
 		field := col.Name.String()
 		table := col.Qualifier.Name.String()
 		if table != "" {
-			if _, ok := tbInfos[table]; !ok {
+			if _, ok := b.tables[table]; !ok {
 				return nil, errors.Errorf("unsupported: unknow.table.in.group.by.field[%s.%s]", table, field)
 			}
 		}
@@ -344,7 +346,7 @@ func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.
 				find = true
 			} else {
 				if tuple.isCol {
-					if strings.EqualFold(field, tuple.field) && (table == "" || table == tuple.info.referTables[0]) {
+					if strings.EqualFold(field, tuple.field) && (table == "" || table == tuple.referTables[0]) {
 						find = true
 					}
 				}
@@ -362,11 +364,11 @@ func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.
 			return nil, errors.Errorf("unsupported: group.by.field[%s].should.be.in.select.list", field)
 		}
 		if canOpt && group.isCol && !hasShard {
-			table = group.info.referTables[0]
+			table = group.referTables[0]
 			var err error
 			// If fields contains shardkey, just push down the group by,
 			// neednot process groupby again. unsupport alias.
-			hasShard, err = checkShard(table, group.field, tbInfos, router)
+			hasShard, err = b.checkShard(table, group.field)
 			if err != nil {
 				return nil, err
 			}
@@ -380,7 +382,7 @@ func checkGroupBy(exprs sqlparser.GroupBy, fields []selectTuple, router *router.
 }
 
 // checkDistinct used to check the distinct, and convert distinct to groupby.
-func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router *router.Router, tbInfos map[string]*tableInfo, canOpt bool) ([]selectTuple, error) {
+func (b *planBuilder) checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, canOpt bool) ([]selectTuple, error) {
 	// field in grouby must be contained in the select exprs, that mains groups is a subset of fields.
 	// if has groupby, neednot process distinct again.
 	if node.Distinct == "" || len(node.GroupBy) > 0 {
@@ -393,7 +395,7 @@ func checkDistinct(node *sqlparser.Select, groups, fields []selectTuple, router 
 	if canOpt {
 		for _, tuple := range fields {
 			if tuple.isCol {
-				ok, err := checkShard(tuple.info.referTables[0], tuple.field, tbInfos, router)
+				ok, err := b.checkShard(tuple.referTables[0], tuple.field)
 				if err != nil {
 					return nil, err
 				}
@@ -444,23 +446,58 @@ func GetProject(root PlanNode) string {
 	return project
 }
 
-// replaceSelect replace the field based on colMap.
-// such as: select tmp+1 from (select a+1 as tmp,b from t1)t;
-// `tmp+1` will be overwritten as 'a+1+1 as `tmp+1`'.
-func replaceSelect(field selectTuple, colMap map[string]selectTuple) (selectTuple, error) {
-	var err error
-	if len(field.info.referTables) > 0 {
-		field.info, err = replaceCol(field.info, colMap)
-		if err != nil {
-			return field, err
-		}
-
-		if expr, ok := field.expr.(*sqlparser.AliasedExpr); ok {
-			if field.alias == "" {
-				field.alias = field.field
-				expr.As = sqlparser.NewColIdent(field.field)
+func unfoldWildStar(s *backend.Scatter, expr *sqlparser.StarExpr, tables map[string]*tableInfo) ([]selectTuple, error) {
+	var tuples []selectTuple
+	if expr.TableName.IsEmpty() {
+		for k, v := range tables {
+			tuple, err := descTable(s, k, v)
+			if err != nil {
+				return nil, err
 			}
+			tuples = append(tuples, tuple...)
 		}
+		return tuples, nil
 	}
-	return field, nil
+
+	tb := expr.TableName.Name.String()
+	db := expr.TableName.Qualifier.String()
+	t, ok := tables[tb]
+	if !ok {
+		return nil, errors.Errorf("unsupported: unknown.table.'%s'.in.field.list", tb)
+	}
+	if db != "" && db != t.database {
+		return nil, errors.Errorf("unsupported: unknown database '%s' in 'field list'", db)
+	}
+	return descTable(s, tb, t)
+}
+
+func descTable(s *backend.Scatter, alias string, t *tableInfo) ([]selectTuple, error) {
+	query := fmt.Sprintf("desc %s.%s", t.database, t.tableConfig.Partitions[0].Table)
+	txn, err := s.CreateTransaction()
+	if err != nil {
+		return nil, err
+	}
+	defer txn.Finish()
+	res, err := txn.ExecuteOnThisBackend(t.tableConfig.Partitions[0].Backend, query)
+	if err != nil {
+		return nil, err
+	}
+	var tuple []selectTuple
+	for _, row := range res.Rows {
+		name := row[0].ToString()
+		tuple = append(tuple, selectTuple{
+			expr: &sqlparser.AliasedExpr{
+				Expr: &sqlparser.ColName{
+					Name: sqlparser.NewColIdent(name),
+					Qualifier: sqlparser.TableName{
+						Name: sqlparser.NewTableIdent(alias),
+					},
+				},
+			},
+			field:       name,
+			referTables: []string{alias},
+			isCol:       true,
+		})
+	}
+	return tuple, nil
 }

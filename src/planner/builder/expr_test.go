@@ -9,6 +9,7 @@
 package builder
 
 import (
+	"backend"
 	"testing"
 
 	"router"
@@ -112,11 +113,11 @@ func TestParserWhereOrJoinExprs(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
-
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		_, _, err = parseWhereOrJoinExprs(sel.Where.Expr, p.getReferTables())
+		_, _, err = parseWhereOrJoinExprs(sel.Where.Expr, b.root.getReferTables())
 		assert.Nil(t, err)
 	}
 }
@@ -147,14 +148,14 @@ func TestWhereFilters(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
-
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		p, err = pushFilters(p, sel.Where.Expr)
+		err = b.pushFilters(sel.Where.Expr)
 		assert.Nil(t, err)
 
-		_, err = p.calcRoute()
+		_, err = b.root.calcRoute()
 		assert.Nil(t, err)
 
 		assert.Nil(t, err)
@@ -174,23 +175,24 @@ func TestWhereFiltersError(t *testing.T) {
 	assert.Nil(t, err)
 	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig(), router.MockTableGConfig())
 	assert.Nil(t, err)
+	b := NewPlanBuilder(log, route, nil, "sbtest")
 
 	node, err := sqlparser.Parse(query)
 	assert.Nil(t, err)
 	sel := node.(*sqlparser.Select)
 
-	p, err := scanTableExprs(log, route, database, sel.From)
+	b.root, err = b.scanTableExprs(sel.From)
 	assert.Nil(t, err)
 
 	// where filter error.
 	{
-		p, err = pushFilters(p, sel.Where.Expr)
+		err = b.pushFilters(sel.Where.Expr)
 		got := err.Error()
 		assert.Equal(t, want, got)
 	}
 	// check shard error.
 	{
-		_, err = checkShard("B", "id", p.getReferTables(), route)
+		_, err = b.checkShard("B", "id")
 		assert.Equal(t, "unsupported: unknown.column.'B.id'.in.field.list", err.Error())
 	}
 	// get on tableinfo.
@@ -205,7 +207,7 @@ func TestWhereFiltersError(t *testing.T) {
 
 func TestParserHaving(t *testing.T) {
 	querys := []string{
-		"select * from A where A.id=1 having concat(str1,str2) = 'sansi'",
+		"select * from A where A.id=1 having concat(id,name) = 'sansi'",
 		"select A.id from G, A where G.id=A.id having A.id=1",
 		"select A.a from A, B where A.id=B.id having A.a=1 and 1=1",
 		"select G.id, B.id, B.a from A,G,B where A.id=B.id having G.id=B.id and B.a=1 and 1=1",
@@ -213,6 +215,10 @@ func TestParserHaving(t *testing.T) {
 	}
 	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
 	database := "sbtest"
+
+	scatter, fakedbs, cleanup := backend.MockScatter(log, 10)
+	defer cleanup()
+	fakedbs.AddQueryPattern("desc .*", descResult)
 
 	route, cleanup := router.MockNewRouter(log)
 	defer cleanup()
@@ -226,17 +232,17 @@ func TestParserHaving(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
-
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, scatter, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		fields, aggTyp, err := parseSelectExprs(sel.SelectExprs, p)
+		fields, aggTyp, err := parseSelectExprs(scatter, b.root, b.tables, &sel.SelectExprs)
 		assert.Nil(t, err)
 
-		err = p.pushSelectExprs(fields, nil, sel, aggTyp)
+		err = b.root.pushSelectExprs(fields, nil, sel, aggTyp)
 		assert.Nil(t, err)
 
-		err = pushHavings(p, sel.Having.Expr)
+		err = b.pushHavings(sel.Having.Expr)
 		assert.Nil(t, err)
 	}
 }
@@ -267,80 +273,18 @@ func TestParserHavingError(t *testing.T) {
 		node, err := sqlparser.Parse(query)
 		assert.Nil(t, err)
 		sel := node.(*sqlparser.Select)
-
-		p, err := scanTableExprs(log, route, database, sel.From)
+		b := NewPlanBuilder(log, route, nil, "sbtest")
+		b.root, err = b.scanTableExprs(sel.From)
 		assert.Nil(t, err)
 
-		fields, aggTyp, err := parseSelectExprs(sel.SelectExprs, p)
+		fields, aggTyp, err := parseSelectExprs(nil, b.root, b.tables, &sel.SelectExprs)
 		assert.Nil(t, err)
 
-		err = p.pushSelectExprs(fields, nil, sel, aggTyp)
+		err = b.root.pushSelectExprs(fields, nil, sel, aggTyp)
 		assert.Nil(t, err)
 
-		err = pushHavings(p, sel.Having.Expr)
+		err = b.pushHavings(sel.Having.Expr)
 		got := err.Error()
 		assert.Equal(t, wants[i], got)
-	}
-}
-
-func TestReplaceCol(t *testing.T) {
-	query := "select tmp from (select A.a+1 as tmp,sum(B.b) as cnt,B.a from A,B) t where tmp+a>2 and cnt>2 having b>1 and tmp > 2"
-	log := xlog.NewStdLog(xlog.Level(xlog.PANIC))
-	database := "sbtest"
-
-	route, cleanup := router.MockNewRouter(log)
-	defer cleanup()
-
-	err := route.CreateDatabase(database)
-	assert.Nil(t, err)
-	err = route.AddForTest(database, router.MockTableMConfig(), router.MockTableBConfig())
-	assert.Nil(t, err)
-
-	node, err := sqlparser.Parse(query)
-	assert.Nil(t, err)
-	sel := node.(*sqlparser.Select)
-
-	p, err := BuildNode(log, route, database, sel.From[0].(*sqlparser.AliasedTableExpr).Expr.(*sqlparser.Subquery).Select)
-	assert.Nil(t, err)
-
-	colMap := make(map[string]selectTuple)
-	for _, field := range p.getFields() {
-		name := field.alias
-		if name == "" {
-			name = field.field
-		}
-		colMap[name] = field
-	}
-
-	{
-		tuple := parseExpr(sel.Where.Expr.(*sqlparser.AndExpr).Left)
-		info, err := replaceCol(tuple.info, colMap)
-		assert.Nil(t, err)
-		buf := sqlparser.NewTrackedBuffer(nil)
-		info.expr.Format(buf)
-		assert.Equal(t, "A", info.referTables[0])
-		assert.Equal(t, "B", info.referTables[1])
-		assert.Equal(t, "A.a + 1 + B.a > 2", buf.String())
-	}
-	{
-		tuple := parseExpr(sel.Where.Expr.(*sqlparser.AndExpr).Right)
-		_, err = replaceCol(tuple.info, colMap)
-		assert.NotNil(t, err)
-		assert.Equal(t, "unsupported: aggregation.field.in.subquery.is.used.in.clause", err.Error())
-	}
-	{
-		tuple := parseExpr(sel.Having.Expr.(*sqlparser.AndExpr).Left)
-		_, err = replaceCol(tuple.info, colMap)
-		assert.NotNil(t, err)
-		assert.Equal(t, "unsupported: unknown.column.name.'b'", err.Error())
-	}
-	{
-		tuple := parseExpr(sel.Having.Expr.(*sqlparser.AndExpr).Right)
-		info, err := replaceCol(tuple.info, colMap)
-		assert.Nil(t, err)
-		buf := sqlparser.NewTrackedBuffer(nil)
-		info.expr.Format(buf)
-		assert.Equal(t, "A", info.referTables[0])
-		assert.Equal(t, "A.a + 1 > 2", buf.String())
 	}
 }

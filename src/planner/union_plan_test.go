@@ -69,7 +69,7 @@ func TestUnionPlan(t *testing.T) {
 		for i, query := range querys {
 			node, err := sqlparser.Parse(query)
 			assert.Nil(t, err)
-			plan := NewUnionPlan(log, database, query, node.(*sqlparser.Union), route)
+			plan := NewUnionPlan(log, database, query, node.(*sqlparser.Union), route, nil)
 
 			// plan build
 			{

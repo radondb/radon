@@ -163,7 +163,7 @@ func (j *JoinNode) pushFilter(filter exprInfo) error {
 	if j.IsLeftJoin {
 		// If left join's right node has "is null" condition, the condition
 		// will record in rightNull instead of push down.
-		if ok, nullFunc := checkIsWithNull(filter, rightTbs); ok {
+		if ok, nullFunc := checkIsWithNull(j.Right, filter, rightTbs); ok {
 			j.rightNull = append(j.rightNull, nullFunc)
 			return nil
 		}
@@ -282,10 +282,10 @@ func (j *JoinNode) setOtherJoin(filters []exprInfo) {
 
 			alias := "tmpc"
 			tuple := selectTuple{
-				expr:  &sqlparser.AliasedExpr{Expr: filter.expr, As: sqlparser.NewColIdent(alias)},
-				info:  filter,
-				field: field,
-				alias: alias,
+				expr:        &sqlparser.AliasedExpr{Expr: filter.expr, As: sqlparser.NewColIdent(alias)},
+				field:       field,
+				alias:       alias,
+				referTables: filter.referTables,
 			}
 			j.otherLeftJoin.left = append(j.otherLeftJoin.left, tuple)
 		} else if checkTbInNode(filter.referTables, j.Right.getReferTables()) {
@@ -559,14 +559,14 @@ func (j *JoinNode) pushOtherFilters(filters []exprInfo, isOtherJoin bool) error 
 			var lidx, ridx int
 			var exchange bool
 			exp, _ := filter.expr.(*sqlparser.ComparisonExpr)
-			left := parseExpr(exp.Left)
-			right := parseExpr(exp.Right)
+			left := parseExpr(j, exp.Left)
+			right := parseExpr(j, exp.Right)
 			ltb := j.Left.getReferTables()
-			isLeft := checkTbInNode(left.info.referTables, ltb)
+			isLeft := checkTbInNode(left.referTables, ltb)
 
 			// exp: t1.a + 1 = t2.a.
 			if exp.Operator == sqlparser.EqualStr && (isOtherJoin || !j.IsLeftJoin) &&
-				len(left.info.referTables) == 1 && len(right.info.referTables) == 1 {
+				len(left.referTables) == 1 && len(right.referTables) == 1 {
 				if !isLeft {
 					exp.Left, exp.Right = exp.Right, exp.Left
 					left, right = right, left
@@ -606,12 +606,12 @@ func (j *JoinNode) pushOtherFilter(node PlanNode, tuple selectTuple) (int, error
 	var err error
 	index := -1
 
-	table := tuple.info.referTables[0]
+	table := tuple.referTables[0]
 	if tuple.isCol {
 		fields := node.getFields()
 		for i, field := range fields {
 			if field.isCol {
-				if table == field.info.referTables[0] && strings.EqualFold(tuple.field, field.field) {
+				if table == field.referTables[0] && strings.EqualFold(tuple.field, field.field) {
 					index = i
 					break
 				}
@@ -635,7 +635,7 @@ func (j *JoinNode) pushOtherFilter(node PlanNode, tuple selectTuple) (int, error
 
 // pushSelectExpr used to push the select field.
 func (j *JoinNode) pushSelectExpr(field selectTuple) (int, error) {
-	if checkTbInNode(field.info.referTables, j.Left.getReferTables()) {
+	if checkTbInNode(field.referTables, j.Left.getReferTables()) {
 		index, err := j.Left.pushSelectExpr(field)
 		if err != nil {
 			return -1, err
@@ -648,7 +648,7 @@ func (j *JoinNode) pushSelectExpr(field selectTuple) (int, error) {
 			}
 		}
 
-		if !checkTbInNode(field.info.referTables, j.Right.getReferTables()) {
+		if !checkTbInNode(field.referTables, j.Right.getReferTables()) {
 			if j.Strategy != NestLoop {
 				j.setNestLoop()
 			}
@@ -705,8 +705,8 @@ func (j *JoinNode) handleJoinOn() {
 				Table: rt,
 			}
 		case SortMerge:
-			leftKey = j.buildOrderBy(j.Left, parseExpr(join.cols[0]))
-			rightKey = j.buildOrderBy(j.Right, parseExpr(join.cols[1]))
+			leftKey = j.buildOrderBy(j.Left, parseExpr(j.Left, join.cols[0]))
+			rightKey = j.buildOrderBy(j.Right, parseExpr(j.Right, join.cols[1]))
 		}
 
 		j.LeftKeys = append(j.LeftKeys, leftKey)
@@ -715,20 +715,20 @@ func (j *JoinNode) handleJoinOn() {
 }
 
 func (j *JoinNode) buildOrderBy(node PlanNode, tuple selectTuple) JoinKey {
-	var col *sqlparser.ColName
+	var col sqlparser.Expr
 	index := -1
-	table := tuple.info.referTables[0]
+	table := tuple.referTables[0]
 	if tuple.isCol {
 		fields := node.getFields()
 		for i, field := range fields {
 			if field.isCol {
-				if table == field.info.referTables[0] && strings.EqualFold(tuple.field, field.field) {
+				if table == field.referTables[0] && strings.EqualFold(tuple.field, field.field) {
 					index = i
 					break
 				}
 			}
 		}
-		col = tuple.info.cols[0]
+		col = tuple.expr.(*sqlparser.AliasedExpr).Expr
 	}
 
 	// key not in the select fields.
@@ -868,7 +868,7 @@ func (j *JoinNode) procure(col *sqlparser.ColName) string {
 	index := -1
 	for i, tuple := range tuples {
 		if tuple.isCol {
-			if strings.EqualFold(field, tuple.field) && table == tuple.info.referTables[0] {
+			if strings.EqualFold(field, tuple.field) && table == tuple.referTables[0] {
 				index = i
 				break
 			}
@@ -878,10 +878,10 @@ func (j *JoinNode) procure(col *sqlparser.ColName) string {
 	// key not in the select fields.
 	if index == -1 {
 		tuple := selectTuple{
-			expr:  &sqlparser.AliasedExpr{Expr: col},
-			info:  exprInfo{col, []string{table}, []*sqlparser.ColName{col}, nil},
-			field: field,
-			isCol: true,
+			expr:        &sqlparser.AliasedExpr{Expr: col},
+			field:       field,
+			referTables: []string{table},
+			isCol:       true,
 		}
 		index, _ = j.Left.pushSelectExpr(tuple)
 	}

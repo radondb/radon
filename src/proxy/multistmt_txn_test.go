@@ -523,6 +523,7 @@ func TestProxyHandleMStmtTxnUseDB(t *testing.T) {
 		fakedbs.AddQueryPattern("select .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("insert .*", &sqltypes.Result{})
 		fakedbs.AddQueryPattern("use .*", &sqltypes.Result{})
+		fakedbs.AddQueryPattern("desc .*", &sqltypes.Result{})
 	}
 
 	// create database.

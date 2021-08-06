@@ -15,7 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/xelabs/go-mysqlstack/sqlparser"
 	"github.com/xelabs/go-mysqlstack/sqlparser/depends/common"
-	"github.com/xelabs/go-mysqlstack/sqlparser/depends/sqltypes"
+	"github.com/xelabs/go-mysqlstack/sqlparser/depends/expression/evaluation"
 	"github.com/xelabs/go-mysqlstack/xlog"
 )
 
@@ -27,8 +27,9 @@ var (
 type Aggregator struct {
 	Field    string
 	Index    int
-	Type     sqltypes.AggrType
+	Type     evaluation.AggrType
 	Distinct bool
+	Eval     evaluation.Evaluation `json:"-"`
 }
 
 // AggregatePlan represents order-by plan.
@@ -73,46 +74,58 @@ func (p *AggregatePlan) analyze() error {
 	// aggregators.
 	k := 0
 	for _, tuple := range tuples {
-		aggrFuc := strings.ToLower(tuple.aggrFuc)
-		if aggrFuc == "" {
-			if tuple.field == "*" {
-				return errors.Errorf("unsupported: exists.aggregate.and.'*'.select.exprs")
-			}
-			nullAggrs = append(nullAggrs, Aggregator{Field: tuple.field, Index: k, Type: sqltypes.AggrTypeNull})
+		if !tuple.hasAgg {
+			nullAggrs = append(nullAggrs, Aggregator{Field: tuple.field, Index: k, Type: evaluation.AggrTypeNull})
 			k++
 			continue
 		}
 
-		var aggType sqltypes.AggrType
-		switch aggrFuc {
-		case "sum":
-			aggType = sqltypes.AggrTypeSum
-		case "count":
-			aggType = sqltypes.AggrTypeCount
-		case "min":
-			aggType = sqltypes.AggrTypeMin
-		case "max":
-			aggType = sqltypes.AggrTypeMax
-		case "avg":
-			aggType = sqltypes.AggrTypeAvg
-		default:
-			return errors.Errorf("unsupported: function:%+v", tuple.aggrFuc)
+		aggr, eval, err := extractAggregate(tuple.expr.(*sqlparser.AliasedExpr).Expr)
+		if err != nil {
+			return err
 		}
 
-		p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: aggType, Distinct: tuple.distinct})
+		var aggType evaluation.AggrType
+		switch aggr.Name {
+		case "sum":
+			aggType = evaluation.AggrTypeSum
+		case "count":
+			aggType = evaluation.AggrTypeCount
+		case "min":
+			aggType = evaluation.AggrTypeMin
+		case "max":
+			aggType = evaluation.AggrTypeMax
+		case "avg":
+			aggType = evaluation.AggrTypeAvg
+		default:
+			return errors.Errorf("unsupported: function:%+v", aggr.Name)
+		}
+
+		p.normalAggrs = append(p.normalAggrs, Aggregator{Field: tuple.field, Index: k, Type: aggType, Distinct: aggr.Distinct, Eval: eval})
+		alias := tuple.alias
+		if alias == "" {
+			alias = tuple.field
+		}
 		if p.IsPushDown {
-			if aggType == sqltypes.AggrTypeAvg {
-				p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("sum(%s)", tuple.aggrField), Index: k, Type: sqltypes.AggrTypeSum})
-				p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("count(%s)", tuple.aggrField), Index: k + 1, Type: sqltypes.AggrTypeCount})
-				avgs := decomposeAvg(&tuple)
+			if aggType == evaluation.AggrTypeAvg {
+				p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("sum(%s)", aggr.Field), Index: k, Type: evaluation.AggrTypeSum})
+				p.normalAggrs = append(p.normalAggrs, Aggregator{Field: fmt.Sprintf("count(%s)", aggr.Field), Index: k + 1, Type: evaluation.AggrTypeCount})
+				avgs := decomposeAvg(alias, aggr)
 				p.rewritten = append(p.rewritten, &sqlparser.AliasedExpr{})
 				copy(p.rewritten[(k+2):], p.rewritten[k+1:])
 				p.rewritten[k] = avgs[0]
 				p.rewritten[(k + 1)] = avgs[1]
 				k++
+			} else {
+				if eval != nil {
+					p.rewritten[k] = &sqlparser.AliasedExpr{
+						Expr: aggr.Expr,
+						As:   sqlparser.NewColIdent(alias),
+					}
+				}
 			}
 		} else {
-			p.rewritten[k] = decomposeAgg(&tuple)
+			p.rewritten[k] = decomposeAgg(alias, aggr)
 			p.tuples[k].expr = p.rewritten[k]
 		}
 		k++
@@ -131,7 +144,7 @@ func (p *AggregatePlan) analyze() error {
 		if idx == -1 {
 			return errors.Errorf("unsupported: group.by.field[%s].should.be.in.noaggregate.select.list", by.field)
 		}
-		p.groupAggrs = append(p.groupAggrs, Aggregator{Field: by.field, Index: idx, Type: sqltypes.AggrTypeGroupBy})
+		p.groupAggrs = append(p.groupAggrs, Aggregator{Field: by.field, Index: idx, Type: evaluation.AggrTypeGroupBy})
 	}
 	return nil
 }

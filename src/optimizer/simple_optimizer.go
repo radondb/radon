@@ -9,6 +9,7 @@
 package optimizer
 
 import (
+	"backend"
 	"planner"
 	"router"
 
@@ -28,16 +29,18 @@ type SimpleOptimizer struct {
 	query    string
 	node     sqlparser.Statement
 	router   *router.Router
+	scatter  *backend.Scatter
 }
 
 // NewSimpleOptimizer creates the new simple optimizer.
-func NewSimpleOptimizer(log *xlog.Log, database string, query string, node sqlparser.Statement, router *router.Router) *SimpleOptimizer {
+func NewSimpleOptimizer(log *xlog.Log, database string, query string, node sqlparser.Statement, router *router.Router, scatter *backend.Scatter) *SimpleOptimizer {
 	return &SimpleOptimizer{
 		log:      log,
 		database: database,
 		query:    query,
 		node:     node,
 		router:   router,
+		scatter:  scatter,
 	}
 }
 
@@ -65,10 +68,10 @@ func (so *SimpleOptimizer) BuildPlanTree() (*planner.PlanTree, error) {
 		plans.Add(node)
 	case *sqlparser.Select:
 		nod := node.(*sqlparser.Select)
-		selectNode := planner.NewSelectPlan(log, database, query, nod, router)
+		selectNode := planner.NewSelectPlan(log, database, query, nod, router, so.scatter)
 		plans.Add(selectNode)
 	case *sqlparser.Union:
-		node := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), router)
+		node := planner.NewUnionPlan(log, database, query, node.(*sqlparser.Union), router, so.scatter)
 		plans.Add(node)
 	case *sqlparser.Checksum, *sqlparser.Optimize, *sqlparser.Check:
 		node := planner.NewOthersPlan(log, database, query, node, router)

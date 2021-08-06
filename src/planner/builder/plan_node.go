@@ -92,37 +92,38 @@ func addFilter(s PlanNode, filter exprInfo) {
 }
 
 // pushFilters push a WHERE clause down, and update the PlanNode info.
-func pushFilters(s PlanNode, expr sqlparser.Expr) (PlanNode, error) {
-	joins, filters, err := parseWhereOrJoinExprs(expr, s.getReferTables())
+func (b *planBuilder) pushFilters(expr sqlparser.Expr) error {
+	joins, filters, err := parseWhereOrJoinExprs(expr, b.root.getReferTables())
 	if err != nil {
-		return s, err
+		return err
 	}
 
 	for _, filter := range filters {
-		if err := s.pushFilter(filter); err != nil {
-			return s, err
+		if err := b.root.pushFilter(filter); err != nil {
+			return err
 		}
 	}
 
-	switch node := s.(type) {
+	switch node := b.root.(type) {
 	case *MergeNode:
 		for _, joinCond := range joins {
 			node.addWhere(joinCond.expr)
 		}
 	case *JoinNode:
-		return node.pushEqualCmprs(joins), nil
+		b.root = node.pushEqualCmprs(joins)
+		return nil
 	}
-	return s, nil
+	return nil
 }
 
 // pushHavings push a HAVING clause down.
-func pushHavings(s PlanNode, expr sqlparser.Expr) error {
-	havings, err := parseHaving(expr, s.getFields())
+func (b *planBuilder) pushHavings(expr sqlparser.Expr) error {
+	havings, err := parseHaving(expr, b.root.getFields())
 	if err != nil {
 		return err
 	}
 	for _, having := range havings {
-		if err = s.pushHaving(having); err != nil {
+		if err = b.root.pushHaving(having); err != nil {
 			return err
 		}
 	}
