@@ -2,45 +2,53 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/radondb/radon)](https://goreportcard.com/report/github.com/radondb/radon)
 [![codecov.io](https://codecov.io/gh/radondb/radon/graphs/badge.svg)](https://codecov.io/gh/radondb/radon/branch/master)
 
-# OverView
-RadonDB is an open source, Cloud-native MySQL database for unlimited scalability and performance.
+# Overview
+RadonDB is an open-source and cloud-native database based on MySQL, enabling unlimited scalability and high performance.
 
 ## What is RadonDB?
 
-RadonDB is a cloud-native database based on MySQL, and architected in fully distributed cluster that enable unlimited scalability (scale-out), capacity and performance. It supported distributed transaction that ensure high data consistency, and leveraged MySQL as storage engine for trusted data reliability. RadonDB is compatible with MySQL protocol, and sup-porting automatic table sharding as well as batch of automation feature for simplifying the maintenance and operation workflow.
+RadonDB is a cloud-native database based on MySQL. It adopts the architecture of distributed clusters, enabling unlimited scalability (scaling-out), capacity and performance. It supports distributed transactions and ensures high data consistency, using MySQL as the storage engine for data reliability. RadonDB is compatible with MySQL protocols, and supports automatic table sharding and a batch of automation features for simplifying the O&M workflow.
 
 ## Features
 
-* **Automatic Sharding**
-* **Auditing and Logging**
-* **Parallel Execution**: Parallel Query, Parallel DML and Parallel DDL
-* **Parallel CHECKSUM TABLE**: Gives same results as MySQL
-* **Distributed Transaction**: Snapshot Isolation
-* **Distributed Joins**: Sort-Merge Join, Nested-Loop Join
-* **Distributed Full Text Search**
-* **Multi Tenant by Database**
-* **Prepared SQL Statement**
-* **JSON**
+⌛ **Automatic sharding**
+
+✍ **Auditing and logging**
+
+🎈 **Parallel execution**: Parallel query, DML and DDL
+
+🧠 **Parallel CHECKSUM TABLE**: Gives the same results as MySQL
+
+💻 **Distributed transaction**: Snapshot isolation
+
+👏 **Distributed Joins**: Sort-merge Join, nested-loop Join
+
+⌨ **Distributed full-text search**
+
+🙂 **Multi-tenancy**
+
+👂 **Prepared SQL statement**
+
+👀 **JSON**
 
 ## Documentation
-For guidance on installation, deployment, and administration, see our [Documentation](docs).
+For guidance on installation, deployment, and management of RadonDB, see our [Documentation](docs).
 
 
 ## Architecture
 
-## Overview
-RadonDB is a new generation of distributed relational database (MyNewSQL) based on MySQL. It was designed to create the open-source database our developers would want to use: one that has features such as financial high availability、
-large-capacity database、automatic plane split table、 scalable and strong consistency, this guide sets out to detail the inner-workings of the radon process as a means of explanation.
+### Overview
+RadonDB is a new distributed relational database (MyNewSQL) based on MySQL. It is designed to create the open-source and developer-friendly database, with such features as high availability in financial scenarios, large capacity, automatic horizontal table partitioning, scalability and strong consistency. This guide displays the details of the internals of RadonDB.
 
 
-## SQL Layer
+### SQL layer
 
-### SQL support
-On SQL syntax level, RadonDB Fully compatible with MySQL.You can view all of the SQL features RadonDB supports here  [radon_sql_statements_manual](docs/radon_sql_statements_manual.md)
+#### SQL support
+On SQL syntax level, RadonDB is compatible with MySQL. For all the SQL features supported by RadonDB, see [radon_sql_statements_manual](docs/radon_sql_statements_manual.md)
 
-###  SQL parser, planner, executor
+#### SQL parser, planner and executor
 
-After your SQL node  receives a SQL request from a mysql client via proxy, RadonDB parses the statement, creates a query plan, and then executes the plan.
+After a node in a RadonDB cluster receives a SQL request from a MySQL client by proxy, RadonDB parses the statement, creates a query plan, and then executes the plan.
 
 
 
@@ -48,11 +56,11 @@ After your SQL node  receives a SQL request from a mysql client via proxy, Radon
                                                                     +---------------+
                                                         x---------->|node1_Executor |
                                 +--------------------+  x           +---------------+
-                                |      SQL Node      |  x
+                                |      SQL node      |  x
                                 |--------------------|  x
-    +-------------+             |     sqlparser      |  x           +---------------+
-    |    query    |+----------->|                    |--x---------->|node2_Executor |
-    +-------------+             |  Distributed Plan  |  x           +---------------+
+    +-------------+             |     SQL parser     |  x           +---------------+
+    |    Query    |+----------->|                    |--x---------->|node2_Executor |
+    +-------------+             |  Distributed plan  |  x           +---------------+
                                 |                    |  x
                                 +--------------------+  x
                                                         x           +---------------+
@@ -63,44 +71,45 @@ After your SQL node  receives a SQL request from a mysql client via proxy, Radon
 
 ``` Parsing ```
 
-Received queries are parsed by sqlparser (which describes the supported syntax by mysql) and generated Abstract Syntax Trees (AST).
+Received queries are parsed by SQL parser (describing the syntax supported by MySQL) and abstract syntax trees (AST) are generated.
 
 
 ``` Planning ```
 
-With the AST, RadonDB begins planning the query's execution by generating a tree of planNodes.
-This step also includes steps analyzing the client's SQL statements against the expected AST expressions, which include things like type checking.
+With the AST, a query plan is formed by RadonDB by generating a tree of plan nodes.
+During the process, RadonDB also performs semantic analysis, including checking whether the query is a valid statement in the SQL language.
 
-You can see the a query plan  generates using `EXPLAIN`(At this stage we only use `EXPLAIN` to  analysis  Table distribution).
+As we can see, a query plan is generated with `EXPLAIN` (at this stage, only `EXPLAIN` is used to analyze table distribution).
 
-``` Excuting ```
+``` Execution ```
 
-Executing an Executor in a storage layer in Parallel with a Distributed Execution Plan.
+In the storage layer, the executor is called in parallel with the distributed execution plan.
 
-### SQL with Transaction
-The SQL node is stateless, but in order to guarantee transaction `Snapshot Isolation`, it is currently a write-multiple-read mode.
+#### SQL and transaction
+The SQL node is stateless, but the multiple-reader single-writer mode is currently adopted for the purpose of transaction `snapshot isolation`.
 
 
-## Transaction Layer
+### Transaction layer
 
 ``` Distributed transaction```
 
-RadonDB provides distributed transaction capabilities. If the distributed executor at different storage nodes and one of the nodes failed to execute, then operation of the rest nodes will be rolled back, This guarantees the atomicity of operating across nodes  and makes the database in a consistent state.
+RadonDB provides distributed transaction capabilities. If one of the nodes fails to execute the transaction in the distributed environment, the rest nodes will be rolled back. 
+This ensures the atomicity of operating across nodes and keeps the database in a consistent state.
 
-```Isolation Levels```
+```Isolation levels```
 
-RadonDB achieves the level of SI (Snapshot Isolation) at the level of consistency. As long as a distributed transaction has not commit, or if some of the partitions have committed, the operation is invisible to other transactions.
+RadonDB achieves snapshot isolation levels on the basis of consistency levels. As long as the distributed transaction has not committed, or some of the partitions have committed, the operation is invisible to other transactions.
 
-``` Transaction with SQL Layer```
+``` Transaction with SQL layer```
 
-The SQL node is stateless, but in order to guarantee transaction `Snapshot Isolation`, it is currently a write-multiple-read mode.
+The SQL node is stateless, but the multiple-reader single-writer mode is currently adopted for the purpose of transaction `snapshot isolation`.
 
 
-## Issues
+## Issue
 
-The [integrated github issue tracker](https://github.com/radondb/radon/issues)
+The [integrated GitHub issue tracker](https://github.com/radondb/radon/issues)
 is used for this project.
 
 ## License
 
-RadonDB is released under the GPLv3. See LICENSE
+RadonDB is released under the GPLv3. See [LICENSE](LICENSE).
